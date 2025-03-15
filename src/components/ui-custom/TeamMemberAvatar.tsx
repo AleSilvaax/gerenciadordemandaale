@@ -1,6 +1,8 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
 
 type AvatarSize = "sm" | "md" | "lg";
 
@@ -23,20 +25,28 @@ export const TeamMemberAvatar: React.FC<TeamMemberAvatarProps> = ({
     lg: "w-12 h-12",
   };
 
+  const initials = name
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase();
+
   return (
-    <div 
+    <Avatar 
       className={cn(
-        "relative rounded-full overflow-hidden border border-white/20 bg-secondary",
+        "border border-white/20 bg-secondary",
         sizeClasses[size],
         className
       )}
     >
-      <img 
+      <AvatarImage 
         src={src} 
         alt={name} 
-        className="w-full h-full object-cover"
-        loading="lazy"
+        className="object-cover"
       />
-    </div>
+      <AvatarFallback className="text-xs font-medium">
+        {initials || <User className="h-4 w-4" />}
+      </AvatarFallback>
+    </Avatar>
   );
 };

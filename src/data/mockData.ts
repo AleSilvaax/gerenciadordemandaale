@@ -32,27 +32,27 @@ export const teamMembers: TeamMember[] = [
   {
     id: "1",
     name: "Alessandro",
-    avatar: "/lovable-uploads/9d2cadff-bdb9-4bc9-ae7b-570abad8e23d.png"
+    avatar: "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png"
   },
   {
     id: "2",
     name: "Hudson",
-    avatar: "/lovable-uploads/5cb696cc-6e38-4576-9018-37b9404a8b1e.png"
+    avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
   },
   {
     id: "3",
     name: "Luiz",
-    avatar: "/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png"
+    avatar: "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png"
   },
   {
     id: "4",
     name: "Matheus",
-    avatar: "/lovable-uploads/6d2887c4-21be-4d34-a140-0ec123066762.png"
+    avatar: "/lovable-uploads/1bdc9d45-f52f-4203-ad83-b9dfc4012386.png"
   },
   {
     id: "5",
     name: "Thiago",
-    avatar: "/lovable-uploads/2a36603c-4739-42fa-a6ca-3491cc8fe0b5.png"
+    avatar: "/lovable-uploads/b6102832-ceb2-4f6d-8c9a-65604fbe30ff.png"
   }
 ];
 
@@ -60,7 +60,7 @@ export const teamMembers: TeamMember[] = [
 export const currentUser = {
   id: "6",
   name: "Christian Paulino",
-  avatar: "/lovable-uploads/e6b9037e-cd6c-4f3d-8020-7963c71e941f.png",
+  avatar: "/lovable-uploads/726022ec-30b5-413d-be9b-09047cd83dc5.png",
   role: "Coordenador de projetos"
 };
 
