@@ -1,4 +1,3 @@
-
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 
 export interface TeamMember {
@@ -42,17 +41,17 @@ export const teamMembers: TeamMember[] = [
   {
     id: "3",
     name: "Luiz",
-    avatar: "/lovable-uploads/1bdc9d45-f52f-4203-ad83-b9dfc4012386.png"
+    avatar: "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png"
   },
   {
     id: "4",
     name: "Matheus",
-    avatar: "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png"
+    avatar: "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png"
   },
   {
     id: "5",
     name: "Thiago",
-    avatar: "/lovable-uploads/726022ec-30b5-413d-be9b-09047cd83dc5.png"
+    avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
   }
 ];
 
