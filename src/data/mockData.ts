@@ -37,7 +37,7 @@ export const teamMembers: TeamMember[] = [
   {
     id: "2",
     name: "Hudson",
-    avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
+    avatar: "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png"
   },
   {
     id: "3",
