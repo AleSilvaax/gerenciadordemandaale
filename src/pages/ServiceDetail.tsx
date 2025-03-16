@@ -1,9 +1,8 @@
-
 import React, { useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   ArrowLeft, Save, Camera, Upload, Image, File, X, FileText,
-  Check, CheckCircle2, XCircle 
+  Check, CheckCircle2, XCircle, Download 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,8 @@ import { useForm } from "react-hook-form";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Service, TeamMember, services, teamMembers } from "@/data/mockData";
-import { generatePDF } from "@/utils/pdfGenerator";
+import { generatePDF, downloadPDF } from "@/utils/pdfGenerator";
+import { toast } from "sonner";
 
 const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +39,8 @@ const ServiceDetail = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfGenerated, setPdfGenerated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Find the service by ID
@@ -90,28 +92,33 @@ const ServiceDetail = () => {
 
   // Handle form submission
   const onSubmit = (data: any) => {
+    setIsSubmitting(true);
+    
     // In a real application, this would update the service data in the backend
     // For this mock version, we'll just show a success toast
-    toast({
-      title: "Demanda atualizada",
-      description: `As alterações na demanda ${id} foram salvas com sucesso.`,
-    });
-    
-    // If status is completed, ask if the user wants to generate a PDF
-    if (data.status === "concluido") {
-      // Mock implementation - in a real app, this would update the actual data
-      setTimeout(() => {
-        toast({
-          title: "Relatório disponível",
-          description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
-          action: (
-            <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
-              Gerar PDF
-            </Button>
-          ),
-        });
-      }, 1000);
-    }
+    setTimeout(() => {
+      setIsSubmitting(false);
+      
+      toast({
+        title: "Demanda atualizada",
+        description: `As alterações na demanda ${id} foram salvas com sucesso.`,
+      });
+      
+      // If status is completed, ask if the user wants to generate a PDF
+      if (data.status === "concluido" && !pdfGenerated) {
+        setTimeout(() => {
+          toast({
+            title: "Relatório disponível",
+            description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
+            action: (
+              <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
+                Gerar PDF
+              </Button>
+            ),
+          });
+        }, 500);
+      }
+    }, 1000);
   };
 
   // Handle photo uploads
@@ -122,7 +129,10 @@ const ServiceDetail = () => {
       "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
       "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
       "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
-      "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png"
+      "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png",
+      "/lovable-uploads/4df72a6d-1dc8-44c2-b61d-cb6504af2b1f.png",
+      "/lovable-uploads/3c26bd66-6e28-4b07-a3ca-e80a3a92ae06.png",
+      "/lovable-uploads/6bfabcbb-e3dc-46e9-985a-ef6610069890.png"
     ];
     
     // Add a random photo from the mock list
@@ -149,14 +159,80 @@ const ServiceDetail = () => {
 
   // Handle PDF generation
   const handleGeneratePDF = () => {
-    // Call the PDF generator utility
-    generatePDF(service);
+    // Update service object with form data to ensure latest values are in the PDF
+    const updatedService = {
+      ...service,
+      title: form.getValues("title"),
+      status: form.getValues("status") as any,
+      location: form.getValues("location"),
+      technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
+      reportData: {
+        client: form.getValues("client"),
+        address: form.getValues("address"),
+        city: form.getValues("city"),
+        executedBy: form.getValues("executedBy"),
+        installationDate: form.getValues("installationDate"),
+        modelNumber: form.getValues("modelNumber"),
+        serialNumberNew: form.getValues("serialNumberNew"),
+        serialNumberOld: form.getValues("serialNumberOld"),
+        homologatedName: form.getValues("homologatedName"),
+        compliesWithNBR17019: form.getValues("compliesWithNBR17019"),
+        homologatedInstallation: form.getValues("homologatedInstallation"),
+        requiredAdjustment: form.getValues("requiredAdjustment"),
+        adjustmentDescription: form.getValues("adjustmentDescription"),
+        validWarranty: form.getValues("validWarranty"),
+        circuitBreakerEntry: form.getValues("circuitBreakerEntry"),
+        chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
+        cableGauge: form.getValues("cableGauge"),
+        chargerStatus: form.getValues("chargerStatus"),
+        technicalComments: form.getValues("technicalComments")
+      },
+      photos: selectedPhotos
+    };
     
-    toast({
-      title: "PDF gerado",
-      description: "O PDF do relatório foi gerado com sucesso.",
-      variant: "default",
-    });
+    // Call the PDF generator utility with updated service
+    const result = generatePDF(updatedService);
+    
+    if (result) {
+      setPdfGenerated(true);
+    }
+  };
+
+  // Handle PDF download
+  const handleDownloadPDF = () => {
+    // Update service object with form data to ensure latest values are in the PDF
+    const updatedService = {
+      ...service,
+      title: form.getValues("title"),
+      status: form.getValues("status") as any,
+      location: form.getValues("location"),
+      technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
+      reportData: {
+        client: form.getValues("client"),
+        address: form.getValues("address"),
+        city: form.getValues("city"),
+        executedBy: form.getValues("executedBy"),
+        installationDate: form.getValues("installationDate"),
+        modelNumber: form.getValues("modelNumber"),
+        serialNumberNew: form.getValues("serialNumberNew"),
+        serialNumberOld: form.getValues("serialNumberOld"),
+        homologatedName: form.getValues("homologatedName"),
+        compliesWithNBR17019: form.getValues("compliesWithNBR17019"),
+        homologatedInstallation: form.getValues("homologatedInstallation"),
+        requiredAdjustment: form.getValues("requiredAdjustment"),
+        adjustmentDescription: form.getValues("adjustmentDescription"),
+        validWarranty: form.getValues("validWarranty"),
+        circuitBreakerEntry: form.getValues("circuitBreakerEntry"),
+        chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
+        cableGauge: form.getValues("cableGauge"),
+        chargerStatus: form.getValues("chargerStatus"),
+        technicalComments: form.getValues("technicalComments")
+      },
+      photos: selectedPhotos
+    };
+    
+    // Call the PDF download utility
+    downloadPDF(updatedService);
   };
 
   return (
@@ -612,16 +688,39 @@ const ServiceDetail = () => {
                   {form.watch("status") === "concluido" && (
                     <Button 
                       type="button" 
-                      variant="outline" 
+                      variant="outline"
                       onClick={handleGeneratePDF}
                     >
                       <FileText size={16} className="mr-2" />
                       Gerar PDF
                     </Button>
                   )}
-                  <Button type="submit">
-                    <Save size={16} className="mr-2" />
-                    Salvar
+                  {pdfGenerated && (
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={handleDownloadPDF}
+                    >
+                      <Download size={16} className="mr-2" />
+                      Baixar PDF
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <span className="animate-spin mr-2">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
+                          </svg>
+                        </span>
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} className="mr-2" />
+                        Salvar
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

@@ -14,20 +14,31 @@ import Equipe from "./pages/Equipe";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Helper component to handle tab selection in Demandas
-const DemandasTabSetter = () => {
+// Helper component to handle tab selection in Demandas and other navigation
+const NavigationHelper = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Handle Demandas tab selection
     if (location.pathname === "/demandas") {
       const selectedTab = localStorage.getItem("demandasTab");
       if (selectedTab) {
         localStorage.removeItem("demandasTab");
       }
     }
+    
+    // Scroll to top on navigation
+    window.scrollTo(0, 0);
   }, [location, navigate]);
   
   return null;
@@ -39,7 +50,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <DemandasTabSetter />
+        <NavigationHelper />
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Index />} />
