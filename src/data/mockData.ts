@@ -1,9 +1,12 @@
+
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
+export type UserRole = "tecnico" | "administrador" | "gestor";
 
 export interface TeamMember {
   id: string;
   name: string;
   avatar: string;
+  role?: UserRole;
 }
 
 export interface Service {
@@ -12,6 +15,30 @@ export interface Service {
   status: ServiceStatus;
   location: string;
   technician: TeamMember;
+  reportData?: ReportData;
+  photos?: string[];
+}
+
+export interface ReportData {
+  client?: string;
+  address?: string;
+  city?: string;
+  executedBy?: string;
+  installationDate?: string;
+  modelNumber?: string;
+  serialNumberNew?: string;
+  serialNumberOld?: string;
+  homologatedName?: string;
+  compliesWithNBR17019?: boolean;
+  homologatedInstallation?: boolean;
+  requiredAdjustment?: boolean;
+  adjustmentDescription?: string;
+  validWarranty?: boolean;
+  circuitBreakerEntry?: string;
+  chargerCircuitBreaker?: string;
+  cableGauge?: string;
+  chargerStatus?: string;
+  technicalComments?: string;
 }
 
 export interface StatData {
@@ -31,27 +58,32 @@ export const teamMembers: TeamMember[] = [
   {
     id: "1",
     name: "Alessandro",
-    avatar: "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png"
+    avatar: "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png",
+    role: "tecnico"
   },
   {
     id: "2",
     name: "Hudson",
-    avatar: "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png"
+    avatar: "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
+    role: "tecnico"
   },
   {
     id: "3",
     name: "Luiz",
-    avatar: "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png"
+    avatar: "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png",
+    role: "tecnico"
   },
   {
     id: "4",
     name: "Matheus",
-    avatar: "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png"
+    avatar: "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png",
+    role: "tecnico"
   },
   {
     id: "5",
     name: "Thiago",
-    avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
+    avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png",
+    role: "administrador"
   }
 ];
 
@@ -59,18 +91,45 @@ export const teamMembers: TeamMember[] = [
 export const currentUser = {
   id: "6",
   name: "Christian Paulino",
-  avatar: "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png",
-  role: "Coordenador de projetos"
+  avatar: "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png",
+  role: "gestor"
 };
 
-// Services data
+// Services data with report data
 export const services: Service[] = [
   {
     id: "6430",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technician: teamMembers[0]
+    technician: teamMembers[0],
+    reportData: {
+      client: "Pedro Penacchione",
+      address: "Av. Airton Pretini, 123",
+      city: "São Paulo",
+      executedBy: "Alessandro",
+      installationDate: "15/05/2023",
+      modelNumber: "EVA007KI/XSTO",
+      serialNumberNew: "",
+      serialNumberOld: "050447A7MR51840167",
+      homologatedName: "BYD",
+      compliesWithNBR17019: true,
+      homologatedInstallation: true,
+      requiredAdjustment: false,
+      adjustmentDescription: "",
+      validWarranty: true,
+      circuitBreakerEntry: "50",
+      chargerCircuitBreaker: "32",
+      cableGauge: "10mm²",
+      chargerStatus: "Carregador apenas acende o Led Branco e não carrega",
+      technicalComments: "Necessário substituição do carregador"
+    },
+    photos: [
+      "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
+      "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
+      "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
+      "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png"
+    ]
   },
   {
     id: "6431",
@@ -154,4 +213,29 @@ export const teamPerformance = [
   { name: "Thiago", color: "#3b82f6" },
   { name: "Alessandro", color: "#a855f7" },
   { name: "Luiz", color: "#6366f1" }
+];
+
+// Additional chart data for statistics
+export const weeklyData: ChartData[] = [
+  { name: "Seg", value: 5 },
+  { name: "Ter", value: 12 },
+  { name: "Qua", value: 8 },
+  { name: "Qui", value: 15 },
+  { name: "Sex", value: 10 },
+  { name: "Sáb", value: 4 },
+  { name: "Dom", value: 0 }
+];
+
+export const serviceTypeData = [
+  { name: "Instalação", value: 45 },
+  { name: "Manutenção", value: 30 },
+  { name: "Reparo", value: 15 },
+  { name: "Vistoria", value: 10 }
+];
+
+export const regionData = [
+  { name: "Norte", value: 20 },
+  { name: "Sul", value: 35 },
+  { name: "Leste", value: 25 },
+  { name: "Oeste", value: 20 }
 ];

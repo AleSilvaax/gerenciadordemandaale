@@ -3,6 +3,15 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
 import { TeamMemberAvatar } from "./TeamMemberAvatar";
+import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
 
 interface ServiceCardProps {
   id: string;
@@ -15,6 +24,7 @@ interface ServiceCardProps {
     avatar: string;
   };
   className?: string;
+  onDelete?: (id: string) => void;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -24,6 +34,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   location,
   technician,
   className,
+  onDelete,
 }) => {
   return (
     <div 
@@ -50,7 +61,32 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
         </div>
       </div>
       
-      <div className="text-sm font-medium text-primary ml-2">{id}</div>
+      <div className="flex items-center">
+        <div className="text-sm font-medium text-primary mr-2">{id}</div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="h-8 w-8 rounded-full flex items-center justify-center bg-secondary/50 hover:bg-secondary">
+              <MoreVertical size={16} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <Link to={`/demandas/${id}`}>
+              <DropdownMenuItem className="cursor-pointer">
+                <Edit size={16} className="mr-2" />
+                Gerenciar
+              </DropdownMenuItem>
+            </Link>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onClick={() => onDelete && onDelete(id)}
+            >
+              <Trash2 size={16} className="mr-2" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 };

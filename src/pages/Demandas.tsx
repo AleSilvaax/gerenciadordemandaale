@@ -1,20 +1,55 @@
 
 import React, { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Plus, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { currentUser, ServiceStatus, services } from "@/data/mockData";
 
 const Demandas: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ServiceStatus | "todos">("todos");
+  const [servicesList, setServicesList] = useState(services);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { toast } = useToast();
   
-  const filteredServices = services.filter(service => {
+  const filteredServices = servicesList.filter(service => {
     if (activeTab === "todos") return true;
     return service.status === activeTab;
   });
   
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
+  
+  const confirmDelete = () => {
+    if (deleteId) {
+      // In a real app, this would call an API to delete the service
+      setServicesList(servicesList.filter(service => service.id !== deleteId));
+      
+      toast({
+        title: "Demanda excluída",
+        description: `A demanda #${deleteId} foi excluída com sucesso.`,
+        variant: "destructive",
+      });
+      
+      setDeleteId(null);
+    }
+  };
+  
   return (
-    <div className="min-h-screen p-4 page-transition">
+    <div className="min-h-screen p-4 pb-20 page-transition">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <TeamMemberAvatar 
@@ -27,9 +62,16 @@ const Demandas: React.FC = () => {
             <h1 className="text-lg font-bold">MINHAS INSTALAÇÕES</h1>
           </div>
         </div>
-        <button className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
-          <Search size={18} />
-        </button>
+        <div className="flex space-x-2">
+          <Link to="/demandas/new">
+            <Button size="icon" variant="default" className="rounded-full">
+              <Plus size={18} />
+            </Button>
+          </Link>
+          <button className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
+            <Search size={18} />
+          </button>
+        </div>
       </div>
       
       <div className="flex space-x-2 mb-4 overflow-x-auto scrollbar-none">
@@ -60,17 +102,50 @@ const Demandas: React.FC = () => {
       </div>
       
       <div className="space-y-2">
-        {filteredServices.map(service => (
-          <ServiceCard
-            key={service.id}
-            id={service.id}
-            title={service.title}
-            status={service.status}
-            location={service.location}
-            technician={service.technician}
-          />
-        ))}
+        {filteredServices.length > 0 ? (
+          filteredServices.map(service => (
+            <ServiceCard
+              key={service.id}
+              id={service.id}
+              title={service.title}
+              status={service.status}
+              location={service.location}
+              technician={service.technician}
+              onDelete={handleDelete}
+            />
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center p-8 rounded-lg glass-card">
+            <AlertCircle size={48} className="text-muted-foreground mb-2" />
+            <p className="text-center text-muted-foreground">
+              Nenhuma demanda encontrada para o filtro selecionado.
+            </p>
+            <Link to="/demandas/new" className="mt-4">
+              <Button variant="outline" size="sm">
+                <Plus size={16} className="mr-2" />
+                Criar nova demanda
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
+      
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir demanda</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta demanda? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
