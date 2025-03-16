@@ -77,7 +77,8 @@ const ServiceDetailPage = () => {
 };
 
 const ServiceStatus = ({ status }: { status: Service["status"] }) => {
-  const StatusBadge = React.lazy(() => import("@/components/ui-custom/StatusBadge"));
+  // Fix: Import StatusBadge correctly as a default import
+  const StatusBadge = React.lazy(() => import("@/components/ui-custom/StatusBadge").then(module => ({ default: module.default || module })));
   
   return (
     <div className="flex items-center mt-1">
@@ -154,18 +155,16 @@ const ServiceDetailTabs = ({
       setIsSubmitting(false);
       
       toast({
-        title: "Demanda atualizada",
-        description: `As alterações na demanda ${service.id} foram salvas com sucesso.`,
+        description: `As alterações na demanda ${service.id} foram salvas com sucesso.`
       });
       
       // If status is completed, ask if the user wants to generate a PDF
       if (formState.status === "concluido" && !pdfGenerated) {
         setTimeout(() => {
           toast({
-            title: "Relatório disponível",
             description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
             action: (
-              <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
+              <Button variant="default" size="sm" onClick={handleGeneratePDF}>
                 Gerar PDF
               </Button>
             ),
@@ -195,8 +194,7 @@ const ServiceDetailTabs = ({
     if (!selectedPhotos.includes(randomPhoto)) {
       setSelectedPhotos([...selectedPhotos, randomPhoto]);
       toast({
-        title: "Foto adicionada",
-        description: "A foto foi adicionada ao relatório com sucesso.",
+        description: "A foto foi adicionada ao relatório com sucesso."
       });
     }
   };
@@ -205,22 +203,31 @@ const ServiceDetailTabs = ({
   const handleRemovePhoto = (photoUrl: string) => {
     setSelectedPhotos(selectedPhotos.filter(photo => photo !== photoUrl));
     toast({
-      title: "Foto removida",
       description: "A foto foi removida do relatório.",
       variant: "destructive",
     });
   };
 
-  // Import PDF generation utilities
-  const { generatePDF, downloadPDF } = React.useMemo(() => {
-    return import("@/utils/pdfGenerator").then(module => ({
-      generatePDF: module.generatePDF,
-      downloadPDF: module.downloadPDF
-    }));
+  // Fix: Import PDF generation utilities correctly
+  const [pdfUtils, setPdfUtils] = useState<{
+    generatePDF: (service: Service) => boolean;
+    downloadPDF: (service: Service) => void;
+  } | null>(null);
+
+  React.useEffect(() => {
+    // Load the PDF utilities
+    import("@/utils/pdfGenerator").then(module => {
+      setPdfUtils({
+        generatePDF: module.generatePDF,
+        downloadPDF: module.downloadPDF
+      });
+    });
   }, []);
 
   // Handle PDF generation
   const handleGeneratePDF = () => {
+    if (!pdfUtils) return;
+    
     // Create updated service object with form data
     const updatedService = {
       ...service,
@@ -253,15 +260,20 @@ const ServiceDetailTabs = ({
     };
     
     // Call the PDF generator utility with updated service
-    const result = generatePDF(updatedService);
+    const result = pdfUtils.generatePDF(updatedService);
     
     if (result) {
       setPdfGenerated(true);
+      toast({
+        description: "PDF gerado com sucesso. Clique em 'Baixar PDF' para salvar o arquivo."
+      });
     }
   };
 
   // Handle PDF download
   const handleDownloadPDF = () => {
+    if (!pdfUtils) return;
+    
     // Create updated service object with form data
     const updatedService = {
       ...service,
@@ -294,7 +306,11 @@ const ServiceDetailTabs = ({
     };
     
     // Call the PDF download utility
-    downloadPDF(updatedService);
+    pdfUtils.downloadPDF(updatedService);
+    
+    toast({
+      description: "O PDF está sendo baixado."
+    });
   };
 
   return (
