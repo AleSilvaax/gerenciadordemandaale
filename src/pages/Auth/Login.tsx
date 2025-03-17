@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,49 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [supabaseReady, setSupabaseReady] = useState(false);
+  const { signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Verificar se o Supabase está configurado corretamente
+  useEffect(() => {
+    const checkSupabase = async () => {
+      try {
+        // Tenta fazer uma consulta simples para verificar a conexão
+        const { error } = await supabase.from('profiles').select('count').limit(1);
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error("Erro na conexão com Supabase:", error);
+          toast({
+            title: "Problema de conexão",
+            description: "Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.",
+            variant: "destructive",
+          });
+        } else {
+          setSupabaseReady(true);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar conexão:", error);
+      }
+    };
+
+    checkSupabase();
+  }, [toast]);
+
+  // Se o usuário já estiver autenticado, redirecionar
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   // Redirecionar para a página anterior caso exista
   const from = location.state?.from?.pathname || "/";
@@ -36,11 +70,14 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log("Tentando fazer login...");
       const success = await signIn(email, password);
       
       if (success) {
+        console.log("Login bem-sucedido, redirecionando para:", from);
         navigate(from, { replace: true });
       } else {
+        console.log("Login falhou");
         toast({
           title: "Falha no login",
           description: "Verifique suas credenciais e tente novamente.",
@@ -58,6 +95,17 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  if (!supabaseReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Conectando ao servidor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

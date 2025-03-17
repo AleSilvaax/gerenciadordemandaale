@@ -14,34 +14,57 @@ export interface UserProfile {
 // Buscar perfil do usuário atual
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   try {
+    console.log("Buscando perfil do usuário atual...");
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) return null;
+    if (!user) {
+      console.log("Nenhum usuário logado");
+      return null;
+    }
     
-    const { data, error } = await supabase
+    console.log("Usuário autenticado encontrado:", user.id);
+    
+    // Buscar o perfil do usuário na tabela profiles
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, avatar')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     
-    if (error) throw error;
+    if (profileError) {
+      console.error("Erro ao buscar perfil:", profileError);
+      throw profileError;
+    }
+    
+    // Se não encontrou perfil, provavelmente é um usuário novo ou não tem perfil ainda
+    if (!profile) {
+      console.log("Perfil não encontrado, verificando se precisa ser criado");
+      return null;
+    }
+    
+    console.log("Perfil encontrado:", profile);
     
     // Buscar as funções do usuário
-    const { data: roles, error: rolesError } = await supabase
+    const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .maybeSingle();
       
-    if (rolesError) throw rolesError;
-      
-    // Assumir primeira função como principal (pode melhorar isso no futuro)
-    const primaryRole = roles && roles.length > 0 ? roles[0].role : 'tecnico';
+    if (roleError && roleError.code !== 'PGRST116') {
+      console.error("Erro ao buscar função do usuário:", roleError);
+      throw roleError;
+    }
+    
+    // Definir a função padrão como 'tecnico' se não encontrar
+    const role = roleData?.role || 'tecnico';
+    console.log("Função do usuário:", role);
     
     return {
-      id: data.id,
-      name: data.name,
-      avatar: data.avatar || '',
-      role: primaryRole
+      id: profile.id,
+      name: profile.name || 'Usuário',
+      avatar: profile.avatar || '',
+      role: role
     };
   } catch (error) {
     console.error("Erro ao buscar perfil:", error);
@@ -53,25 +76,37 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 // Buscar todos os membros da equipe
 export async function getAllTeamMembers(): Promise<UserProfile[]> {
   try {
-    const { data, error } = await supabase
+    console.log("Buscando todos os membros da equipe...");
+    
+    // Buscar todos os perfis
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        name,
-        avatar,
-        user_roles:user_roles(role)
-      `);
+      .select('id, name, avatar');
     
-    if (error) throw error;
+    if (profilesError) throw profilesError;
     
-    return data.map((profile: any) => ({
-      id: profile.id,
-      name: profile.name,
-      avatar: profile.avatar || '',
-      role: profile.user_roles && profile.user_roles.length > 0 
-        ? profile.user_roles[0].role 
-        : 'tecnico'
-    }));
+    console.log("Perfis encontrados:", profiles?.length || 0);
+    
+    // Para cada perfil, buscar a função
+    const members: UserProfile[] = [];
+    
+    for (const profile of profiles || []) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+      
+      members.push({
+        id: profile.id,
+        name: profile.name || 'Usuário',
+        avatar: profile.avatar || '',
+        role: roleData?.role || 'tecnico'
+      });
+    }
+    
+    console.log("Membros da equipe processados:", members.length);
+    return members;
   } catch (error) {
     console.error("Erro ao buscar membros da equipe:", error);
     toast.error("Erro ao carregar membros da equipe");
@@ -82,6 +117,7 @@ export async function getAllTeamMembers(): Promise<UserProfile[]> {
 // Atualizar perfil do usuário
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<boolean> {
   try {
+    console.log("Atualizando perfil do usuário:", userId);
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -105,6 +141,7 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
 // Atualizar avatar com upload de arquivo
 export async function updateProfileAvatar(userId: string, file: File): Promise<boolean> {
   try {
+    console.log("Atualizando avatar do usuário:", userId);
     const avatarUrl = await updateUserAvatar(userId, file);
     
     if (!avatarUrl) {
@@ -123,35 +160,43 @@ export async function updateProfileAvatar(userId: string, file: File): Promise<b
 // Buscar técnicos (usuários com função 'tecnico')
 export async function getTechnicians(): Promise<UserProfile[]> {
   try {
-    // Corrigir a consulta para obter os IDs dos técnicos primeiro
-    const { data: userRoles, error: rolesError } = await supabase
+    console.log("Buscando técnicos...");
+    
+    // Buscar os IDs dos usuários com função 'tecnico'
+    const { data: technicianRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('role', 'tecnico');
     
     if (rolesError) throw rolesError;
     
-    if (!userRoles || userRoles.length === 0) {
+    if (!technicianRoles || technicianRoles.length === 0) {
+      console.log("Nenhum técnico encontrado");
       return [];
     }
     
+    console.log("Técnicos encontrados:", technicianRoles.length);
+    
     // Extrair os IDs dos técnicos
-    const technicianIds = userRoles.map(role => role.user_id);
+    const technicianIds = technicianRoles.map(role => role.user_id);
     
     // Buscar os perfis dos técnicos
-    const { data, error } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, name, avatar')
       .in('id', technicianIds);
     
-    if (error) throw error;
+    if (profilesError) throw profilesError;
     
-    return data?.map((profile: any) => ({
+    const technicians = profiles?.map(profile => ({
       id: profile.id,
-      name: profile.name,
+      name: profile.name || 'Técnico',
       avatar: profile.avatar || '',
       role: 'tecnico'
     })) || [];
+    
+    console.log("Perfis de técnicos processados:", technicians.length);
+    return technicians;
   } catch (error) {
     console.error("Erro ao buscar técnicos:", error);
     toast.error("Erro ao carregar lista de técnicos");

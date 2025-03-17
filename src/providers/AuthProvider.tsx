@@ -36,11 +36,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkSession = async () => {
       try {
+        console.log("Verificando sessão...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
+          console.log("Sessão encontrada, buscando perfil...");
           const profile = await getCurrentUserProfile();
+          console.log("Perfil obtido:", profile);
           setUser(profile);
+        } else {
+          console.log("Nenhuma sessão encontrada");
         }
       } catch (error) {
         console.error("Erro ao verificar sessão:", error);
@@ -54,10 +59,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Monitorar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Evento de autenticação:", event);
+        
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          console.log("Usuário logado ou atualizado, buscando perfil...");
           const profile = await getCurrentUserProfile();
+          console.log("Perfil atualizado:", profile);
           setUser(profile);
         } else if (event === 'SIGNED_OUT') {
+          console.log("Usuário deslogado");
           setUser(null);
           navigate('/login');
         }
@@ -72,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Login com email e senha
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log("Tentando login com:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -80,7 +91,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
 
       if (data.user) {
+        console.log("Login bem-sucedido, buscando perfil...");
         const profile = await getCurrentUserProfile();
+        console.log("Perfil obtido após login:", profile);
         setUser(profile);
         return true;
       }
@@ -95,6 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Registrar novo usuário
   const signUp = async (email: string, password: string, name: string): Promise<boolean> => {
     try {
+      console.log("Registrando novo usuário:", email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -122,6 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Logout
   const signOut = async (): Promise<void> => {
     try {
+      console.log("Realizando logout...");
       await supabase.auth.signOut();
       setUser(null);
       navigate('/login');
@@ -136,6 +151,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if (!user) return false;
       
+      console.log("Atualizando perfil:", data);
       const { error } = await supabase
         .from('profiles')
         .update({
