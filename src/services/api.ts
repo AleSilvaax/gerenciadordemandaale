@@ -1,7 +1,47 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Service, ServiceStatus, ReportData } from "@/types/service";
 import { toast } from "sonner";
+
+// Convert database service format to application service format
+export function convertDbServiceToAppService(dbService: any): Service {
+  return {
+    id: dbService.id,
+    title: dbService.title,
+    status: dbService.status as ServiceStatus,
+    location: dbService.location,
+    number: dbService.number,
+    technician: {
+      id: dbService.technician?.id || "",
+      name: dbService.technician?.name || "Não atribuído",
+      avatar: dbService.technician?.avatar || "",
+    },
+    reportData: dbService.report_data ? {
+      client: dbService.report_data.client || "",
+      address: dbService.report_data.address || "",
+      city: dbService.report_data.city || "",
+      executedBy: dbService.report_data.executed_by || "",
+      installationDate: dbService.report_data.installation_date || "",
+      modelNumber: dbService.report_data.model_number || "",
+      serialNumberNew: dbService.report_data.serial_number_new || "",
+      serialNumberOld: dbService.report_data.serial_number_old || "",
+      homologatedName: dbService.report_data.homologated_name || "",
+      compliesWithNBR17019: dbService.report_data.complies_with_nbr17019 || false,
+      homologatedInstallation: dbService.report_data.homologated_installation || false,
+      requiredAdjustment: dbService.report_data.required_adjustment || false,
+      adjustmentDescription: dbService.report_data.adjustment_description || "",
+      validWarranty: dbService.report_data.valid_warranty || false,
+      circuitBreakerEntry: dbService.report_data.circuit_breaker_entry || "",
+      chargerCircuitBreaker: dbService.report_data.charger_circuit_breaker || "",
+      cableGauge: dbService.report_data.cable_gauge || "",
+      chargerStatus: dbService.report_data.charger_status || "",
+      technicalComments: dbService.report_data.technical_comments || "",
+    } : {} as ReportData,
+    photos: (dbService.service_photos || []).map((photo: any) => photo.photo_url),
+  };
+}
+
+// Function aliases to ensure backwards compatibility
+export const getServices = getAllServices;
 
 // Obter todas as demandas (serviços)
 export async function getAllServices() {
@@ -279,6 +319,24 @@ export async function addServicePhoto(serviceId: string, photoUrl: string) {
   } catch (error) {
     console.error("Erro ao adicionar foto:", error);
     toast.error("Erro ao adicionar foto");
+    return false;
+  }
+}
+
+// Remover uma foto de um serviço
+export async function removeServicePhoto(photoId: string) {
+  try {
+    const { error } = await supabase
+      .from('service_photos')
+      .delete()
+      .eq('id', photoId);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao remover foto:", error);
+    toast.error("Erro ao remover foto");
     return false;
   }
 }

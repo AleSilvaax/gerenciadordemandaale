@@ -1,5 +1,5 @@
 
-import { Service } from "@/data/mockData";
+import { Service } from "@/types/service";
 
 export interface ServiceFormData {
   title: string;

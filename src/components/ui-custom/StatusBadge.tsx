@@ -1,11 +1,10 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-
-type StatusType = "concluido" | "pendente" | "cancelado";
+import { ServiceStatus } from "@/types/service";
 
 interface StatusBadgeProps {
-  status: StatusType;
+  status: ServiceStatus;
   className?: string;
 }
 
@@ -18,3 +17,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) =
     </span>
   );
 };
+
+// Default export for React.lazy()
+export default StatusBadge;

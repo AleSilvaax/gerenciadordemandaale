@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Search, Plus, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/providers/AuthProvider";
 import { Service, ServiceStatus } from "@/types/service";
-import { getServices, deleteService, convertDbServiceToAppService } from "@/services/api";
+import { getAllServices, deleteService, convertDbServiceToAppService } from "@/services/api";
 import { Loader2 } from "lucide-react";
 
 const Demandas: React.FC = () => {
@@ -33,11 +32,8 @@ const Demandas: React.FC = () => {
     const fetchServices = async () => {
       setIsLoading(true);
       try {
-        const servicesData = await getServices();
-        const formattedServices = servicesData.map((service: any) => 
-          convertDbServiceToAppService(service)
-        );
-        setServicesList(formattedServices);
+        const servicesData = await getAllServices();
+        setServicesList(servicesData);
       } catch (error) {
         console.error("Erro ao buscar demandas:", error);
         toast({
