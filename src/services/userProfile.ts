@@ -123,25 +123,25 @@ export async function updateProfileAvatar(userId: string, file: File): Promise<b
 // Buscar técnicos (usuários com função 'tecnico')
 export async function getTechnicians(): Promise<UserProfile[]> {
   try {
-    // Fix the query to correctly retrieve technician profiles
-    const { data: userRoles } = await supabase
+    // Corrigir a consulta para obter os IDs dos técnicos primeiro
+    const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('role', 'tecnico');
+    
+    if (rolesError) throw rolesError;
     
     if (!userRoles || userRoles.length === 0) {
       return [];
     }
     
+    // Extrair os IDs dos técnicos
     const technicianIds = userRoles.map(role => role.user_id);
     
+    // Buscar os perfis dos técnicos
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        name,
-        avatar
-      `)
+      .select('id, name, avatar')
       .in('id', technicianIds);
     
     if (error) throw error;

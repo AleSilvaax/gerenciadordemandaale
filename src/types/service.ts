@@ -5,7 +5,7 @@ export interface TeamMember {
   id: string;
   name: string;
   avatar: string;
-  role?: string; // Changed from optional specific string to optional generic string
+  role?: string;
 }
 
 export interface ReportData {
