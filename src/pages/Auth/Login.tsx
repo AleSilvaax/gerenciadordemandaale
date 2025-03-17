@@ -14,31 +14,38 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [supabaseReady, setSupabaseReady] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
   const { signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Verificar se o Supabase está configurado corretamente
+  // Verificar se o Supabase está configurado corretamente com um timeout
   useEffect(() => {
     const checkSupabase = async () => {
       try {
+        // Definir um timeout para a verificação de conexão
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout na conexão com o servidor")), 5000);
+        });
+
         // Tenta fazer uma consulta simples para verificar a conexão
-        const { error } = await supabase.from('profiles').select('count').limit(1);
+        const connectionPromise = supabase.from('profiles').select('count').limit(1);
         
-        if (error && error.code !== 'PGRST116') {
-          console.error("Erro na conexão com Supabase:", error);
-          toast({
-            title: "Problema de conexão",
-            description: "Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.",
-            variant: "destructive",
-          });
-        } else {
-          setSupabaseReady(true);
-        }
+        // Usar Promise.race para limitar o tempo de espera
+        await Promise.race([connectionPromise, timeoutPromise]);
+        
+        setCheckingConnection(false);
       } catch (error) {
         console.error("Erro ao verificar conexão:", error);
+        setConnectionError(true);
+        setCheckingConnection(false);
+        toast({
+          title: "Problema de conexão",
+          description: "Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.",
+          variant: "destructive",
+        });
       }
     };
 
@@ -96,12 +103,37 @@ const Login = () => {
     }
   };
 
-  if (!supabaseReady) {
+  if (checkingConnection) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p>Conectando ao servidor...</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 text-primary hover:underline text-sm"
+          >
+            Clique aqui se demorar muito
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-4">Erro de Conexão</h1>
+          <p className="text-muted-foreground mb-6">
+            Não foi possível conectar ao servidor. Verifique sua conexão com a internet ou tente novamente mais tarde.
+          </p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="w-full"
+          >
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );
