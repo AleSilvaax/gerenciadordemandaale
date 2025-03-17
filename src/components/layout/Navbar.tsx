@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { List, Home, FileText, BarChart2, Users, User, LogOut } from "lucide-react";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { cn } from "@/lib/utils";
 import {
@@ -24,11 +23,10 @@ const menuItems = [
 
 export const Navbar = () => {
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
 
-  // Fecha o menu quando a rota muda em mobile
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);

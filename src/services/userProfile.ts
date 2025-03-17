@@ -40,7 +40,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     return {
       id: data.id,
       name: data.name,
-      avatar: data.avatar,
+      avatar: data.avatar || '',
       role: primaryRole
     };
   } catch (error) {
@@ -59,7 +59,7 @@ export async function getAllTeamMembers(): Promise<UserProfile[]> {
         id,
         name,
         avatar,
-        user_roles(role)
+        user_roles:user_roles(role)
       `);
     
     if (error) throw error;
@@ -67,7 +67,7 @@ export async function getAllTeamMembers(): Promise<UserProfile[]> {
     return data.map((profile: any) => ({
       id: profile.id,
       name: profile.name,
-      avatar: profile.avatar,
+      avatar: profile.avatar || '',
       role: profile.user_roles && profile.user_roles.length > 0 
         ? profile.user_roles[0].role 
         : 'tecnico'
@@ -130,16 +130,21 @@ export async function getTechnicians(): Promise<UserProfile[]> {
         name,
         avatar
       `)
-      .in('id', supabase.from('user_roles').select('user_id').eq('role', 'tecnico'));
+      .in('id', 
+        supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'tecnico')
+      );
     
     if (error) throw error;
     
-    return data.map((profile: any) => ({
+    return data?.map((profile: any) => ({
       id: profile.id,
       name: profile.name,
-      avatar: profile.avatar,
+      avatar: profile.avatar || '',
       role: 'tecnico'
-    }));
+    })) || [];
   } catch (error) {
     console.error("Erro ao buscar técnicos:", error);
     toast.error("Erro ao carregar lista de técnicos");

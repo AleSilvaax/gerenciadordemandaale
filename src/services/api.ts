@@ -1,256 +1,303 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Service, ServiceStatus } from "@/types/service";
+import { Service, ServiceStatus, ReportData } from "@/types/service";
 import { toast } from "sonner";
 
-// Obter todas as demandas
-export async function getServices() {
+// Obter todas as demandas (serviços)
+export async function getAllServices() {
   try {
     const { data, error } = await supabase
       .from('services')
       .select(`
         *,
-        technician:technician_id (id, name, avatar),
+        technician:profiles(id, name, avatar),
         report_data(*),
-        photos:service_photos(id, photo_url)
-      `)
-      .order('created_at', { ascending: false });
+        service_photos(photo_url)
+      `);
 
     if (error) throw error;
-    return data || [];
+
+    // Transformar os dados para o formato da interface Service
+    return data.map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      status: item.status as ServiceStatus,
+      location: item.location,
+      number: item.number,
+      technician: {
+        id: item.technician?.id || "",
+        name: item.technician?.name || "Não atribuído",
+        avatar: item.technician?.avatar || "",
+      },
+      reportData: item.report_data ? {
+        client: item.report_data.client || "",
+        address: item.report_data.address || "",
+        city: item.report_data.city || "",
+        executedBy: item.report_data.executed_by || "",
+        installationDate: item.report_data.installation_date || "",
+        modelNumber: item.report_data.model_number || "",
+        serialNumberNew: item.report_data.serial_number_new || "",
+        serialNumberOld: item.report_data.serial_number_old || "",
+        homologatedName: item.report_data.homologated_name || "",
+        compliesWithNBR17019: item.report_data.complies_with_nbr17019 || false,
+        homologatedInstallation: item.report_data.homologated_installation || false,
+        requiredAdjustment: item.report_data.required_adjustment || false,
+        adjustmentDescription: item.report_data.adjustment_description || "",
+        validWarranty: item.report_data.valid_warranty || false,
+        circuitBreakerEntry: item.report_data.circuit_breaker_entry || "",
+        chargerCircuitBreaker: item.report_data.charger_circuit_breaker || "",
+        cableGauge: item.report_data.cable_gauge || "",
+        chargerStatus: item.report_data.charger_status || "",
+        technicalComments: item.report_data.technical_comments || "",
+      } : {} as ReportData,
+      photos: (item.service_photos || []).map((photo: any) => photo.photo_url),
+    }));
   } catch (error) {
-    console.error("Erro ao buscar demandas:", error);
-    toast.error("Erro ao carregar demandas");
+    console.error("Erro ao buscar serviços:", error);
+    toast.error("Erro ao carregar as demandas");
     return [];
   }
 }
 
-// Obter uma demanda específica
-export async function getServiceById(id: string) {
+// Criar uma nova demanda (serviço)
+export async function createService(serviceData: {
+  title: string;
+  location: string;
+  technician_id?: string;
+}) {
   try {
+    // Gerar um número sequencial para o serviço
+    const { count, error: countError } = await supabase
+      .from('services')
+      .select('*', { count: 'exact' });
+    
+    if (countError) throw countError;
+    
+    const serviceNumber = `SV${(count || 0) + 1}`.padStart(6, '0');
+    
     const { data, error } = await supabase
       .from('services')
-      .select(`
-        *,
-        technician:technician_id (id, name, avatar),
-        report_data(*),
-        photos:service_photos(id, photo_url)
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error(`Erro ao buscar demanda ${id}:`, error);
-    toast.error("Erro ao carregar dados da demanda");
-    return null;
-  }
-}
-
-// Criar uma nova demanda
-export async function createService(serviceData: Partial<Service>) {
-  try {
-    // Primeiro, criamos o registro do serviço
-    const { data: service, error } = await supabase
-      .from('services')
       .insert({
-        number: serviceData.id || `SRV${Date.now().toString().slice(-8)}`,
-        title: serviceData.title || 'Nova Demanda',
-        status: serviceData.status || 'pendente',
-        location: serviceData.location || '',
-        technician_id: serviceData.technician?.id || null
+        number: serviceNumber,
+        title: serviceData.title,
+        status: 'pendente',
+        location: serviceData.location,
+        technician_id: serviceData.technician_id || null,
       })
-      .select()
-      .single();
-
+      .select();
+    
     if (error) throw error;
-
-    // Em seguida, criamos os dados do relatório
-    if (service) {
-      const { error: reportError } = await supabase
+    
+    if (data && data.length > 0) {
+      // Criar entrada inicial de dados do relatório
+      await supabase
         .from('report_data')
         .insert({
-          id: service.id,
-          client: serviceData.reportData?.client || '',
-          address: serviceData.reportData?.address || '',
-          city: serviceData.reportData?.city || '',
-          // ... outros campos do relatório
+          id: data[0].id,
+          client: '',
+          address: '',
+          city: '',
         });
-
-      if (reportError) throw reportError;
+      
+      return data[0].id;
     }
-
-    // Adicionar fotos, se existirem
-    if (service && serviceData.photos && serviceData.photos.length > 0) {
-      const photoInserts = serviceData.photos.map(photoUrl => ({
-        service_id: service.id,
-        photo_url: photoUrl
-      }));
-
-      const { error: photosError } = await supabase
-        .from('service_photos')
-        .insert(photoInserts);
-
-      if (photosError) throw photosError;
-    }
-
-    toast.success("Demanda criada com sucesso");
-    return service;
+    
+    return null;
   } catch (error) {
-    console.error("Erro ao criar demanda:", error);
-    toast.error("Erro ao criar demanda");
+    console.error("Erro ao criar serviço:", error);
+    toast.error("Erro ao criar nova demanda");
     return null;
   }
 }
 
-// Atualizar uma demanda existente
-export async function updateService(id: string, serviceData: Partial<Service>) {
+// Salvar fotos para uma demanda
+export async function saveServicePhotos(serviceId: string, photoUrls: string[]) {
   try {
-    // Atualizar dados básicos do serviço
+    const photosToInsert = photoUrls.map(url => ({
+      service_id: serviceId,
+      photo_url: url,
+    }));
+    
+    const { error } = await supabase
+      .from('service_photos')
+      .insert(photosToInsert);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar fotos:", error);
+    toast.error("Erro ao salvar fotos do serviço");
+    return false;
+  }
+}
+
+// Atualizar uma demanda
+export async function updateService(serviceId: string, serviceData: {
+  title?: string;
+  status?: ServiceStatus;
+  location?: string;
+  technician_id?: string;
+}) {
+  try {
     const { error } = await supabase
       .from('services')
       .update({
         title: serviceData.title,
         status: serviceData.status,
         location: serviceData.location,
-        technician_id: serviceData.technician?.id,
-        updated_at: new Date().toISOString()
+        technician_id: serviceData.technician_id,
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
-
+      .eq('id', serviceId);
+    
     if (error) throw error;
-
-    // Atualizar dados do relatório
-    if (serviceData.reportData) {
-      const { error: reportError } = await supabase
-        .from('report_data')
-        .upsert({
-          id: id,
-          client: serviceData.reportData.client,
-          address: serviceData.reportData.address,
-          city: serviceData.reportData.city,
-          executed_by: serviceData.reportData.executedBy,
-          installation_date: serviceData.reportData.installationDate,
-          model_number: serviceData.reportData.modelNumber,
-          serial_number_new: serviceData.reportData.serialNumberNew,
-          serial_number_old: serviceData.reportData.serialNumberOld,
-          homologated_name: serviceData.reportData.homologatedName,
-          complies_with_nbr17019: serviceData.reportData.compliesWithNBR17019,
-          homologated_installation: serviceData.reportData.homologatedInstallation,
-          required_adjustment: serviceData.reportData.requiredAdjustment,
-          adjustment_description: serviceData.reportData.adjustmentDescription,
-          valid_warranty: serviceData.reportData.validWarranty,
-          circuit_breaker_entry: serviceData.reportData.circuitBreakerEntry,
-          charger_circuit_breaker: serviceData.reportData.chargerCircuitBreaker,
-          cable_gauge: serviceData.reportData.cableGauge,
-          charger_status: serviceData.reportData.chargerStatus,
-          technical_comments: serviceData.reportData.technicalComments,
-          updated_at: new Date().toISOString()
-        });
-
-      if (reportError) throw reportError;
-    }
-
-    toast.success("Demanda atualizada com sucesso");
+    
     return true;
   } catch (error) {
-    console.error(`Erro ao atualizar demanda ${id}:`, error);
+    console.error("Erro ao atualizar serviço:", error);
     toast.error("Erro ao atualizar demanda");
     return false;
   }
 }
 
-// Excluir uma demanda
-export async function deleteService(id: string) {
+// Atualizar os dados do relatório
+export async function updateReportData(serviceId: string, reportData: Partial<ReportData>) {
   try {
-    // Ao excluir o serviço, as entradas relacionadas em report_data e service_photos 
-    // serão excluídas automaticamente devido à restrição ON DELETE CASCADE
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
+    // Converter dados do frontend para o formato do banco
+    const dbReportData = {
+      id: serviceId,
+      client: reportData.client,
+      address: reportData.address,
+      city: reportData.city,
+      executed_by: reportData.executedBy,
+      installation_date: reportData.installationDate,
+      model_number: reportData.modelNumber,
+      serial_number_new: reportData.serialNumberNew,
+      serial_number_old: reportData.serialNumberOld,
+      homologated_name: reportData.homologatedName,
+      complies_with_nbr17019: reportData.compliesWithNBR17019,
+      homologated_installation: reportData.homologatedInstallation,
+      required_adjustment: reportData.requiredAdjustment,
+      adjustment_description: reportData.adjustmentDescription,
+      valid_warranty: reportData.validWarranty,
+      circuit_breaker_entry: reportData.circuitBreakerEntry,
+      charger_circuit_breaker: reportData.chargerCircuitBreaker,
+      cable_gauge: reportData.cableGauge,
+      charger_status: reportData.chargerStatus,
+      technical_comments: reportData.technicalComments,
+      updated_at: new Date().toISOString(),
+    };
 
+    const { error } = await supabase
+      .from('report_data')
+      .upsert(dbReportData, { onConflict: 'id' });
+    
     if (error) throw error;
     
-    toast.success("Demanda excluída com sucesso");
     return true;
   } catch (error) {
-    console.error(`Erro ao excluir demanda ${id}:`, error);
-    toast.error("Erro ao excluir demanda");
+    console.error("Erro ao atualizar dados do relatório:", error);
+    toast.error("Erro ao salvar dados do relatório");
     return false;
   }
 }
 
-// Adicionar foto a um serviço
+// Obter uma demanda específica pelo ID
+export async function getServiceById(serviceId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select(`
+        *,
+        technician:profiles(id, name, avatar),
+        report_data(*),
+        service_photos(photo_url)
+      `)
+      .eq('id', serviceId)
+      .single();
+    
+    if (error) throw error;
+    
+    if (!data) return null;
+    
+    // Transformar os dados para o formato da interface Service
+    return {
+      id: data.id,
+      title: data.title,
+      status: data.status as ServiceStatus,
+      location: data.location,
+      number: data.number,
+      technician: {
+        id: data.technician?.id || "",
+        name: data.technician?.name || "Não atribuído",
+        avatar: data.technician?.avatar || "",
+      },
+      reportData: data.report_data ? {
+        client: data.report_data.client || "",
+        address: data.report_data.address || "",
+        city: data.report_data.city || "",
+        executedBy: data.report_data.executed_by || "",
+        installationDate: data.report_data.installation_date || "",
+        modelNumber: data.report_data.model_number || "",
+        serialNumberNew: data.report_data.serial_number_new || "",
+        serialNumberOld: data.report_data.serial_number_old || "",
+        homologatedName: data.report_data.homologated_name || "",
+        compliesWithNBR17019: data.report_data.complies_with_nbr17019 || false,
+        homologatedInstallation: data.report_data.homologated_installation || false,
+        requiredAdjustment: data.report_data.required_adjustment || false,
+        adjustmentDescription: data.report_data.adjustment_description || "",
+        validWarranty: data.report_data.valid_warranty || false,
+        circuitBreakerEntry: data.report_data.circuit_breaker_entry || "",
+        chargerCircuitBreaker: data.report_data.charger_circuit_breaker || "",
+        cableGauge: data.report_data.cable_gauge || "",
+        chargerStatus: data.report_data.charger_status || "",
+        technicalComments: data.report_data.technical_comments || "",
+      } : {} as ReportData,
+      photos: (data.service_photos || []).map((photo: any) => photo.photo_url),
+    };
+  } catch (error) {
+    console.error("Erro ao buscar serviço:", error);
+    toast.error("Erro ao carregar detalhes da demanda");
+    return null;
+  }
+}
+
+// Adicionar uma foto a um serviço
 export async function addServicePhoto(serviceId: string, photoUrl: string) {
   try {
     const { error } = await supabase
       .from('service_photos')
       .insert({
         service_id: serviceId,
-        photo_url: photoUrl
+        photo_url: photoUrl,
       });
-
+    
     if (error) throw error;
     
-    toast.success("Foto adicionada com sucesso");
     return true;
   } catch (error) {
-    console.error(`Erro ao adicionar foto à demanda ${serviceId}:`, error);
+    console.error("Erro ao adicionar foto:", error);
     toast.error("Erro ao adicionar foto");
     return false;
   }
 }
 
-// Remover foto de um serviço
-export async function removeServicePhoto(photoId: string) {
+// Excluir uma demanda
+export async function deleteService(serviceId: string) {
   try {
+    // As tabelas relacionadas serão excluídas automaticamente devido ao ON DELETE CASCADE
     const { error } = await supabase
-      .from('service_photos')
+      .from('services')
       .delete()
-      .eq('id', photoId);
-
+      .eq('id', serviceId);
+    
     if (error) throw error;
     
-    toast.success("Foto removida com sucesso");
     return true;
   } catch (error) {
-    console.error(`Erro ao remover foto ${photoId}:`, error);
-    toast.error("Erro ao remover foto");
+    console.error("Erro ao excluir serviço:", error);
+    toast.error("Erro ao excluir demanda");
     return false;
   }
-}
-
-// Conversor para compatibilidade com a estrutura original
-export function convertDbServiceToAppService(dbService: any): Service {
-  return {
-    id: dbService.number,
-    title: dbService.title,
-    status: dbService.status as ServiceStatus,
-    location: dbService.location,
-    technician: dbService.technician || { id: '', name: '', avatar: '' },
-    reportData: {
-      client: dbService.report_data?.client || '',
-      address: dbService.report_data?.address || '',
-      city: dbService.report_data?.city || '',
-      executedBy: dbService.report_data?.executed_by || '',
-      installationDate: dbService.report_data?.installation_date || '',
-      modelNumber: dbService.report_data?.model_number || '',
-      serialNumberNew: dbService.report_data?.serial_number_new || '',
-      serialNumberOld: dbService.report_data?.serial_number_old || '',
-      homologatedName: dbService.report_data?.homologated_name || '',
-      compliesWithNBR17019: dbService.report_data?.complies_with_nbr17019 || false,
-      homologatedInstallation: dbService.report_data?.homologated_installation || false,
-      requiredAdjustment: dbService.report_data?.required_adjustment || false,
-      adjustmentDescription: dbService.report_data?.adjustment_description || '',
-      validWarranty: dbService.report_data?.valid_warranty || false,
-      circuitBreakerEntry: dbService.report_data?.circuit_breaker_entry || '',
-      chargerCircuitBreaker: dbService.report_data?.charger_circuit_breaker || '',
-      cableGauge: dbService.report_data?.cable_gauge || '',
-      chargerStatus: dbService.report_data?.charger_status || '',
-      technicalComments: dbService.report_data?.technical_comments || ''
-    },
-    photos: dbService.photos ? dbService.photos.map((p: any) => p.photo_url) : []
-  };
 }

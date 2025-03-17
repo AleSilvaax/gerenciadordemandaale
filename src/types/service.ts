@@ -38,4 +38,5 @@ export interface Service {
   technician: TeamMember;
   reportData: ReportData;
   photos: string[];
+  number?: string;
 }
