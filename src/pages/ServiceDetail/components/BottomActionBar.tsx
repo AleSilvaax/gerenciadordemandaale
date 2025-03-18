@@ -10,6 +10,7 @@ interface BottomActionBarProps {
   onCancel: () => void;
   onGeneratePDF: () => void;
   onDownloadPDF: () => void;
+  onSave: () => void;
 }
 
 const BottomActionBar: React.FC<BottomActionBarProps> = ({
@@ -18,7 +19,8 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   status,
   onCancel,
   onGeneratePDF,
-  onDownloadPDF
+  onDownloadPDF,
+  onSave
 }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
@@ -47,7 +49,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
               Baixar PDF
             </Button>
           )}
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="button" onClick={onSave} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <span className="animate-spin mr-2">

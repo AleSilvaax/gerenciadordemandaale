@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Service, ServiceStatus, ReportData } from "@/types/service";
+import { Service, ServiceStatus, ReportData, TeamMember } from "@/types/service";
 import { toast } from "sonner";
 
 // Convert database service format to application service format
@@ -15,11 +15,11 @@ export function convertDbServiceToAppService(dbService: any): Service {
     location: dbService.location,
     number: dbService.number,
     technicians: technicians.map((tech: any) => ({
-      id: tech.id || "",
-      name: tech.name || "Não atribuído",
-      avatar: tech.avatar || "",
-      role: tech.role || "tecnico"
-    })),
+      id: tech.technician?.id || "",
+      name: tech.technician?.name || "Não atribuído",
+      avatar: tech.technician?.avatar || "",
+      role: tech.technician?.role || "tecnico"
+    })).filter((tech: any) => tech.id),
     reportData: dbService.report_data ? {
       client: dbService.report_data.client || "",
       address: dbService.report_data.address || "",
@@ -55,8 +55,8 @@ export async function getAllServices() {
       .from('services')
       .select(`
         *,
-        technicians:service_technicians(
-          technician:profiles(id, name, avatar, role)
+        service_technicians(
+          technician:profiles(id, name, avatar)
         ),
         report_data(*),
         service_photos(photo_url)
@@ -67,10 +67,10 @@ export async function getAllServices() {
     // Transformar os dados para o formato da interface Service
     return data.map((item: any) => {
       // Extract technicians from nested structure
-      const technicians = item.technicians 
-        ? item.technicians.map((tech: any) => tech.technician).filter(Boolean)
+      const technicians = item.service_technicians 
+        ? item.service_technicians.map((tech: any) => tech.technician).filter(Boolean)
         : [];
-        
+
       return {
         id: item.id,
         title: item.title,
@@ -109,6 +109,22 @@ export async function getAllServices() {
   }
 }
 
+// Função para obter o próximo valor de sequência
+async function getNextSequenceValue(sequenceName: string) {
+  try {
+    // Using raw SQL query since rpc has typing issues
+    const { data, error } = await supabase
+      .rpc('nextval_for_service', { seq_name: sequenceName });
+    
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error("Erro ao obter próximo valor de sequência:", error);
+    return null;
+  }
+}
+
 // Criar uma nova demanda (serviço)
 export async function createService(serviceData: {
   title: string;
@@ -117,10 +133,11 @@ export async function createService(serviceData: {
 }) {
   try {
     // Gerar um número sequencial para o serviço
-    const { data: nextVal, error: seqError } = await supabase
-      .rpc('nextval', { seq_name: 'service_number_sequence' });
+    const nextVal = await getNextSequenceValue('service_number_sequence');
     
-    if (seqError) throw seqError;
+    if (!nextVal) {
+      throw new Error("Não foi possível gerar número sequencial");
+    }
     
     const serviceNumber = `SV${String(nextVal).padStart(5, '0')}`;
     
@@ -142,16 +159,13 @@ export async function createService(serviceData: {
       
       // Adicionar os técnicos associados
       if (serviceData.technician_ids.length > 0) {
-        const technicianInserts = serviceData.technician_ids.map(techId => ({
-          service_id: serviceId,
-          technician_id: techId
-        }));
-        
-        // Using plain SQL for now due to typing issues
-        for (const insert of technicianInserts) {
+        for (const techId of serviceData.technician_ids) {
           const { error: techError } = await supabase
             .from('service_technicians')
-            .insert(insert);
+            .insert({
+              service_id: serviceId,
+              technician_id: techId
+            });
             
           if (techError) throw techError;
         }
@@ -178,34 +192,19 @@ export async function createService(serviceData: {
   }
 }
 
-// Função RPC para obter o próximo valor de sequência
-export async function getNextSequenceValue(sequenceName: string) {
-  try {
-    const { data, error } = await supabase
-      .rpc('nextval', { seq_name: sequenceName });
-    
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error("Erro ao obter próximo valor de sequência:", error);
-    return null;
-  }
-}
-
 // Salvar fotos para uma demanda
 export async function saveServicePhotos(serviceId: string, photoUrls: string[]) {
   try {
-    const photosToInsert = photoUrls.map(url => ({
-      service_id: serviceId,
-      photo_url: url,
-    }));
-    
-    const { error } = await supabase
-      .from('service_photos')
-      .insert(photosToInsert);
-    
-    if (error) throw error;
+    for (const url of photoUrls) {
+      const { error } = await supabase
+        .from('service_photos')
+        .insert({
+          service_id: serviceId,
+          photo_url: url,
+        });
+      
+      if (error) throw error;
+    }
     
     return true;
   } catch (error) {
@@ -250,7 +249,6 @@ export async function updateService(serviceId: string, serviceData: {
       
       // Adiciona as novas associações
       if (serviceData.technician_ids.length > 0) {
-        // Using plain SQL for now due to typing issues
         for (const techId of serviceData.technician_ids) {
           const { error: insertError } = await supabase
             .from('service_technicians')
@@ -321,8 +319,8 @@ export async function getServiceById(serviceId: string) {
       .from('services')
       .select(`
         *,
-        technicians:service_technicians(
-          technician:profiles(id, name, avatar, role)
+        service_technicians(
+          technician:profiles(id, name, avatar)
         ),
         report_data(*),
         service_photos(photo_url)
@@ -335,8 +333,8 @@ export async function getServiceById(serviceId: string) {
     if (!data) return null;
     
     // Extract technicians from nested structure
-    const technicians = data.technicians 
-      ? data.technicians.map((tech: any) => tech.technician).filter(Boolean)
+    const technicians = data.service_technicians 
+      ? data.service_technicians.map((tech: any) => tech.technician).filter(Boolean)
       : [];
     
     // Transformar os dados para o formato da interface Service
@@ -430,6 +428,24 @@ export async function deleteService(serviceId: string) {
   } catch (error) {
     console.error("Erro ao excluir serviço:", error);
     toast.error("Erro ao excluir demanda");
+    return false;
+  }
+}
+
+// Atualizar avatar do técnico
+export async function updateTechnicianAvatar(technicianId: string, photoUrl: string) {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar: photoUrl })
+      .eq('id', technicianId);
+    
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar avatar:", error);
+    toast.error("Erro ao atualizar foto do técnico");
     return false;
   }
 }

@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface PhotosTabProps {
   selectedPhotos: string[];
