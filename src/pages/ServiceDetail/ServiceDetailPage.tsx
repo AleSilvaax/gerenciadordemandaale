@@ -153,12 +153,25 @@ const ServiceDetailPage = () => {
       
       setIsSubmitting(true);
       
-      const updatedService: Partial<Service> = {
-        title: formState.title,
-        status: formState.status as ServiceStatus,
-        location: formState.location,
-        technicians: formState.technicianIds.map(id => ({ id, name: "", avatar: "" })),
-        reportData: {
+      try {
+        const updatedService: Partial<Service> = {
+          title: formState.title,
+          status: formState.status as ServiceStatus,
+          location: formState.location,
+          technicians: formState.technicianIds.map(id => ({ 
+            id, 
+            name: "", 
+            avatar: "" 
+          })),
+        };
+        
+        const serviceSuccess = await updateService(id, updatedService);
+        
+        if (!serviceSuccess) {
+          throw new Error("Failed to update service");
+        }
+
+        const reportSuccess = await updateReportData(id, {
           client: formState.client,
           address: formState.address,
           city: formState.city,
@@ -178,20 +191,14 @@ const ServiceDetailPage = () => {
           cableGauge: formState.cableGauge,
           chargerStatus: formState.chargerStatus,
           technicalComments: formState.technicalComments
-        },
-        photos: selectedPhotos
-      };
-      
-      const success = await updateService(id, {
-        title: updatedService.title,
-        status: updatedService.status,
-        location: updatedService.location,
-        technician_ids: formState.technicianIds
-      });
-      
-      setIsSubmitting(false);
-      
-      if (success) {
+        });
+
+        if (!reportSuccess) {
+          throw new Error("Failed to update report data");
+        }
+
+        toast.success("Alterações salvas com sucesso!");
+
         if (formState.status === "concluido" && !pdfGenerated) {
           setTimeout(() => {
             toast({
@@ -204,6 +211,11 @@ const ServiceDetailPage = () => {
             });
           }, 500);
         }
+      } catch (error) {
+        console.error("Error saving changes:", error);
+        toast.error("Erro ao salvar alterações. Por favor, tente novamente.");
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
@@ -218,31 +230,32 @@ const ServiceDetailPage = () => {
       const filePath = `services/${id}/${fileName}`;
 
       try {
-        const { data, error } = await supabase.storage
+        toast.loading("Enviando foto...");
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('service-photos')
           .upload(filePath, file);
 
-        if (error) throw error;
+        if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage
           .from('service-photos')
           .getPublicUrl(filePath);
 
-        if (publicUrlData) {
-          const photoUrl = publicUrlData.publicUrl;
-          
-          const success = await addServicePhoto(id, photoUrl);
-          
-          if (success) {
-            setSelectedPhotos([...selectedPhotos, photoUrl]);
-          }
+        if (!publicUrlData) throw new Error("Failed to get public URL");
+
+        const photoUrl = publicUrlData.publicUrl;
+        const success = await addServicePhoto(id, photoUrl);
+        
+        if (success) {
+          setSelectedPhotos([...selectedPhotos, photoUrl]);
+          toast.success("Foto adicionada com sucesso!");
+        } else {
+          throw new Error("Failed to add photo to service");
         }
       } catch (error) {
-        console.error("Erro ao fazer upload da foto:", error);
-        toast({
-          description: "Erro ao adicionar foto. Por favor, tente novamente.",
-          variant: "destructive",
-        });
+        console.error("Error uploading photo:", error);
+        toast.error("Erro ao adicionar foto. Por favor, tente novamente.");
       }
 
       if (fileInputRef.current) {
@@ -429,6 +442,7 @@ const ServiceDetailPage = () => {
               onCancel={() => navigate('/demandas')}
               onGeneratePDF={handleGeneratePDF}
               onDownloadPDF={handleDownloadPDF}
+              onSave={handleSubmit}
             />
           </form>
         </Tabs>
