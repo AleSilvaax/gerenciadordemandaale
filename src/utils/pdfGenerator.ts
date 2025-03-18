@@ -17,7 +17,12 @@ export const generatePDF = (service: Service): boolean => {
     doc.text(`ID: ${service.id}`, 14, 32);
     doc.text(`Status: ${service.status === 'concluido' ? 'Concluído' : service.status === 'pendente' ? 'Pendente' : 'Cancelado'}`, 14, 38);
     doc.text(`Local: ${service.location}`, 14, 44);
-    doc.text(`Técnico: ${service.technician.name}`, 14, 50);
+    
+    // Add technicians
+    const techniciansText = service.technicians.length > 0
+      ? service.technicians.map(tech => tech.name).join(", ")
+      : "Não atribuído";
+    doc.text(`Técnicos: ${techniciansText}`, 14, 50);
     
     // Add report data
     doc.setFontSize(14);

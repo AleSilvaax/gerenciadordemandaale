@@ -5,7 +5,7 @@ export interface ServiceFormData {
   title: string;
   status: string;
   location: string;
-  technician: string;
+  technicianIds: string[];
   client: string;
   address: string;
   city: string;

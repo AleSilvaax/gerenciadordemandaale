@@ -166,7 +166,7 @@ const NewService = () => {
                       <TeamMemberAvatar
                         src={tech.avatar}
                         name={tech.name}
-                        size="xs"
+                        size="sm"
                       />
                       <span>{tech.name}</span>
                       <button 

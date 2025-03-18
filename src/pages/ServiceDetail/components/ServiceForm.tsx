@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { teamMembers } from "@/data/mockData";
 
 interface ServiceFormProps {
@@ -22,12 +24,29 @@ interface ServiceFormProps {
     title: string;
     location: string;
     status: string;
-    technician: string;
+    technicianIds: string[];
   };
   onChange: (field: string, value: any) => void;
 }
 
 const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
+  const handleAddTechnician = (technicianId: string) => {
+    if (!formState.technicianIds.includes(technicianId)) {
+      onChange('technicianIds', [...formState.technicianIds, technicianId]);
+    }
+  };
+
+  const handleRemoveTechnician = (technicianId: string) => {
+    onChange('technicianIds', formState.technicianIds.filter(id => id !== technicianId));
+  };
+
+  const selectedTechnicians = formState.technicianIds.map(id => 
+    teamMembers.find(tech => tech.id === id)
+  ).filter(Boolean);
+
+  const availableTechnicians = teamMembers
+    .filter(member => member.role === "tecnico" && !formState.technicianIds.includes(member.id));
+  
   return (
     <>
       <div className="space-y-4">
@@ -71,36 +90,63 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
         </FormItem>
 
         <FormItem>
-          <FormLabel>Técnico Responsável</FormLabel>
+          <FormLabel>Técnicos Responsáveis</FormLabel>
+          
+          {/* Display selected technicians */}
+          {selectedTechnicians.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {selectedTechnicians.map(tech => tech && (
+                <Badge key={tech.id} variant="secondary" className="flex items-center gap-1 px-3 py-1.5">
+                  <TeamMemberAvatar
+                    src={tech.avatar}
+                    name={tech.name}
+                    size="sm"
+                  />
+                  <span>{tech.name}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveTechnician(tech.id)}
+                    className="ml-1 text-destructive hover:text-destructive/80"
+                  >
+                    <X size={14} />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+          
+          {/* Add technicians dropdown */}
           <Select
-            value={formState.technician}
-            onValueChange={(value) => onChange("technician", value)}
+            onValueChange={handleAddTechnician}
+            disabled={availableTechnicians.length === 0}
           >
             <FormControl>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o técnico" />
+                <SelectValue placeholder={
+                  availableTechnicians.length > 0 
+                    ? "Adicionar técnico" 
+                    : "Todos os técnicos já foram adicionados"
+                } />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {teamMembers
-                .filter(member => member.role === "tecnico")
-                .map(technician => (
-                  <SelectItem 
-                    key={technician.id} 
-                    value={technician.id}
-                    className="flex items-center"
-                  >
-                    <div className="flex items-center">
-                      <TeamMemberAvatar
-                        src={technician.avatar}
-                        name={technician.name}
-                        size="sm"
-                        className="mr-2"
-                      />
-                      {technician.name}
-                    </div>
-                  </SelectItem>
-                ))}
+              {availableTechnicians.map(technician => (
+                <SelectItem 
+                  key={technician.id} 
+                  value={technician.id}
+                  className="flex items-center"
+                >
+                  <div className="flex items-center">
+                    <TeamMemberAvatar
+                      src={technician.avatar}
+                      name={technician.name}
+                      size="sm"
+                      className="mr-2"
+                    />
+                    {technician.name}
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </FormItem>

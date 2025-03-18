@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Service, ServiceStatus } from "@/types/service";
+import { Service, ServiceStatus, TeamMember } from "@/types/service";
 
 import ServiceForm from "./components/ServiceForm";
 import ReportForm from "./components/ReportForm";
@@ -29,7 +28,6 @@ const ServiceDetailPage = () => {
   const [service, setService] = useState<Service | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Buscar os dados do serviço
   useEffect(() => {
     const fetchServiceDetails = async () => {
       if (!id) return;
@@ -63,13 +61,12 @@ const ServiceDetailPage = () => {
     fetchServiceDetails();
   }, [id, navigate, toast]);
 
-  // Serviço vazio padrão para inicialização de formulário
   const emptyService: Service = {
     id: "",
     title: "",
     status: "pendente",
     location: "",
-    technician: { id: "", name: "", avatar: "" },
+    technicians: [],
     reportData: {
       client: "",
       address: "",
@@ -105,10 +102,8 @@ const ServiceDetailPage = () => {
     );
   }
 
-  // Utilize o serviço ou um serviço vazio se não estiver carregado
   const currentService = service || emptyService;
   
-  // Componente ServiceStatus
   const ServiceStatus = ({ status }: { status: ServiceStatus }) => {
     return (
       <div className="flex items-center mt-1">
@@ -120,13 +115,12 @@ const ServiceDetailPage = () => {
     )
   };
 
-  // Tabs para os detalhes do serviço
   const ServiceDetailTabs = () => {
     const [formState, setFormState] = useState({
       title: currentService.title,
       status: currentService.status,
       location: currentService.location,
-      technician: currentService.technician.id,
+      technicianIds: currentService.technicians.map(tech => tech.id),
       client: currentService.reportData?.client || "",
       address: currentService.reportData?.address || "",
       city: currentService.reportData?.city || "",
@@ -159,16 +153,11 @@ const ServiceDetailPage = () => {
       
       setIsSubmitting(true);
       
-      // Criar objeto de serviço atualizado com base no estado do formulário
       const updatedService: Partial<Service> = {
         title: formState.title,
         status: formState.status as ServiceStatus,
         location: formState.location,
-        technician: {
-          id: formState.technician,
-          name: "", // Será preenchido pelo backend
-          avatar: "" // Será preenchido pelo backend
-        },
+        technicians: formState.technicianIds.map(id => ({ id, name: "", avatar: "" })),
         reportData: {
           client: formState.client,
           address: formState.address,
@@ -193,12 +182,16 @@ const ServiceDetailPage = () => {
         photos: selectedPhotos
       };
       
-      const success = await updateService(id, updatedService);
+      const success = await updateService(id, {
+        title: updatedService.title,
+        status: updatedService.status,
+        location: updatedService.location,
+        technician_ids: formState.technicianIds
+      });
       
       setIsSubmitting(false);
       
       if (success) {
-        // Se o status é concluído, perguntar se deseja gerar PDF
         if (formState.status === "concluido" && !pdfGenerated) {
           setTimeout(() => {
             toast({
@@ -214,7 +207,6 @@ const ServiceDetailPage = () => {
       }
     };
 
-    // Lidar com upload de fotos
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files || e.target.files.length === 0 || !id) {
         return;
@@ -226,14 +218,12 @@ const ServiceDetailPage = () => {
       const filePath = `services/${id}/${fileName}`;
 
       try {
-        // Upload do arquivo para o Storage do Supabase
         const { data, error } = await supabase.storage
           .from('service-photos')
           .upload(filePath, file);
 
         if (error) throw error;
 
-        // Obter URL pública da imagem
         const { data: publicUrlData } = supabase.storage
           .from('service-photos')
           .getPublicUrl(filePath);
@@ -241,7 +231,6 @@ const ServiceDetailPage = () => {
         if (publicUrlData) {
           const photoUrl = publicUrlData.publicUrl;
           
-          // Adicionar foto ao serviço no banco de dados
           const success = await addServicePhoto(id, photoUrl);
           
           if (success) {
@@ -256,17 +245,14 @@ const ServiceDetailPage = () => {
         });
       }
 
-      // Limpar input de arquivo
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     };
 
-    // Remover foto
     const handleRemovePhoto = async (photoUrl: string) => {
       if (!id) return;
 
-      // Extrair o nome do arquivo da URL
       const fileName = photoUrl.split('/').pop();
       
       if (!fileName) {
@@ -275,7 +261,6 @@ const ServiceDetailPage = () => {
       }
 
       try {
-        // Primeiro remove do banco de dados
         const { data: photoData, error: fetchError } = await supabase
           .from('service_photos')
           .select('id')
@@ -301,14 +286,12 @@ const ServiceDetailPage = () => {
       }
     };
 
-    // Funções para o PDF
     const [pdfUtils, setPdfUtils] = useState<{
       generatePDF: (service: Service) => boolean;
       downloadPDF: (service: Service) => void;
     } | null>(null);
 
     useEffect(() => {
-      // Carregar as utilidades de PDF
       import("@/utils/pdfGenerator").then(module => {
         setPdfUtils({
           generatePDF: module.generatePDF,
@@ -317,20 +300,18 @@ const ServiceDetailPage = () => {
       });
     }, []);
 
-    // Gerar PDF
     const handleGeneratePDF = () => {
       if (!pdfUtils || !currentService) return;
       
-      // Criar objeto de serviço atualizado com dados do formulário
       const updatedService = {
         ...currentService,
         title: formState.title,
         status: formState.status as ServiceStatus,
         location: formState.location,
-        technician: {
-          ...currentService.technician,
-          id: formState.technician
-        },
+        technicians: formState.technicianIds.map(id => {
+          const tech = currentService.technicians.find(t => t.id === id);
+          return tech || { id, name: "Técnico", avatar: "" };
+        }),
         reportData: {
           client: formState.client,
           address: formState.address,
@@ -355,7 +336,6 @@ const ServiceDetailPage = () => {
         photos: selectedPhotos
       };
       
-      // Gerar PDF com o serviço atualizado
       const result = pdfUtils.generatePDF(updatedService);
       
       if (result) {
@@ -366,20 +346,18 @@ const ServiceDetailPage = () => {
       }
     };
 
-    // Baixar PDF
     const handleDownloadPDF = () => {
       if (!pdfUtils || !currentService) return;
       
-      // Criar objeto de serviço atualizado com dados do formulário
       const updatedService = {
         ...currentService,
         title: formState.title,
         status: formState.status as ServiceStatus,
         location: formState.location,
-        technician: {
-          ...currentService.technician,
-          id: formState.technician
-        },
+        technicians: formState.technicianIds.map(id => {
+          const tech = currentService.technicians.find(t => t.id === id);
+          return tech || { id, name: "Técnico", avatar: "" };
+        }),
         reportData: {
           client: formState.client,
           address: formState.address,
@@ -404,7 +382,6 @@ const ServiceDetailPage = () => {
         photos: selectedPhotos
       };
       
-      // Baixar PDF com o serviço atualizado
       pdfUtils.downloadPDF(updatedService);
       
       toast({

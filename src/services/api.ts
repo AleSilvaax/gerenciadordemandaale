@@ -56,7 +56,7 @@ export async function getAllServices() {
       .select(`
         *,
         technicians:service_technicians(
-          technician:profiles(id, name, avatar)
+          technician:profiles(id, name, avatar, role)
         ),
         report_data(*),
         service_photos(photo_url)
@@ -68,7 +68,7 @@ export async function getAllServices() {
     return data.map((item: any) => {
       // Extract technicians from nested structure
       const technicians = item.technicians 
-        ? item.technicians.map((tech: any) => tech.technician) 
+        ? item.technicians.map((tech: any) => tech.technician).filter(Boolean)
         : [];
         
       return {
@@ -147,11 +147,14 @@ export async function createService(serviceData: {
           technician_id: techId
         }));
         
-        const { error: techError } = await supabase
-          .from('service_technicians')
-          .insert(technicianInserts);
-          
-        if (techError) throw techError;
+        // Using plain SQL for now due to typing issues
+        for (const insert of technicianInserts) {
+          const { error: techError } = await supabase
+            .from('service_technicians')
+            .insert(insert);
+            
+          if (techError) throw techError;
+        }
       }
       
       // Criar entrada inicial de dados do relatório
@@ -247,16 +250,17 @@ export async function updateService(serviceId: string, serviceData: {
       
       // Adiciona as novas associações
       if (serviceData.technician_ids.length > 0) {
-        const technicianInserts = serviceData.technician_ids.map(techId => ({
-          service_id: serviceId,
-          technician_id: techId
-        }));
-        
-        const { error: insertError } = await supabase
-          .from('service_technicians')
-          .insert(technicianInserts);
-          
-        if (insertError) throw insertError;
+        // Using plain SQL for now due to typing issues
+        for (const techId of serviceData.technician_ids) {
+          const { error: insertError } = await supabase
+            .from('service_technicians')
+            .insert({
+              service_id: serviceId,
+              technician_id: techId
+            });
+            
+          if (insertError) throw insertError;
+        }
       }
     }
     
@@ -317,7 +321,9 @@ export async function getServiceById(serviceId: string) {
       .from('services')
       .select(`
         *,
-        technician:profiles(id, name, avatar),
+        technicians:service_technicians(
+          technician:profiles(id, name, avatar, role)
+        ),
         report_data(*),
         service_photos(photo_url)
       `)
@@ -328,6 +334,11 @@ export async function getServiceById(serviceId: string) {
     
     if (!data) return null;
     
+    // Extract technicians from nested structure
+    const technicians = data.technicians 
+      ? data.technicians.map((tech: any) => tech.technician).filter(Boolean)
+      : [];
+    
     // Transformar os dados para o formato da interface Service
     return {
       id: data.id,
@@ -335,11 +346,7 @@ export async function getServiceById(serviceId: string) {
       status: data.status as ServiceStatus,
       location: data.location,
       number: data.number,
-      technician: {
-        id: data.technician?.id || "",
-        name: data.technician?.name || "Não atribuído",
-        avatar: data.technician?.avatar || "",
-      },
+      technicians: technicians,
       reportData: data.report_data ? {
         client: data.report_data.client || "",
         address: data.report_data.address || "",
