@@ -2,7 +2,8 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -16,40 +17,65 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, loading, checkUserRole } = useAuth();
   const location = useLocation();
   const [showRetryButton, setShowRetryButton] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Adicionar um timer para mostrar o botão de tentar novamente após 10 segundos
+  // Adicionar um timer para mostrar o botão de tentar novamente após 5 segundos
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         setShowRetryButton(true);
+      }, 5000);
+      
+      // Após 10 segundos, mostrar o botão de timeout
+      const timeoutTimer = setTimeout(() => {
+        setLoadingTimeout(true);
       }, 10000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timeoutTimer);
+      };
+    } else {
+      setShowRetryButton(false);
+      setLoadingTimeout(false);
     }
   }, [loading]);
 
   // Mostrar um indicador de carregamento enquanto verifica a autenticação
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 size={48} className="mx-auto animate-spin mb-4" />
-          <p className="text-muted-foreground">Verificando autenticação...</p>
-          {showRetryButton && (
-            <div className="mt-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Está demorando mais que o esperado.
+      <div className="h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md w-full">
+          {loadingTimeout ? (
+            <>
+              <AlertCircle size={48} className="mx-auto mb-4 text-amber-500" />
+              <h2 className="text-xl font-semibold mb-2">Verificação de autenticação demorada</h2>
+              <p className="text-muted-foreground mb-6">
+                Está demorando mais que o esperado para verificar sua autenticação. Isso pode indicar problemas de conexão.
               </p>
-              <button 
+            </>
+          ) : (
+            <>
+              <Loader2 size={48} className="mx-auto animate-spin mb-4" />
+              <p className="text-muted-foreground mb-4">Verificando autenticação...</p>
+            </>
+          )}
+          
+          {showRetryButton && (
+            <div className="space-y-3">
+              <Button 
                 onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
+                className="w-full"
               >
                 Tentar novamente
-              </button>
-              <p className="text-sm text-muted-foreground mt-4">
-                Ou você pode 
-                <a href="/login" className="text-blue-500 hover:underline ml-1">fazer login novamente</a>
-              </p>
+              </Button>
+              <Button 
+                onClick={() => window.location.href = "/login"} 
+                variant="outline"
+                className="w-full"
+              >
+                Ir para a tela de login
+              </Button>
             </div>
           )}
         </div>
@@ -75,12 +101,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Você não tem permissão para acessar esta página. Esta funcionalidade requer 
             privilégios de {requiredRole}.
           </p>
-          <button
+          <Button
             onClick={() => window.history.back()}
             className="px-4 py-2 bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
           >
             Voltar
-          </button>
+          </Button>
         </div>
       </div>
     );

@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
+  const [connectionErrorMessage, setConnectionErrorMessage] = useState("");
   const { signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -25,25 +27,36 @@ const Login = () => {
   useEffect(() => {
     const checkSupabase = async () => {
       try {
+        setCheckingConnection(true);
+        setConnectionError(false);
+        
+        console.log("Verificando conexão com Supabase...");
+        
         // Definir um timeout para a verificação de conexão
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Timeout na conexão com o servidor")), 5000);
+          setTimeout(() => reject(new Error("Timeout na conexão com o servidor")), 3000);
         });
 
         // Tenta fazer uma consulta simples para verificar a conexão
-        const connectionPromise = supabase.from('profiles').select('count').limit(1);
+        const connectionPromise = supabase
+          .from('profiles')
+          .select('count')
+          .limit(1)
+          .maybeSingle();
         
         // Usar Promise.race para limitar o tempo de espera
         await Promise.race([connectionPromise, timeoutPromise]);
         
+        console.log("Conexão com Supabase estabelecida com sucesso");
         setCheckingConnection(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao verificar conexão:", error);
         setConnectionError(true);
+        setConnectionErrorMessage(error.message || "Não foi possível conectar ao servidor");
         setCheckingConnection(false);
         toast({
           title: "Problema de conexão",
-          description: "Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.",
+          description: "Não foi possível conectar ao servidor. Por favor, tente novamente.",
           variant: "destructive",
         });
       }
@@ -91,11 +104,40 @@ const Login = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro de login:", error);
       toast({
         title: "Erro no login",
-        description: "Ocorreu um erro durante o login. Tente novamente mais tarde.",
+        description: error.message || "Ocorreu um erro durante o login. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSkipConnectionCheck = () => {
+    setCheckingConnection(false);
+    setConnectionError(false);
+  };
+
+  const handleTryAlternativeConnection = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Tentar uma abordagem diferente de conexão
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      console.log("Verificação alternativa de conexão bem-sucedida");
+      setConnectionError(false);
+      setCheckingConnection(false);
+    } catch (error: any) {
+      console.error("Erro na verificação alternativa:", error);
+      toast({
+        title: "Problema persistente",
+        description: "Ainda não foi possível conectar ao servidor. Verifique sua conexão com a internet.",
         variant: "destructive",
       });
     } finally {
@@ -106,15 +148,25 @@ const Login = () => {
   if (checkingConnection) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center">
+        <div className="text-center w-full max-w-md">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Conectando ao servidor...</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 text-primary hover:underline text-sm"
-          >
-            Clique aqui se demorar muito
-          </button>
+          <p className="mb-4">Conectando ao servidor...</p>
+          <div className="flex flex-col gap-2 mt-6">
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="w-full"
+            >
+              Tentar novamente
+            </Button>
+            <Button 
+              onClick={handleSkipConnectionCheck} 
+              variant="ghost"
+              className="w-full"
+            >
+              Pular verificação de conexão
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -123,17 +175,40 @@ const Login = () => {
   if (connectionError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md w-full">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-4">Erro de Conexão</h1>
           <p className="text-muted-foreground mb-6">
-            Não foi possível conectar ao servidor. Verifique sua conexão com a internet ou tente novamente mais tarde.
+            {connectionErrorMessage || "Não foi possível conectar ao servidor. Verifique sua conexão com a internet ou tente novamente mais tarde."}
           </p>
-          <Button 
-            onClick={() => window.location.reload()}
-            className="w-full"
-          >
-            Tentar novamente
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              Tentar novamente
+            </Button>
+            <Button 
+              onClick={handleTryAlternativeConnection}
+              variant="outline"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                  Verificando...
+                </>
+              ) : "Tentar conexão alternativa"}
+            </Button>
+            <Button 
+              onClick={handleSkipConnectionCheck}
+              variant="ghost"
+              className="w-full"
+            >
+              Continuar mesmo assim
+            </Button>
+          </div>
         </div>
       </div>
     );
