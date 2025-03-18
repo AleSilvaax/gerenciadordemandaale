@@ -1,20 +1,25 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Service, ServiceStatus, ReportData } from "@/types/service";
 import { toast } from "sonner";
 
 // Convert database service format to application service format
 export function convertDbServiceToAppService(dbService: any): Service {
+  // Default empty array for technicians
+  const technicians = dbService.technicians || [];
+  
   return {
     id: dbService.id,
     title: dbService.title,
     status: dbService.status as ServiceStatus,
     location: dbService.location,
     number: dbService.number,
-    technician: {
-      id: dbService.technician?.id || "",
-      name: dbService.technician?.name || "Não atribuído",
-      avatar: dbService.technician?.avatar || "",
-    },
+    technicians: technicians.map((tech: any) => ({
+      id: tech.id || "",
+      name: tech.name || "Não atribuído",
+      avatar: tech.avatar || "",
+      role: tech.role || "tecnico"
+    })),
     reportData: dbService.report_data ? {
       client: dbService.report_data.client || "",
       address: dbService.report_data.address || "",
@@ -50,7 +55,9 @@ export async function getAllServices() {
       .from('services')
       .select(`
         *,
-        technician:profiles(id, name, avatar),
+        technicians:service_technicians(
+          technician:profiles(id, name, avatar)
+        ),
         report_data(*),
         service_photos(photo_url)
       `);
@@ -58,40 +65,43 @@ export async function getAllServices() {
     if (error) throw error;
 
     // Transformar os dados para o formato da interface Service
-    return data.map((item: any) => ({
-      id: item.id,
-      title: item.title,
-      status: item.status as ServiceStatus,
-      location: item.location,
-      number: item.number,
-      technician: {
-        id: item.technician?.id || "",
-        name: item.technician?.name || "Não atribuído",
-        avatar: item.technician?.avatar || "",
-      },
-      reportData: item.report_data ? {
-        client: item.report_data.client || "",
-        address: item.report_data.address || "",
-        city: item.report_data.city || "",
-        executedBy: item.report_data.executed_by || "",
-        installationDate: item.report_data.installation_date || "",
-        modelNumber: item.report_data.model_number || "",
-        serialNumberNew: item.report_data.serial_number_new || "",
-        serialNumberOld: item.report_data.serial_number_old || "",
-        homologatedName: item.report_data.homologated_name || "",
-        compliesWithNBR17019: item.report_data.complies_with_nbr17019 || false,
-        homologatedInstallation: item.report_data.homologated_installation || false,
-        requiredAdjustment: item.report_data.required_adjustment || false,
-        adjustmentDescription: item.report_data.adjustment_description || "",
-        validWarranty: item.report_data.valid_warranty || false,
-        circuitBreakerEntry: item.report_data.circuit_breaker_entry || "",
-        chargerCircuitBreaker: item.report_data.charger_circuit_breaker || "",
-        cableGauge: item.report_data.cable_gauge || "",
-        chargerStatus: item.report_data.charger_status || "",
-        technicalComments: item.report_data.technical_comments || "",
-      } : {} as ReportData,
-      photos: (item.service_photos || []).map((photo: any) => photo.photo_url),
-    }));
+    return data.map((item: any) => {
+      // Extract technicians from nested structure
+      const technicians = item.technicians 
+        ? item.technicians.map((tech: any) => tech.technician) 
+        : [];
+        
+      return {
+        id: item.id,
+        title: item.title,
+        status: item.status as ServiceStatus,
+        location: item.location,
+        number: item.number,
+        technicians: technicians,
+        reportData: item.report_data ? {
+          client: item.report_data.client || "",
+          address: item.report_data.address || "",
+          city: item.report_data.city || "",
+          executedBy: item.report_data.executed_by || "",
+          installationDate: item.report_data.installation_date || "",
+          modelNumber: item.report_data.model_number || "",
+          serialNumberNew: item.report_data.serial_number_new || "",
+          serialNumberOld: item.report_data.serial_number_old || "",
+          homologatedName: item.report_data.homologated_name || "",
+          compliesWithNBR17019: item.report_data.complies_with_nbr17019 || false,
+          homologatedInstallation: item.report_data.homologated_installation || false,
+          requiredAdjustment: item.report_data.required_adjustment || false,
+          adjustmentDescription: item.report_data.adjustment_description || "",
+          validWarranty: item.report_data.valid_warranty || false,
+          circuitBreakerEntry: item.report_data.circuit_breaker_entry || "",
+          chargerCircuitBreaker: item.report_data.charger_circuit_breaker || "",
+          cableGauge: item.report_data.cable_gauge || "",
+          chargerStatus: item.report_data.charger_status || "",
+          technicalComments: item.report_data.technical_comments || "",
+        } : {} as ReportData,
+        photos: (item.service_photos || []).map((photo: any) => photo.photo_url),
+      };
+    });
   } catch (error) {
     console.error("Erro ao buscar serviços:", error);
     toast.error("Erro ao carregar as demandas");
@@ -103,18 +113,18 @@ export async function getAllServices() {
 export async function createService(serviceData: {
   title: string;
   location: string;
-  technician_id?: string;
+  technician_ids: string[];
 }) {
   try {
     // Gerar um número sequencial para o serviço
-    const { count, error: countError } = await supabase
-      .from('services')
-      .select('*', { count: 'exact' });
+    const { data: nextVal, error: seqError } = await supabase
+      .rpc('nextval', { seq_name: 'service_number_sequence' });
     
-    if (countError) throw countError;
+    if (seqError) throw seqError;
     
-    const serviceNumber = `SV${(count || 0) + 1}`.padStart(6, '0');
+    const serviceNumber = `SV${String(nextVal).padStart(5, '0')}`;
     
+    // Criar o serviço
     const { data, error } = await supabase
       .from('services')
       .insert({
@@ -122,30 +132,60 @@ export async function createService(serviceData: {
         title: serviceData.title,
         status: 'pendente',
         location: serviceData.location,
-        technician_id: serviceData.technician_id || null,
       })
       .select();
     
     if (error) throw error;
     
     if (data && data.length > 0) {
+      const serviceId = data[0].id;
+      
+      // Adicionar os técnicos associados
+      if (serviceData.technician_ids.length > 0) {
+        const technicianInserts = serviceData.technician_ids.map(techId => ({
+          service_id: serviceId,
+          technician_id: techId
+        }));
+        
+        const { error: techError } = await supabase
+          .from('service_technicians')
+          .insert(technicianInserts);
+          
+        if (techError) throw techError;
+      }
+      
       // Criar entrada inicial de dados do relatório
       await supabase
         .from('report_data')
         .insert({
-          id: data[0].id,
+          id: serviceId,
           client: '',
           address: '',
           city: '',
         });
       
-      return data[0].id;
+      return serviceId;
     }
     
     return null;
   } catch (error) {
     console.error("Erro ao criar serviço:", error);
     toast.error("Erro ao criar nova demanda");
+    return null;
+  }
+}
+
+// Função RPC para obter o próximo valor de sequência
+export async function getNextSequenceValue(sequenceName: string) {
+  try {
+    const { data, error } = await supabase
+      .rpc('nextval', { seq_name: sequenceName });
+    
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error("Erro ao obter próximo valor de sequência:", error);
     return null;
   }
 }
@@ -177,21 +217,48 @@ export async function updateService(serviceId: string, serviceData: {
   title?: string;
   status?: ServiceStatus;
   location?: string;
-  technician_id?: string;
+  technician_ids?: string[];
 }) {
   try {
-    const { error } = await supabase
-      .from('services')
-      .update({
-        title: serviceData.title,
-        status: serviceData.status,
-        location: serviceData.location,
-        technician_id: serviceData.technician_id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', serviceId);
+    // Atualizar o serviço
+    if (serviceData.title || serviceData.status || serviceData.location) {
+      const { error } = await supabase
+        .from('services')
+        .update({
+          title: serviceData.title,
+          status: serviceData.status,
+          location: serviceData.location,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', serviceId);
+      
+      if (error) throw error;
+    }
     
-    if (error) throw error;
+    // Atualizar os técnicos associados
+    if (serviceData.technician_ids) {
+      // Primeiro remove todas as associações existentes
+      const { error: deleteError } = await supabase
+        .from('service_technicians')
+        .delete()
+        .eq('service_id', serviceId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Adiciona as novas associações
+      if (serviceData.technician_ids.length > 0) {
+        const technicianInserts = serviceData.technician_ids.map(techId => ({
+          service_id: serviceId,
+          technician_id: techId
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('service_technicians')
+          .insert(technicianInserts);
+          
+        if (insertError) throw insertError;
+      }
+    }
     
     return true;
   } catch (error) {

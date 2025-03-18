@@ -33,6 +33,184 @@ export type Database = {
         }
         Relationships: []
       }
+      report_data: {
+        Row: {
+          address: string | null
+          adjustment_description: string | null
+          cable_gauge: string | null
+          charger_circuit_breaker: string | null
+          charger_status: string | null
+          circuit_breaker_entry: string | null
+          city: string | null
+          client: string | null
+          complies_with_nbr17019: boolean | null
+          created_at: string
+          executed_by: string | null
+          homologated_installation: boolean | null
+          homologated_name: string | null
+          id: string
+          installation_date: string | null
+          model_number: string | null
+          required_adjustment: boolean | null
+          serial_number_new: string | null
+          serial_number_old: string | null
+          technical_comments: string | null
+          updated_at: string
+          valid_warranty: boolean | null
+        }
+        Insert: {
+          address?: string | null
+          adjustment_description?: string | null
+          cable_gauge?: string | null
+          charger_circuit_breaker?: string | null
+          charger_status?: string | null
+          circuit_breaker_entry?: string | null
+          city?: string | null
+          client?: string | null
+          complies_with_nbr17019?: boolean | null
+          created_at?: string
+          executed_by?: string | null
+          homologated_installation?: boolean | null
+          homologated_name?: string | null
+          id: string
+          installation_date?: string | null
+          model_number?: string | null
+          required_adjustment?: boolean | null
+          serial_number_new?: string | null
+          serial_number_old?: string | null
+          technical_comments?: string | null
+          updated_at?: string
+          valid_warranty?: boolean | null
+        }
+        Update: {
+          address?: string | null
+          adjustment_description?: string | null
+          cable_gauge?: string | null
+          charger_circuit_breaker?: string | null
+          charger_status?: string | null
+          circuit_breaker_entry?: string | null
+          city?: string | null
+          client?: string | null
+          complies_with_nbr17019?: boolean | null
+          created_at?: string
+          executed_by?: string | null
+          homologated_installation?: boolean | null
+          homologated_name?: string | null
+          id?: string
+          installation_date?: string | null
+          model_number?: string | null
+          required_adjustment?: boolean | null
+          serial_number_new?: string | null
+          serial_number_old?: string | null
+          technical_comments?: string | null
+          updated_at?: string
+          valid_warranty?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_data_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_photos: {
+        Row: {
+          created_at: string
+          id: string
+          photo_url: string
+          service_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          photo_url: string
+          service_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          photo_url?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_photos_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_technicians: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_technicians_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_technicians_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string
+          id: string
+          location: string
+          number: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location: string
+          number: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string
+          number?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

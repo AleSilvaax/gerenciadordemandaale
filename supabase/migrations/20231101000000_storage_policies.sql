@@ -21,6 +21,21 @@ BEGIN
       -- Ignorar erros ao remover políticas inexistentes
   END;
 
+  -- Criar buckets se não existirem
+  BEGIN
+    INSERT INTO storage.buckets (id, name) VALUES ('avatars', 'avatars');
+  EXCEPTION
+    WHEN others THEN
+      -- Ignorar erro se o bucket já existir
+  END;
+  
+  BEGIN
+    INSERT INTO storage.buckets (id, name) VALUES ('service-photos', 'service-photos');
+  EXCEPTION
+    WHEN others THEN
+      -- Ignorar erro se o bucket já existir
+  END;
+
   -- Políticas para avatares
   CREATE POLICY "Avatar storage is publicly accessible"
     ON storage.objects FOR SELECT
@@ -47,7 +62,7 @@ BEGIN
       (storage.foldername(name))[1] = auth.uid()::text
     );
 
-  -- Políticas para fotos de serviço
+  -- Políticas para fotos de serviço (mais permissivas)
   CREATE POLICY "Service photos are publicly accessible"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'service-photos');
@@ -71,3 +86,6 @@ BEGIN
     );
 END;
 $$;
+
+-- Execute a função para configurar as políticas
+SELECT setup_storage_policies();

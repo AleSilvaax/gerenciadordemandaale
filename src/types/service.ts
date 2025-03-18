@@ -35,7 +35,7 @@ export interface Service {
   title: string;
   status: ServiceStatus;
   location: string;
-  technician: TeamMember;
+  technicians: TeamMember[];
   reportData: ReportData;
   photos: string[];
   number?: string;
