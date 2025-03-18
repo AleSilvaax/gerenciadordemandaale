@@ -15,7 +15,6 @@ import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { AuthProvider } from "./providers/AuthProvider";
-import { ProtectedRoute } from "./providers/ProtectedRoute";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 
@@ -42,6 +41,11 @@ const NavigationHelper = () => {
       }
     }
     
+    // Redirect from login page to main app
+    if (location.pathname === "/login" || location.pathname === "/register") {
+      navigate('/');
+    }
+    
     // Scroll to top on navigation
     window.scrollTo(0, 0);
   }, [location, navigate]);
@@ -58,12 +62,12 @@ const App = () => (
         <AuthProvider>
           <NavigationHelper />
           <Routes>
-            {/* Rotas de autenticação */}
+            {/* Login/Register routes still exist but will be redirected */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* Rotas protegidas */}
-            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            {/* All routes now use AppLayout without ProtectedRoute */}
+            <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/demandas" element={<Demandas />} />
               <Route path="/demandas/new" element={<NewService />} />
