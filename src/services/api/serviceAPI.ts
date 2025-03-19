@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Service, ServiceStatus, TeamMember } from "@/types/service";
+import { Service, ServiceStatus } from "@/types/service";
 
 // Create a new service
 export async function createService(data: {
@@ -44,7 +44,11 @@ export async function createService(data: {
       throw serviceError;
     }
     
-    const serviceId = serviceData.id;
+    const serviceId = serviceData?.id;
+    if (!serviceId) {
+      throw new Error("Service ID not returned after creation");
+    }
+    
     console.log("Service created with ID:", serviceId);
     
     // Add technicians to the service
@@ -72,127 +76,6 @@ export async function createService(data: {
   }
 }
 
-// Get service by ID
-export async function getServiceById(id: string): Promise<any | null> {
-  try {
-    console.log("Fetching service by ID:", id);
-    
-    // Get service data
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    
-    if (serviceError) {
-      console.error("Error fetching service:", serviceError);
-      throw serviceError;
-    }
-    
-    if (!service) {
-      console.log("Service not found");
-      return null;
-    }
-    
-    // Get service technicians
-    const { data: technicianRelations, error: techError } = await supabase
-      .from('service_technicians')
-      .select('technician_id')
-      .eq('service_id', id);
-    
-    if (techError) {
-      console.error("Error fetching technician relations:", techError);
-      // Continue with partial data
-    }
-    
-    const technicianIds = technicianRelations?.map(r => r.technician_id) || [];
-    
-    // Get technician profiles
-    let technicianProfiles = [];
-    if (technicianIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, avatar')
-        .in('id', technicianIds);
-      
-      if (profilesError) {
-        console.error("Error fetching technician profiles:", profilesError);
-      } else {
-        technicianProfiles = profiles || [];
-      }
-    }
-    
-    // Get report data
-    const { data: reportData, error: reportError } = await supabase
-      .from('report_data')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    
-    if (reportError && reportError.code !== 'PGRST116') {
-      console.error("Error fetching report data:", reportError);
-      // Continue with partial data
-    }
-    
-    // Get service photos
-    const { data: photosData, error: photosError } = await supabase
-      .from('service_photos')
-      .select('photo_url')
-      .eq('service_id', id);
-    
-    if (photosError) {
-      console.error("Error fetching service photos:", photosError);
-      // Continue with partial data
-    }
-    
-    // Return combined data
-    return {
-      ...service,
-      technicians: technicianProfiles || [],
-      reportData: reportData || null,
-      photos: photosData?.map(p => p.photo_url) || []
-    };
-  } catch (error) {
-    console.error("Error in getServiceById:", error);
-    toast.error("Erro ao buscar dados da demanda");
-    return null;
-  }
-}
-
-// Convert database service to app service format
-export function convertDbServiceToAppService(dbService: any): Service {
-  return {
-    id: dbService.id,
-    title: dbService.title,
-    status: dbService.status as ServiceStatus,
-    location: dbService.location,
-    technicians: dbService.technicians || [],
-    reportData: dbService.reportData || {
-      client: "",
-      address: "",
-      city: "",
-      executedBy: "",
-      installationDate: "",
-      modelNumber: "",
-      serialNumberNew: "",
-      serialNumberOld: "",
-      homologatedName: "",
-      compliesWithNBR17019: false,
-      homologatedInstallation: false,
-      requiredAdjustment: false,
-      adjustmentDescription: "",
-      validWarranty: false,
-      circuitBreakerEntry: "",
-      chargerCircuitBreaker: "",
-      cableGauge: "",
-      chargerStatus: "",
-      technicalComments: ""
-    },
-    photos: dbService.photos || [],
-    number: dbService.number
-  };
-}
-
 // Get all services
 export async function getAllServices(): Promise<Service[]> {
   try {
@@ -207,6 +90,10 @@ export async function getAllServices(): Promise<Service[]> {
     if (servicesError) {
       console.error("Error fetching services:", servicesError);
       throw servicesError;
+    }
+    
+    if (!services) {
+      return [];
     }
     
     // Get all service technicians
@@ -345,145 +232,6 @@ export async function updateService(id: string, data: Partial<Service>): Promise
   }
 }
 
-// Update report data
-export async function updateReportData(serviceId: string, data: any): Promise<boolean> {
-  try {
-    console.log("Updating report data for service:", serviceId);
-    
-    // Check if report data exists
-    const { data: existingData, error: checkError } = await supabase
-      .from('report_data')
-      .select('id')
-      .eq('id', serviceId)
-      .maybeSingle();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error("Error checking report data:", checkError);
-      throw checkError;
-    }
-    
-    if (existingData) {
-      // Update existing report data
-      const { error: updateError } = await supabase
-        .from('report_data')
-        .update({
-          client: data.client,
-          address: data.address,
-          city: data.city,
-          executed_by: data.executedBy,
-          installation_date: data.installationDate,
-          model_number: data.modelNumber,
-          serial_number_new: data.serialNumberNew,
-          serial_number_old: data.serialNumberOld,
-          homologated_name: data.homologatedName,
-          complies_with_nbr17019: data.compliesWithNBR17019,
-          homologated_installation: data.homologatedInstallation,
-          required_adjustment: data.requiredAdjustment,
-          adjustment_description: data.adjustmentDescription,
-          valid_warranty: data.validWarranty,
-          circuit_breaker_entry: data.circuitBreakerEntry,
-          charger_circuit_breaker: data.chargerCircuitBreaker,
-          cable_gauge: data.cableGauge,
-          charger_status: data.chargerStatus,
-          technical_comments: data.technicalComments,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', serviceId);
-      
-      if (updateError) {
-        console.error("Error updating report data:", updateError);
-        throw updateError;
-      }
-    } else {
-      // Insert new report data
-      const { error: insertError } = await supabase
-        .from('report_data')
-        .insert({
-          id: serviceId,
-          client: data.client,
-          address: data.address,
-          city: data.city,
-          executed_by: data.executedBy,
-          installation_date: data.installationDate,
-          model_number: data.modelNumber,
-          serial_number_new: data.serialNumberNew,
-          serial_number_old: data.serialNumberOld,
-          homologated_name: data.homologatedName,
-          complies_with_nbr17019: data.compliesWithNBR17019,
-          homologated_installation: data.homologatedInstallation,
-          required_adjustment: data.requiredAdjustment,
-          adjustment_description: data.adjustmentDescription,
-          valid_warranty: data.validWarranty,
-          circuit_breaker_entry: data.circuitBreakerEntry,
-          charger_circuit_breaker: data.chargerCircuitBreaker,
-          cable_gauge: data.cableGauge,
-          charger_status: data.chargerStatus,
-          technical_comments: data.technicalComments
-        });
-      
-      if (insertError) {
-        console.error("Error inserting report data:", insertError);
-        throw insertError;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in updateReportData:", error);
-    toast.error("Erro ao atualizar dados do relatório");
-    return false;
-  }
-}
-
-// Add photo to service
-export async function addServicePhoto(serviceId: string, photoUrl: string): Promise<boolean> {
-  try {
-    console.log("Adding photo to service:", serviceId, photoUrl);
-    
-    const { error } = await supabase
-      .from('service_photos')
-      .insert({
-        service_id: serviceId,
-        photo_url: photoUrl
-      });
-    
-    if (error) {
-      console.error("Error adding photo to service:", error);
-      throw error;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in addServicePhoto:", error);
-    toast.error("Erro ao adicionar foto ao serviço");
-    return false;
-  }
-}
-
-// Remove photo from service
-export async function removeServicePhoto(photoUrl: string, serviceId: string): Promise<boolean> {
-  try {
-    console.log("Removing service photo by URL:", photoUrl);
-    
-    const { error } = await supabase
-      .from('service_photos')
-      .delete()
-      .eq('photo_url', photoUrl)
-      .eq('service_id', serviceId);
-    
-    if (error) {
-      console.error("Error removing service photo:", error);
-      throw error;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in removeServicePhoto:", error);
-    toast.error("Erro ao remover foto do serviço");
-    return false;
-  }
-}
-
 // Delete a service
 export async function deleteService(id: string): Promise<boolean> {
   try {
@@ -540,4 +288,38 @@ export async function deleteService(id: string): Promise<boolean> {
     toast.error("Erro ao excluir demanda");
     return false;
   }
+}
+
+// Convert database service to app service format
+export function convertDbServiceToAppService(dbService: any): Service {
+  return {
+    id: dbService.id,
+    title: dbService.title,
+    status: dbService.status as ServiceStatus,
+    location: dbService.location,
+    technicians: dbService.technicians || [],
+    reportData: dbService.reportData || {
+      client: "",
+      address: "",
+      city: "",
+      executedBy: "",
+      installationDate: "",
+      modelNumber: "",
+      serialNumberNew: "",
+      serialNumberOld: "",
+      homologatedName: "",
+      compliesWithNBR17019: false,
+      homologatedInstallation: false,
+      requiredAdjustment: false,
+      adjustmentDescription: "",
+      validWarranty: false,
+      circuitBreakerEntry: "",
+      chargerCircuitBreaker: "",
+      cableGauge: "",
+      chargerStatus: "",
+      technicalComments: ""
+    },
+    photos: dbService.photos || [],
+    number: dbService.number
+  };
 }
