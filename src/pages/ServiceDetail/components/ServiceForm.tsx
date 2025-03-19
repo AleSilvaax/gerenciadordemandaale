@@ -18,26 +18,19 @@ import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { teamMembers } from "@/data/mockData";
+import { useServiceDetail } from "../context/ServiceDetailContext";
 
-interface ServiceFormProps {
-  formState: {
-    title: string;
-    location: string;
-    status: string;
-    technicianIds: string[];
-  };
-  onChange: (field: string, value: any) => void;
-}
+const ServiceForm: React.FC = () => {
+  const { formState, handleFormChange } = useServiceDetail();
 
-const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
   const handleAddTechnician = (technicianId: string) => {
     if (!formState.technicianIds.includes(technicianId)) {
-      onChange('technicianIds', [...formState.technicianIds, technicianId]);
+      handleFormChange('technicianIds', [...formState.technicianIds, technicianId]);
     }
   };
 
   const handleRemoveTechnician = (technicianId: string) => {
-    onChange('technicianIds', formState.technicianIds.filter(id => id !== technicianId));
+    handleFormChange('technicianIds', formState.technicianIds.filter(id => id !== technicianId));
   };
 
   const selectedTechnicians = formState.technicianIds.map(id => 
@@ -55,7 +48,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
           <FormControl>
             <Input 
               value={formState.title} 
-              onChange={(e) => onChange("title", e.target.value)} 
+              onChange={(e) => handleFormChange("title", e.target.value)} 
             />
           </FormControl>
         </FormItem>
@@ -65,7 +58,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
           <FormControl>
             <Input 
               value={formState.location} 
-              onChange={(e) => onChange("location", e.target.value)} 
+              onChange={(e) => handleFormChange("location", e.target.value)} 
             />
           </FormControl>
         </FormItem>
@@ -74,7 +67,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ formState, onChange }) => {
           <FormLabel>Status</FormLabel>
           <Select
             value={formState.status}
-            onValueChange={(value) => onChange("status", value)}
+            onValueChange={(value) => handleFormChange("status", value)}
           >
             <FormControl>
               <SelectTrigger>

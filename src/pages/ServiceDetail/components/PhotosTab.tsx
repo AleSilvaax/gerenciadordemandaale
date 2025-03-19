@@ -2,21 +2,13 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Image, X } from "lucide-react";
-import { toast } from "sonner";
+import { useServiceDetail } from "../context/ServiceDetailContext";
+import { useServicePhotos } from "../hooks/useServicePhotos";
 
-interface PhotosTabProps {
-  selectedPhotos: string[];
-  handlePhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRemovePhoto: (photoUrl: string) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-}
+const PhotosTab: React.FC = () => {
+  const { selectedPhotos, fileInputRef } = useServiceDetail();
+  const { handlePhotoUpload, handleRemovePhoto } = useServicePhotos();
 
-const PhotosTab: React.FC<PhotosTabProps> = ({
-  selectedPhotos,
-  handlePhotoUpload,
-  handleRemovePhoto,
-  fileInputRef
-}) => {
   return (
     <div>
       <div className="flex items-center justify-between">
