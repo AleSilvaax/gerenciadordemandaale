@@ -20,6 +20,10 @@ export async function createService(data: {
       throw numberError;
     }
     
+    if (numberData === null) {
+      throw new Error("Failed to generate service number");
+    }
+    
     const serviceNumber = `SVC${numberData.toString().padStart(6, '0')}`;
     console.log("Generated service number:", serviceNumber);
     
@@ -107,7 +111,7 @@ export async function getServiceById(id: string): Promise<any | null> {
     const { data: technicianProfiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, name, avatar')
-      .in('id', technicianIds);
+      .in('id', technicianIds.length > 0 ? technicianIds : ['00000000-0000-0000-0000-000000000000']);
     
     if (profilesError) {
       console.error("Error fetching technician profiles:", profilesError);
@@ -451,14 +455,15 @@ export async function addServicePhoto(serviceId: string, photoUrl: string): Prom
 }
 
 // Remove photo from service
-export async function removeServicePhoto(photoId: string): Promise<boolean> {
+export async function removeServicePhoto(photoUrl: string, serviceId: string): Promise<boolean> {
   try {
-    console.log("Removing service photo:", photoId);
+    console.log("Removing service photo by URL:", photoUrl);
     
     const { error } = await supabase
       .from('service_photos')
       .delete()
-      .eq('id', photoId);
+      .eq('photo_url', photoUrl)
+      .eq('service_id', serviceId);
     
     if (error) {
       console.error("Error removing service photo:", error);
@@ -482,8 +487,9 @@ export async function deleteService(id: string): Promise<boolean> {
     const tables = ['service_photos', 'service_technicians', 'report_data'];
     
     for (const table of tables) {
+      const tableName = table as 'service_photos' | 'service_technicians' | 'report_data';
       const { error } = await supabase
-        .from(table)
+        .from(tableName)
         .delete()
         .eq(table === 'report_data' ? 'id' : 'service_id', id);
       
