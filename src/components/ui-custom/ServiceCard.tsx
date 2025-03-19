@@ -1,92 +1,99 @@
 
 import React from "react";
-import { cn } from "@/lib/utils";
-import { StatusBadge } from "./StatusBadge";
-import { TeamMemberAvatar } from "./TeamMemberAvatar";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
-import { 
+import { MoreVertical, MapPin } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TeamMember } from "@/types/service";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import StatusBadge from "@/components/ui-custom/StatusBadge";
 
-interface ServiceCardProps {
+export interface ServiceCardProps {
   id: string;
   title: string;
-  status: "concluido" | "pendente" | "cancelado";
+  status: "pendente" | "concluido" | "cancelado";
   location: string;
-  technician: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  className?: string;
+  technician: TeamMember[];
   onDelete?: (id: string) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({
+export function ServiceCard({
   id,
   title,
   status,
   location,
   technician,
-  className,
   onDelete,
-}) => {
+}: ServiceCardProps) {
   return (
-    <div 
-      className={cn(
-        "flex items-center p-3 rounded-lg glass-card mb-2 animate-slideIn",
-        className
-      )}
-    >
-      <TeamMemberAvatar 
-        src={technician.avatar} 
-        name={technician.name} 
-        size="md" 
-        className="mr-3" 
-      />
-      
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium truncate">{title}</h3>
-        <div className="flex items-center text-xs text-muted-foreground mt-0.5">
-          <span>Status: </span>
-          <StatusBadge status={status} className="ml-1" />
-        </div>
-        <div className="text-xs text-muted-foreground mt-0.5 truncate">
-          Local: {location}
-        </div>
-      </div>
-      
-      <div className="flex items-center">
-        <div className="text-sm font-medium text-primary mr-2">{id}</div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="h-8 w-8 rounded-full flex items-center justify-center bg-secondary/50 hover:bg-secondary">
-              <MoreVertical size={16} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <Link to={`/demandas/${id}`}>
-              <DropdownMenuItem className="cursor-pointer">
-                <Edit size={16} className="mr-2" />
-                Gerenciar
+    <Card className="overflow-hidden border border-white/10">
+      <CardContent className="p-0">
+        <div className="p-4 flex justify-between items-start">
+          <Link to={`/demandas/${id}`} className="flex-1">
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <h3 className="font-medium truncate">{title}</h3>
+              </div>
+              <div className="flex items-center text-xs text-muted-foreground">
+                <MapPin size={12} className="mr-1" />
+                <span className="truncate">{location}</span>
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="flex -space-x-2">
+                  {technician.slice(0, 3).map((tech) => (
+                    <TeamMemberAvatar
+                      key={tech.id}
+                      src={tech.avatar}
+                      name={tech.name}
+                      size="sm"
+                      className="border-2 border-background"
+                    />
+                  ))}
+                  {technician.length > 3 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 h-8 rounded-full border-2 border-background"
+                    >
+                      +{technician.length - 3}
+                    </Badge>
+                  )}
+                </div>
+                <StatusBadge status={status} />
+              </div>
+            </div>
+          </Link>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-full hover:bg-accent">
+                <MoreVertical size={16} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to={`/demandas/${id}`}>Ver detalhes</Link>
               </DropdownMenuItem>
-            </Link>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => onDelete && onDelete(id)}
-            >
-              <Trash2 size={16} className="mr-2" />
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+              {onDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete(id);
+                  }}
+                >
+                  Excluir
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardContent>
+    </Card>
   );
-};
+}

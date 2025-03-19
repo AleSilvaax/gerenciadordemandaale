@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -11,7 +12,13 @@ import ServiceForm from "./components/ServiceForm";
 import ReportForm from "./components/ReportForm";
 import PhotosTab from "./components/PhotosTab";
 import BottomActionBar from "./components/BottomActionBar";
-import { getServiceById, updateService, convertDbServiceToAppService, addServicePhoto, removeServicePhoto } from "@/services/api";
+import { 
+  getServiceById, 
+  updateService, 
+  convertDbServiceToAppService, 
+  updateReportData, 
+  addServicePhoto
+} from "@/services/api";
 import { supabase } from "@/integrations/supabase/client";
 
 const StatusBadge = React.lazy(() => import("@/components/ui-custom/StatusBadge"));
@@ -19,7 +26,7 @@ const StatusBadge = React.lazy(() => import("@/components/ui-custom/StatusBadge"
 const ServiceDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +48,7 @@ const ServiceDetailPage = () => {
           setService(formattedService);
           setSelectedPhotos(formattedService.photos || []);
         } else {
-          toast({
+          uiToast({
             description: `Demanda #${id} não encontrada.`,
             variant: "destructive",
           });
@@ -49,7 +56,7 @@ const ServiceDetailPage = () => {
         }
       } catch (error) {
         console.error("Erro ao buscar detalhes da demanda:", error);
-        toast({
+        uiToast({
           description: "Erro ao carregar detalhes da demanda.",
           variant: "destructive",
         });
@@ -59,7 +66,7 @@ const ServiceDetailPage = () => {
     };
 
     fetchServiceDetails();
-  }, [id, navigate, toast]);
+  }, [id, navigate, uiToast]);
 
   const emptyService: Service = {
     id: "",
@@ -201,7 +208,7 @@ const ServiceDetailPage = () => {
 
         if (formState.status === "concluido" && !pdfGenerated) {
           setTimeout(() => {
-            toast({
+            uiToast({
               description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
               action: (
                 <Button variant="default" size="sm" onClick={handleGeneratePDF}>
@@ -231,6 +238,12 @@ const ServiceDetailPage = () => {
 
       try {
         toast.loading("Enviando foto...");
+
+        // Check if the bucket exists, create if it doesn't
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets?.find(b => b.name === 'service-photos')) {
+          await supabase.storage.createBucket('service-photos', { public: true });
+        }
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('service-photos')
@@ -266,36 +279,52 @@ const ServiceDetailPage = () => {
     const handleRemovePhoto = async (photoUrl: string) => {
       if (!id) return;
 
-      const fileName = photoUrl.split('/').pop();
-      
-      if (!fileName) {
-        console.error("Nome de arquivo inválido:", photoUrl);
-        return;
-      }
-
       try {
+        // Extract the path from the URL
+        const urlParts = photoUrl.split('/service-photos/');
+        if (urlParts.length < 2) {
+          throw new Error("Invalid photo URL format");
+        }
+        
+        const filePath = urlParts[1];
+        
+        // First remove from database
         const { data: photoData, error: fetchError } = await supabase
           .from('service_photos')
           .select('id')
           .eq('photo_url', photoUrl)
           .eq('service_id', id)
-          .single();
+          .maybeSingle();
 
-        if (fetchError) throw fetchError;
+        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
+        // If found in database, delete the record
         if (photoData) {
-          const success = await removeServicePhoto(photoData.id);
+          const { error: deleteError } = await supabase
+            .from('service_photos')
+            .delete()
+            .eq('id', photoData.id);
           
-          if (success) {
-            setSelectedPhotos(selectedPhotos.filter(photo => photo !== photoUrl));
-          }
+          if (deleteError) throw deleteError;
         }
+        
+        // Also try to remove from storage
+        const { error: storageError } = await supabase.storage
+          .from('service-photos')
+          .remove([filePath]);
+        
+        // This might fail if file doesn't exist, but we still want to remove from UI
+        if (storageError) {
+          console.warn("Could not delete file from storage:", storageError);
+        }
+        
+        // Update UI state regardless of storage deletion outcome
+        setSelectedPhotos(selectedPhotos.filter(photo => photo !== photoUrl));
+        toast.success("Foto removida com sucesso!");
+        
       } catch (error) {
         console.error("Erro ao remover foto:", error);
-        toast({
-          description: "Erro ao remover foto. Por favor, tente novamente.",
-          variant: "destructive",
-        });
+        toast.error("Erro ao remover foto. Por favor, tente novamente.");
       }
     };
 
@@ -353,7 +382,7 @@ const ServiceDetailPage = () => {
       
       if (result) {
         setPdfGenerated(true);
-        toast({
+        uiToast({
           description: "PDF gerado com sucesso. Clique em 'Baixar PDF' para salvar o arquivo."
         });
       }
@@ -397,7 +426,7 @@ const ServiceDetailPage = () => {
       
       pdfUtils.downloadPDF(updatedService);
       
-      toast({
+      uiToast({
         description: "O PDF está sendo baixado."
       });
     };

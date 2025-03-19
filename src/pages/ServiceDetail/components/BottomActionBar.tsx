@@ -10,7 +10,7 @@ interface BottomActionBarProps {
   onCancel: () => void;
   onGeneratePDF: () => void;
   onDownloadPDF: () => void;
-  onSave: () => void;
+  onSave: (e: React.FormEvent) => void;
 }
 
 const BottomActionBar: React.FC<BottomActionBarProps> = ({
@@ -49,7 +49,7 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
               Baixar PDF
             </Button>
           )}
-          <Button type="button" onClick={onSave} disabled={isSubmitting}>
+          <Button type="button" onClick={(e) => onSave(e)} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <span className="animate-spin mr-2">

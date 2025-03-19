@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from "react";
-import { ArrowLeft, Save, PlusCircle, Trash2, UserPlus, Upload, User, ShieldCheck, Loader2 } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ArrowLeft, Save, PlusCircle, Trash2, UserPlus, User, ShieldCheck, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { currentUser, teamMembers, UserRole } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Permission {
   id: string;
@@ -91,23 +92,68 @@ const Equipe: React.FC = () => {
     roleFilter === "todos" || member.role === roleFilter
   );
 
-  const getRandomAvatar = () => {
-    const avatars = [
-      "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png",
-      "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png",
-      "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png",
-      "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png",
-      "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
-    ];
-    return avatars[Math.floor(Math.random() * avatars.length)];
+  // Get avatars directly from the storage bucket to prevent caching issues
+  const getRandomAvatar = async (): Promise<string> => {
+    try {
+      // Try to find or create the avatars bucket
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets?.find(b => b.name === 'avatars')) {
+        await supabase.storage.createBucket('avatars', { public: true });
+      }
+
+      // Generate a unique avatar path
+      const timestamp = Date.now();
+      const randomValue = Math.floor(Math.random() * 1000);
+      const fileName = `avatar_${timestamp}_${randomValue}.png`;
+      const filePath = `default/${fileName}`;
+
+      // Default avatars to use
+      const avatars = [
+        "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png",
+        "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png",
+        "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png",
+        "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png",
+        "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
+      ];
+
+      // Choose a random avatar
+      const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+      
+      // Fetch the avatar image
+      const response = await fetch(randomAvatar);
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: blob.type });
+
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData) throw new Error("Failed to get public URL");
+
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error("Error generating avatar:", error);
+      // Fallback to static avatar if something goes wrong
+      return "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png";
+    }
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (newMember.name.trim()) {
+      const avatarUrl = await getRandomAvatar();
+      
       const newTeamMember = {
         id: `${team.length + 10}`,
         name: newMember.name,
-        avatar: getRandomAvatar(),
+        avatar: avatarUrl,
         role: newMember.role
       };
       
@@ -142,31 +188,70 @@ const Equipe: React.FC = () => {
     }
   };
 
-  const handleFileChange = (memberId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadingAvatar(memberId);
+  const handleFileChange = async (memberId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    setUploadingAvatar(memberId);
+    
+    try {
+      // Check if the avatars bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets?.find(b => b.name === 'avatars')) {
+        await supabase.storage.createBucket('avatars', { public: true });
+      }
       
-      // Simulating upload in a real app
-      setTimeout(() => {
-        const updatedTeam = team.map(member => {
-          if (member.id === memberId) {
-            return {
-              ...member,
-              // For demo purposes, we'll use a random avatar from our existing set
-              avatar: getRandomAvatar()
-            };
-          }
-          return member;
-        });
-        
-        setTeam(updatedTeam);
-        setUploadingAvatar(null);
-        
-        toast({
-          title: "Foto atualizada",
-          description: "A foto do perfil foi atualizada com sucesso.",
-        });
-      }, 1500);
+      // Create a unique file name to prevent caching issues
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const filePath = `members/${memberId}/${timestamp}.${fileExt}`;
+      
+      // Upload the file
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      
+      if (!publicUrlData) throw new Error("Failed to get public URL");
+      
+      const photoUrl = publicUrlData.publicUrl;
+      
+      // Update the team member's avatar with a cache-busting query parameter
+      const updatedTeam = team.map(member => {
+        if (member.id === memberId) {
+          return {
+            ...member,
+            avatar: `${photoUrl}?t=${timestamp}`
+          };
+        }
+        return member;
+      });
+      
+      setTeam(updatedTeam);
+      toast({
+        title: "Foto atualizada",
+        description: "A foto do perfil foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({
+        title: "Erro ao atualizar foto",
+        description: "Ocorreu um erro ao atualizar a foto de perfil.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(null);
+      
+      // Clear the file input
+      if (fileInputRefs.current[memberId]) {
+        fileInputRefs.current[memberId]!.value = "";
+      }
     }
   };
 
@@ -282,10 +367,11 @@ const Equipe: React.FC = () => {
               />
               <input
                 type="file"
-                accept="image/*"
                 ref={(el) => fileInputRefs.current[member.id] = el}
-                onChange={(e) => handleFileChange(member.id, e)}
+                accept="image/*"
+                multiple={false}
                 className="hidden"
+                onChange={(e) => handleFileChange(member.id, e)}
               />
               
               <DropdownMenu>
@@ -300,14 +386,12 @@ const Equipe: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
-                    <Upload size={16} className="mr-2" />
                     Trocar foto
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleDeleteMember(member.id)}
                     className="text-destructive focus:text-destructive"
                   >
-                    <Trash2 size={16} className="mr-2" />
                     Remover
                   </DropdownMenuItem>
                 </DropdownMenuContent>
