@@ -10,55 +10,26 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      permission_roles: {
-        Row: {
-          created_at: string
-          id: string
-          permission_id: string
-          role: Database["public"]["Enums"]["user_role"]
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          permission_id: string
-          role: Database["public"]["Enums"]["user_role"]
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          permission_id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "permission_roles_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "system_permissions"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       profiles: {
         Row: {
           avatar: string | null
-          created_at: string
+          created_at: string | null
           id: string
-          name: string
+          name: string | null
           updated_at: string | null
         }
         Insert: {
           avatar?: string | null
-          created_at?: string
+          created_at?: string | null
           id: string
-          name: string
+          name?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar?: string | null
-          created_at?: string
+          created_at?: string | null
           id?: string
-          name?: string
+          name?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -183,6 +154,42 @@ export interface Database {
           }
         ]
       }
+      service_technicians: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_technicians_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_technicians_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       services: {
         Row: {
           created_at: string
@@ -199,7 +206,7 @@ export interface Database {
           id?: string
           location: string
           number: string
-          status: string
+          status?: string
           technician_id?: string | null
           title: string
           updated_at?: string
@@ -223,30 +230,6 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
-      }
-      system_permissions: {
-        Row: {
-          created_at: string
-          id: string
-          permission_key: string
-          question: string
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          permission_key: string
-          question: string
-          title: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          permission_key?: string
-          question?: string
-          title?: string
-        }
-        Relationships: []
       }
       user_roles: {
         Row: {
@@ -282,6 +265,10 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
+      nextval_for_service: {
+        Args: Record<string, never>
+        Returns: number
+      }
       has_role: {
         Args: {
           user_id: string

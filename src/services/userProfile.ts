@@ -39,7 +39,28 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     // Se não encontrou perfil, provavelmente é um usuário novo ou não tem perfil ainda
     if (!profile) {
       console.log("Perfil não encontrado, verificando se precisa ser criado");
-      return null;
+      
+      // Tentar criar perfil para o usuário
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name: user.user_metadata?.name || "Usuário",
+          avatar: ""
+        });
+      
+      if (insertError) {
+        console.error("Erro ao criar perfil:", insertError);
+        throw insertError;
+      }
+      
+      // Retornar perfil recém-criado
+      return {
+        id: user.id,
+        name: user.user_metadata?.name || "Usuário",
+        avatar: "",
+        role: "tecnico" // Papel padrão
+      };
     }
     
     console.log("Perfil encontrado:", profile);
@@ -54,6 +75,20 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     if (roleError && roleError.code !== 'PGRST116') {
       console.error("Erro ao buscar função do usuário:", roleError);
       throw roleError;
+    }
+    
+    // Se não encontrou a função, criar uma
+    if (!roleData) {
+      const { error: insertRoleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: user.id,
+          role: 'tecnico' // Função padrão
+        });
+      
+      if (insertRoleError) {
+        console.error("Erro ao criar função do usuário:", insertRoleError);
+      }
     }
     
     // Definir a função padrão como 'tecnico' se não encontrar
@@ -118,16 +153,50 @@ export async function getAllTeamMembers(): Promise<UserProfile[]> {
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<boolean> {
   try {
     console.log("Atualizando perfil do usuário:", userId);
+    
+    // Prepare update data
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.avatar !== undefined) updateData.avatar = data.avatar;
+    updateData.updated_at = new Date().toISOString();
+    
     const { error } = await supabase
       .from('profiles')
-      .update({
-        name: data.name,
-        avatar: data.avatar,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId);
     
     if (error) throw error;
+    
+    // If role is being updated, update user_roles table
+    if (data.role) {
+      // Check if role record exists
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (roleCheckError && roleCheckError.code !== 'PGRST116') {
+        throw roleCheckError;
+      }
+      
+      if (existingRole) {
+        // Update existing role
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: data.role })
+          .eq('id', existingRole.id);
+        
+        if (roleUpdateError) throw roleUpdateError;
+      } else {
+        // Insert new role
+        const { error: roleInsertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: data.role });
+        
+        if (roleInsertError) throw roleInsertError;
+      }
+    }
     
     toast.success("Perfil atualizado com sucesso");
     return true;
@@ -142,11 +211,50 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
 export async function updateProfileAvatar(userId: string, file: File): Promise<boolean> {
   try {
     console.log("Atualizando avatar do usuário:", userId);
-    const avatarUrl = await updateUserAvatar(userId, file);
     
-    if (!avatarUrl) {
-      throw new Error("Falha ao fazer upload do avatar");
+    // Garantir que o bucket avatars exista
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.find(b => b.name === 'avatars')) {
+      await supabase.storage.createBucket('avatars', { public: true });
     }
+    
+    // Adicionar timestamp ao nome do arquivo para evitar caching e conflitos
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    
+    // Remover avatares antigos do usuário
+    const { data: oldFiles } = await supabase.storage
+      .from('avatars')
+      .list(userId);
+    
+    if (oldFiles && oldFiles.length > 0) {
+      const filesToRemove = oldFiles.map(f => `${userId}/${f.name}`);
+      await supabase.storage
+        .from('avatars')
+        .remove(filesToRemove);
+    }
+    
+    // Fazer upload do novo avatar
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        cacheControl: 'no-cache', // Evitar cache
+        upsert: true
+      });
+    
+    if (error) throw error;
+    
+    // Obter URL público
+    const { data: publicUrlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+    
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      throw new Error("Falha ao obter URL público");
+    }
+    
+    // Adicionar parâmetro de cache busting à URL
+    const avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
     
     // Atualizar o URL do avatar no perfil
     return await updateUserProfile(userId, { avatar: avatarUrl });
