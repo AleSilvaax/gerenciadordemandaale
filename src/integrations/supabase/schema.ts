@@ -197,7 +197,6 @@ export interface Database {
           location: string
           number: string
           status: string
-          technician_id: string | null
           title: string
           updated_at: string
         }
@@ -207,7 +206,6 @@ export interface Database {
           location: string
           number: string
           status?: string
-          technician_id?: string | null
           title: string
           updated_at?: string
         }
@@ -217,37 +215,28 @@ export interface Database {
           location?: string
           number?: string
           status?: string
-          technician_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "services_technician_id_fkey"
-            columns: ["technician_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: "tecnico" | "administrador" | "gestor"
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: "tecnico" | "administrador" | "gestor"
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: "tecnico" | "administrador" | "gestor"
           user_id?: string
         }
         Relationships: [
@@ -272,7 +261,7 @@ export interface Database {
       has_role: {
         Args: {
           user_id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: "tecnico" | "administrador" | "gestor"
         }
         Returns: boolean
       }

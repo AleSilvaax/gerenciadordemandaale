@@ -108,14 +108,18 @@ export async function getServiceById(id: string): Promise<any | null> {
     const technicianIds = technicianRelations?.map(r => r.technician_id) || [];
     
     // Get technician profiles
-    const { data: technicianProfiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, name, avatar')
-      .in('id', technicianIds.length > 0 ? technicianIds : ['00000000-0000-0000-0000-000000000000']);
-    
-    if (profilesError) {
-      console.error("Error fetching technician profiles:", profilesError);
-      // Continue with partial data
+    let technicianProfiles = [];
+    if (technicianIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, avatar')
+        .in('id', technicianIds);
+      
+      if (profilesError) {
+        console.error("Error fetching technician profiles:", profilesError);
+      } else {
+        technicianProfiles = profiles || [];
+      }
     }
     
     // Get report data
@@ -184,7 +188,8 @@ export function convertDbServiceToAppService(dbService: any): Service {
       chargerStatus: "",
       technicalComments: ""
     },
-    photos: dbService.photos || []
+    photos: dbService.photos || [],
+    number: dbService.number
   };
 }
 
@@ -263,7 +268,8 @@ export async function getAllServices(): Promise<Service[]> {
           chargerStatus: "",
           technicalComments: ""
         },
-        photos: []
+        photos: [],
+        number: service.number
       };
     });
     
@@ -483,19 +489,37 @@ export async function deleteService(id: string): Promise<boolean> {
   try {
     console.log("Deleting service:", id);
     
-    // First delete related data
+    // Delete related data
     const tables = ['service_photos', 'service_technicians', 'report_data'];
     
     for (const table of tables) {
-      const tableName = table as 'service_photos' | 'service_technicians' | 'report_data';
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq(table === 'report_data' ? 'id' : 'service_id', id);
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error(`Error deleting related data from ${table}:`, error);
-        // Continue with deletion
+      if (table === 'report_data') {
+        const { error } = await supabase
+          .from('report_data')
+          .delete()
+          .eq('id', id);
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error(`Error deleting related data from report_data:`, error);
+        }
+      } else if (table === 'service_photos') {
+        const { error } = await supabase
+          .from('service_photos')
+          .delete()
+          .eq('service_id', id);
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error(`Error deleting related data from service_photos:`, error);
+        }
+      } else if (table === 'service_technicians') {
+        const { error } = await supabase
+          .from('service_technicians')
+          .delete()
+          .eq('service_id', id);
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error(`Error deleting related data from service_technicians:`, error);
+        }
       }
     }
     

@@ -3,12 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { updateUserAvatar } from "./upload";
 
+// Define valid role types to match the database constraints
+export type UserRole = 'tecnico' | 'administrador' | 'gestor';
+
 // Interface para o perfil de usuário
 export interface UserProfile {
   id: string;
   name: string;
   avatar: string;
-  role?: string;
+  role?: UserRole;
 }
 
 // Buscar perfil do usuário atual
@@ -83,7 +86,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
         .from('user_roles')
         .insert({
           user_id: user.id,
-          role: 'tecnico' // Função padrão
+          role: 'tecnico' as UserRole // Função padrão com tipo explícito
         });
       
       if (insertRoleError) {
@@ -92,7 +95,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     }
     
     // Definir a função padrão como 'tecnico' se não encontrar
-    const role = roleData?.role || 'tecnico';
+    const role = (roleData?.role || 'tecnico') as UserRole;
     console.log("Função do usuário:", role);
     
     return {
@@ -136,7 +139,7 @@ export async function getAllTeamMembers(): Promise<UserProfile[]> {
         id: profile.id,
         name: profile.name || 'Usuário',
         avatar: profile.avatar || '',
-        role: roleData?.role || 'tecnico'
+        role: (roleData?.role || 'tecnico') as UserRole
       });
     }
     
@@ -169,6 +172,9 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
     
     // If role is being updated, update user_roles table
     if (data.role) {
+      // Ensure role is a valid UserRole type
+      const role = data.role as UserRole;
+      
       // Check if role record exists
       const { data: existingRole, error: roleCheckError } = await supabase
         .from('user_roles')
@@ -184,7 +190,7 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
         // Update existing role
         const { error: roleUpdateError } = await supabase
           .from('user_roles')
-          .update({ role: data.role })
+          .update({ role })
           .eq('id', existingRole.id);
         
         if (roleUpdateError) throw roleUpdateError;
@@ -192,7 +198,10 @@ export async function updateUserProfile(userId: string, data: Partial<UserProfil
         // Insert new role
         const { error: roleInsertError } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role: data.role });
+          .insert({
+            user_id: userId,
+            role
+          });
         
         if (roleInsertError) throw roleInsertError;
       }
@@ -300,7 +309,7 @@ export async function getTechnicians(): Promise<UserProfile[]> {
       id: profile.id,
       name: profile.name || 'Técnico',
       avatar: profile.avatar || '',
-      role: 'tecnico'
+      role: 'tecnico' as UserRole
     })) || [];
     
     console.log("Perfis de técnicos processados:", technicians.length);

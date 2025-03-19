@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
-import { UserProfile, getCurrentUserProfile, updateUserProfile } from "@/services/userProfile";
+import { UserProfile, UserRole, getCurrentUserProfile, updateUserProfile } from "@/services/userProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,7 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<boolean>;
-  checkUserRole: (role: 'tecnico' | 'administrador' | 'gestor') => boolean;
+  checkUserRole: (role: UserRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Development version for now - always returns true
-  const checkUserRole = (role: 'tecnico' | 'administrador' | 'gestor'): boolean => {
+  const checkUserRole = (role: UserRole): boolean => {
     // For development, always return true
     return true;
     
