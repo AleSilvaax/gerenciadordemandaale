@@ -4,3 +4,5 @@ export * from './serviceAPI';
 export * from './reportAPI';
 export * from './photoAPI';
 export * from './technicianAPI';
+export * from './serviceDetailsAPI';
+
