@@ -22,6 +22,7 @@ import {
 import { useForm } from "react-hook-form";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { teamMembers } from "@/data/mockData";
+import { createService } from "@/services/api";
 
 const NewService = () => {
   const navigate = useNavigate();
@@ -37,16 +38,36 @@ const NewService = () => {
   });
 
   // Handle form submission
-  const onSubmit = (data: any) => {
-    // In a real application, this would create a new service in the backend
-    // For this mock version, we'll just show a success toast and navigate back
-    toast({
-      title: "Demanda criada",
-      description: "A nova demanda foi criada com sucesso.",
-    });
-    
-    // Navigate back to demands list
-    navigate('/demandas');
+  const onSubmit = async (data: any) => {
+    try {
+      const technician = teamMembers.find(member => member.id === data.technician);
+      
+      if (!technician) {
+        throw new Error("Técnico não encontrado");
+      }
+      
+      const newService = await createService({
+        title: data.title,
+        location: data.location,
+        technicians: [technician],
+        status: "pendente"
+      });
+      
+      toast({
+        title: "Demanda criada",
+        description: `A demanda #${newService.id} foi criada com sucesso.`,
+      });
+      
+      // Navigate back to demands list
+      navigate('/demandas');
+    } catch (error) {
+      console.error("Erro ao criar demanda:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a demanda. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

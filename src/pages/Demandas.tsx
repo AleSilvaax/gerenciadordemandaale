@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Plus, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
@@ -16,13 +16,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { currentUser, ServiceStatus, services } from "@/data/mockData";
+import { Service, ServiceStatus, currentUser } from "@/data/mockData";
+import { getServices, deleteService } from "@/services/api";
 
 const Demandas: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ServiceStatus | "todos">("todos");
-  const [servicesList, setServicesList] = useState(services);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getServices();
+      setServicesList(data);
+    } catch (error) {
+      console.error("Erro ao carregar demandas:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as demandas. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const filteredServices = servicesList.filter(service => {
     if (activeTab === "todos") return true;
@@ -33,18 +56,31 @@ const Demandas: React.FC = () => {
     setDeleteId(id);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      // In a real app, this would call an API to delete the service
-      setServicesList(servicesList.filter(service => service.id !== deleteId));
-      
-      toast({
-        title: "Demanda excluída",
-        description: `A demanda #${deleteId} foi excluída com sucesso.`,
-        variant: "destructive",
-      });
-      
-      setDeleteId(null);
+      try {
+        const success = await deleteService(deleteId);
+        
+        if (success) {
+          setServicesList(servicesList.filter(service => service.id !== deleteId));
+          
+          toast({
+            title: "Demanda excluída",
+            description: `A demanda #${deleteId} foi excluída com sucesso.`,
+          });
+        } else {
+          throw new Error("Falha ao excluir o serviço");
+        }
+      } catch (error) {
+        console.error("Erro ao excluir demanda:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a demanda. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setDeleteId(null);
+      }
     }
   };
   
@@ -102,7 +138,11 @@ const Demandas: React.FC = () => {
       </div>
       
       <div className="space-y-2">
-        {filteredServices.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center p-8 rounded-lg glass-card">
+            <p className="text-center text-muted-foreground">Carregando demandas...</p>
+          </div>
+        ) : filteredServices.length > 0 ? (
           filteredServices.map(service => (
             <ServiceCard
               key={service.id}
@@ -110,7 +150,7 @@ const Demandas: React.FC = () => {
               title={service.title}
               status={service.status}
               location={service.location}
-              technician={service.technician}
+              technician={service.technicians?.[0] || { id: "", name: "Sem técnico", avatar: "" }}
               onDelete={handleDelete}
             />
           ))
