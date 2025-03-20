@@ -49,7 +49,7 @@ const NewService = () => {
       const newService = await createService({
         title: data.title,
         location: data.location,
-        technicians: [technician],
+        technician: technician,
         status: "pendente"
       });
       

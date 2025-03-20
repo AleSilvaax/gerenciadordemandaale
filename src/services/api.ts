@@ -40,7 +40,11 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
       title: service.title || "Nova Demanda",
       status: service.status || "pendente",
       location: service.location || "",
-      technicians: service.technicians || [],
+      technician: service.technician || {
+        id: "",
+        name: "Sem técnico",
+        avatar: ""
+      },
       reportData: service.reportData || {},
       photos: service.photos || [],
     };

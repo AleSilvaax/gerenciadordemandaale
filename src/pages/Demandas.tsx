@@ -150,7 +150,7 @@ const Demandas: React.FC = () => {
               title={service.title}
               status={service.status}
               location={service.location}
-              technician={service.technicians?.[0] || { id: "", name: "Sem técnico", avatar: "" }}
+              technician={service.technician || { id: "", name: "Sem técnico", avatar: "" }}
               onDelete={handleDelete}
             />
           ))

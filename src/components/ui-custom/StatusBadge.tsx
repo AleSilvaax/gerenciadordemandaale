@@ -16,12 +16,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) =
       case "concluido":
         return {
           label: "Concluído",
-          variant: "success" as const,
+          variant: "default" as const,
+          className: "bg-green-500 hover:bg-green-600",
         };
       case "pendente":
         return {
           label: "Pendente",
-          variant: "warning" as const,
+          variant: "secondary" as const,
+          className: "bg-yellow-500 hover:bg-yellow-600 text-black",
         };
       case "cancelado":
         return {
@@ -36,12 +38,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) =
     }
   };
 
-  const { label, variant } = getStatusConfig(status);
+  const { label, variant, className: statusClassName } = getStatusConfig(status);
 
   return (
     <Badge 
       variant={variant} 
-      className={cn("text-xs font-medium", className)}
+      className={cn("text-xs font-medium", statusClassName, className)}
     >
       {label}
     </Badge>
