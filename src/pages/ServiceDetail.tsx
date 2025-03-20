@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   ArrowLeft, Save, Camera, Upload, Image, File, X, FileText,
@@ -29,9 +30,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { Service, TeamMember, services, teamMembers } from "@/data/mockData";
+import { Service, TeamMember, teamMembers } from "@/data/mockData";
 import { generatePDF, downloadPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
+import { 
+  getServiceById, 
+  updateService, 
+  updateReportData, 
+  updateServicePhotos,
+  addPhotoToService
+} from "@/services/api";
 
 const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,124 +49,303 @@ const ServiceDetail = () => {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pdfGenerated, setPdfGenerated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [service, setService] = useState<Service | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Find the service by ID
-  const service = services.find(s => s.id === id) || {
-    id: "",
-    title: "",
-    status: "pendente" as const,
-    location: "",
-    technician: teamMembers[0],
-    reportData: {},
-    photos: []
-  };
+  // Fetch the service data
+  useEffect(() => {
+    const fetchService = async () => {
+      if (!id) return;
+      
+      try {
+        setIsLoading(true);
+        const fetchedService = await getServiceById(id);
+        
+        if (fetchedService) {
+          setService(fetchedService);
+          if (fetchedService.photos) {
+            setSelectedPhotos(fetchedService.photos);
+          }
+        } else {
+          toast({
+            title: "Erro",
+            description: "Demanda não encontrada",
+            variant: "destructive",
+          });
+          navigate('/demandas');
+        }
+      } catch (error) {
+        console.error("Error fetching service:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar os dados da demanda",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchService();
+  }, [id, navigate, toast]);
   
-  // Use react-hook-form for form handling
+  // Initialize form with service data
   const form = useForm({
     defaultValues: {
-      title: service.title,
-      status: service.status,
-      location: service.location,
-      technician: service.technician.id,
-      client: service.reportData?.client || "",
-      address: service.reportData?.address || "",
-      city: service.reportData?.city || "",
-      executedBy: service.reportData?.executedBy || "",
-      installationDate: service.reportData?.installationDate || "",
-      modelNumber: service.reportData?.modelNumber || "",
-      serialNumberNew: service.reportData?.serialNumberNew || "",
-      serialNumberOld: service.reportData?.serialNumberOld || "",
-      homologatedName: service.reportData?.homologatedName || "",
-      compliesWithNBR17019: service.reportData?.compliesWithNBR17019 || false,
-      homologatedInstallation: service.reportData?.homologatedInstallation || false,
-      requiredAdjustment: service.reportData?.requiredAdjustment || false,
-      adjustmentDescription: service.reportData?.adjustmentDescription || "",
-      validWarranty: service.reportData?.validWarranty || false,
-      circuitBreakerEntry: service.reportData?.circuitBreakerEntry || "",
-      chargerCircuitBreaker: service.reportData?.chargerCircuitBreaker || "",
-      cableGauge: service.reportData?.cableGauge || "",
-      chargerStatus: service.reportData?.chargerStatus || "",
-      technicalComments: service.reportData?.technicalComments || ""
+      title: "",
+      status: "pendente" as const,
+      location: "",
+      technician: "",
+      client: "",
+      address: "",
+      city: "",
+      executedBy: "",
+      installationDate: "",
+      modelNumber: "",
+      serialNumberNew: "",
+      serialNumberOld: "",
+      homologatedName: "",
+      compliesWithNBR17019: false,
+      homologatedInstallation: false,
+      requiredAdjustment: false,
+      adjustmentDescription: "",
+      validWarranty: false,
+      circuitBreakerEntry: "",
+      chargerCircuitBreaker: "",
+      cableGauge: "",
+      chargerStatus: "",
+      technicalComments: ""
     }
   });
 
-  // Initialize selected photos
-  React.useEffect(() => {
-    if (service.photos) {
-      setSelectedPhotos(service.photos);
+  // Update form values when service data is loaded
+  useEffect(() => {
+    if (service) {
+      form.reset({
+        title: service.title || "",
+        status: service.status || "pendente",
+        location: service.location || "",
+        technician: service.technician?.id || "",
+        client: service.reportData?.client || "",
+        address: service.reportData?.address || "",
+        city: service.reportData?.city || "",
+        executedBy: service.reportData?.executedBy || "",
+        installationDate: service.reportData?.installationDate || "",
+        modelNumber: service.reportData?.modelNumber || "",
+        serialNumberNew: service.reportData?.serialNumberNew || "",
+        serialNumberOld: service.reportData?.serialNumberOld || "",
+        homologatedName: service.reportData?.homologatedName || "",
+        compliesWithNBR17019: service.reportData?.compliesWithNBR17019 || false,
+        homologatedInstallation: service.reportData?.homologatedInstallation || false,
+        requiredAdjustment: service.reportData?.requiredAdjustment || false,
+        adjustmentDescription: service.reportData?.adjustmentDescription || "",
+        validWarranty: service.reportData?.validWarranty || false,
+        circuitBreakerEntry: service.reportData?.circuitBreakerEntry || "",
+        chargerCircuitBreaker: service.reportData?.chargerCircuitBreaker || "",
+        cableGauge: service.reportData?.cableGauge || "",
+        chargerStatus: service.reportData?.chargerStatus || "",
+        technicalComments: service.reportData?.technicalComments || ""
+      });
     }
-  }, [service.photos]);
+  }, [service, form]);
 
   // Handle form submission
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
+    if (!id || !service) return;
+    
     setIsSubmitting(true);
     
-    // In a real application, this would update the service data in the backend
-    // For this mock version, we'll just show a success toast
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Find the technician object based on the selected ID
+      const selectedTechnician = teamMembers.find(t => t.id === data.technician) || service.technician;
       
-      toast({
-        title: "Demanda atualizada",
-        description: `As alterações na demanda ${id} foram salvas com sucesso.`,
+      // Update the service general data
+      const serviceUpdated = await updateService(id, {
+        title: data.title,
+        status: data.status,
+        location: data.location,
+        technician: selectedTechnician
       });
       
-      // If status is completed, ask if the user wants to generate a PDF
-      if (data.status === "concluido" && !pdfGenerated) {
-        setTimeout(() => {
-          toast({
-            title: "Relatório disponível",
-            description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
-            action: (
-              <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
-                Gerar PDF
-              </Button>
-            ),
-          });
-        }, 500);
+      // Update the report data
+      const reportUpdated = await updateReportData(id, {
+        client: data.client,
+        address: data.address,
+        city: data.city,
+        executedBy: data.executedBy,
+        installationDate: data.installationDate,
+        modelNumber: data.modelNumber,
+        serialNumberNew: data.serialNumberNew,
+        serialNumberOld: data.serialNumberOld,
+        homologatedName: data.homologatedName,
+        compliesWithNBR17019: data.compliesWithNBR17019,
+        homologatedInstallation: data.homologatedInstallation,
+        requiredAdjustment: data.requiredAdjustment,
+        adjustmentDescription: data.adjustmentDescription,
+        validWarranty: data.validWarranty,
+        circuitBreakerEntry: data.circuitBreakerEntry,
+        chargerCircuitBreaker: data.chargerCircuitBreaker,
+        cableGauge: data.cableGauge,
+        chargerStatus: data.chargerStatus,
+        technicalComments: data.technicalComments
+      });
+      
+      // Update photos if they have changed
+      if (JSON.stringify(service.photos) !== JSON.stringify(selectedPhotos)) {
+        await updateServicePhotos(id, selectedPhotos);
       }
-    }, 1000);
+      
+      // If all updates were successful
+      if (serviceUpdated && reportUpdated) {
+        // Refresh service data
+        const updatedService = await getServiceById(id);
+        if (updatedService) {
+          setService(updatedService);
+        }
+        
+        toast({
+          title: "Demanda atualizada",
+          description: `As alterações na demanda ${id} foram salvas com sucesso.`,
+        });
+        
+        // If status is completed, ask if the user wants to generate a PDF
+        if (data.status === "concluido" && !pdfGenerated) {
+          setTimeout(() => {
+            toast({
+              title: "Relatório disponível",
+              description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
+              action: (
+                <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
+                  Gerar PDF
+                </Button>
+              ),
+            });
+          }, 500);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating service:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar as alterações da demanda",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle photo uploads
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Mock photo upload - in a real application, this would upload the photos to a server
-    // and return URLs. For this example, we'll use the photos from the data.
-    const mockPhotoURLs = [
-      "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
-      "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
-      "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
-      "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png",
-      "/lovable-uploads/4df72a6d-1dc8-44c2-b61d-cb6504af2b1f.png",
-      "/lovable-uploads/3c26bd66-6e28-4b07-a3ca-e80a3a92ae06.png",
-      "/lovable-uploads/6bfabcbb-e3dc-46e9-985a-ef6610069890.png"
-    ];
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id || !e.target.files || e.target.files.length === 0) return;
     
-    // Add a random photo from the mock list
-    const randomPhoto = mockPhotoURLs[Math.floor(Math.random() * mockPhotoURLs.length)];
-    
-    if (!selectedPhotos.includes(randomPhoto)) {
-      setSelectedPhotos([...selectedPhotos, randomPhoto]);
+    try {
+      // Mock photo upload - in a real application, this would upload the photos to a server
+      // For this example, we'll use the mock URLs
+      const mockPhotoURLs = [
+        "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
+        "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
+        "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
+        "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png",
+        "/lovable-uploads/4df72a6d-1dc8-44c2-b61d-cb6504af2b1f.png",
+        "/lovable-uploads/3c26bd66-6e28-4b07-a3ca-e80a3a92ae06.png",
+        "/lovable-uploads/6bfabcbb-e3dc-46e9-985a-ef6610069890.png"
+      ];
+      
+      // Add a random photo from the mock list
+      const randomPhoto = mockPhotoURLs[Math.floor(Math.random() * mockPhotoURLs.length)];
+      
+      if (!selectedPhotos.includes(randomPhoto)) {
+        // Update the local state
+        const newPhotos = [...selectedPhotos, randomPhoto];
+        setSelectedPhotos(newPhotos);
+        
+        // Also update in the API
+        const success = await addPhotoToService(id, randomPhoto);
+        
+        if (success) {
+          toast({
+            title: "Foto adicionada",
+            description: "A foto foi adicionada ao relatório com sucesso.",
+          });
+          
+          // Refresh service data
+          const updatedService = await getServiceById(id);
+          if (updatedService) {
+            setService(updatedService);
+          }
+        } else {
+          // Revert the local state change if API update failed
+          setSelectedPhotos(selectedPhotos);
+          toast({
+            title: "Erro",
+            description: "Falha ao adicionar a foto ao relatório",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading photo:", error);
       toast({
-        title: "Foto adicionada",
-        description: "A foto foi adicionada ao relatório com sucesso.",
+        title: "Erro",
+        description: "Falha ao carregar a foto",
+        variant: "destructive",
       });
+    } finally {
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   // Handle photo removal
-  const handleRemovePhoto = (photoUrl: string) => {
-    setSelectedPhotos(selectedPhotos.filter(photo => photo !== photoUrl));
-    toast({
-      title: "Foto removida",
-      description: "A foto foi removida do relatório.",
-      variant: "destructive",
-    });
+  const handleRemovePhoto = async (photoUrl: string) => {
+    if (!id) return;
+    
+    try {
+      // Update the local state first
+      const updatedPhotos = selectedPhotos.filter(photo => photo !== photoUrl);
+      setSelectedPhotos(updatedPhotos);
+      
+      // Then update in the API
+      const success = await updateServicePhotos(id, updatedPhotos);
+      
+      if (success) {
+        toast({
+          title: "Foto removida",
+          description: "A foto foi removida do relatório.",
+        });
+        
+        // Refresh service data
+        const updatedService = await getServiceById(id);
+        if (updatedService) {
+          setService(updatedService);
+        }
+      } else {
+        // Revert the local state change if API update failed
+        setSelectedPhotos(selectedPhotos);
+        toast({
+          title: "Erro",
+          description: "Falha ao remover a foto do relatório",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error removing photo:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao remover a foto",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle PDF generation
   const handleGeneratePDF = () => {
+    if (!service) return;
+    
     // Update service object with form data to ensure latest values are in the PDF
     const updatedService = {
       ...service,
@@ -195,11 +382,23 @@ const ServiceDetail = () => {
     
     if (result) {
       setPdfGenerated(true);
+      toast({
+        title: "PDF gerado",
+        description: "O PDF do relatório foi gerado com sucesso.",
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Falha ao gerar o PDF do relatório",
+        variant: "destructive",
+      });
     }
   };
 
   // Handle PDF download
   const handleDownloadPDF = () => {
+    if (!service) return;
+    
     // Update service object with form data to ensure latest values are in the PDF
     const updatedService = {
       ...service,
@@ -234,6 +433,35 @@ const ServiceDetail = () => {
     // Call the PDF download utility
     downloadPDF(updatedService);
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin mb-4">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
+            </svg>
+          </div>
+          <p className="text-muted-foreground">Carregando dados da demanda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no service found
+  if (!service) {
+    return (
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold mb-2">Demanda não encontrada</h2>
+          <p className="text-muted-foreground mb-4">A demanda solicitada não existe ou foi removida.</p>
+          <Button onClick={() => navigate('/demandas')}>Voltar para Demandas</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 pb-20 page-transition">
