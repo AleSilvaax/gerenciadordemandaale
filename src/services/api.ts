@@ -1,14 +1,66 @@
 import { Service, ServiceStatus, ReportData } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
+// Helper function to handle localStorage storage limits
+const safelyStoreData = (key: string, data: any): boolean => {
+  try {
+    const serializedData = JSON.stringify(data);
+    localStorage.setItem(key, serializedData);
+    return true;
+  } catch (error) {
+    if (error instanceof DOMException && (
+      // everything except Firefox
+      error.name === 'QuotaExceededError' ||
+      // Firefox
+      error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      
+      console.warn('localStorage quota exceeded. Compressing data...');
+      
+      // For image-heavy data, we'll try to reduce the data size
+      if (key === 'services') {
+        // Create a copy with reduced photo arrays (keep at most 2 photos per service)
+        const reducedData = data.map((service: Service) => {
+          if (service.photos && service.photos.length > 2) {
+            return {
+              ...service,
+              photos: service.photos.slice(0, 2)
+            };
+          }
+          return service;
+        });
+        
+        try {
+          localStorage.setItem(key, JSON.stringify(reducedData));
+          console.info('Successfully stored compressed data');
+          return true;
+        } catch (compressionError) {
+          console.error('Failed to store even with compression', compressionError);
+          return false;
+        }
+      }
+    }
+    
+    console.error('Error storing data in localStorage:', error);
+    return false;
+  }
+};
+
 // Variável local para armazenar os serviços em memória
-let localServices: Service[] = JSON.parse(localStorage.getItem("services") || "[]");
+let localServices: Service[] = [];
+
+// Try to load from localStorage, but handle errors
+try {
+  localServices = JSON.parse(localStorage.getItem("services") || "[]");
+} catch (error) {
+  console.error("Error loading services from localStorage:", error);
+  localServices = [];
+}
 
 // Inicializa com dados de exemplo se não houver dados no localStorage
 if (localServices.length === 0) {
   import("@/data/mockData").then(({ services }) => {
     localServices = [...services];
-    localStorage.setItem("services", JSON.stringify(localServices));
+    safelyStoreData("services", localServices);
   });
 }
 
@@ -49,7 +101,7 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
     };
 
     localServices.push(newService);
-    localStorage.setItem("services", JSON.stringify(localServices));
+    safelyStoreData("services", localServices);
     
     setTimeout(() => {
       resolve(newService);
@@ -72,10 +124,10 @@ export const updateService = (id: string, updates: Partial<Service>): Promise<bo
       ...updates,
     };
 
-    localStorage.setItem("services", JSON.stringify(localServices));
+    const success = safelyStoreData("services", localServices);
     
     setTimeout(() => {
-      resolve(true);
+      resolve(success);
     }, 300);
   });
 };
@@ -95,10 +147,10 @@ export const updateReportData = (id: string, reportData: Partial<ReportData>): P
       ...reportData,
     };
 
-    localStorage.setItem("services", JSON.stringify(localServices));
+    const success = safelyStoreData("services", localServices);
     
     setTimeout(() => {
-      resolve(true);
+      resolve(success);
     }, 300);
   });
 };
@@ -114,15 +166,15 @@ export const deleteService = (id: string): Promise<boolean> => {
       return;
     }
 
-    localStorage.setItem("services", JSON.stringify(localServices));
+    const success = safelyStoreData("services", localServices);
     
     setTimeout(() => {
-      resolve(true);
+      resolve(success);
     }, 300);
   });
 };
 
-// Adiciona uma foto a um serviço
+// Adiciona uma foto a um serviço - Versão melhorada para suportar uploads externos
 export const addPhotoToService = (id: string, photoFile: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -146,8 +198,22 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
           localServices[index].photos = [];
         }
         
-        localServices[index].photos.push(photoUrl);
-        localStorage.setItem("services", JSON.stringify(localServices));
+        // Verificar se a foto já existe para evitar duplicações
+        if (!localServices[index].photos.includes(photoUrl)) {
+          localServices[index].photos.push(photoUrl);
+          const success = safelyStoreData("services", localServices);
+          
+          if (!success) {
+            // Se não conseguir salvar no localStorage, tente remover fotos mais antigas
+            if (localServices[index].photos.length > 1) {
+              localServices[index].photos = [
+                ...localServices[index].photos.slice(1),
+                photoUrl
+              ];
+              safelyStoreData("services", localServices);
+            }
+          }
+        }
         
         setTimeout(() => {
           resolve(photoUrl);
@@ -176,10 +242,10 @@ export const updateServicePhotos = (id: string, photos: string[]): Promise<boole
     }
 
     localServices[index].photos = photos;
-    localStorage.setItem("services", JSON.stringify(localServices));
+    const success = safelyStoreData("services", localServices);
     
     setTimeout(() => {
-      resolve(true);
+      resolve(success);
     }, 300);
   });
 };

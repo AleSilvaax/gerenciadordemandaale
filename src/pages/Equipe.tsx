@@ -56,6 +56,7 @@ const Equipe: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole | "todos">("todos");
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
 
@@ -91,23 +92,12 @@ const Equipe: React.FC = () => {
     roleFilter === "todos" || member.role === roleFilter
   );
 
-  const getRandomAvatar = () => {
-    const avatars = [
-      "/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png",
-      "/lovable-uploads/b58598a4-1c9d-4b38-a808-fb9627d2c39e.png",
-      "/lovable-uploads/ade02ef5-1423-471b-936c-ced61d8c0bdd.png",
-      "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png",
-      "/lovable-uploads/d17c377b-2186-478e-9ad7-c4992d09fc7b.png"
-    ];
-    return avatars[Math.floor(Math.random() * avatars.length)];
-  };
-
   const handleAddMember = () => {
     if (newMember.name.trim()) {
       const newTeamMember = {
         id: `${team.length + 10}`,
         name: newMember.name,
-        avatar: getRandomAvatar(),
+        avatar: "",
         role: newMember.role
       };
       
@@ -146,27 +136,55 @@ const Equipe: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       setUploadingAvatar(memberId);
       
-      // Simulating upload in a real app
-      setTimeout(() => {
-        const updatedTeam = team.map(member => {
-          if (member.id === memberId) {
-            return {
-              ...member,
-              // For demo purposes, we'll use a random avatar from our existing set
-              avatar: getRandomAvatar()
-            };
-          }
-          return member;
-        });
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (!event.target || !event.target.result) {
+          toast({
+            title: "Erro",
+            description: "Falha ao ler a imagem",
+            variant: "destructive",
+          });
+          setUploadingAvatar(null);
+          return;
+        }
         
-        setTeam(updatedTeam);
-        setUploadingAvatar(null);
+        // Get the data URL from the file
+        const photoUrl = event.target.result.toString();
         
+        // Update the team member with the actual uploaded photo
+        setTimeout(() => {
+          const updatedTeam = team.map(member => {
+            if (member.id === memberId) {
+              return {
+                ...member,
+                avatar: photoUrl
+              };
+            }
+            return member;
+          });
+          
+          setTeam(updatedTeam);
+          setUploadingAvatar(null);
+          
+          toast({
+            title: "Foto atualizada",
+            description: "A foto do perfil foi atualizada com sucesso.",
+          });
+        }, 800);
+      };
+      
+      reader.onerror = () => {
         toast({
-          title: "Foto atualizada",
-          description: "A foto do perfil foi atualizada com sucesso.",
+          title: "Erro",
+          description: "Erro ao ler o arquivo",
+          variant: "destructive",
         });
-      }, 1500);
+        setUploadingAvatar(null);
+      };
+      
+      reader.readAsDataURL(file);
     }
   };
 
@@ -189,6 +207,19 @@ const Equipe: React.FC = () => {
       }
       return permission;
     }));
+  };
+  
+  const handleSaveChanges = () => {
+    setIsSaving(true);
+    
+    // Simulate saving to backend
+    setTimeout(() => {
+      setIsSaving(false);
+      toast({
+        title: "Permissões salvas",
+        description: "As permissões da equipe foram atualizadas com sucesso.",
+      });
+    }, 800);
   };
 
   return (
@@ -369,14 +400,18 @@ const Equipe: React.FC = () => {
       </div>
       
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
-        <Button className="w-full" onClick={() => {
-          toast({
-            title: "Permissões salvas",
-            description: "As permissões da equipe foram atualizadas com sucesso.",
-          });
-        }}>
-          <Save size={18} className="mr-2" />
-          Salvar
+        <Button className="w-full" onClick={handleSaveChanges} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 size={18} className="mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save size={18} className="mr-2" />
+              Salvar
+            </>
+          )}
         </Button>
       </div>
       
