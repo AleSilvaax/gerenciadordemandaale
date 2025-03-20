@@ -1,11 +1,12 @@
 
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useToast } from '@/components/ui/use-toast';
-import { useEffect, useState } from 'react';
 import { Service, ServiceStatus } from '@/types/service';
 import { updateService, updateReportData } from '@/services/api';
 import { useServiceDetail } from '../context/ServiceDetailContext';
+import { Button } from '@/components/ui/button';
 
 export const useServiceFormSubmit = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,12 +93,13 @@ export const useServiceFormSubmit = () => {
           uiToast({
             description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
             action: (
-              <button 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium"
+              <Button 
+                variant="default" 
+                size="sm" 
                 onClick={handleGeneratePDF}
               >
                 Gerar PDF
-              </button>
+              </Button>
             ),
           });
         }, 500);
