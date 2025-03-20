@@ -1,3 +1,4 @@
+
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 
@@ -13,7 +14,7 @@ export interface Service {
   title: string;
   status: ServiceStatus;
   location: string;
-  technicians: TeamMember[];
+  technician: TeamMember;
   reportData?: ReportData;
   photos?: string[];
 }
@@ -52,6 +53,7 @@ export interface ChartData {
   value: number;
 }
 
+// Team members data
 export const teamMembers: TeamMember[] = [
   {
     id: "1",
@@ -85,6 +87,7 @@ export const teamMembers: TeamMember[] = [
   }
 ];
 
+// Current user data
 export const currentUser = {
   id: "6",
   name: "Christian Paulino",
@@ -92,13 +95,14 @@ export const currentUser = {
   role: "gestor"
 };
 
+// Services data with report data
 export const services: Service[] = [
   {
     id: "6430",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[0]],
+    technician: teamMembers[0],
     reportData: {
       client: "Pedro Penacchione",
       address: "Av. Airton Pretini, 123",
@@ -132,59 +136,60 @@ export const services: Service[] = [
     title: "Vistoria Pedro Penacchione",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[0]]
+    technician: teamMembers[0]
   },
   {
     id: "6432",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[2]]
+    technician: teamMembers[2]
   },
   {
     id: "6433",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[0]]
+    technician: teamMembers[0]
   },
   {
     id: "6434",
     title: "Vistoria Luan de Jesus",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[1]]
+    technician: teamMembers[1]
   },
   {
     id: "6435",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[2]]
+    technician: teamMembers[2]
   },
   {
     id: "6436",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[0]]
+    technician: teamMembers[0]
   },
   {
     id: "6437",
     title: "Vistoria Luan de Jesus",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[1]]
+    technician: teamMembers[1]
   },
   {
     id: "6438",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technicians: [teamMembers[2]]
+    technician: teamMembers[2]
   }
 ];
 
+// Stats data
 export const stats: StatData = {
   total: 243,
   completed: 143,
@@ -192,6 +197,7 @@ export const stats: StatData = {
   cancelled: 20
 };
 
+// Monthly chart data
 export const monthlyData: ChartData[] = [
   { name: "Jan", value: 20 },
   { name: "Fev", value: 40 },
@@ -201,6 +207,7 @@ export const monthlyData: ChartData[] = [
   { name: "Jun", value: 74 }
 ];
 
+// Team performance data
 export const teamPerformance = [
   { name: "Hudson", color: "#ef4444" },
   { name: "Thiago", color: "#3b82f6" },
@@ -208,6 +215,7 @@ export const teamPerformance = [
   { name: "Luiz", color: "#6366f1" }
 ];
 
+// Additional chart data for statistics
 export const weeklyData: ChartData[] = [
   { name: "Seg", value: 5 },
   { name: "Ter", value: 12 },

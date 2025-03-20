@@ -1,89 +1,234 @@
 
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { Service } from '@/types/service';
+import { Service, TeamMember } from "@/data/mockData";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
-// Generate PDF from service data
-export const generatePDF = (service: Service): boolean => {
+// Function to create a new jsPDF instance with consistent styling
+const createPdfDocument = () => {
+  const pdf = new jsPDF();
+  
+  // Set default font
+  pdf.setFont("helvetica");
+  
+  return pdf;
+};
+
+// Generate the cover page
+const generateCoverPage = (pdf: any, service: Service) => {
+  // Background color
+  pdf.setFillColor(30, 30, 30);
+  pdf.rect(0, 0, 210, 297, "F");
+  
+  // Add date
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(14);
+  const date = new Date().toLocaleDateString("pt-BR");
+  pdf.text(`${date}`, 20, 30);
+  
+  // Add technician name
+  pdf.setTextColor(255, 240, 0);
+  pdf.text(`${service.technician.name}`, 20, 40);
+  
+  // Add title
+  pdf.setFontSize(40);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("RELATÓRIO", 20, 120);
+  pdf.text("DE SERVIÇO", 20, 145);
+  
+  // Add client and service number
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("DESTINO", 20, 260);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(`Cliente ${service.reportData?.client || ""}`, 20, 270);
+  
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("N° DA NOTA", 150, 260);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(service.id, 150, 270);
+};
+
+// Generate the technicians page
+const generateTechniciansPage = (pdf: any, service: Service) => {
+  // Background color
+  pdf.setFillColor(30, 30, 30);
+  pdf.rect(0, 0, 210, 297, "F");
+  
+  // Add title
+  pdf.setFontSize(30);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("TÉCNICOS", 20, 40);
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("RESPONSÁVEIS", 20, 55);
+  
+  // We don't have access to draw images directly in this mock
+  // In a real implementation, the technician images would be added here
+  // Instead, we'll add a placeholder text for the technician info
+  
+  pdf.setFontSize(18);
+  pdf.setTextColor(255, 240, 0);
+  pdf.text(`${service.technician.name}`, 80, 100);
+  
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("Eletricista instalador", 80, 110);
+};
+
+// Generate the service description page
+const generateDescriptionPage = (pdf: any, service: Service) => {
+  // Background color
+  pdf.setFillColor(30, 30, 30);
+  pdf.rect(0, 0, 210, 297, "F");
+  
+  // Add title
+  pdf.setFontSize(30);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("DESCRIÇÃO DO", 20, 40);
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("SERVIÇO", 20, 55);
+  
+  // Add service description
+  pdf.setFontSize(12);
+  pdf.setTextColor(255, 255, 255);
+  
+  const description = service.reportData?.technicalComments || 
+    `Referente à instalação de carregador veicular do cliente ${service.reportData?.client || service.title}.`;
+  
+  // Split long text to fit page
+  const lines = pdf.splitTextToSize(description, 170);
+  pdf.text(lines, 20, 80);
+  
+  // In a real implementation, photos would be added here
+  // For now, we'll add placeholder text
+  pdf.setFontSize(10);
+  pdf.text("Fotos do serviço incluídas no relatório original", 20, 150);
+};
+
+// Generate technical details page
+const generateDetailsPage = (pdf: any, service: Service) => {
+  // Background color
+  pdf.setFillColor(30, 30, 30);
+  pdf.rect(0, 0, 210, 297, "F");
+  
+  // Add title
+  pdf.setFontSize(30);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("DETALHES", 20, 40);
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("TÉCNICOS", 20, 55);
+  
+  // Add service details in a table-like format
+  pdf.setFontSize(12);
+  pdf.setTextColor(255, 255, 255);
+  
+  let yPos = 80;
+  const xPos1 = 20;
+  const xPos2 = 100;
+  const lineHeight = 10;
+  
+  // Add details from report data
+  const details = [
+    { label: "Cliente:", value: service.reportData?.client || "" },
+    { label: "Endereço:", value: service.reportData?.address || "" },
+    { label: "Cidade:", value: service.reportData?.city || "" },
+    { label: "Data da Instalação:", value: service.reportData?.installationDate || "" },
+    { label: "Marca e Modelo:", value: service.reportData?.modelNumber || "" },
+    { label: "Número de Série:", value: service.reportData?.serialNumberOld || "" },
+    { label: "Bitola do cabo:", value: service.reportData?.cableGauge || "" },
+    { label: "Disjuntor do carregador:", value: service.reportData?.chargerCircuitBreaker || "" },
+    { label: "Status do carregador:", value: service.reportData?.chargerStatus || "" }
+  ];
+  
+  details.forEach(item => {
+    pdf.setTextColor(255, 240, 0);
+    pdf.text(item.label, xPos1, yPos);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(item.value, xPos2, yPos);
+    yPos += lineHeight;
+  });
+  
+  // Add compliance information
+  yPos += 10;
+  pdf.setTextColor(255, 240, 0);
+  pdf.text("Conformidade:", xPos1, yPos);
+  pdf.setTextColor(255, 255, 255);
+  
+  yPos += lineHeight;
+  pdf.text(`- Instalação atende NBR17019: ${service.reportData?.compliesWithNBR17019 ? "Sim" : "Não"}`, xPos1, yPos);
+  
+  yPos += lineHeight;
+  pdf.text(`- Realizada com homologado: ${service.reportData?.homologatedInstallation ? "Sim" : "Não"}`, xPos1, yPos);
+  
+  yPos += lineHeight;
+  pdf.text(`- Garantia procede: ${service.reportData?.validWarranty ? "Sim" : "Não"}`, xPos1, yPos);
+  
+  yPos += lineHeight;
+  pdf.text(`- Foi necessário adequação: ${service.reportData?.requiredAdjustment ? "Sim" : "Não"}`, xPos1, yPos);
+  
+  if (service.reportData?.requiredAdjustment && service.reportData?.adjustmentDescription) {
+    yPos += lineHeight;
+    pdf.text("Descrição da adequação:", xPos1, yPos);
+    
+    yPos += lineHeight;
+    const adjustmentLines = pdf.splitTextToSize(service.reportData.adjustmentDescription, 170);
+    pdf.text(adjustmentLines, xPos1, yPos);
+  }
+};
+
+export function generatePDF(service: Service): boolean {
+  console.log("Generating PDF for service:", service.id);
+  
+  // Show toast indicating PDF is being generated
+  toast.info("Gerando relatório...", {
+    description: "Por favor aguarde enquanto o relatório é gerado."
+  });
+  
   try {
-    const doc = new jsPDF();
+    // Create PDF document
+    const pdf = createPdfDocument();
     
-    // Add title
-    doc.setFontSize(18);
-    doc.text(`Relatório de Vistoria - ${service.title}`, 14, 22);
+    // Generate cover page
+    generateCoverPage(pdf, service);
     
-    // Add details
-    doc.setFontSize(12);
-    doc.text(`ID: ${service.id}`, 14, 32);
-    doc.text(`Status: ${service.status === 'concluido' ? 'Concluído' : service.status === 'pendente' ? 'Pendente' : 'Cancelado'}`, 14, 38);
-    doc.text(`Local: ${service.location}`, 14, 44);
+    // Add technicians page
+    pdf.addPage();
+    generateTechniciansPage(pdf, service);
     
-    // Add technicians
-    const techniciansText = service.technicians.length > 0
-      ? service.technicians.map(tech => tech.name).join(", ")
-      : "Não atribuído";
-    doc.text(`Técnicos: ${techniciansText}`, 14, 50);
+    // Add description page
+    pdf.addPage();
+    generateDescriptionPage(pdf, service);
     
-    // Add report data
-    doc.setFontSize(14);
-    doc.text('Dados do Relatório', 14, 60);
+    // Add technical details page
+    pdf.addPage();
+    generateDetailsPage(pdf, service);
     
-    const reportData = service.reportData;
-    
-    autoTable(doc, {
-      startY: 65,
-      head: [['Campo', 'Valor']],
-      body: [
-        ['Cliente', reportData.client],
-        ['Endereço', reportData.address],
-        ['Cidade', reportData.city],
-        ['Executado por', reportData.executedBy],
-        ['Data de instalação', reportData.installationDate],
-        ['Modelo', reportData.modelNumber],
-        ['Número de série (Novo)', reportData.serialNumberNew],
-        ['Número de série (Antigo)', reportData.serialNumberOld],
-        ['Nome homologado', reportData.homologatedName],
-        ['Atende NBR 17019', reportData.compliesWithNBR17019 ? 'Sim' : 'Não'],
-        ['Instalação homologada', reportData.homologatedInstallation ? 'Sim' : 'Não'],
-        ['Requer ajuste', reportData.requiredAdjustment ? 'Sim' : 'Não'],
-        ['Descrição do ajuste', reportData.adjustmentDescription],
-        ['Garantia válida', reportData.validWarranty ? 'Sim' : 'Não'],
-        ['Disjuntor de entrada', reportData.circuitBreakerEntry],
-        ['Disjuntor do carregador', reportData.chargerCircuitBreaker],
-        ['Bitola do cabo', reportData.cableGauge],
-        ['Status do carregador', reportData.chargerStatus],
-        ['Comentários técnicos', reportData.technicalComments],
-      ],
-    });
-    
-    // Save PDF to browser memory
-    // The data will be saved in PDF format and ready to download later
-    (window as any).generatedPDF = doc;
+    // Simulate a delay to show loading
+    setTimeout(() => {
+      // In a real app, we would use pdf.save() to trigger download
+      console.log("PDF generated successfully for service:", service.id);
+      
+      // Offer PDF for download
+      pdf.save(`relatório-${service.id}.pdf`);
+      
+      // Show success toast after PDF is ready
+      toast.success("Relatório gerado com sucesso", {
+        description: `O PDF para a vistoria ${service.id} foi gerado e baixado automaticamente.`
+      });
+    }, 1500);
     
     return true;
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
+    console.error("Error generating PDF:", error);
+    
+    toast.error("Erro ao gerar o relatório", {
+      description: "Ocorreu um erro ao gerar o PDF. Por favor, tente novamente."
+    });
+    
     return false;
   }
-};
+}
 
-// Download the previously generated PDF
-export const downloadPDF = (service: Service): void => {
-  try {
-    const doc = (window as any).generatedPDF;
-    
-    if (!doc) {
-      // If PDF doesn't exist, generate it
-      const generated = generatePDF(service);
-      if (!generated) {
-        throw new Error('Falha ao gerar PDF');
-      }
-    }
-    
-    // Download PDF
-    const doc2 = (window as any).generatedPDF;
-    doc2.save(`Relatório_${service.id}_${service.title}.pdf`);
-  } catch (error) {
-    console.error('Erro ao baixar PDF:', error);
-  }
-};
+export function downloadPDF(service: Service): void {
+  generatePDF(service);
+}
