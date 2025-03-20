@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
@@ -41,7 +40,6 @@ import {
   addPhotoToService
 } from "@/services/api";
 
-// Define the form values type to ensure type safety
 interface FormValues {
   title: string;
   status: ServiceStatus;
@@ -80,7 +78,6 @@ const ServiceDetail = () => {
   const [service, setService] = useState<Service | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch the service data
   useEffect(() => {
     const fetchService = async () => {
       if (!id) return;
@@ -117,7 +114,6 @@ const ServiceDetail = () => {
     fetchService();
   }, [id, navigate, toast]);
   
-  // Initialize form with default values
   const form = useForm<FormValues>({
     defaultValues: {
       title: "",
@@ -146,7 +142,6 @@ const ServiceDetail = () => {
     }
   });
 
-  // Update form values when service data is loaded
   useEffect(() => {
     if (service) {
       form.reset({
@@ -177,17 +172,14 @@ const ServiceDetail = () => {
     }
   }, [service, form]);
 
-  // Handle form submission
   const onSubmit = async (data: FormValues) => {
     if (!id || !service) return;
     
     setIsSubmitting(true);
     
     try {
-      // Find the technician object based on the selected ID
       const selectedTechnician = teamMembers.find(t => t.id === data.technician) || service.technician;
       
-      // Update the service general data
       const serviceUpdated = await updateService(id, {
         title: data.title,
         status: data.status,
@@ -195,7 +187,6 @@ const ServiceDetail = () => {
         technician: selectedTechnician
       });
       
-      // Update the report data
       const reportUpdated = await updateReportData(id, {
         client: data.client,
         address: data.address,
@@ -218,14 +209,11 @@ const ServiceDetail = () => {
         technicalComments: data.technicalComments
       });
       
-      // Update photos if they have changed
       if (JSON.stringify(service.photos) !== JSON.stringify(selectedPhotos)) {
         await updateServicePhotos(id, selectedPhotos);
       }
       
-      // If all updates were successful
       if (serviceUpdated && reportUpdated) {
-        // Refresh service data
         const updatedService = await getServiceById(id);
         if (updatedService) {
           setService(updatedService);
@@ -236,7 +224,6 @@ const ServiceDetail = () => {
           description: `As alterações na demanda ${id} foram salvas com sucesso.`,
         });
         
-        // If status is completed, ask if the user wants to generate a PDF
         if (data.status === "concluido" && !pdfGenerated) {
           setTimeout(() => {
             toast({
@@ -263,80 +250,59 @@ const ServiceDetail = () => {
     }
   };
 
-  // Handle photo uploads
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!id || !e.target.files || e.target.files.length === 0) return;
     
+    const file = e.target.files[0];
+    
     try {
-      // Mock photo upload - in a real application, this would upload the photos to a server
-      // For this example, we'll use the mock URLs
-      const mockPhotoURLs = [
-        "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
-        "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
-        "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
-        "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png",
-        "/lovable-uploads/4df72a6d-1dc8-44c2-b61d-cb6504af2b1f.png",
-        "/lovable-uploads/3c26bd66-6e28-4b07-a3ca-e80a3a92ae06.png",
-        "/lovable-uploads/6bfabcbb-e3dc-46e9-985a-ef6610069890.png"
-      ];
+      setIsSubmitting(true);
       
-      // Add a random photo from the mock list
-      const randomPhoto = mockPhotoURLs[Math.floor(Math.random() * mockPhotoURLs.length)];
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione um arquivo de imagem válido",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      if (!selectedPhotos.includes(randomPhoto)) {
-        // Update the local state
-        const newPhotos = [...selectedPhotos, randomPhoto];
-        setSelectedPhotos(newPhotos);
-        
-        // Also update in the API
-        const success = await addPhotoToService(id, randomPhoto);
-        
-        if (success) {
-          toast({
-            title: "Foto adicionada",
-            description: "A foto foi adicionada ao relatório com sucesso.",
-          });
-          
-          // Refresh service data
-          const updatedService = await getServiceById(id);
-          if (updatedService) {
-            setService(updatedService);
-          }
-        } else {
-          // Revert the local state change if API update failed
-          setSelectedPhotos(selectedPhotos);
-          toast({
-            title: "Erro",
-            description: "Falha ao adicionar a foto ao relatório",
-            variant: "destructive",
-          });
-        }
+      const photoUrl = await addPhotoToService(id, file);
+      
+      const newPhotos = [...selectedPhotos, photoUrl];
+      setSelectedPhotos(newPhotos);
+      
+      toast({
+        title: "Foto adicionada",
+        description: "A foto foi adicionada ao relatório com sucesso.",
+      });
+      
+      const updatedService = await getServiceById(id);
+      if (updatedService) {
+        setService(updatedService);
       }
     } catch (error) {
-      console.error("Error uploading photo:", error);
+      console.error("Erro ao fazer upload da foto:", error);
       toast({
         title: "Erro",
-        description: "Falha ao carregar a foto",
+        description: "Falha ao carregar a foto. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
-      // Reset the file input
+      setIsSubmitting(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   };
 
-  // Handle photo removal
   const handleRemovePhoto = async (photoUrl: string) => {
     if (!id) return;
     
     try {
-      // Update the local state first
       const updatedPhotos = selectedPhotos.filter(photo => photo !== photoUrl);
       setSelectedPhotos(updatedPhotos);
       
-      // Then update in the API
       const success = await updateServicePhotos(id, updatedPhotos);
       
       if (success) {
@@ -345,13 +311,11 @@ const ServiceDetail = () => {
           description: "A foto foi removida do relatório.",
         });
         
-        // Refresh service data
         const updatedService = await getServiceById(id);
         if (updatedService) {
           setService(updatedService);
         }
       } else {
-        // Revert the local state change if API update failed
         setSelectedPhotos(selectedPhotos);
         toast({
           title: "Erro",
@@ -369,11 +333,9 @@ const ServiceDetail = () => {
     }
   };
 
-  // Handle PDF generation
   const handleGeneratePDF = () => {
     if (!service) return;
     
-    // Update service object with form data to ensure latest values are in the PDF
     const updatedService = {
       ...service,
       title: form.getValues("title"),
@@ -404,7 +366,6 @@ const ServiceDetail = () => {
       photos: selectedPhotos
     };
     
-    // Call the PDF generator utility with updated service
     const result = generatePDF(updatedService);
     
     if (result) {
@@ -422,11 +383,9 @@ const ServiceDetail = () => {
     }
   };
 
-  // Handle PDF download
   const handleDownloadPDF = () => {
     if (!service) return;
     
-    // Update service object with form data to ensure latest values are in the PDF
     const updatedService = {
       ...service,
       title: form.getValues("title"),
@@ -457,11 +416,9 @@ const ServiceDetail = () => {
       photos: selectedPhotos
     };
     
-    // Call the PDF download utility
     downloadPDF(updatedService);
   };
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen p-4 flex items-center justify-center">
@@ -477,7 +434,6 @@ const ServiceDetail = () => {
     );
   }
 
-  // If no service found
   if (!service) {
     return (
       <div className="min-h-screen p-4 flex items-center justify-center">

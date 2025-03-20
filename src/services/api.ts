@@ -1,4 +1,3 @@
-
 import { Service, ServiceStatus, ReportData } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
@@ -124,25 +123,45 @@ export const deleteService = (id: string): Promise<boolean> => {
 };
 
 // Adiciona uma foto a um serviço
-export const addPhotoToService = (id: string, photoUrl: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const index = localServices.findIndex((s) => s.id === id);
+export const addPhotoToService = (id: string, photoFile: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
     
-    if (index === -1) {
-      resolve(false);
-      return;
-    }
-
-    if (!localServices[index].photos) {
-      localServices[index].photos = [];
-    }
-
-    localServices[index].photos.push(photoUrl);
-    localStorage.setItem("services", JSON.stringify(localServices));
+    reader.onload = (event) => {
+      try {
+        if (!event.target || !event.target.result) {
+          reject("Falha ao ler o arquivo");
+          return;
+        }
+        
+        const photoUrl = event.target.result.toString();
+        const index = localServices.findIndex((s) => s.id === id);
+        
+        if (index === -1) {
+          reject("Serviço não encontrado");
+          return;
+        }
+        
+        if (!localServices[index].photos) {
+          localServices[index].photos = [];
+        }
+        
+        localServices[index].photos.push(photoUrl);
+        localStorage.setItem("services", JSON.stringify(localServices));
+        
+        setTimeout(() => {
+          resolve(photoUrl);
+        }, 300);
+      } catch (error) {
+        reject(error);
+      }
+    };
     
-    setTimeout(() => {
-      resolve(true);
-    }, 300);
+    reader.onerror = () => {
+      reject("Erro ao ler o arquivo");
+    };
+    
+    reader.readAsDataURL(photoFile);
   });
 };
 
