@@ -1,39 +1,25 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useToast } from '@/components/ui/use-toast';
 import { Service, ServiceStatus } from '@/types/service';
 import { updateService, updateReportData } from '@/services/api';
 import { useServiceDetail } from '../context/ServiceDetailContext';
-import { Button } from '@/components/ui/button';
+import { usePdfHandler } from './usePdfHandler';
 
 export const useServiceFormSubmit = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast: uiToast } = useToast();
   const { 
-    service, 
     formState, 
     setIsSubmitting, 
-    pdfGenerated, 
-    setPdfGenerated, 
-    selectedPhotos 
+    pdfGenerated
   } = useServiceDetail();
 
-  const [pdfUtils, setPdfUtils] = useState<{
-    generatePDF: (service: Service) => boolean;
-    downloadPDF: (service: Service) => void;
-  } | null>(null);
-
-  useEffect(() => {
-    import('@/utils/pdfGenerator').then(module => {
-      setPdfUtils({
-        generatePDF: module.generatePDF,
-        downloadPDF: module.downloadPDF
-      });
-    });
-  }, []);
+  const { 
+    handleGeneratePDF, 
+    handleDownloadPDF, 
+    promptPdfGeneration 
+  } = usePdfHandler();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,18 +76,7 @@ export const useServiceFormSubmit = () => {
 
       if (formState.status === "concluido" && !pdfGenerated) {
         setTimeout(() => {
-          uiToast({
-            description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
-            action: (
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleGeneratePDF}
-              >
-                Gerar PDF
-              </Button>
-            ),
-          });
+          promptPdfGeneration(handleGeneratePDF);
         }, 500);
       }
     } catch (error) {
@@ -110,95 +85,6 @@ export const useServiceFormSubmit = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleGeneratePDF = () => {
-    if (!pdfUtils || !service) return;
-    
-    const updatedService = {
-      ...service,
-      title: formState.title,
-      status: formState.status as ServiceStatus,
-      location: formState.location,
-      technicians: formState.technicianIds.map(id => {
-        const tech = service.technicians.find(t => t.id === id);
-        return tech || { id, name: "Técnico", avatar: "" };
-      }),
-      reportData: {
-        client: formState.client,
-        address: formState.address,
-        city: formState.city,
-        executedBy: formState.executedBy,
-        installationDate: formState.installationDate,
-        modelNumber: formState.modelNumber,
-        serialNumberNew: formState.serialNumberNew,
-        serialNumberOld: formState.serialNumberOld,
-        homologatedName: formState.homologatedName,
-        compliesWithNBR17019: formState.compliesWithNBR17019,
-        homologatedInstallation: formState.homologatedInstallation,
-        requiredAdjustment: formState.requiredAdjustment,
-        adjustmentDescription: formState.adjustmentDescription,
-        validWarranty: formState.validWarranty,
-        circuitBreakerEntry: formState.circuitBreakerEntry,
-        chargerCircuitBreaker: formState.chargerCircuitBreaker,
-        cableGauge: formState.cableGauge,
-        chargerStatus: formState.chargerStatus,
-        technicalComments: formState.technicalComments
-      },
-      photos: selectedPhotos
-    };
-    
-    const result = pdfUtils.generatePDF(updatedService);
-    
-    if (result) {
-      setPdfGenerated(true);
-      uiToast({
-        description: "PDF gerado com sucesso. Clique em 'Baixar PDF' para salvar o arquivo."
-      });
-    }
-  };
-
-  const handleDownloadPDF = () => {
-    if (!pdfUtils || !service) return;
-    
-    const updatedService = {
-      ...service,
-      title: formState.title,
-      status: formState.status as ServiceStatus,
-      location: formState.location,
-      technicians: formState.technicianIds.map(id => {
-        const tech = service.technicians.find(t => t.id === id);
-        return tech || { id, name: "Técnico", avatar: "" };
-      }),
-      reportData: {
-        client: formState.client,
-        address: formState.address,
-        city: formState.city,
-        executedBy: formState.executedBy,
-        installationDate: formState.installationDate,
-        modelNumber: formState.modelNumber,
-        serialNumberNew: formState.serialNumberNew,
-        serialNumberOld: formState.serialNumberOld,
-        homologatedName: formState.homologatedName,
-        compliesWithNBR17019: formState.compliesWithNBR17019,
-        homologatedInstallation: formState.homologatedInstallation,
-        requiredAdjustment: formState.requiredAdjustment,
-        adjustmentDescription: formState.adjustmentDescription,
-        validWarranty: formState.validWarranty,
-        circuitBreakerEntry: formState.circuitBreakerEntry,
-        chargerCircuitBreaker: formState.chargerCircuitBreaker,
-        cableGauge: formState.cableGauge,
-        chargerStatus: formState.chargerStatus,
-        technicalComments: formState.technicalComments
-      },
-      photos: selectedPhotos
-    };
-    
-    pdfUtils.downloadPDF(updatedService);
-    
-    uiToast({
-      description: "O PDF está sendo baixado."
-    });
   };
 
   return { 
