@@ -30,7 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { Service, TeamMember, teamMembers } from "@/data/mockData";
+import { Service, ServiceStatus, TeamMember, teamMembers } from "@/data/mockData";
 import { generatePDF, downloadPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 import { 
@@ -40,6 +40,33 @@ import {
   updateServicePhotos,
   addPhotoToService
 } from "@/services/api";
+
+// Define the form values type to ensure type safety
+interface FormValues {
+  title: string;
+  status: ServiceStatus;
+  location: string;
+  technician: string;
+  client: string;
+  address: string;
+  city: string;
+  executedBy: string;
+  installationDate: string;
+  modelNumber: string;
+  serialNumberNew: string;
+  serialNumberOld: string;
+  homologatedName: string;
+  compliesWithNBR17019: boolean;
+  homologatedInstallation: boolean;
+  requiredAdjustment: boolean;
+  adjustmentDescription: string;
+  validWarranty: boolean;
+  circuitBreakerEntry: string;
+  chargerCircuitBreaker: string;
+  cableGauge: string;
+  chargerStatus: string;
+  technicalComments: string;
+}
 
 const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -90,11 +117,11 @@ const ServiceDetail = () => {
     fetchService();
   }, [id, navigate, toast]);
   
-  // Initialize form with service data
-  const form = useForm({
+  // Initialize form with default values
+  const form = useForm<FormValues>({
     defaultValues: {
       title: "",
-      status: "pendente" as const,
+      status: "pendente",
       location: "",
       technician: "",
       client: "",
@@ -151,7 +178,7 @@ const ServiceDetail = () => {
   }, [service, form]);
 
   // Handle form submission
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormValues) => {
     if (!id || !service) return;
     
     setIsSubmitting(true);
