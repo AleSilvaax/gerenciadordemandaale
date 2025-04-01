@@ -339,7 +339,7 @@ const ServiceDetail = () => {
     const updatedService = {
       ...service,
       title: form.getValues("title"),
-      status: form.getValues("status") as any,
+      status: form.getValues("status") as ServiceStatus,
       location: form.getValues("location"),
       technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
       reportData: {
@@ -389,7 +389,7 @@ const ServiceDetail = () => {
     const updatedService = {
       ...service,
       title: form.getValues("title"),
-      status: form.getValues("status") as any,
+      status: form.getValues("status") as ServiceStatus,
       location: form.getValues("location"),
       technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
       reportData: {
@@ -890,16 +890,16 @@ const ServiceDetail = () => {
               )}
             </TabsContent>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
-              <div className="flex justify-between items-center max-w-md mx-auto">
+            <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-md border-t border-white/10 p-4 z-10">
+              <div className="flex justify-between items-center max-w-5xl mx-auto">
                 <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
                   Cancelar
                 </Button>
                 <div className="flex gap-2">
-                  {form.watch("status") === "concluido" && (
+                  {(form.watch("status") === "concluido" || service.status === "concluido") && (
                     <Button 
                       type="button" 
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleGeneratePDF}
                     >
                       <FileText size={16} className="mr-2" />
@@ -909,7 +909,7 @@ const ServiceDetail = () => {
                   {pdfGenerated && (
                     <Button 
                       type="button" 
-                      variant="outline"
+                      variant="secondary"
                       onClick={handleDownloadPDF}
                     >
                       <Download size={16} className="mr-2" />

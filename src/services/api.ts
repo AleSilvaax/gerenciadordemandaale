@@ -1,3 +1,4 @@
+
 import { Service, ServiceStatus, ReportData } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
@@ -119,6 +120,7 @@ export const updateService = (id: string, updates: Partial<Service>): Promise<bo
       return;
     }
 
+    // Deep clone the service to avoid reference issues
     localServices[index] = {
       ...localServices[index],
       ...updates,
@@ -219,6 +221,7 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
           resolve(photoUrl);
         }, 300);
       } catch (error) {
+        console.error("Error processing photo:", error);
         reject(error);
       }
     };
@@ -241,7 +244,7 @@ export const updateServicePhotos = (id: string, photos: string[]): Promise<boole
       return;
     }
 
-    localServices[index].photos = photos;
+    localServices[index].photos = [...photos];
     const success = safelyStoreData("services", localServices);
     
     setTimeout(() => {
