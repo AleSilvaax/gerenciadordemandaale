@@ -15,16 +15,20 @@ import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
+// Configure React Query with better caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minute
-      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnMount: true,      // Refetch when component mounts
+      retry: 2,                  // Retry failed requests twice
     },
   },
 });
 
-// Helper component to handle tab selection in Demandas and other navigation
+// Helper component to handle tab selection and page refreshes
 const NavigationHelper = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -40,6 +44,13 @@ const NavigationHelper = () => {
     
     // Scroll to top on navigation
     window.scrollTo(0, 0);
+    
+    // Force refresh data if coming from a form submission
+    const needsRefresh = sessionStorage.getItem("needsRefresh");
+    if (needsRefresh) {
+      queryClient.invalidateQueries();
+      sessionStorage.removeItem("needsRefresh");
+    }
   }, [location, navigate]);
   
   return null;

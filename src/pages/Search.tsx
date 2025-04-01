@@ -14,21 +14,22 @@ const Search: React.FC = () => {
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const loadServices = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getServices();
-        setServices(data);
-        setFilteredServices(data);
-      } catch (error) {
-        console.error("Error loading services:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Add a refresh function to reload data
+  const refreshServices = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getServices();
+      setServices(data);
+      setFilteredServices(data);
+    } catch (error) {
+      console.error("Error loading services:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    loadServices();
+  useEffect(() => {
+    refreshServices();
   }, []);
 
   useEffect(() => {
@@ -91,13 +92,19 @@ const Search: React.FC = () => {
         </div>
       ) : filteredServices.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground mb-4">
-            {searchQuery
-              ? `${filteredServices.length} resultado${filteredServices.length !== 1 ? "s" : ""} encontrado${
-                  filteredServices.length !== 1 ? "s" : ""
-                }`
-              : "Todas as demandas"}
-          </p>
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              {searchQuery
+                ? `${filteredServices.length} resultado${filteredServices.length !== 1 ? "s" : ""} encontrado${
+                    filteredServices.length !== 1 ? "s" : ""
+                  }`
+                : "Todas as demandas"}
+            </p>
+            <Button variant="outline" size="sm" onClick={refreshServices}>
+              <Loader2 size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
           {filteredServices.map((service) => (
             <ServiceCard
               key={service.id}
@@ -121,6 +128,10 @@ const Search: React.FC = () => {
               Limpar pesquisa
             </Button>
           )}
+          <Button variant="outline" className="mt-2" onClick={refreshServices}>
+            <Loader2 size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Atualizar dados
+          </Button>
         </div>
       )}
     </div>

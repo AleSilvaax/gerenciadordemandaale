@@ -454,7 +454,7 @@ const ServiceDetail = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 pb-20 page-transition">
+    <div className="min-h-screen p-4 pb-32 page-transition">
       <div className="flex items-center mb-6">
         <Link to="/demandas" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
           <ArrowLeft size={18} />
@@ -463,7 +463,7 @@ const ServiceDetail = () => {
           <h1 className="text-xl font-bold">
             {id ? `Demanda #${id}` : "Nova Demanda"}
           </h1>
-          {service.status && (
+          {service?.status && (
             <div className="flex items-center mt-1">
               <span className="text-sm text-muted-foreground mr-2">Status:</span>
               <StatusBadge status={service.status} />
@@ -896,13 +896,13 @@ const ServiceDetail = () => {
               )}
             </TabsContent>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-white/10 p-4 z-10">
-              <div className="flex justify-between items-center max-w-5xl mx-auto">
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-50 shadow-lg">
+              <div className="container flex justify-between items-center max-w-5xl mx-auto">
                 <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
                   Cancelar
                 </Button>
                 <div className="flex gap-2">
-                  {(form.watch("status") === "concluido" || service.status === "concluido") && (
+                  {(form.watch("status") === "concluido" || service?.status === "concluido") && (
                     <Button 
                       type="button" 
                       variant="secondary"
@@ -922,7 +922,11 @@ const ServiceDetail = () => {
                       Baixar PDF
                     </Button>
                   )}
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="bg-primary hover:bg-primary/90"
+                  >
                     {isSubmitting ? (
                       <>
                         <span className="animate-spin mr-2">

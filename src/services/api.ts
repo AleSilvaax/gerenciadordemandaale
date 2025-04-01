@@ -1,4 +1,3 @@
-
 import { Service, ServiceStatus, ReportData, TeamMember } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
@@ -46,13 +45,37 @@ const safelyStoreData = (key: string, data: any): boolean => {
   }
 };
 
+// Synchronize data between memory and localStorage
+const syncServicesWithLocalStorage = () => {
+  try {
+    // First save any changes from memory to localStorage
+    if (localServices.length > 0) {
+      safelyStoreData("services", localServices);
+    }
+    
+    // Then load from localStorage to ensure we have latest data
+    const storedServices = localStorage.getItem("services");
+    if (storedServices) {
+      localServices = JSON.parse(storedServices);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error syncing services with localStorage:", error);
+    return false;
+  }
+};
+
 // Local variables to store data in memory
 let localServices: Service[] = [];
 let localTeam: TeamMember[] = [];
 
 // Try to load from localStorage, but handle errors
 try {
-  localServices = JSON.parse(localStorage.getItem("services") || "[]");
+  const storedServices = localStorage.getItem("services");
+  if (storedServices) {
+    localServices = JSON.parse(storedServices);
+  }
 } catch (error) {
   console.error("Error loading services from localStorage:", error);
   localServices = [];
@@ -60,7 +83,10 @@ try {
 
 // Try to load team members from localStorage
 try {
-  localTeam = JSON.parse(localStorage.getItem("teamMembers") || "[]");
+  const storedTeam = localStorage.getItem("teamMembers");
+  if (storedTeam) {
+    localTeam = JSON.parse(storedTeam);
+  }
 } catch (error) {
   console.error("Error loading team members from localStorage:", error);
   localTeam = [];
@@ -85,8 +111,11 @@ if (localTeam.length === 0) {
 // Return all services
 export const getServices = (): Promise<Service[]> => {
   return new Promise((resolve) => {
+    // Sync with localStorage before returning
+    syncServicesWithLocalStorage();
+    
     setTimeout(() => {
-      resolve(localServices);
+      resolve([...localServices]); // Return a copy to avoid reference issues
     }, 300); // Small delay to simulate API request
   });
 };
@@ -94,9 +123,13 @@ export const getServices = (): Promise<Service[]> => {
 // Get a service by ID
 export const getServiceById = (id: string): Promise<Service | null> => {
   return new Promise((resolve) => {
+    // Sync with localStorage before fetching
+    syncServicesWithLocalStorage();
+    
     setTimeout(() => {
-      const service = localServices.find((s) => s.id === id) || null;
-      resolve(service);
+      const service = localServices.find((s) => s.id === id);
+      // Return a deep copy to avoid reference issues
+      resolve(service ? JSON.parse(JSON.stringify(service)) : null);
     }, 300);
   });
 };
@@ -104,6 +137,9 @@ export const getServiceById = (id: string): Promise<Service | null> => {
 // Create a new service
 export const createService = (service: Partial<Service>): Promise<Service> => {
   return new Promise((resolve) => {
+    // Sync with localStorage before creating
+    syncServicesWithLocalStorage();
+    
     const newService: Service = {
       id: uuidv4().slice(0, 4), // Generate short ID similar to originals
       title: service.title || "Nova Demanda",
@@ -122,7 +158,8 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
     safelyStoreData("services", localServices);
     
     setTimeout(() => {
-      resolve(newService);
+      // Return a deep copy to avoid reference issues
+      resolve(JSON.parse(JSON.stringify(newService)));
     }, 300);
   });
 };
@@ -131,6 +168,9 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
 export const updateService = (id: string, updates: Partial<Service>): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
+      // Sync with localStorage before updating
+      syncServicesWithLocalStorage();
+      
       const index = localServices.findIndex((s) => s.id === id);
       
       if (index === -1) {
@@ -163,6 +203,9 @@ export const updateService = (id: string, updates: Partial<Service>): Promise<bo
 export const updateReportData = (id: string, reportData: Partial<ReportData>): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
+      // Sync with localStorage before updating
+      syncServicesWithLocalStorage();
+      
       const index = localServices.findIndex((s) => s.id === id);
       
       if (index === -1) {
@@ -211,9 +254,12 @@ export const deleteService = (id: string): Promise<boolean> => {
   });
 };
 
-// Add a photo to a service - Improved version to support external uploads
+// Add a photo to a service - Improved version to support external uploads and better localStorage handling
 export const addPhotoToService = (id: string, photoFile: File): Promise<string> => {
   return new Promise((resolve, reject) => {
+    // Sync with localStorage before updating
+    syncServicesWithLocalStorage();
+    
     const reader = new FileReader();
     
     reader.onload = (event) => {
@@ -281,6 +327,9 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
 export const updateServicePhotos = (id: string, photos: string[]): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
+      // Sync with localStorage before updating
+      syncServicesWithLocalStorage();
+      
       const index = localServices.findIndex((s) => s.id === id);
       
       if (index === -1) {
