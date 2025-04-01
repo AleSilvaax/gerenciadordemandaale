@@ -1,4 +1,3 @@
-
 import { Service, ServiceStatus, ReportData } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
@@ -113,47 +112,57 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
 // Atualiza um serviço existente
 export const updateService = (id: string, updates: Partial<Service>): Promise<boolean> => {
   return new Promise((resolve) => {
-    const index = localServices.findIndex((s) => s.id === id);
-    
-    if (index === -1) {
+    try {
+      const index = localServices.findIndex((s) => s.id === id);
+      
+      if (index === -1) {
+        resolve(false);
+        return;
+      }
+
+      // Deep clone the service to avoid reference issues
+      localServices[index] = {
+        ...localServices[index],
+        ...updates,
+      };
+
+      const success = safelyStoreData("services", localServices);
+      
+      setTimeout(() => {
+        resolve(success);
+      }, 300);
+    } catch (error) {
+      console.error("Error updating service:", error);
       resolve(false);
-      return;
     }
-
-    // Deep clone the service to avoid reference issues
-    localServices[index] = {
-      ...localServices[index],
-      ...updates,
-    };
-
-    const success = safelyStoreData("services", localServices);
-    
-    setTimeout(() => {
-      resolve(success);
-    }, 300);
   });
 };
 
 // Atualiza os dados do relatório de um serviço
 export const updateReportData = (id: string, reportData: Partial<ReportData>): Promise<boolean> => {
   return new Promise((resolve) => {
-    const index = localServices.findIndex((s) => s.id === id);
-    
-    if (index === -1) {
+    try {
+      const index = localServices.findIndex((s) => s.id === id);
+      
+      if (index === -1) {
+        resolve(false);
+        return;
+      }
+
+      localServices[index].reportData = {
+        ...localServices[index].reportData,
+        ...reportData,
+      };
+
+      const success = safelyStoreData("services", localServices);
+      
+      setTimeout(() => {
+        resolve(success);
+      }, 300);
+    } catch (error) {
+      console.error("Error updating report data:", error);
       resolve(false);
-      return;
     }
-
-    localServices[index].reportData = {
-      ...localServices[index].reportData,
-      ...reportData,
-    };
-
-    const success = safelyStoreData("services", localServices);
-    
-    setTimeout(() => {
-      resolve(success);
-    }, 300);
   });
 };
 
@@ -196,6 +205,7 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
           return;
         }
         
+        // Inicializar array de fotos se não existir
         if (!localServices[index].photos) {
           localServices[index].photos = [];
         }
@@ -226,7 +236,8 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
       }
     };
     
-    reader.onerror = () => {
+    reader.onerror = (error) => {
+      console.error("Error reading file:", error);
       reject("Erro ao ler o arquivo");
     };
     
@@ -237,18 +248,23 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
 // Atualiza a lista de fotos de um serviço
 export const updateServicePhotos = (id: string, photos: string[]): Promise<boolean> => {
   return new Promise((resolve) => {
-    const index = localServices.findIndex((s) => s.id === id);
-    
-    if (index === -1) {
-      resolve(false);
-      return;
-    }
+    try {
+      const index = localServices.findIndex((s) => s.id === id);
+      
+      if (index === -1) {
+        resolve(false);
+        return;
+      }
 
-    localServices[index].photos = [...photos];
-    const success = safelyStoreData("services", localServices);
-    
-    setTimeout(() => {
-      resolve(success);
-    }, 300);
+      localServices[index].photos = [...photos];
+      const success = safelyStoreData("services", localServices);
+      
+      setTimeout(() => {
+        resolve(success);
+      }, 300);
+    } catch (error) {
+      console.error("Error updating photos:", error);
+      resolve(false);
+    }
   });
 };

@@ -203,7 +203,7 @@ export function generatePDF(service: Service): boolean {
     pdf.addPage();
     generateDetailsPage(pdf, service);
     
-    // Simulate a delay to show loading
+    // Simulate a delay to show loading (in a real app this wouldn't be needed)
     setTimeout(() => {
       // In a real app, we would use pdf.save() to trigger download
       console.log("PDF generated successfully for service:", service.id);

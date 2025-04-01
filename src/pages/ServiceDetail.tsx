@@ -176,6 +176,10 @@ const ServiceDetail = () => {
     if (!id || !service) return;
     
     setIsSubmitting(true);
+    toast({
+      title: "Salvando alterações",
+      description: "Por favor aguarde enquanto salvamos as informações..."
+    });
     
     try {
       const selectedTechnician = teamMembers.find(t => t.id === data.technician) || service.technician;
@@ -209,11 +213,12 @@ const ServiceDetail = () => {
         technicalComments: data.technicalComments
       });
       
+      let photosUpdated = true;
       if (JSON.stringify(service.photos) !== JSON.stringify(selectedPhotos)) {
-        await updateServicePhotos(id, selectedPhotos);
+        photosUpdated = await updateServicePhotos(id, selectedPhotos);
       }
       
-      if (serviceUpdated && reportUpdated) {
+      if (serviceUpdated && reportUpdated && photosUpdated) {
         const updatedService = await getServiceById(id);
         if (updatedService) {
           setService(updatedService);
@@ -237,6 +242,8 @@ const ServiceDetail = () => {
             });
           }, 500);
         }
+      } else {
+        throw new Error("Falha ao salvar alguma das informações");
       }
     } catch (error) {
       console.error("Error updating service:", error);
@@ -845,7 +852,6 @@ const ServiceDetail = () => {
                     type="file"
                     ref={fileInputRef}
                     accept="image/*"
-                    multiple
                     className="hidden"
                     onChange={handlePhotoUpload}
                   />
@@ -890,7 +896,7 @@ const ServiceDetail = () => {
               )}
             </TabsContent>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-md border-t border-white/10 p-4 z-10">
+            <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-white/10 p-4 z-10">
               <div className="flex justify-between items-center max-w-5xl mx-auto">
                 <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
                   Cancelar
