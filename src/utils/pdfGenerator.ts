@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+// Background image for cover page (green forest scene)
+const BACKGROUND_IMAGE = "/public/lovable-uploads/f79bbcd5-4a5b-4289-a624-206b123e134f.png";
+
 // Function to create a new jsPDF instance with consistent styling
 const createPdfDocument = () => {
   const pdf = new jsPDF();
@@ -16,9 +19,22 @@ const createPdfDocument = () => {
 
 // Generate the cover page
 const generateCoverPage = (pdf: any, service: Service) => {
-  // Background color
-  pdf.setFillColor(30, 30, 30);
+  // Try to add background image
+  try {
+    pdf.addImage(BACKGROUND_IMAGE, 'PNG', 0, 0, 210, 297);
+  } catch (error) {
+    console.error("Error adding background image:", error);
+    
+    // If background image fails, use a solid color background
+    pdf.setFillColor(30, 30, 30);
+    pdf.rect(0, 0, 210, 297, "F");
+  }
+  
+  // Add semi-transparent overlay for better text readability
+  pdf.setFillColor(0, 0, 0);
+  pdf.setGlobalAlpha(0.6);
   pdf.rect(0, 0, 210, 297, "F");
+  pdf.setGlobalAlpha(1);
   
   // Add date
   pdf.setTextColor(255, 255, 255);
@@ -34,7 +50,10 @@ const generateCoverPage = (pdf: any, service: Service) => {
   pdf.setFontSize(40);
   pdf.setTextColor(255, 255, 255);
   pdf.text("RELATÓRIO", 20, 120);
-  pdf.text("DE SERVIÇO", 20, 145);
+  
+  // Add different second line based on service phase
+  const phaseText = service.reportData?.servicePhase === "inspection" ? "DE VISTORIA" : "DE INSTALAÇÃO";
+  pdf.text(phaseText, 20, 145);
   
   // Add client and service number
   pdf.setFontSize(14);
@@ -62,10 +81,16 @@ const generateTechniciansPage = (pdf: any, service: Service) => {
   pdf.setTextColor(255, 240, 0);
   pdf.text("RESPONSÁVEIS", 20, 55);
   
-  // We don't have access to draw images directly in this mock
-  // In a real implementation, the technician images would be added here
-  // Instead, we'll add a placeholder text for the technician info
+  // Try to add technician photo if available
+  try {
+    if (service.technician.avatar) {
+      pdf.addImage(service.technician.avatar, 'JPEG', 20, 80, 50, 50);
+    }
+  } catch (error) {
+    console.error("Error adding technician photo:", error);
+  }
   
+  // Add technician info
   pdf.setFontSize(18);
   pdf.setTextColor(255, 240, 0);
   pdf.text(`${service.technician.name}`, 80, 100);
@@ -86,39 +111,41 @@ const generateDescriptionPage = (pdf: any, service: Service) => {
   pdf.setTextColor(255, 255, 255);
   pdf.text("DESCRIÇÃO DO", 20, 40);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("SERVIÇO", 20, 55);
+  
+  // Different title based on service phase
+  const phaseText = service.reportData?.servicePhase === "inspection" ? "LEVANTAMENTO" : "SERVIÇO";
+  pdf.text(phaseText, 20, 55);
   
   // Add service description
   pdf.setFontSize(12);
   pdf.setTextColor(255, 255, 255);
   
   const description = service.reportData?.technicalComments || 
-    `Referente à instalação de carregador veicular do cliente ${service.reportData?.client || service.title}.`;
+    `Referente à ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} de carregador veicular do cliente ${service.reportData?.client || service.title}.`;
   
   // Split long text to fit page
   const lines = pdf.splitTextToSize(description, 170);
   pdf.text(lines, 20, 80);
   
-  // In a real implementation, photos would be added here
-  // For now, we'll add placeholder text
-  pdf.setFontSize(10);
-  pdf.text("Fotos do serviço incluídas no relatório original", 20, 150);
-  
-  // If we have photos, try to add them
+  // Add photos if they exist
   if (service.photos && service.photos.length > 0) {
     try {
-      let yPos = 180;
+      let yPos = 120;
       for (let i = 0; i < Math.min(2, service.photos.length); i++) {
-        pdf.addImage(service.photos[i], 'JPEG', 20, yPos, 170, 40);
-        yPos += 50;
+        pdf.addImage(service.photos[i], 'JPEG', 20, yPos, 170, 50);
+        yPos += 60;
       }
     } catch (error) {
       console.error("Error adding photos to PDF:", error);
+      pdf.text("(Fotos disponíveis no relatório original)", 20, 150);
     }
+  } else {
+    pdf.setFontSize(10);
+    pdf.text("(Sem fotos disponíveis)", 20, 150);
   }
 };
 
-// Generate technical details page
+// Generate technical details page based on service phase
 const generateDetailsPage = (pdf: any, service: Service) => {
   // Background color
   pdf.setFillColor(30, 30, 30);
@@ -140,52 +167,104 @@ const generateDetailsPage = (pdf: any, service: Service) => {
   const xPos2 = 100;
   const lineHeight = 10;
   
-  // Add details from report data
-  const details = [
+  // Add client details for both types
+  const commonDetails = [
     { label: "Cliente:", value: service.reportData?.client || "" },
     { label: "Endereço:", value: service.reportData?.address || "" },
     { label: "Cidade:", value: service.reportData?.city || "" },
-    { label: "Data da Instalação:", value: service.reportData?.installationDate || "" },
-    { label: "Marca e Modelo:", value: service.reportData?.modelNumber || "" },
-    { label: "Número de Série:", value: service.reportData?.serialNumberOld || "" },
-    { label: "Bitola do cabo:", value: service.reportData?.cableGauge || "" },
-    { label: "Disjuntor do carregador:", value: service.reportData?.chargerCircuitBreaker || "" },
-    { label: "Status do carregador:", value: service.reportData?.chargerStatus || "" }
   ];
   
-  details.forEach(item => {
+  // Add phase-specific details
+  if (service.reportData?.servicePhase === "inspection") {
+    // Inspection details
+    const inspectionDetails = [
+      ...commonDetails,
+      { label: "Data da Vistoria:", value: service.reportData?.inspectionDate || "" },
+      { label: "Tensão do local:", value: service.reportData?.voltage || "" },
+      { label: "Tipo de alimentação:", value: service.reportData?.supplyType || "" },
+      { label: "Distância até ponto:", value: service.reportData?.installationDistance || "" },
+      { label: "Obstáculos no percurso:", value: service.reportData?.installationObstacles || "" },
+      { label: "Possui quadro existente:", value: service.reportData?.existingPanel ? "Sim" : "Não" },
+    ];
+    
+    inspectionDetails.forEach(item => {
+      pdf.setTextColor(255, 240, 0);
+      pdf.text(item.label, xPos1, yPos);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(item.value, xPos2, yPos);
+      yPos += lineHeight;
+    });
+    
+    // Add panel details if existing panel is true
+    if (service.reportData?.existingPanel) {
+      yPos += lineHeight/2;
+      pdf.setTextColor(255, 240, 0);
+      pdf.text("Detalhes do quadro:", xPos1, yPos);
+      yPos += lineHeight;
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`- Tipo: ${service.reportData?.panelType || ""}`, xPos1 + 10, yPos);
+      yPos += lineHeight;
+      
+      pdf.text(`- Amperagem: ${service.reportData?.panelAmps || ""}`, xPos1 + 10, yPos);
+      yPos += lineHeight;
+    }
+    
+    // Add grounding system
+    yPos += lineHeight/2;
     pdf.setTextColor(255, 240, 0);
-    pdf.text(item.label, xPos1, yPos);
+    pdf.text("Sistema de aterramento:", xPos1, yPos);
+    yPos += lineHeight;
+    
     pdf.setTextColor(255, 255, 255);
-    pdf.text(item.value, xPos2, yPos);
-    yPos += lineHeight;
-  });
-  
-  // Add compliance information
-  yPos += 10;
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("Conformidade:", xPos1, yPos);
-  pdf.setTextColor(255, 255, 255);
-  
-  yPos += lineHeight;
-  pdf.text(`- Instalação atende NBR17019: ${service.reportData?.compliesWithNBR17019 ? "Sim" : "Não"}`, xPos1, yPos);
-  
-  yPos += lineHeight;
-  pdf.text(`- Realizada com homologado: ${service.reportData?.homologatedInstallation ? "Sim" : "Não"}`, xPos1, yPos);
-  
-  yPos += lineHeight;
-  pdf.text(`- Garantia procede: ${service.reportData?.validWarranty ? "Sim" : "Não"}`, xPos1, yPos);
-  
-  yPos += lineHeight;
-  pdf.text(`- Foi necessário adequação: ${service.reportData?.requiredAdjustment ? "Sim" : "Não"}`, xPos1, yPos);
-  
-  if (service.reportData?.requiredAdjustment && service.reportData?.adjustmentDescription) {
-    yPos += lineHeight;
-    pdf.text("Descrição da adequação:", xPos1, yPos);
+    pdf.text(service.reportData?.groundingSystem || "Não especificado", xPos1 + 10, yPos);
+  } else {
+    // Installation details
+    const installationDetails = [
+      ...commonDetails,
+      { label: "Data da Instalação:", value: service.reportData?.installationDate || "" },
+      { label: "Marca e Modelo:", value: service.reportData?.modelNumber || "" },
+      { label: "Número de Série:", value: service.reportData?.serialNumberNew || "" },
+      { label: "Potência do carregador:", value: service.reportData?.chargerLoad || "" },
+      { label: "Bitola do cabo:", value: service.reportData?.cableGauge || "" },
+      { label: "Disjuntor do carregador:", value: service.reportData?.chargerCircuitBreaker || "" },
+      { label: "Status do carregador:", value: service.reportData?.chargerStatus || "" }
+    ];
+    
+    installationDetails.forEach(item => {
+      pdf.setTextColor(255, 240, 0);
+      pdf.text(item.label, xPos1, yPos);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(item.value, xPos2, yPos);
+      yPos += lineHeight;
+    });
+    
+    // Add compliance information
+    yPos += 10;
+    pdf.setTextColor(255, 240, 0);
+    pdf.text("Conformidade:", xPos1, yPos);
+    pdf.setTextColor(255, 255, 255);
     
     yPos += lineHeight;
-    const adjustmentLines = pdf.splitTextToSize(service.reportData.adjustmentDescription, 170);
-    pdf.text(adjustmentLines, xPos1, yPos);
+    pdf.text(`- Instalação atende NBR17019: ${service.reportData?.compliesWithNBR17019 ? "Sim" : "Não"}`, xPos1, yPos);
+    
+    yPos += lineHeight;
+    pdf.text(`- Realizada com homologado: ${service.reportData?.homologatedInstallation ? "Sim" : "Não"}`, xPos1, yPos);
+    
+    yPos += lineHeight;
+    pdf.text(`- Garantia procede: ${service.reportData?.validWarranty ? "Sim" : "Não"}`, xPos1, yPos);
+    
+    yPos += lineHeight;
+    pdf.text(`- Foi necessário adequação: ${service.reportData?.requiredAdjustment ? "Sim" : "Não"}`, xPos1, yPos);
+    
+    if (service.reportData?.requiredAdjustment && service.reportData?.adjustmentDescription) {
+      yPos += lineHeight;
+      pdf.text("Descrição da adequação:", xPos1, yPos);
+      
+      yPos += lineHeight;
+      const adjustmentLines = pdf.splitTextToSize(service.reportData.adjustmentDescription, 170);
+      pdf.text(adjustmentLines, xPos1, yPos);
+    }
   }
 };
 
@@ -222,11 +301,11 @@ export function generatePDF(service: Service): boolean {
       console.log("PDF generated successfully for service:", service.id);
       
       // Offer PDF for download
-      pdf.save(`relatório-${service.id}.pdf`);
+      pdf.save(`relatório-${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
       
       // Show success toast after PDF is ready
       toast.success("Relatório gerado com sucesso", {
-        description: `O PDF para a vistoria ${service.id} foi gerado e baixado automaticamente.`
+        description: `O PDF para ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
       });
     }, 500);
     

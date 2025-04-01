@@ -42,7 +42,11 @@ const Search: React.FC = () => {
           service.id.toLowerCase().includes(query) ||
           service.location.toLowerCase().includes(query) ||
           service.technician.name.toLowerCase().includes(query) ||
-          (service.reportData?.client && service.reportData.client.toLowerCase().includes(query))
+          (service.reportData?.client && service.reportData.client.toLowerCase().includes(query)) ||
+          (service.reportData?.servicePhase && 
+            (service.reportData.servicePhase === "inspection" && "vistoria".includes(query) ||
+             service.reportData.servicePhase === "installation" && "instalação".includes(query))
+          )
       );
       setFilteredServices(filtered);
     } else {

@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   ArrowLeft, Save, Camera, Upload, Image, File, X, FileText,
-  Check, CheckCircle2, XCircle, Download 
+  Check, CheckCircle2, XCircle, Download, Clipboard, Zap, Wrench 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +44,14 @@ import {
 interface FormValues {
   title: string;
   status: ServiceStatus;
+  servicePhase: "inspection" | "installation";
   location: string;
   technician: string;
   client: string;
   address: string;
   city: string;
   executedBy: string;
+  inspectionDate: string;
   installationDate: string;
   modelNumber: string;
   serialNumberNew: string;
@@ -63,6 +66,15 @@ interface FormValues {
   chargerCircuitBreaker: string;
   cableGauge: string;
   chargerStatus: string;
+  chargerLoad: string;
+  voltage: string;
+  supplyType: string;
+  installationDistance: string;
+  installationObstacles: string;
+  existingPanel: boolean;
+  panelType: string;
+  panelAmps: string;
+  groundingSystem: string;
   technicalComments: string;
 }
 
@@ -118,12 +130,14 @@ const ServiceDetail = () => {
     defaultValues: {
       title: "",
       status: "pendente",
+      servicePhase: "inspection",
       location: "",
       technician: "",
       client: "",
       address: "",
       city: "",
       executedBy: "",
+      inspectionDate: "",
       installationDate: "",
       modelNumber: "",
       serialNumberNew: "",
@@ -138,6 +152,15 @@ const ServiceDetail = () => {
       chargerCircuitBreaker: "",
       cableGauge: "",
       chargerStatus: "",
+      chargerLoad: "",
+      voltage: "",
+      supplyType: "",
+      installationDistance: "",
+      installationObstacles: "",
+      existingPanel: false,
+      panelType: "",
+      panelAmps: "",
+      groundingSystem: "",
       technicalComments: ""
     }
   });
@@ -147,12 +170,14 @@ const ServiceDetail = () => {
       form.reset({
         title: service.title || "",
         status: service.status || "pendente",
+        servicePhase: service.reportData?.servicePhase || "inspection",
         location: service.location || "",
         technician: service.technician?.id || "",
         client: service.reportData?.client || "",
         address: service.reportData?.address || "",
         city: service.reportData?.city || "",
         executedBy: service.reportData?.executedBy || "",
+        inspectionDate: service.reportData?.inspectionDate || "",
         installationDate: service.reportData?.installationDate || "",
         modelNumber: service.reportData?.modelNumber || "",
         serialNumberNew: service.reportData?.serialNumberNew || "",
@@ -167,6 +192,15 @@ const ServiceDetail = () => {
         chargerCircuitBreaker: service.reportData?.chargerCircuitBreaker || "",
         cableGauge: service.reportData?.cableGauge || "",
         chargerStatus: service.reportData?.chargerStatus || "",
+        chargerLoad: service.reportData?.chargerLoad || "",
+        voltage: service.reportData?.voltage || "",
+        supplyType: service.reportData?.supplyType || "",
+        installationDistance: service.reportData?.installationDistance || "",
+        installationObstacles: service.reportData?.installationObstacles || "",
+        existingPanel: service.reportData?.existingPanel || false,
+        panelType: service.reportData?.panelType || "",
+        panelAmps: service.reportData?.panelAmps || "",
+        groundingSystem: service.reportData?.groundingSystem || "",
         technicalComments: service.reportData?.technicalComments || ""
       });
     }
@@ -192,10 +226,12 @@ const ServiceDetail = () => {
       });
       
       const reportUpdated = await updateReportData(id, {
+        servicePhase: data.servicePhase,
         client: data.client,
         address: data.address,
         city: data.city,
         executedBy: data.executedBy,
+        inspectionDate: data.inspectionDate,
         installationDate: data.installationDate,
         modelNumber: data.modelNumber,
         serialNumberNew: data.serialNumberNew,
@@ -210,6 +246,15 @@ const ServiceDetail = () => {
         chargerCircuitBreaker: data.chargerCircuitBreaker,
         cableGauge: data.cableGauge,
         chargerStatus: data.chargerStatus,
+        chargerLoad: data.chargerLoad,
+        voltage: data.voltage,
+        supplyType: data.supplyType,
+        installationDistance: data.installationDistance,
+        installationObstacles: data.installationObstacles,
+        existingPanel: data.existingPanel,
+        panelType: data.panelType,
+        panelAmps: data.panelAmps,
+        groundingSystem: data.groundingSystem,
         technicalComments: data.technicalComments
       });
       
@@ -350,10 +395,12 @@ const ServiceDetail = () => {
       location: form.getValues("location"),
       technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
       reportData: {
+        servicePhase: form.getValues("servicePhase"),
         client: form.getValues("client"),
         address: form.getValues("address"),
         city: form.getValues("city"),
         executedBy: form.getValues("executedBy"),
+        inspectionDate: form.getValues("inspectionDate"),
         installationDate: form.getValues("installationDate"),
         modelNumber: form.getValues("modelNumber"),
         serialNumberNew: form.getValues("serialNumberNew"),
@@ -368,6 +415,15 @@ const ServiceDetail = () => {
         chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
         cableGauge: form.getValues("cableGauge"),
         chargerStatus: form.getValues("chargerStatus"),
+        chargerLoad: form.getValues("chargerLoad"),
+        voltage: form.getValues("voltage"),
+        supplyType: form.getValues("supplyType"),
+        installationDistance: form.getValues("installationDistance"),
+        installationObstacles: form.getValues("installationObstacles"),
+        existingPanel: form.getValues("existingPanel"),
+        panelType: form.getValues("panelType"),
+        panelAmps: form.getValues("panelAmps"),
+        groundingSystem: form.getValues("groundingSystem"),
         technicalComments: form.getValues("technicalComments")
       },
       photos: selectedPhotos
@@ -400,10 +456,12 @@ const ServiceDetail = () => {
       location: form.getValues("location"),
       technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
       reportData: {
+        servicePhase: form.getValues("servicePhase"),
         client: form.getValues("client"),
         address: form.getValues("address"),
         city: form.getValues("city"),
         executedBy: form.getValues("executedBy"),
+        inspectionDate: form.getValues("inspectionDate"),
         installationDate: form.getValues("installationDate"),
         modelNumber: form.getValues("modelNumber"),
         serialNumberNew: form.getValues("serialNumberNew"),
@@ -418,6 +476,15 @@ const ServiceDetail = () => {
         chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
         cableGauge: form.getValues("cableGauge"),
         chargerStatus: form.getValues("chargerStatus"),
+        chargerLoad: form.getValues("chargerLoad"),
+        voltage: form.getValues("voltage"),
+        supplyType: form.getValues("supplyType"),
+        installationDistance: form.getValues("installationDistance"),
+        installationObstacles: form.getValues("installationObstacles"),
+        existingPanel: form.getValues("existingPanel"),
+        panelType: form.getValues("panelType"),
+        panelAmps: form.getValues("panelAmps"),
+        groundingSystem: form.getValues("groundingSystem"),
         technicalComments: form.getValues("technicalComments")
       },
       photos: selectedPhotos
@@ -467,21 +534,51 @@ const ServiceDetail = () => {
             <div className="flex items-center mt-1">
               <span className="text-sm text-muted-foreground mr-2">Status:</span>
               <StatusBadge status={service.status} />
+              {service.reportData?.servicePhase && (
+                <span className="ml-2 text-sm bg-secondary/60 text-primary px-2 py-0.5 rounded">
+                  {service.reportData.servicePhase === "inspection" ? "Vistoria" : "Instalação"}
+                </span>
+              )}
             </div>
           )}
         </div>
       </div>
 
       <Tabs defaultValue="general" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-4">
+        <TabsList className="grid grid-cols-4 mb-4">
           <TabsTrigger value="general">Geral</TabsTrigger>
-          <TabsTrigger value="report">Relatório</TabsTrigger>
+          <TabsTrigger value="inspection">Vistoria</TabsTrigger>
+          <TabsTrigger value="installation">Instalação</TabsTrigger>
           <TabsTrigger value="photos">Fotos</TabsTrigger>
         </TabsList>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <TabsContent value="general" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="servicePhase"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fase do Serviço</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a fase" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="inspection">Vistoria</SelectItem>
+                        <SelectItem value="installation">Instalação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="title"
@@ -573,9 +670,7 @@ const ServiceDetail = () => {
                   </FormItem>
                 )}
               />
-            </TabsContent>
 
-            <TabsContent value="report" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -628,20 +723,203 @@ const ServiceDetail = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+            </TabsContent>
 
+            <TabsContent value="inspection" className="space-y-4">
+              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
+                <Clipboard className="h-5 w-5 text-primary" />
+                <h3 className="text-md font-medium">Levantamento Infraestrutural e Elétrico</h3>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="inspectionDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data da Vistoria</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="text" placeholder="DD/MM/AAAA" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="installationDate"
+                  name="voltage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data da Instalação</FormLabel>
+                      <FormLabel>Tensão do local (V)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="text" placeholder="DD/MM/AAAA" />
+                        <Input {...field} />
                       </FormControl>
                     </FormItem>
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="supplyType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de alimentação</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="monofasico">Monofásico</SelectItem>
+                          <SelectItem value="bifasico">Bifásico</SelectItem>
+                          <SelectItem value="trifasico">Trifásico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="installationDistance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Distância até o ponto de instalação (m)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="installationObstacles"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Obstáculos no percurso</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="existingPanel"
+                  render={({ field }) => (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="existingPanel" 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                      <Label htmlFor="existingPanel">Possui quadro elétrico existente</Label>
+                    </div>
+                  )}
+                />
+
+                {form.watch("existingPanel") && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6 pl-2 border-l-2 border-secondary/50">
+                    <FormField
+                      control={form.control}
+                      name="panelType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de quadro</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="panelAmps"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amperagem do quadro (A)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="groundingSystem"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sistema de aterramento</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o sistema" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="TN-S">TN-S</SelectItem>
+                        <SelectItem value="TN-C">TN-C</SelectItem>
+                        <SelectItem value="TN-C-S">TN-C-S</SelectItem>
+                        <SelectItem value="TT">TT</SelectItem>
+                        <SelectItem value="IT">IT</SelectItem>
+                        <SelectItem value="Inexistente">Inexistente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="technicalComments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações da vistoria</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} className="min-h-[100px]" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+
+            <TabsContent value="installation" className="space-y-4">
+              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
+                <Zap className="h-5 w-5 text-primary" />
+                <h3 className="text-md font-medium">Detalhes da Instalação</h3>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="installationDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data da Instalação</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="text" placeholder="DD/MM/AAAA" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="modelNumber"
@@ -687,6 +965,19 @@ const ServiceDetail = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nome do Homologado</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="chargerLoad"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Potência do carregador (kW)</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -828,19 +1119,6 @@ const ServiceDetail = () => {
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="technicalComments"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Comentários técnicos</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} className="min-h-[100px]" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
               </div>
             </TabsContent>
 
