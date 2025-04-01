@@ -1,4 +1,5 @@
-import { Service, ServiceStatus, ReportData } from "@/data/mockData";
+
+import { Service, ServiceStatus, ReportData, TeamMember } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
 // Helper function to handle localStorage storage limits
@@ -45,8 +46,9 @@ const safelyStoreData = (key: string, data: any): boolean => {
   }
 };
 
-// Variável local para armazenar os serviços em memória
+// Local variables to store data in memory
 let localServices: Service[] = [];
+let localTeam: TeamMember[] = [];
 
 // Try to load from localStorage, but handle errors
 try {
@@ -56,7 +58,15 @@ try {
   localServices = [];
 }
 
-// Inicializa com dados de exemplo se não houver dados no localStorage
+// Try to load team members from localStorage
+try {
+  localTeam = JSON.parse(localStorage.getItem("teamMembers") || "[]");
+} catch (error) {
+  console.error("Error loading team members from localStorage:", error);
+  localTeam = [];
+}
+
+// Initialize with example data if no data in localStorage
 if (localServices.length === 0) {
   import("@/data/mockData").then(({ services }) => {
     localServices = [...services];
@@ -64,16 +74,24 @@ if (localServices.length === 0) {
   });
 }
 
-// Retorna todos os serviços
+// Initialize team members if none exist
+if (localTeam.length === 0) {
+  import("@/data/mockData").then(({ teamMembers }) => {
+    localTeam = [...teamMembers];
+    safelyStoreData("teamMembers", localTeam);
+  });
+}
+
+// Return all services
 export const getServices = (): Promise<Service[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(localServices);
-    }, 300); // Pequeno atraso para simular requisição de API
+    }, 300); // Small delay to simulate API request
   });
 };
 
-// Busca um serviço pelo ID
+// Get a service by ID
 export const getServiceById = (id: string): Promise<Service | null> => {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -83,11 +101,11 @@ export const getServiceById = (id: string): Promise<Service | null> => {
   });
 };
 
-// Cria um novo serviço
+// Create a new service
 export const createService = (service: Partial<Service>): Promise<Service> => {
   return new Promise((resolve) => {
     const newService: Service = {
-      id: uuidv4().slice(0, 4), // Gerar ID curto similar aos originais
+      id: uuidv4().slice(0, 4), // Generate short ID similar to originals
       title: service.title || "Nova Demanda",
       status: service.status || "pendente",
       location: service.location || "",
@@ -109,7 +127,7 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
   });
 };
 
-// Atualiza um serviço existente
+// Update an existing service
 export const updateService = (id: string, updates: Partial<Service>): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
@@ -120,11 +138,14 @@ export const updateService = (id: string, updates: Partial<Service>): Promise<bo
         return;
       }
 
-      // Deep clone the service to avoid reference issues
-      localServices[index] = {
-        ...localServices[index],
-        ...updates,
-      };
+      // Create a deep copy of the service to avoid reference issues
+      const updatedService = JSON.parse(JSON.stringify(localServices[index]));
+      
+      // Apply updates
+      Object.assign(updatedService, updates);
+      
+      // Update in the array
+      localServices[index] = updatedService;
 
       const success = safelyStoreData("services", localServices);
       
@@ -138,7 +159,7 @@ export const updateService = (id: string, updates: Partial<Service>): Promise<bo
   });
 };
 
-// Atualiza os dados do relatório de um serviço
+// Update report data for a service
 export const updateReportData = (id: string, reportData: Partial<ReportData>): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
@@ -149,10 +170,15 @@ export const updateReportData = (id: string, reportData: Partial<ReportData>): P
         return;
       }
 
-      localServices[index].reportData = {
-        ...localServices[index].reportData,
+      // Deep copy to avoid reference issues
+      const updatedService = JSON.parse(JSON.stringify(localServices[index]));
+      
+      updatedService.reportData = {
+        ...updatedService.reportData,
         ...reportData,
       };
+      
+      localServices[index] = updatedService;
 
       const success = safelyStoreData("services", localServices);
       
@@ -166,7 +192,7 @@ export const updateReportData = (id: string, reportData: Partial<ReportData>): P
   });
 };
 
-// Deleta um serviço
+// Delete a service
 export const deleteService = (id: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const initialLength = localServices.length;
@@ -185,7 +211,7 @@ export const deleteService = (id: string): Promise<boolean> => {
   });
 };
 
-// Adiciona uma foto a um serviço - Versão melhorada para suportar uploads externos
+// Add a photo to a service - Improved version to support external uploads
 export const addPhotoToService = (id: string, photoFile: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -205,23 +231,29 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
           return;
         }
         
-        // Inicializar array de fotos se não existir
-        if (!localServices[index].photos) {
-          localServices[index].photos = [];
+        // Deep copy to avoid reference issues
+        const updatedService = JSON.parse(JSON.stringify(localServices[index]));
+        
+        // Initialize photos array if it doesn't exist
+        if (!updatedService.photos) {
+          updatedService.photos = [];
         }
         
-        // Verificar se a foto já existe para evitar duplicações
-        if (!localServices[index].photos.includes(photoUrl)) {
-          localServices[index].photos.push(photoUrl);
+        // Check if the photo already exists to avoid duplications
+        if (!updatedService.photos.includes(photoUrl)) {
+          updatedService.photos.push(photoUrl);
+          localServices[index] = updatedService;
+          
           const success = safelyStoreData("services", localServices);
           
           if (!success) {
-            // Se não conseguir salvar no localStorage, tente remover fotos mais antigas
-            if (localServices[index].photos.length > 1) {
-              localServices[index].photos = [
-                ...localServices[index].photos.slice(1),
+            // If can't save to localStorage, try removing older photos
+            if (updatedService.photos.length > 1) {
+              updatedService.photos = [
+                ...updatedService.photos.slice(1),
                 photoUrl
               ];
+              localServices[index] = updatedService;
               safelyStoreData("services", localServices);
             }
           }
@@ -245,7 +277,7 @@ export const addPhotoToService = (id: string, photoFile: File): Promise<string> 
   });
 };
 
-// Atualiza a lista de fotos de um serviço
+// Update photos for a service
 export const updateServicePhotos = (id: string, photos: string[]): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
@@ -256,7 +288,11 @@ export const updateServicePhotos = (id: string, photos: string[]): Promise<boole
         return;
       }
 
-      localServices[index].photos = [...photos];
+      // Deep copy to avoid reference issues
+      const updatedService = JSON.parse(JSON.stringify(localServices[index]));
+      updatedService.photos = [...photos];
+      localServices[index] = updatedService;
+      
       const success = safelyStoreData("services", localServices);
       
       setTimeout(() => {
@@ -266,5 +302,117 @@ export const updateServicePhotos = (id: string, photos: string[]): Promise<boole
       console.error("Error updating photos:", error);
       resolve(false);
     }
+  });
+};
+
+// Get all team members
+export const getTeamMembers = (): Promise<TeamMember[]> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(localTeam);
+    }, 300);
+  });
+};
+
+// Update a team member
+export const updateTeamMember = (id: string, updates: Partial<TeamMember>): Promise<boolean> => {
+  return new Promise((resolve) => {
+    try {
+      const index = localTeam.findIndex((m) => m.id === id);
+      
+      if (index === -1) {
+        resolve(false);
+        return;
+      }
+
+      // Deep copy to avoid reference issues
+      const updatedMember = {
+        ...JSON.parse(JSON.stringify(localTeam[index])),
+        ...updates
+      };
+      
+      localTeam[index] = updatedMember;
+      
+      const success = safelyStoreData("teamMembers", localTeam);
+      
+      // Also update any services that reference this team member (for technicians)
+      if (success) {
+        localServices = localServices.map(service => {
+          if (service.technician && service.technician.id === id) {
+            return {
+              ...service,
+              technician: updatedMember
+            };
+          }
+          return service;
+        });
+        
+        safelyStoreData("services", localServices);
+      }
+      
+      setTimeout(() => {
+        resolve(success);
+      }, 300);
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      resolve(false);
+    }
+  });
+};
+
+// Add a new team member
+export const addTeamMember = (member: Partial<TeamMember>): Promise<TeamMember> => {
+  return new Promise((resolve) => {
+    const newMember: TeamMember = {
+      id: uuidv4().slice(0, 4),
+      name: member.name || "Novo Membro",
+      avatar: member.avatar || "",
+      role: member.role || "tecnico",
+    };
+
+    localTeam.push(newMember);
+    safelyStoreData("teamMembers", localTeam);
+    
+    setTimeout(() => {
+      resolve(newMember);
+    }, 300);
+  });
+};
+
+// Delete a team member
+export const deleteTeamMember = (id: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const initialLength = localTeam.length;
+    localTeam = localTeam.filter((m) => m.id !== id);
+    
+    if (initialLength === localTeam.length) {
+      resolve(false);
+      return;
+    }
+
+    const success = safelyStoreData("teamMembers", localTeam);
+    
+    // Also update any services that reference this team member
+    if (success) {
+      localServices = localServices.map(service => {
+        if (service.technician && service.technician.id === id) {
+          return {
+            ...service,
+            technician: {
+              id: "",
+              name: "Sem técnico",
+              avatar: ""
+            }
+          };
+        }
+        return service;
+      });
+      
+      safelyStoreData("services", localServices);
+    }
+    
+    setTimeout(() => {
+      resolve(success);
+    }, 300);
   });
 };

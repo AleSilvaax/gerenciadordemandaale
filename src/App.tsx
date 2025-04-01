@@ -11,6 +11,7 @@ import ServiceDetail from "./pages/ServiceDetail";
 import NewService from "./pages/NewService";
 import Estatisticas from "./pages/Estatisticas";
 import Equipe from "./pages/Equipe";
+import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/demandas/:id" element={<ServiceDetail />} />
             <Route path="/estatisticas" element={<Estatisticas />} />
             <Route path="/equipe" element={<Equipe />} />
+            <Route path="/search" element={<Search />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

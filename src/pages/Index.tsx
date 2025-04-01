@@ -1,13 +1,36 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Search, CheckCircle, ClipboardList, XCircle, BarChart, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { StatCard } from "@/components/ui-custom/StatCard";
-import { currentUser, stats, teamMembers } from "@/data/mockData";
+import { currentUser, stats, TeamMember } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
+import { getTeamMembers, getServices } from "@/services/api";
 
 const Index: React.FC = () => {
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        // Load team members
+        const members = await getTeamMembers();
+        if (members && members.length > 0) {
+          setTeam(members);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+
   return (
     <div className="min-h-screen p-4 page-transition">
       <div className="flex items-center justify-between mb-4">
@@ -22,20 +45,34 @@ const Index: React.FC = () => {
             <p className="text-xs text-muted-foreground">{currentUser.role === "gestor" ? "Coordenador de projetos" : currentUser.role}</p>
           </div>
         </div>
-        <button className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
+        <Link to="/search" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
           <Search size={18} />
-        </button>
+        </Link>
       </div>
       
       <h1 className="text-2xl font-bold mt-6">Minha equipe</h1>
       
       <div className="flex space-x-3 mt-4 overflow-x-auto scrollbar-none pb-2">
-        {teamMembers.map(member => (
-          <div key={member.id} className="flex flex-col items-center space-y-1">
-            <TeamMemberAvatar src={member.avatar} name={member.name} />
-            <span className="text-xs whitespace-nowrap">{member.name}</span>
+        {isLoading ? (
+          <div className="flex items-center justify-center w-full py-4">
+            <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full mr-2"></div>
+            <span className="text-sm text-muted-foreground">Carregando equipe...</span>
           </div>
-        ))}
+        ) : team.length > 0 ? (
+          team.map(member => (
+            <div key={member.id} className="flex flex-col items-center space-y-1">
+              <TeamMemberAvatar src={member.avatar} name={member.name} />
+              <span className="text-xs whitespace-nowrap">{member.name}</span>
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            Nenhum membro na equipe.
+            <Link to="/equipe" className="ml-2 text-primary">
+              Adicionar membros
+            </Link>
+          </div>
+        )}
       </div>
       
       <div className="flex justify-between items-center mt-6">
@@ -121,8 +158,8 @@ const Index: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <TeamMemberAvatar 
-                    src={teamMembers[0].avatar} 
-                    name={teamMembers[0].name} 
+                    src={team.length > 0 ? team[0].avatar : ""}
+                    name={team.length > 0 ? team[0].name : "Técnico"}
                     size="sm" 
                   />
                 </div>
@@ -146,8 +183,8 @@ const Index: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <TeamMemberAvatar 
-                    src={teamMembers[0].avatar} 
-                    name={teamMembers[0].name} 
+                    src={team.length > 0 ? team[0].avatar : ""}
+                    name={team.length > 0 ? team[0].name : "Técnico"}
                     size="sm" 
                   />
                 </div>

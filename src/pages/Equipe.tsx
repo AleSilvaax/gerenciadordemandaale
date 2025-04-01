@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Save, PlusCircle, Trash2, UserPlus, Upload, User, ShieldCheck, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { currentUser, teamMembers, UserRole } from "@/data/mockData";
+import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/api";
 
 interface Permission {
   id: string;
@@ -87,28 +88,56 @@ const Equipe: React.FC = () => {
       roles: ["administrador", "gestor"]
     }
   ]);
+  
+  // Load team members from API
+  useEffect(() => {
+    const loadTeamMembers = async () => {
+      try {
+        const members = await getTeamMembers();
+        if (members && members.length > 0) {
+          setTeam(members);
+        }
+      } catch (error) {
+        console.error("Error loading team members:", error);
+      }
+    };
+    
+    loadTeamMembers();
+  }, []);
 
   const filteredTeam = team.filter(member => 
     roleFilter === "todos" || member.role === roleFilter
   );
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (newMember.name.trim()) {
-      const newTeamMember = {
-        id: `${team.length + 10}`,
-        name: newMember.name,
-        avatar: "",
-        role: newMember.role
-      };
+      setIsSaving(true);
       
-      setTeam([...team, newTeamMember]);
-      setNewMember({ name: "", role: "tecnico" });
-      setIsAddingMember(false);
-      
-      toast({
-        title: "Membro adicionado",
-        description: `${newMember.name} foi adicionado à equipe como ${newMember.role}.`,
-      });
+      try {
+        const newTeamMember = await addTeamMember({
+          name: newMember.name,
+          role: newMember.role,
+          avatar: ""
+        });
+        
+        setTeam([...team, newTeamMember]);
+        setNewMember({ name: "", role: "tecnico" });
+        setIsAddingMember(false);
+        
+        toast({
+          title: "Membro adicionado",
+          description: `${newMember.name} foi adicionado à equipe como ${newMember.role}.`,
+        });
+      } catch (error) {
+        console.error("Error adding team member:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao adicionar novo membro.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -116,30 +145,48 @@ const Equipe: React.FC = () => {
     setMemberToDelete(id);
   };
 
-  const confirmDeleteMember = () => {
+  const confirmDeleteMember = async () => {
     if (memberToDelete) {
-      const updatedTeam = team.filter(member => member.id !== memberToDelete);
-      const deletedMember = team.find(member => member.id === memberToDelete);
+      setIsSaving(true);
       
-      setTeam(updatedTeam);
-      setMemberToDelete(null);
-      
-      toast({
-        title: "Membro removido",
-        description: `${deletedMember?.name} foi removido da equipe.`,
-        variant: "destructive",
-      });
+      try {
+        const deletedMember = team.find(member => member.id === memberToDelete);
+        const success = await deleteTeamMember(memberToDelete);
+        
+        if (success) {
+          const updatedTeam = team.filter(member => member.id !== memberToDelete);
+          setTeam(updatedTeam);
+          
+          toast({
+            title: "Membro removido",
+            description: `${deletedMember?.name} foi removido da equipe.`,
+            variant: "destructive",
+          });
+        } else {
+          throw new Error("Failed to delete team member");
+        }
+      } catch (error) {
+        console.error("Error deleting team member:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao remover membro da equipe.",
+          variant: "destructive",
+        });
+      } finally {
+        setMemberToDelete(null);
+        setIsSaving(false);
+      }
     }
   };
 
-  const handleFileChange = (memberId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (memberId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setUploadingAvatar(memberId);
       
       const file = e.target.files[0];
       const reader = new FileReader();
       
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         if (!event.target || !event.target.result) {
           toast({
             title: "Erro",
@@ -153,26 +200,41 @@ const Equipe: React.FC = () => {
         // Get the data URL from the file
         const photoUrl = event.target.result.toString();
         
-        // Update the team member with the actual uploaded photo
-        setTimeout(() => {
-          const updatedTeam = team.map(member => {
-            if (member.id === memberId) {
-              return {
-                ...member,
-                avatar: photoUrl
-              };
-            }
-            return member;
-          });
+        try {
+          // Update the team member with the new photo
+          const success = await updateTeamMember(memberId, { avatar: photoUrl });
           
-          setTeam(updatedTeam);
-          setUploadingAvatar(null);
-          
+          if (success) {
+            // Update local state
+            const updatedTeam = team.map(member => {
+              if (member.id === memberId) {
+                return {
+                  ...member,
+                  avatar: photoUrl
+                };
+              }
+              return member;
+            });
+            
+            setTeam(updatedTeam);
+            
+            toast({
+              title: "Foto atualizada",
+              description: "A foto do perfil foi atualizada com sucesso.",
+            });
+          } else {
+            throw new Error("Failed to update team member photo");
+          }
+        } catch (error) {
+          console.error("Error updating team member photo:", error);
           toast({
-            title: "Foto atualizada",
-            description: "A foto do perfil foi atualizada com sucesso.",
+            title: "Erro",
+            description: "Falha ao atualizar a foto do membro.",
+            variant: "destructive",
           });
-        }, 800);
+        } finally {
+          setUploadingAvatar(null);
+        }
       };
       
       reader.onerror = () => {
@@ -209,17 +271,27 @@ const Equipe: React.FC = () => {
     }));
   };
   
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     setIsSaving(true);
     
-    // Simulate saving to backend
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      // Save permissions to localStorage (in a real app, would save to a backend)
+      localStorage.setItem("permissions", JSON.stringify(permissions));
+      
       toast({
         title: "Permissões salvas",
         description: "As permissões da equipe foram atualizadas com sucesso.",
       });
-    }, 800);
+    } catch (error) {
+      console.error("Error saving permissions:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar as permissões.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -399,7 +471,7 @@ const Equipe: React.FC = () => {
         ))}
       </div>
       
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-white/10 p-4 z-10">
         <Button className="w-full" onClick={handleSaveChanges} disabled={isSaving}>
           {isSaving ? (
             <>

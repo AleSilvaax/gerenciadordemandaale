@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Search, Plus, AlertCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,16 @@ const Demandas: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   useEffect(() => {
+    // Check if there's a selected tab in localStorage from the Index page
+    const savedTab = localStorage.getItem("demandasTab");
+    if (savedTab && (savedTab === "pendente" || savedTab === "concluido" || savedTab === "cancelado")) {
+      setActiveTab(savedTab as ServiceStatus);
+      localStorage.removeItem("demandasTab");
+    }
+    
     loadServices();
   }, []);
 
@@ -83,6 +91,10 @@ const Demandas: React.FC = () => {
       }
     }
   };
+
+  const handleSearch = () => {
+    navigate('/search');
+  };
   
   return (
     <div className="min-h-screen p-4 pb-20 page-transition">
@@ -104,7 +116,10 @@ const Demandas: React.FC = () => {
               <Plus size={18} />
             </Button>
           </Link>
-          <button className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
+          <button 
+            className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10"
+            onClick={handleSearch}
+          >
             <Search size={18} />
           </button>
         </div>

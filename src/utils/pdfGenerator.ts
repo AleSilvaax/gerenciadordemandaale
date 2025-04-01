@@ -103,6 +103,19 @@ const generateDescriptionPage = (pdf: any, service: Service) => {
   // For now, we'll add placeholder text
   pdf.setFontSize(10);
   pdf.text("Fotos do serviço incluídas no relatório original", 20, 150);
+  
+  // If we have photos, try to add them
+  if (service.photos && service.photos.length > 0) {
+    try {
+      let yPos = 180;
+      for (let i = 0; i < Math.min(2, service.photos.length); i++) {
+        pdf.addImage(service.photos[i], 'JPEG', 20, yPos, 170, 40);
+        yPos += 50;
+      }
+    } catch (error) {
+      console.error("Error adding photos to PDF:", error);
+    }
+  }
 };
 
 // Generate technical details page
@@ -215,7 +228,7 @@ export function generatePDF(service: Service): boolean {
       toast.success("Relatório gerado com sucesso", {
         description: `O PDF para a vistoria ${service.id} foi gerado e baixado automaticamente.`
       });
-    }, 1500);
+    }, 500);
     
     return true;
   } catch (error) {
