@@ -1,6 +1,7 @@
 
+
 import { Service, TeamMember } from "@/data/mockData";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -32,6 +33,23 @@ const safelyAddImage = (pdf, imagePath, format, x, y, width, height) => {
   }
 };
 
+// Create a semi-transparent overlay (without using setGlobalAlpha)
+const addSemiTransparentOverlay = (pdf, x, y, width, height, color, opacity) => {
+  // For different opacity levels, we'll use different RGB values to simulate transparency
+  // This is a workaround since setGlobalAlpha is not available
+  
+  // Convert opacity (0-1) to color intensity (0-255)
+  const colorValue = Math.floor(255 * (1 - opacity));
+  
+  if (color === "black") {
+    pdf.setFillColor(colorValue, colorValue, colorValue);
+  } else if (color === "white") {
+    pdf.setFillColor(255, 255, 255);
+  }
+  
+  pdf.rect(x, y, width, height, "F");
+};
+
 // Generate the cover page
 const generateCoverPage = (pdf, service) => {
   // Try to add background image
@@ -42,10 +60,8 @@ const generateCoverPage = (pdf, service) => {
   }
   
   // Add semi-transparent overlay for better text readability
-  pdf.setFillColor(0, 0, 0);
-  pdf.setGlobalAlpha(0.6);
-  pdf.rect(0, 0, 210, 297, "F");
-  pdf.setGlobalAlpha(1);
+  // Instead of using setGlobalAlpha, use the custom function
+  addSemiTransparentOverlay(pdf, 0, 0, 210, 297, "black", 0.6);
   
   // Add date
   pdf.setTextColor(255, 255, 255);
@@ -437,3 +453,4 @@ export function generatePDF(service: Service): boolean {
 export function downloadPDF(service: Service): void {
   generatePDF(service);
 }
+
