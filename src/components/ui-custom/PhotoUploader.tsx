@@ -1,144 +1,178 @@
 
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useRef, useState } from 'react';
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { X, Upload, ImagePlus } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { X, Camera, Image, Edit2 } from "lucide-react";
 
-interface PhotoUploaderProps {
-  onPhotosUpdate: (photos: string[], titles: string[]) => void;
-  initialPhotos?: string[];
-  initialTitles?: string[];
-  maxPhotos?: number;
+interface PhotoDetails {
+  url: string;
+  title: string;
 }
 
-export function PhotoUploader({
-  onPhotosUpdate,
-  initialPhotos = [],
-  initialTitles = [],
-  maxPhotos = 12
-}: PhotoUploaderProps) {
-  const [photos, setPhotos] = useState<string[]>(initialPhotos);
-  const [titles, setTitles] = useState<string[]>(initialTitles.length === initialPhotos.length 
-    ? initialTitles 
-    : initialPhotos.map((_, i) => `Foto ${i + 1}`)
-  );
+interface PhotoUploaderProps {
+  photos: PhotoDetails[];
+  onAddPhoto: (file: File, title: string) => Promise<void>;
+  onRemovePhoto: (index: number) => Promise<void>;
+  onUpdateTitle: (index: number, title: string) => Promise<void>;
+  className?: string;
+}
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
+  photos,
+  onAddPhoto,
+  onRemovePhoto,
+  onUpdateTitle,
+  className = "",
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [photoTitle, setPhotoTitle] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
     
-    if (photos.length + files.length > maxPhotos) {
-      toast.error(`Limite de fotos excedido`, {
-        description: `Você pode adicionar no máximo ${maxPhotos} fotos.`
-      });
+    const file = e.target.files[0];
+    
+    if (!file.type.startsWith('image/')) {
+      alert("Por favor, selecione um arquivo de imagem válido");
       return;
     }
     
-    // Process each file
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setPhotos(prev => [...prev, event.target!.result as string]);
-          setTitles(prev => [...prev, `Foto ${prev.length + 1}`]);
-          
-          // Update parent component
-          const updatedPhotos = [...photos, event.target!.result as string];
-          const updatedTitles = [...titles, `Foto ${titles.length + 1}`];
-          onPhotosUpdate(updatedPhotos, updatedTitles);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsUploading(true);
     
-    // Reset input value to allow selecting the same file again
-    e.target.value = "";
+    try {
+      await onAddPhoto(file, photoTitle || `Foto ${photos.length + 1}`);
+      setPhotoTitle("");
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto:", error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
-  const removePhoto = (index: number) => {
-    const updatedPhotos = photos.filter((_, i) => i !== index);
-    const updatedTitles = titles.filter((_, i) => i !== index);
-    
-    setPhotos(updatedPhotos);
-    setTitles(updatedTitles);
-    
-    // Update parent component
-    onPhotosUpdate(updatedPhotos, updatedTitles);
+  const handleEditTitle = (index: number) => {
+    setEditingIndex(index);
+    setEditTitle(photos[index].title);
   };
 
-  const updateTitle = (index: number, newTitle: string) => {
-    const updatedTitles = [...titles];
-    updatedTitles[index] = newTitle;
-    
-    setTitles(updatedTitles);
-    
-    // Update parent component
-    onPhotosUpdate(photos, updatedTitles);
+  const saveTitle = async (index: number) => {
+    try {
+      await onUpdateTitle(index, editTitle);
+      setEditingIndex(null);
+    } catch (error) {
+      console.error("Erro ao atualizar título:", error);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Fotos do Serviço ({photos.length}/{maxPhotos})</h3>
-        <Label htmlFor="photo-upload" className="cursor-pointer">
-          <div className="flex items-center gap-1 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 rounded-md text-sm font-medium">
-            <ImagePlus className="h-4 w-4" />
-            <span>Adicionar Fotos</span>
-          </div>
-          <Input 
-            id="photo-upload" 
-            type="file" 
-            accept="image/*" 
-            multiple 
-            onChange={handleFileChange} 
-            className="hidden" 
-            disabled={photos.length >= maxPhotos}
+    <div className={className}>
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <Label htmlFor="photoTitle">Título da foto</Label>
+          <Input
+            id="photoTitle"
+            placeholder="Ex: Painel elétrico"
+            value={photoTitle}
+            onChange={(e) => setPhotoTitle(e.target.value)}
           />
-        </Label>
-      </div>
-      
-      {photos.length === 0 ? (
-        <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <Upload className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-sm text-gray-500">Faça upload de fotos para o relatório</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {photos.map((photo, index) => (
-            <Card key={index} className="overflow-hidden">
-              <div className="relative">
-                <AspectRatio ratio={4/3}>
-                  <img 
-                    src={photo} 
-                    alt={titles[index] || `Foto ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </AspectRatio>
-                <Button 
-                  size="icon" 
-                  variant="destructive" 
-                  className="absolute top-2 right-2 h-6 w-6 rounded-full"
-                  onClick={() => removePhoto(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+        
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full"
+          >
+            {isUploading ? (
+              <div className="flex items-center">
+                <div className="animate-spin mr-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
+                  </svg>
+                </div>
+                Enviando...
               </div>
-              <CardContent className="p-3">
-                <Input
-                  placeholder="Título da foto"
-                  value={titles[index] || ""}
-                  onChange={(e) => updateTitle(index, e.target.value)}
-                  className="text-sm mt-2"
+            ) : (
+              <>
+                <Camera size={16} className="mr-2" />
+                Adicionar Foto
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {photos.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+          {photos.map((photo, index) => (
+            <div key={index} className="relative border rounded-lg overflow-hidden group">
+              <div className="relative">
+                <img 
+                  src={photo.url} 
+                  alt={photo.title} 
+                  className="w-full h-32 object-cover"
                 />
-              </CardContent>
-            </Card>
+                <button
+                  type="button"
+                  onClick={() => onRemovePhoto(index)}
+                  className="absolute top-2 right-2 bg-black/70 rounded-full p-1 hover:bg-black/90"
+                >
+                  <X size={16} className="text-white" />
+                </button>
+              </div>
+              
+              <div className="p-2 bg-gray-50 border-t">
+                {editingIndex === index ? (
+                  <div className="flex">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="text-sm h-8 mr-2"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="default"
+                      onClick={() => saveTitle(index)}
+                      className="h-8"
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium truncate">{photo.title}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditTitle(index)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit2 size={14} />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
     </div>
   );
-}
+};

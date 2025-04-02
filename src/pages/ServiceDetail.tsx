@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   ArrowLeft, Save, Camera, Upload, Image, File, X, FileText,
-  Check, CheckCircle2, XCircle, Download, Clipboard, Zap, Wrench 
+  Check, CheckCircle2, XCircle, Download, Clipboard, Zap, Wrench, FileDown 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -27,12 +27,20 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { SignatureCanvas } from "@/components/ui-custom/SignatureCanvas";
+import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { Service, ServiceStatus, TeamMember, teamMembers } from "@/data/mockData";
-import { generatePDF, downloadPDF } from "@/utils/pdfGenerator";
-import { toast } from "sonner";
+import { 
+  generatePDF, 
+  downloadPDF, 
+  downloadInspectionPDF,
+  downloadInstallationPDF 
+} from "@/utils/pdfGenerator";
 import { 
   getServiceById, 
   updateService, 
@@ -48,6 +56,7 @@ interface FormValues {
   location: string;
   technician: string;
   client: string;
+  clientName: string;
   address: string;
   city: string;
   executedBy: string;
@@ -74,8 +83,24 @@ interface FormValues {
   existingPanel: boolean;
   panelType: string;
   panelAmps: string;
+  voltageBetweenPhases: string;
+  voltageBetweenPhaseAndNeutral: string;
+  hasThreePhase: boolean;
   groundingSystem: string;
+  wallboxBrand: string;
+  wallboxPower: string;
+  powerSupplyType: string;
+  needsInfrastructure: boolean;
+  needsScaffolding: boolean;
+  needsTechnicalHole: boolean;
+  needsMasonry: boolean;
+  artNumber: string;
   technicalComments: string;
+}
+
+interface PhotoDetails {
+  url: string;
+  title: string;
 }
 
 const ServiceDetail = () => {
@@ -83,12 +108,13 @@ const ServiceDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+  const [photoDetails, setPhotoDetails] = useState<PhotoDetails[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [service, setService] = useState<Service | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [clientSignature, setClientSignature] = useState<string>("");
+  const [technicianSignature, setTechnicianSignature] = useState<string>("");
   
   useEffect(() => {
     const fetchService = async () => {
@@ -100,8 +126,23 @@ const ServiceDetail = () => {
         
         if (fetchedService) {
           setService(fetchedService);
-          if (fetchedService.photos) {
-            setSelectedPhotos(fetchedService.photos);
+          
+          // Initialize photo details if available
+          if (fetchedService.photos && fetchedService.photos.length > 0) {
+            const photos = fetchedService.photos.map((url, index) => ({
+              url,
+              title: fetchedService.photoTitles?.[index] || `Foto ${index + 1}`
+            }));
+            setPhotoDetails(photos);
+          }
+          
+          // Initialize signatures if available
+          if (fetchedService.reportData?.clientSignature) {
+            setClientSignature(fetchedService.reportData.clientSignature);
+          }
+          
+          if (fetchedService.technician.signature) {
+            setTechnicianSignature(fetchedService.technician.signature);
           }
         } else {
           toast({
@@ -134,6 +175,7 @@ const ServiceDetail = () => {
       location: "",
       technician: "",
       client: "",
+      clientName: "",
       address: "",
       city: "",
       executedBy: "",
@@ -160,7 +202,18 @@ const ServiceDetail = () => {
       existingPanel: false,
       panelType: "",
       panelAmps: "",
+      voltageBetweenPhases: "",
+      voltageBetweenPhaseAndNeutral: "",
+      hasThreePhase: false,
       groundingSystem: "",
+      wallboxBrand: "",
+      wallboxPower: "",
+      powerSupplyType: "",
+      needsInfrastructure: false,
+      needsScaffolding: false,
+      needsTechnicalHole: false,
+      needsMasonry: false,
+      artNumber: "",
       technicalComments: ""
     }
   });
@@ -174,6 +227,7 @@ const ServiceDetail = () => {
         location: service.location || "",
         technician: service.technician?.id || "",
         client: service.reportData?.client || "",
+        clientName: service.reportData?.clientName || "",
         address: service.reportData?.address || "",
         city: service.reportData?.city || "",
         executedBy: service.reportData?.executedBy || "",
@@ -200,7 +254,18 @@ const ServiceDetail = () => {
         existingPanel: service.reportData?.existingPanel || false,
         panelType: service.reportData?.panelType || "",
         panelAmps: service.reportData?.panelAmps || "",
+        voltageBetweenPhases: service.reportData?.voltageBetweenPhases || "",
+        voltageBetweenPhaseAndNeutral: service.reportData?.voltageBetweenPhaseAndNeutral || "",
+        hasThreePhase: service.reportData?.hasThreePhase || false,
         groundingSystem: service.reportData?.groundingSystem || "",
+        wallboxBrand: service.reportData?.wallboxBrand || "",
+        wallboxPower: service.reportData?.wallboxPower || "",
+        powerSupplyType: service.reportData?.powerSupplyType || "",
+        needsInfrastructure: service.reportData?.needsInfrastructure || false,
+        needsScaffolding: service.reportData?.needsScaffolding || false,
+        needsTechnicalHole: service.reportData?.needsTechnicalHole || false,
+        needsMasonry: service.reportData?.needsMasonry || false,
+        artNumber: service.reportData?.artNumber || "",
         technicalComments: service.reportData?.technicalComments || ""
       });
     }
@@ -218,6 +283,11 @@ const ServiceDetail = () => {
     try {
       const selectedTechnician = teamMembers.find(t => t.id === data.technician) || service.technician;
       
+      // Update technician signature if changed
+      if (technicianSignature !== service.technician.signature) {
+        selectedTechnician.signature = technicianSignature;
+      }
+      
       const serviceUpdated = await updateService(id, {
         title: data.title,
         status: data.status,
@@ -225,9 +295,15 @@ const ServiceDetail = () => {
         technician: selectedTechnician
       });
       
+      // Extract photo URLs and titles
+      const photoUrls = photoDetails.map(p => p.url);
+      const photoTitles = photoDetails.map(p => p.title);
+      
       const reportUpdated = await updateReportData(id, {
         servicePhase: data.servicePhase,
         client: data.client,
+        clientName: data.clientName,
+        clientSignature: clientSignature,
         address: data.address,
         city: data.city,
         executedBy: data.executedBy,
@@ -254,13 +330,26 @@ const ServiceDetail = () => {
         existingPanel: data.existingPanel,
         panelType: data.panelType,
         panelAmps: data.panelAmps,
+        voltageBetweenPhases: data.voltageBetweenPhases,
+        voltageBetweenPhaseAndNeutral: data.voltageBetweenPhaseAndNeutral,
+        hasThreePhase: data.hasThreePhase,
         groundingSystem: data.groundingSystem,
+        wallboxBrand: data.wallboxBrand,
+        wallboxPower: data.wallboxPower,
+        powerSupplyType: data.powerSupplyType,
+        needsInfrastructure: data.needsInfrastructure,
+        needsScaffolding: data.needsScaffolding,
+        needsTechnicalHole: data.needsTechnicalHole,
+        needsMasonry: data.needsMasonry,
+        artNumber: data.artNumber,
         technicalComments: data.technicalComments
       });
       
+      // Update photos and titles
       let photosUpdated = true;
-      if (JSON.stringify(service.photos) !== JSON.stringify(selectedPhotos)) {
-        photosUpdated = await updateServicePhotos(id, selectedPhotos);
+      if (JSON.stringify(service.photos) !== JSON.stringify(photoUrls) || 
+          JSON.stringify(service.photoTitles) !== JSON.stringify(photoTitles)) {
+        photosUpdated = await updateServicePhotos(id, photoUrls, photoTitles);
       }
       
       if (serviceUpdated && reportUpdated && photosUpdated) {
@@ -302,37 +391,22 @@ const ServiceDetail = () => {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!id || !e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
+  const handleAddPhoto = async (file: File, title: string) => {
+    if (!id) return;
     
     try {
-      setIsSubmitting(true);
-      
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Erro",
-          description: "Por favor, selecione um arquivo de imagem válido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const photoUrl = await addPhotoToService(id, file);
       
-      const newPhotos = [...selectedPhotos, photoUrl];
-      setSelectedPhotos(newPhotos);
+      // Add new photo with title
+      const newPhotoDetails = [...photoDetails, { url: photoUrl, title }];
+      setPhotoDetails(newPhotoDetails);
       
       toast({
         title: "Foto adicionada",
         description: "A foto foi adicionada ao relatório com sucesso.",
       });
       
-      const updatedService = await getServiceById(id);
-      if (updatedService) {
-        setService(updatedService);
-      }
+      return photoUrl;
     } catch (error) {
       console.error("Erro ao fazer upload da foto:", error);
       toast({
@@ -340,35 +414,32 @@ const ServiceDetail = () => {
         description: "Falha ao carregar a foto. Por favor, tente novamente.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      throw error;
     }
   };
 
-  const handleRemovePhoto = async (photoUrl: string) => {
+  const handleRemovePhoto = async (index: number) => {
     if (!id) return;
     
     try {
-      const updatedPhotos = selectedPhotos.filter(photo => photo !== photoUrl);
-      setSelectedPhotos(updatedPhotos);
+      const updatedPhotoDetails = [...photoDetails];
+      updatedPhotoDetails.splice(index, 1);
+      setPhotoDetails(updatedPhotoDetails);
       
-      const success = await updateServicePhotos(id, updatedPhotos);
+      // Extract URLs and titles
+      const photoUrls = updatedPhotoDetails.map(p => p.url);
+      const photoTitles = updatedPhotoDetails.map(p => p.title);
+      
+      const success = await updateServicePhotos(id, photoUrls, photoTitles);
       
       if (success) {
         toast({
           title: "Foto removida",
           description: "A foto foi removida do relatório.",
         });
-        
-        const updatedService = await getServiceById(id);
-        if (updatedService) {
-          setService(updatedService);
-        }
       } else {
-        setSelectedPhotos(selectedPhotos);
+        // Revert if update failed
+        setPhotoDetails(photoDetails);
         toast({
           title: "Erro",
           description: "Falha ao remover a foto do relatório",
@@ -385,49 +456,43 @@ const ServiceDetail = () => {
     }
   };
 
+  const handleUpdatePhotoTitle = async (index: number, newTitle: string) => {
+    if (!id) return;
+    
+    try {
+      const updatedPhotoDetails = [...photoDetails];
+      updatedPhotoDetails[index].title = newTitle;
+      setPhotoDetails(updatedPhotoDetails);
+      
+      // Extract URLs and titles
+      const photoUrls = updatedPhotoDetails.map(p => p.url);
+      const photoTitles = updatedPhotoDetails.map(p => p.title);
+      
+      const success = await updateServicePhotos(id, photoUrls, photoTitles);
+      
+      if (!success) {
+        // Revert if update failed
+        setPhotoDetails(photoDetails);
+        toast({
+          title: "Erro",
+          description: "Falha ao atualizar o título da foto",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating photo title:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar o título da foto",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGeneratePDF = () => {
     if (!service) return;
     
-    const updatedService = {
-      ...service,
-      title: form.getValues("title"),
-      status: form.getValues("status") as ServiceStatus,
-      location: form.getValues("location"),
-      technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
-      reportData: {
-        servicePhase: form.getValues("servicePhase"),
-        client: form.getValues("client"),
-        address: form.getValues("address"),
-        city: form.getValues("city"),
-        executedBy: form.getValues("executedBy"),
-        inspectionDate: form.getValues("inspectionDate"),
-        installationDate: form.getValues("installationDate"),
-        modelNumber: form.getValues("modelNumber"),
-        serialNumberNew: form.getValues("serialNumberNew"),
-        serialNumberOld: form.getValues("serialNumberOld"),
-        homologatedName: form.getValues("homologatedName"),
-        compliesWithNBR17019: form.getValues("compliesWithNBR17019"),
-        homologatedInstallation: form.getValues("homologatedInstallation"),
-        requiredAdjustment: form.getValues("requiredAdjustment"),
-        adjustmentDescription: form.getValues("adjustmentDescription"),
-        validWarranty: form.getValues("validWarranty"),
-        circuitBreakerEntry: form.getValues("circuitBreakerEntry"),
-        chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
-        cableGauge: form.getValues("cableGauge"),
-        chargerStatus: form.getValues("chargerStatus"),
-        chargerLoad: form.getValues("chargerLoad"),
-        voltage: form.getValues("voltage"),
-        supplyType: form.getValues("supplyType"),
-        installationDistance: form.getValues("installationDistance"),
-        installationObstacles: form.getValues("installationObstacles"),
-        existingPanel: form.getValues("existingPanel"),
-        panelType: form.getValues("panelType"),
-        panelAmps: form.getValues("panelAmps"),
-        groundingSystem: form.getValues("groundingSystem"),
-        technicalComments: form.getValues("technicalComments")
-      },
-      photos: selectedPhotos
-    };
+    const updatedService = prepareServiceForPDF();
     
     const result = generatePDF(updatedService);
     
@@ -449,15 +514,40 @@ const ServiceDetail = () => {
   const handleDownloadPDF = () => {
     if (!service) return;
     
-    const updatedService = {
+    const updatedService = prepareServiceForPDF();
+    downloadPDF(updatedService);
+  };
+
+  const handleDownloadInspectionPDF = () => {
+    if (!service) return;
+    
+    const updatedService = prepareServiceForPDF();
+    downloadInspectionPDF(updatedService);
+  };
+
+  const handleDownloadInstallationPDF = () => {
+    if (!service) return;
+    
+    const updatedService = prepareServiceForPDF();
+    downloadInstallationPDF(updatedService);
+  };
+
+  const prepareServiceForPDF = () => {
+    // Prepare updated service with all current data for PDF generation
+    return {
       ...service,
       title: form.getValues("title"),
       status: form.getValues("status") as ServiceStatus,
       location: form.getValues("location"),
-      technician: teamMembers.find(t => t.id === form.getValues("technician")) || service.technician,
+      technician: {
+        ...service.technician,
+        signature: technicianSignature
+      },
       reportData: {
         servicePhase: form.getValues("servicePhase"),
         client: form.getValues("client"),
+        clientName: form.getValues("clientName"),
+        clientSignature: clientSignature,
         address: form.getValues("address"),
         city: form.getValues("city"),
         executedBy: form.getValues("executedBy"),
@@ -484,13 +574,23 @@ const ServiceDetail = () => {
         existingPanel: form.getValues("existingPanel"),
         panelType: form.getValues("panelType"),
         panelAmps: form.getValues("panelAmps"),
+        voltageBetweenPhases: form.getValues("voltageBetweenPhases"),
+        voltageBetweenPhaseAndNeutral: form.getValues("voltageBetweenPhaseAndNeutral"),
+        hasThreePhase: form.getValues("hasThreePhase"),
         groundingSystem: form.getValues("groundingSystem"),
+        wallboxBrand: form.getValues("wallboxBrand"),
+        wallboxPower: form.getValues("wallboxPower"),
+        powerSupplyType: form.getValues("powerSupplyType"),
+        needsInfrastructure: form.getValues("needsInfrastructure"),
+        needsScaffolding: form.getValues("needsScaffolding"),
+        needsTechnicalHole: form.getValues("needsTechnicalHole"),
+        needsMasonry: form.getValues("needsMasonry"),
+        artNumber: form.getValues("artNumber"),
         technicalComments: form.getValues("technicalComments")
       },
-      photos: selectedPhotos
+      photos: photoDetails.map(p => p.url),
+      photoTitles: photoDetails.map(p => p.title)
     };
-    
-    downloadPDF(updatedService);
   };
 
   if (isLoading) {
@@ -545,11 +645,12 @@ const ServiceDetail = () => {
       </div>
 
       <Tabs defaultValue="general" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-4">
+        <TabsList className="grid grid-cols-5 mb-4">
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="inspection">Vistoria</TabsTrigger>
           <TabsTrigger value="installation">Instalação</TabsTrigger>
           <TabsTrigger value="photos">Fotos</TabsTrigger>
+          <TabsTrigger value="signatures">Assinaturas</TabsTrigger>
         </TabsList>
 
         <Form {...form}>
@@ -687,6 +788,19 @@ const ServiceDetail = () => {
 
                 <FormField
                   control={form.control}
+                  name="clientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Completo do Cliente</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
@@ -811,6 +925,51 @@ const ServiceDetail = () => {
                 />
               </div>
 
+              <div className="space-y-4 mt-4">
+                <h3 className="text-lg font-medium">Wallbox</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="wallboxBrand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Marca do Wallbox</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="wallboxPower"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Potência do Wallbox (kW)</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="powerSupplyType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Alimentação</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <FormField
                   control={form.control}
@@ -847,11 +1006,120 @@ const ServiceDetail = () => {
                       name="panelAmps"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Amperagem do quadro (A)</FormLabel>
+                          <FormLabel>Corrente do quadro (A)</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
                         </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="voltageBetweenPhases"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tensão entre fases (V)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="voltageBetweenPhaseAndNeutral"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tensão fase/neutro (V)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="hasThreePhase"
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="hasThreePhase" 
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <Label htmlFor="hasThreePhase">Trifásico</Label>
+                        </div>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 mt-4">
+                <h3 className="text-lg font-medium">Infraestrutura Necessária</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="needsInfrastructure"
+                  render={({ field }) => (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="needsInfrastructure" 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                      <Label htmlFor="needsInfrastructure">Necessita de infraestrutura</Label>
+                    </div>
+                  )}
+                />
+                
+                {form.watch("needsInfrastructure") && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ml-6 pl-2 border-l-2 border-secondary/50">
+                    <FormField
+                      control={form.control}
+                      name="needsScaffolding"
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="needsScaffolding" 
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <Label htmlFor="needsScaffolding">Necessita andaime</Label>
+                        </div>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="needsTechnicalHole"
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="needsTechnicalHole" 
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <Label htmlFor="needsTechnicalHole">Necessita furo técnico</Label>
+                        </div>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="needsMasonry"
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="needsMasonry" 
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <Label htmlFor="needsMasonry">Necessita alvenaria</Label>
+                        </div>
                       )}
                     />
                   </div>
@@ -882,6 +1150,19 @@ const ServiceDetail = () => {
                         <SelectItem value="Inexistente">Inexistente</SelectItem>
                       </SelectContent>
                     </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="artNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número da ART</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -1123,55 +1404,41 @@ const ServiceDetail = () => {
             </TabsContent>
 
             <TabsContent value="photos" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Fotos do relatório</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Camera size={16} className="mr-2" />
-                    Adicionar fotos
-                  </Button>
-                </div>
+              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
+                <Image className="h-5 w-5 text-primary" />
+                <h3 className="text-md font-medium">Registros Fotográficos</h3>
               </div>
+              
+              <PhotoUploader
+                photos={photoDetails}
+                onAddPhoto={handleAddPhoto}
+                onRemovePhoto={handleRemovePhoto}
+                onUpdateTitle={handleUpdatePhotoTitle}
+                className="mt-4"
+              />
+            </TabsContent>
 
-              {selectedPhotos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {selectedPhotos.map((photo, index) => (
-                    <div key={index} className="relative rounded-lg overflow-hidden">
-                      <img 
-                        src={photo} 
-                        alt={`Foto ${index + 1}`} 
-                        className="w-full h-32 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(photo)}
-                        className="absolute top-2 right-2 bg-black/70 rounded-full p-1 hover:bg-black/90"
-                      >
-                        <X size={16} className="text-white" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-4 p-8 border-2 border-dashed border-gray-300 rounded-lg bg-secondary/20">
-                  <Image size={48} className="text-gray-400" />
-                  <p className="text-muted-foreground text-center">
-                    Nenhuma foto adicionada. Clique em "Adicionar fotos" para incluir imagens no relatório.
-                  </p>
-                </div>
-              )}
+            <TabsContent value="signatures" className="space-y-4">
+              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
+                <FileText className="h-5 w-5 text-primary" />
+                <h3 className="text-md font-medium">Assinaturas Digitais</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <SignatureCanvas
+                  id="client-signature"
+                  label="Assinatura do Cliente"
+                  value={clientSignature}
+                  onChange={setClientSignature}
+                />
+                
+                <SignatureCanvas
+                  id="technician-signature"
+                  label="Assinatura do Técnico"
+                  value={technicianSignature}
+                  onChange={setTechnicianSignature}
+                />
+              </div>
             </TabsContent>
 
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-50 shadow-lg">
@@ -1181,25 +1448,36 @@ const ServiceDetail = () => {
                 </Button>
                 <div className="flex gap-2">
                   {(form.watch("status") === "concluido" || service?.status === "concluido") && (
-                    <Button 
-                      type="button" 
-                      variant="secondary"
-                      onClick={handleGeneratePDF}
-                    >
-                      <FileText size={16} className="mr-2" />
-                      Gerar PDF
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={handleDownloadInspectionPDF}
+                      >
+                        <FileDown size={16} className="mr-2" />
+                        Baixar PDF Vistoria
+                      </Button>
+                      
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={handleDownloadInstallationPDF}
+                      >
+                        <FileDown size={16} className="mr-2" />
+                        Baixar PDF Instalação
+                      </Button>
+                      
+                      <Button 
+                        type="button" 
+                        variant="secondary"
+                        onClick={handleGeneratePDF}
+                      >
+                        <FileText size={16} className="mr-2" />
+                        Gerar PDF Atual
+                      </Button>
+                    </div>
                   )}
-                  {pdfGenerated && (
-                    <Button 
-                      type="button" 
-                      variant="secondary"
-                      onClick={handleDownloadPDF}
-                    >
-                      <Download size={16} className="mr-2" />
-                      Baixar PDF
-                    </Button>
-                  )}
+                  
                   <Button 
                     type="submit" 
                     disabled={isSubmitting}

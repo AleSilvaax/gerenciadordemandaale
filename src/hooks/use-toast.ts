@@ -171,7 +171,7 @@ function toast({ ...props }: Toast) {
 toast.success = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "default",
+    variant: "success",
     className: "bg-green-600 text-white",
     ...props,
   })
@@ -188,7 +188,7 @@ toast.error = (title: string, props: Omit<Toast, "title"> = {}) => {
 toast.info = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "default",
+    variant: "info",
     className: "bg-blue-600 text-white",
     ...props,
   })
@@ -197,7 +197,7 @@ toast.info = (title: string, props: Omit<Toast, "title"> = {}) => {
 toast.warning = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "default",
+    variant: "warning",
     className: "bg-orange-600 text-white",
     ...props,
   })

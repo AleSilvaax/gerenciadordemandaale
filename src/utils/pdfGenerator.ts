@@ -5,9 +5,13 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 // Background image for cover page (modern car charging station)
-const BACKGROUND_IMAGE = "/lovable-uploads/1ce7b523-bb1c-4cfa-809b-7f4e1ffdfc9b.png";
+const BACKGROUND_IMAGE = "/lovable-uploads/c0db695c-99b5-4820-9a9d-0d5a1d28d879.png";
+// Company logo
+const COMPANY_LOGO = "/lovable-uploads/e8144b55-8f09-4d05-bee1-568575cd0162.png";
 // Signature image (empty signature line)
 const SIGNATURE_LINE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCAYAAABkOJMpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgSURBVHgB7cMBDQAAAMKg909tDjegAAAAAAAAAAAAPgYQCAABy4qsDQAAAABJRU5ErkJggg==";
+// EV icon
+const EV_ICON = "/lovable-uploads/7290ab74-2d07-4b8f-a09b-add8f81ed7c2.png";
 
 // Function to create a new jsPDF instance with consistent styling
 const createPdfDocument = () => {
@@ -44,6 +48,8 @@ const addSemiTransparentOverlay = (pdf, x, y, width, height, color, opacity) => 
     pdf.setFillColor(colorValue, colorValue, colorValue);
   } else if (color === "white") {
     pdf.setFillColor(255, 255, 255);
+  } else if (color === "yellow") {
+    pdf.setFillColor(255, 240, 0);
   }
   
   pdf.rect(x, y, width, height, "F");
@@ -61,25 +67,31 @@ const generateCoverPage = (pdf, service) => {
   // Add semi-transparent overlay for better text readability
   addSemiTransparentOverlay(pdf, 0, 0, 210, 297, "black", 0.7);
   
+  // Add company logo
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+  
+  // Add EV icon
+  safelyAddImage(pdf, EV_ICON, 'PNG', 150, 20, 30, 30);
+  
   // Add date with modern styling
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
   const date = new Date().toLocaleDateString("pt-BR");
-  pdf.text(`Data: ${date}`, 20, 30);
+  pdf.text(`Data: ${date}`, 20, 60);
   
   // Add technician name with accent color
   pdf.setTextColor(255, 240, 0);
   pdf.setFontSize(14);
-  pdf.text(`Técnico: ${service.technician.name}`, 20, 45);
+  pdf.text(`Técnico: ${service.technician.name}`, 20, 75);
   
   // Add title with larger, more impactful font
   pdf.setFontSize(42);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("RELATÓRIO", 20, 110);
+  pdf.text("RELATÓRIO", 20, 130);
   
   // Different second line based on service phase with consistent styling
   const phaseText = service.reportData?.servicePhase === "inspection" ? "DE VISTORIA" : "DE INSTALAÇÃO";
-  pdf.text(phaseText, 20, 135);
+  pdf.text(phaseText, 20, 155);
   
   // Add client and service info with better spacing and organization
   pdf.setFontSize(14);
@@ -101,41 +113,44 @@ const generateTechniciansPage = (pdf, service) => {
   pdf.setFillColor(30, 30, 30);
   pdf.rect(0, 0, 210, 297, "F");
   
+  // Add company logo as header
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+  
   // Add title
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("TÉCNICOS", 20, 40);
+  pdf.text("TÉCNICOS", 20, 60);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("RESPONSÁVEIS", 20, 55);
+  pdf.text("RESPONSÁVEIS", 20, 75);
   
   // Try to add technician photo with better quality and proper dimensions
   if (service.technician && service.technician.avatar) {
     // Increased size for better quality and added better position
-    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 80, 60, 60);
+    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 100, 60, 60);
   }
   
   // Add technician info with better spacing
   pdf.setFontSize(18);
   pdf.setTextColor(255, 240, 0);
-  pdf.text(`${service.technician.name}`, 90, 95);
+  pdf.text(`${service.technician.name}`, 90, 115);
   
   pdf.setFontSize(14);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("Eletricista instalador", 90, 110);
+  pdf.text("Eletricista instalador", 90, 130);
   
   // Add signature section for technician
   pdf.setFontSize(14);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("ASSINATURA DIGITAL:", 20, 170);
+  pdf.text("ASSINATURA DIGITAL:", 20, 180);
   
   // Add technician signature if it exists or signature line
   if (service.technician.signature) {
-    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 180, 100, 40);
+    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 190, 100, 40);
   } else {
-    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 190, 170, 1);
+    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 200, 170, 1);
     pdf.setFontSize(10);
     pdf.setTextColor(255, 255, 255);
-    pdf.text("Assinatura do técnico responsável", 20, 200);
+    pdf.text("Assinatura do técnico responsável", 20, 210);
   }
 };
 
@@ -145,15 +160,18 @@ const generateDescriptionPage = (pdf, service) => {
   pdf.setFillColor(30, 30, 30);
   pdf.rect(0, 0, 210, 297, "F");
   
+  // Add company logo as header
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+  
   // Add title
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("DESCRIÇÃO DO", 20, 40);
+  pdf.text("DESCRIÇÃO DO", 20, 60);
   pdf.setTextColor(255, 240, 0);
   
   // Different title based on service phase
   const phaseText = service.reportData?.servicePhase === "inspection" ? "LEVANTAMENTO" : "SERVIÇO";
-  pdf.text(phaseText, 20, 55);
+  pdf.text(phaseText, 20, 75);
   
   // Add service description
   pdf.setFontSize(12);
@@ -164,15 +182,15 @@ const generateDescriptionPage = (pdf, service) => {
   
   // Split long text to fit page
   const lines = pdf.splitTextToSize(description, 170);
-  pdf.text(lines, 20, 80);
+  pdf.text(lines, 20, 95);
   
   // Add photos with titles if they exist
-  if (service.photos && service.photos.length > 0) {
+  if (service.photos && service.photos.length > 0 && service.photoTitles && service.photoTitles.length > 0) {
     pdf.setFontSize(16);
     pdf.setTextColor(255, 240, 0);
-    pdf.text("REGISTROS FOTOGRÁFICOS", 20, 120);
+    pdf.text("REGISTROS FOTOGRÁFICOS", 20, 140);
     
-    let yPos = 135;
+    let yPos = 155;
     let photosAdded = 0;
     const photoWidth = 80;
     const photoHeight = 60;
@@ -186,7 +204,7 @@ const generateDescriptionPage = (pdf, service) => {
         // Add photo title/caption if available
         pdf.setFontSize(9);
         pdf.setTextColor(255, 255, 255);
-        const photoTitle = service.photoTitles?.[i] || `Foto ${i + 1}`;
+        const photoTitle = service.photoTitles[i] || `Foto ${i + 1}`;
         pdf.text(photoTitle, xPos, yPos + photoHeight + 10);
         photosAdded++;
       }
@@ -198,11 +216,14 @@ const generateDescriptionPage = (pdf, service) => {
       pdf.setFillColor(30, 30, 30);
       pdf.rect(0, 0, 210, 297, "F");
       
+      // Add company logo as header
+      safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+      
       pdf.setFontSize(16);
       pdf.setTextColor(255, 240, 0);
-      pdf.text("REGISTROS FOTOGRÁFICOS (CONTINUAÇÃO)", 20, 30);
+      pdf.text("REGISTROS FOTOGRÁFICOS (CONTINUAÇÃO)", 20, 50);
       
-      yPos = 45;
+      yPos = 65;
       
       for (let i = 4; i < Math.min(12, service.photos.length); i++) {
         // Calculate positioning for 2 photos per row
@@ -213,7 +234,7 @@ const generateDescriptionPage = (pdf, service) => {
           // Add photo title/caption if available
           pdf.setFontSize(9);
           pdf.setTextColor(255, 255, 255);
-          const photoTitle = service.photoTitles?.[i] || `Foto ${i + 1}`;
+          const photoTitle = service.photoTitles[i] || `Foto ${i + 1}`;
           pdf.text(photoTitle, xPos, yPos + photoHeight + 10);
         }
       }
@@ -222,12 +243,12 @@ const generateDescriptionPage = (pdf, service) => {
     if (photosAdded === 0) {
       pdf.setFontSize(10);
       pdf.setTextColor(255, 255, 255);
-      pdf.text("(Sem fotos disponíveis ou erro ao carregar)", 20, 150);
+      pdf.text("(Sem fotos disponíveis ou erro ao carregar)", 20, 165);
     }
   } else {
     pdf.setFontSize(10);
     pdf.setTextColor(255, 255, 255);
-    pdf.text("(Sem fotos disponíveis)", 20, 150);
+    pdf.text("(Sem fotos disponíveis)", 20, 165);
   }
 };
 
@@ -237,18 +258,21 @@ const generateDetailsPage = (pdf, service) => {
   pdf.setFillColor(30, 30, 30);
   pdf.rect(0, 0, 210, 297, "F");
   
+  // Add company logo as header
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+  
   // Add title
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("DETALHES", 20, 40);
+  pdf.text("DETALHES", 20, 60);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("TÉCNICOS", 20, 55);
+  pdf.text("TÉCNICOS", 20, 75);
   
   // Add service details in a table-like format
   pdf.setFontSize(12);
   pdf.setTextColor(255, 255, 255);
   
-  let yPos = 80;
+  let yPos = 95;
   const xPos1 = 20;
   const xPos2 = 100;
   const lineHeight = 10;
@@ -311,7 +335,8 @@ const generateDetailsPage = (pdf, service) => {
       pdf.text(`- Tipo: ${service.reportData?.panelType || ""}`, xPos1, yPos);
       yPos += lineHeight;
       
-      pdf.text(`- Amperagem: ${service.reportData?.panelAmps || ""}`, xPos1, yPos);
+      // Changed from "amperagem" to "corrente" as requested
+      pdf.text(`- Corrente: ${service.reportData?.panelAmps || ""}`, xPos1, yPos);
       yPos += lineHeight;
       
       pdf.text(`- Tensão entre fases: ${service.reportData?.voltageBetweenPhases || "N/A"}`, xPos1, yPos);
@@ -410,64 +435,69 @@ const generateSignaturePage = (pdf, service) => {
   pdf.setFillColor(30, 30, 30);
   pdf.rect(0, 0, 210, 297, "F");
   
+  // Add company logo as header
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 50, 20);
+  
   // Add title
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("ASSINATURAS", 20, 40);
+  pdf.text("ASSINATURAS", 20, 60);
   
   // Client signature section
   pdf.setFontSize(16);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("ASSINATURA DO CLIENTE", 20, 80);
+  pdf.text("ASSINATURA DO CLIENTE", 20, 95);
   
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
-  pdf.text("Nome completo:", 20, 95);
+  pdf.text(`Nome: ${service.reportData?.clientName || ""}`, 20, 110);
   
   // Add client signature if it exists or signature line
   if (service.reportData?.clientSignature) {
-    safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 110, 100, 40);
+    safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 100, 40);
   } else {
     // Add signature line for client
-    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 110, 170, 1);
+    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 135, 170, 1);
     pdf.setFontSize(10);
-    pdf.text("Assinatura do cliente ou representante", 20, 120);
+    pdf.text("Assinatura do cliente ou representante", 20, 145);
   }
   
   // Technician signature section
   pdf.setFontSize(16);
   pdf.setTextColor(255, 240, 0);
-  pdf.text("ASSINATURA DO TÉCNICO", 20, 160);
+  pdf.text("ASSINATURA DO TÉCNICO", 20, 175);
   
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
-  pdf.text(`Nome: ${service.technician.name}`, 20, 175);
+  pdf.text(`Nome: ${service.technician.name}`, 20, 190);
   
   // Add technician signature if it exists or signature line
   if (service.technician.signature) {
-    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 190, 100, 40);
+    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 100, 40);
   } else {
     // Add signature line for technician
-    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 190, 170, 1);
+    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 215, 170, 1);
     pdf.setFontSize(10);
-    pdf.text("Assinatura do técnico responsável", 20, 200);
+    pdf.text("Assinatura do técnico responsável", 20, 225);
   }
   
   // Add date and service number
   pdf.setFontSize(12);
-  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, 20, 230);
-  pdf.text(`Número da Ordem de Serviço: ${service.id}`, 20, 245);
+  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, 20, 250);
+  pdf.text(`Número da Demanda: ${service.id}`, 20, 265);
   
   // Disclaimer
   pdf.setFontSize(8);
   pdf.setTextColor(200, 200, 200);
   const disclaimer = "Este documento confirma que o serviço foi executado conforme as especificações técnicas e que ambas as partes estão de acordo com o trabalho realizado.";
   const disclaimerLines = pdf.splitTextToSize(disclaimer, 170);
-  pdf.text(disclaimerLines, 20, 270);
+  pdf.text(disclaimerLines, 20, 280);
 };
 
-export function generatePDF(service: Service): boolean {
+export function generatePDF(service: Service, reportType: "inspection" | "installation" = null): boolean {
   console.log("Generating PDF for service:", service.id);
+  
+  const actualReportType = reportType || service.reportData?.servicePhase || "inspection";
   
   // Show toast indicating PDF is being generated
   toast.info("Gerando relatório...", {
@@ -479,7 +509,7 @@ export function generatePDF(service: Service): boolean {
     const pdf = createPdfDocument();
     
     // Generate cover page
-    generateCoverPage(pdf, service);
+    generateCoverPage(pdf, {...service, reportData: {...service.reportData, servicePhase: actualReportType}});
     
     // Add technicians page
     pdf.addPage();
@@ -491,18 +521,18 @@ export function generatePDF(service: Service): boolean {
     
     // Add technical details page
     pdf.addPage();
-    generateDetailsPage(pdf, service);
+    generateDetailsPage(pdf, {...service, reportData: {...service.reportData, servicePhase: actualReportType}});
     
     // Add signature page
     pdf.addPage();
     generateSignaturePage(pdf, service);
     
     // Save the PDF with a proper name based on service phase
-    pdf.save(`relatório-${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
+    pdf.save(`relatório-${actualReportType === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
     
     // Show success toast after PDF is ready
     toast.success("Relatório gerado com sucesso", {
-      description: `O PDF para ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
+      description: `O PDF para ${actualReportType === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
     });
     
     return true;
@@ -519,4 +549,12 @@ export function generatePDF(service: Service): boolean {
 
 export function downloadPDF(service: Service): void {
   generatePDF(service);
+}
+
+export function downloadInspectionPDF(service: Service): void {
+  generatePDF(service, "inspection");
+}
+
+export function downloadInstallationPDF(service: Service): void {
+  generatePDF(service, "installation");
 }
