@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search as SearchIcon, X, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -45,7 +46,9 @@ const Search: React.FC = () => {
           (service.reportData?.servicePhase && 
             (service.reportData.servicePhase === "inspection" && "vistoria".includes(query) ||
              service.reportData.servicePhase === "installation" && "instalação".includes(query))
-          )
+          ) ||
+          (service.reportData?.wallboxBrand && service.reportData.wallboxBrand.toLowerCase().includes(query)) ||
+          (service.reportData?.artNumber && service.reportData.artNumber.toLowerCase().includes(query))
       );
       setFilteredServices(filtered);
     } else {

@@ -16,6 +16,10 @@ export interface Service {
   technician: TeamMember;
   reportData?: ReportData;
   photos?: string[];
+  signatures?: {
+    client?: string;
+    technician?: string;
+  };
 }
 
 export interface ReportData {
@@ -49,21 +53,59 @@ export interface ReportData {
   panelAmps?: string;
   groundingSystem?: string;
   chargerLoad?: string;
+  
+  wallboxBrand?: string;
+  wallboxPower?: string;
+  powerSupplyType?: string;
+  phaseAmperage?: string;
+  cableSection?: string;
+  energyMeter?: boolean;
+  needsInfrastructure?: boolean;
+  artNumber?: string;
+  projectNumber?: string;
+  
+  installationTime?: string;
+  daysCount?: string;
+  clientRepresentative?: string;
+  greenCableLength?: string;
+  blackCableLength?: string;
+  ppCableLength?: string;
+  
+  breakerDetails?: string;
+  drDetails?: string;
+  dpsDetails?: string;
+  conduitType?: string;
+  hasGroundingSystem?: boolean;
+  groundingDetails?: string;
+  earthBarrierDetails?: string;
+  neutralBarrierDetails?: string;
+  
+  voltageBetweenPhases?: string;
+  voltageBetweenPhaseAndNeutral?: string;
+  hasThreePhase?: boolean;
+  hasMainBreaker?: boolean;
+  hasDps?: boolean;
+  
+  distanceToPanelAndCharger?: string;
+  conduitInstallationType?: string;
+  chargerPositionAgreed?: boolean;
+  externalInstallation?: boolean;
+  needsScaffolding?: boolean;
+  needsTechnicalHole?: boolean;
+  needsMasonry?: boolean;
+  needsWallPainting?: boolean;
+  needsConduitPainting?: boolean;
+  needsArtEmission?: boolean;
+  needsAdditionalDocumentation?: boolean;
+  hasWifiOrCellSignal?: boolean;
+  workingHours?: string;
+  
+  mainBreakerPhoto?: string;
+  electricalPanelPhoto?: string;
+  infraAreaPhoto?: string;
+  chargerLocationPhoto?: string;
 }
 
-export interface StatData {
-  total: number;
-  completed: number;
-  pending: number;
-  cancelled: number;
-}
-
-export interface ChartData {
-  name: string;
-  value: number;
-}
-
-// Team members data
 export const teamMembers: TeamMember[] = [
   {
     id: "1",
@@ -97,7 +139,6 @@ export const teamMembers: TeamMember[] = [
   }
 ];
 
-// Current user data
 export const currentUser = {
   id: "6",
   name: "Christian Paulino",
@@ -105,7 +146,6 @@ export const currentUser = {
   role: "gestor"
 };
 
-// Services data with report data
 export const services: Service[] = [
   {
     id: "6430",
@@ -143,14 +183,33 @@ export const services: Service[] = [
       panelType: "Panel Type",
       panelAmps: "10A",
       groundingSystem: "Grounding System",
-      chargerLoad: "10A"
+      chargerLoad: "10A",
+      
+      wallboxBrand: "WEG",
+      wallboxPower: "7,4kW",
+      powerSupplyType: "1P+N",
+      phaseAmperage: "F1",
+      cableSection: "10mm²",
+      energyMeter: false,
+      needsInfrastructure: true,
+      artNumber: "BRZ123456",
+      
+      voltageBetweenPhases: "N/A",
+      voltageBetweenPhaseAndNeutral: "220V",
+      hasThreePhase: false,
+      hasMainBreaker: true,
+      hasDps: true
     },
     photos: [
       "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",
       "/lovable-uploads/86cd5924-e313-4335-8a20-13c65aedd078.png",
       "/lovable-uploads/4efdaad5-6ec2-44d7-9128-ce9b043b4377.png",
       "/lovable-uploads/a333754c-948f-42e3-b154-d1468a519a75.png"
-    ]
+    ],
+    signatures: {
+      client: "",
+      technician: ""
+    }
   },
   {
     id: "6431",
@@ -210,7 +269,6 @@ export const services: Service[] = [
   }
 ];
 
-// Stats data
 export const stats: StatData = {
   total: 243,
   completed: 143,
@@ -218,7 +276,6 @@ export const stats: StatData = {
   cancelled: 20
 };
 
-// Monthly chart data
 export const monthlyData: ChartData[] = [
   { name: "Jan", value: 20 },
   { name: "Fev", value: 40 },
@@ -228,7 +285,6 @@ export const monthlyData: ChartData[] = [
   { name: "Jun", value: 74 }
 ];
 
-// Team performance data
 export const teamPerformance = [
   { name: "Hudson", color: "#ef4444" },
   { name: "Thiago", color: "#3b82f6" },
@@ -236,7 +292,6 @@ export const teamPerformance = [
   { name: "Luiz", color: "#6366f1" }
 ];
 
-// Additional chart data for statistics
 export const weeklyData: ChartData[] = [
   { name: "Seg", value: 5 },
   { name: "Ter", value: 12 },
