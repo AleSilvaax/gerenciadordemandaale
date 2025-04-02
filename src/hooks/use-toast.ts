@@ -7,7 +7,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -91,8 +91,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -170,7 +168,7 @@ function toast({ ...props }: Toast) {
 }
 
 // Add variant methods to the toast function
-toast.success = (title: string, props: Omit<Toast, "title">) => {
+toast.success = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
     variant: "default",
@@ -179,7 +177,7 @@ toast.success = (title: string, props: Omit<Toast, "title">) => {
   })
 }
 
-toast.error = (title: string, props: Omit<Toast, "title">) => {
+toast.error = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
     variant: "destructive",
@@ -187,11 +185,20 @@ toast.error = (title: string, props: Omit<Toast, "title">) => {
   })
 }
 
-toast.info = (title: string, props: Omit<Toast, "title">) => {
+toast.info = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
     variant: "default",
     className: "bg-blue-600 text-white",
+    ...props,
+  })
+}
+
+toast.warning = (title: string, props: Omit<Toast, "title"> = {}) => {
+  return toast({
+    title,
+    variant: "default",
+    className: "bg-orange-600 text-white",
     ...props,
   })
 }
