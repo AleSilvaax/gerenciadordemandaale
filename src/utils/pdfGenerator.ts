@@ -414,16 +414,13 @@ export function generatePDF(service: Service): boolean {
     pdf.addPage();
     generateSignaturePage(pdf, service);
     
-    // Simulate a delay to show loading (in a real app this wouldn't be needed)
-    setTimeout(() => {
-      // Save the PDF with a proper name based on service phase
-      pdf.save(`relatório-${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
-      
-      // Show success toast after PDF is ready
-      toast.success("Relatório gerado com sucesso", {
-        description: `O PDF para ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
-      });
-    }, 500);
+    // Save the PDF with a proper name based on service phase
+    pdf.save(`relatório-${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
+    
+    // Show success toast after PDF is ready
+    toast.success("Relatório gerado com sucesso", {
+      description: `O PDF para ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
+    });
     
     return true;
   } catch (error) {

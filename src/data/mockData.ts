@@ -1,3 +1,4 @@
+
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 
@@ -104,6 +105,19 @@ export interface ReportData {
   electricalPanelPhoto?: string;
   infraAreaPhoto?: string;
   chargerLocationPhoto?: string;
+}
+
+// Add the missing interfaces for the chart data
+export interface StatData {
+  total: number;
+  completed: number;
+  pending: number;
+  cancelled: number;
+}
+
+export interface ChartData {
+  name: string;
+  value: number;
 }
 
 export const teamMembers: TeamMember[] = [
