@@ -1,4 +1,3 @@
-
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 
@@ -24,6 +23,7 @@ export interface ReportData {
   address?: string;
   city?: string;
   executedBy?: string;
+  servicePhase?: "inspection" | "installation";
   installationDate?: string;
   modelNumber?: string;
   serialNumberNew?: string;
@@ -39,6 +39,16 @@ export interface ReportData {
   cableGauge?: string;
   chargerStatus?: string;
   technicalComments?: string;
+  inspectionDate?: string;
+  voltage?: string;
+  supplyType?: string;
+  installationDistance?: string;
+  installationObstacles?: string;
+  existingPanel?: boolean;
+  panelType?: string;
+  panelAmps?: string;
+  groundingSystem?: string;
+  chargerLoad?: string;
 }
 
 export interface StatData {
@@ -108,6 +118,7 @@ export const services: Service[] = [
       address: "Av. Airton Pretini, 123",
       city: "São Paulo",
       executedBy: "Alessandro",
+      servicePhase: "inspection",
       installationDate: "15/05/2023",
       modelNumber: "EVA007KI/XSTO",
       serialNumberNew: "",
@@ -122,7 +133,17 @@ export const services: Service[] = [
       chargerCircuitBreaker: "32",
       cableGauge: "10mm²",
       chargerStatus: "Carregador apenas acende o Led Branco e não carrega",
-      technicalComments: "Necessário substituição do carregador"
+      technicalComments: "Necessário substituição do carregador",
+      inspectionDate: "15/05/2023",
+      voltage: "220V",
+      supplyType: "AC",
+      installationDistance: "10m",
+      installationObstacles: "Nenhum",
+      existingPanel: true,
+      panelType: "Panel Type",
+      panelAmps: "10A",
+      groundingSystem: "Grounding System",
+      chargerLoad: "10A"
     },
     photos: [
       "/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png",

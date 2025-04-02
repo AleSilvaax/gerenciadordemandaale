@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search as SearchIcon, X, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
