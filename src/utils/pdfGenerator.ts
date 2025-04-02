@@ -1,6 +1,4 @@
-
-
-import { Service, TeamMember } from "@/data/mockData";
+import { Service } from "@/data/mockData";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -453,4 +451,3 @@ export function generatePDF(service: Service): boolean {
 export function downloadPDF(service: Service): void {
   generatePDF(service);
 }
-
