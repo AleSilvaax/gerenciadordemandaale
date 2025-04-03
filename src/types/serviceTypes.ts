@@ -1,18 +1,34 @@
 
-import { TeamMember } from "@/data/mockData";
-import { CustomField } from "@/components/ui-custom/CustomFieldManager";
+export interface TeamMember {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  avatar?: string;
+  signature?: string; // Add signature property
+}
+
+export interface CustomField {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select';
+  value: string | number | boolean;
+  options?: string[]; // For select type
+}
 
 export interface ReportData {
+  // General properties
   client?: string;
   address?: string;
   city?: string;
-  clientName?: string;
+  servicePhase?: 'inspection' | 'installation';
+  customFields?: CustomField[];
+  technicalComments?: string;
   clientSignature?: string;
-  
-  // Service phase
-  servicePhase?: "inspection" | "installation";
-  
-  // Inspection fields
+  clientName?: string; // Add client name property
+
+  // Inspection specific
   inspectionDate?: string;
   voltage?: string;
   supplyType?: string;
@@ -33,8 +49,8 @@ export interface ReportData {
   needsMasonry?: boolean;
   groundingSystem?: string;
   artNumber?: string;
-  
-  // Installation fields
+
+  // Installation specific
   installationDate?: string;
   modelNumber?: string;
   serialNumberNew?: string;
@@ -47,36 +63,19 @@ export interface ReportData {
   validWarranty?: boolean;
   requiredAdjustment?: boolean;
   adjustmentDescription?: string;
-  
-  // Technical comments
-  technicalComments?: string;
-  
-  // Custom fields
-  customFields?: CustomField[];
 }
+
+export type ServiceStatus = 'pendente' | 'concluido' | 'cancelado';
 
 export interface Service {
   id: string;
   title: string;
   description?: string;
-  status: "pendente" | "concluido" | "cancelado";
+  status: ServiceStatus;
   date?: string;
-  dueDate?: string;
-  priority?: "low" | "medium" | "high";
-  client?: string;
-  address?: string;
-  city?: string;
   location: string;
-  type?: string;
-  technician: TeamMember & {
-    signature?: string;
-  };
-  notes?: string;
-  photos?: string[];
-  photoTitles?: string[];
+  technician: TeamMember;
   reportData?: ReportData;
-  signatures?: {
-    client?: string;
-    technician?: string;
-  };
+  photos?: string[];
+  photoTitles?: string[]; // Add photoTitles property
 }

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, BarChart2, Users, Settings } from "lucide-react";
+import { FileText, BarChart2, Users } from "lucide-react";
 import { getServices } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
@@ -103,62 +103,6 @@ const Index: React.FC = () => {
           ) : (
             <p>Nenhuma demanda encontrada.</p>
           )}
-        </div>
-      </div>
-      
-      <div className="space-y-4 mt-8">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Opções do sistema</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/demandas")}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-medium">Demandas</h3>
-                <p className="text-sm text-muted-foreground">Gerenciar demandas</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/estatisticas")}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <BarChart2 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-medium">Estatísticas</h3>
-                <p className="text-sm text-muted-foreground">Visualizar relatórios</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/equipe")}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-medium">Equipe</h3>
-                <p className="text-sm text-muted-foreground">Gerenciar técnicos</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/settings")}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <Settings className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-medium">Configurações</h3>
-                <p className="text-sm text-muted-foreground">Configurar campos personalizados</p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

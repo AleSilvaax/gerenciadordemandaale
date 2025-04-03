@@ -30,6 +30,7 @@ function App() {
             <Route index element={<Index />} />
             <Route path="demandas" element={<Demandas />} />
             <Route path="demandas/:id" element={<ServiceDetail />} />
+            <Route path="demandas/:id/edit" element={<ServiceDetail editMode={true} />} />
             <Route path="nova-demanda" element={<NewService />} />
             <Route path="estatisticas" element={<Estatisticas />} />
             <Route path="equipe" element={<Equipe />} />

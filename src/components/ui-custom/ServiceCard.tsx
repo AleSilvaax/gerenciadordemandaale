@@ -1,83 +1,146 @@
 
 import React from "react";
-import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { CalendarIcon, MapPin, ChevronRight, Trash2, Edit } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusBadge } from "./StatusBadge";
-import { TeamMemberAvatar } from "./TeamMemberAvatar";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { formatDate } from "@/utils/formatters";
 import { Service } from "@/types/serviceTypes";
 
 interface ServiceCardProps {
   service: Service;
-  className?: string;
   onDelete?: (id: string) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({
-  service,
-  className,
-  onDelete,
-}) => {
-  const { id, title, status, location, technician } = service;
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete }) => {
+  const navigate = useNavigate();
+  
+  const handleViewDetails = () => {
+    navigate(`/demandas/${service.id}`);
+  };
+  
+  const handleEditService = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/demandas/${service.id}/edit`);
+  };
+  
+  const handleDeleteService = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(service.id);
+    }
+  };
   
   return (
-    <div 
-      className={cn(
-        "flex items-center p-3 rounded-lg glass-card mb-2 animate-slideIn",
-        className
-      )}
+    <Card 
+      className="hover:border-primary/30 transition-colors cursor-pointer"
+      onClick={handleViewDetails}
     >
-      <TeamMemberAvatar 
-        src={technician.avatar} 
-        name={technician.name} 
-        size="md" 
-        className="mr-3" 
-      />
-      
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium truncate">{title}</h3>
-        <div className="flex items-center text-xs text-muted-foreground mt-0.5">
-          <span>Status: </span>
-          <StatusBadge status={status} className="ml-1" />
+      <CardContent className="p-4 md:p-6">
+        <div className="flex flex-col md:flex-row justify-between">
+          <div className="flex-1 space-y-2">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="font-semibold text-lg truncate">{service.title}</h3>
+                <StatusBadge status={service.status} />
+              </div>
+              <div className="block md:hidden">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="mr-1 h-3.5 w-3.5" />
+              <span className="truncate">{service.location}</span>
+            </div>
+            
+            {service.date && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                <span>{formatDate(service.date)}</span>
+              </div>
+            )}
+            
+            <div className="hidden md:flex items-center pt-2">
+              <div className="flex items-center flex-1">
+                <Avatar className="h-6 w-6 mr-2">
+                  <AvatarImage src={service.technician.avatar} />
+                  <AvatarFallback>{service.technician.name.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm">{service.technician.name}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex flex-col items-end justify-between">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex space-x-1 mt-auto">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleEditService}
+              >
+                <Edit className="h-3.5 w-3.5" />
+                <span className="sr-only">Editar</span>
+              </Button>
+              
+              {onDelete && (
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={handleDeleteService}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only">Excluir</span>
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex md:hidden justify-between items-center mt-4 pt-4 border-t">
+            <div className="flex items-center">
+              <Avatar className="h-6 w-6 mr-2">
+                <AvatarImage src={service.technician.avatar} />
+                <AvatarFallback>{service.technician.name.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm">{service.technician.name}</span>
+            </div>
+            
+            <div className="flex space-x-1">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleEditService}
+              >
+                <Edit className="h-3.5 w-3.5" />
+                <span className="sr-only">Editar</span>
+              </Button>
+              
+              {onDelete && (
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={handleDeleteService}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only">Excluir</span>
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="text-xs text-muted-foreground mt-0.5 truncate">
-          Local: {location}
-        </div>
-      </div>
-      
-      <div className="flex items-center">
-        <div className="text-sm font-medium text-primary mr-2">{id}</div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="h-8 w-8 rounded-full flex items-center justify-center bg-secondary/50 hover:bg-secondary">
-              <MoreVertical size={16} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <Link to={`/demandas/${id}`}>
-              <DropdownMenuItem className="cursor-pointer">
-                <Edit size={16} className="mr-2" />
-                Gerenciar
-              </DropdownMenuItem>
-            </Link>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => onDelete && onDelete(id)}
-            >
-              <Trash2 size={16} className="mr-2" />
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -1,234 +1,139 @@
 
 import React, { useRef, useState, useEffect } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Trash2, Edit2, Save } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Undo2, Save, Trash2 } from "lucide-react";
 
 interface SignatureCaptureProps {
   onSave?: (signatureUrl: string) => void;
   onChange?: (dataUrl: string) => void; // Add onChange prop
   initialSignature?: string;
-  initialValue?: string; // Add initialValue prop
+  initialValue?: string; // Add initialValue prop for compatibility
   label?: string;
   width?: number;
   height?: number;
-  className?: string;
 }
 
 export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   onSave,
   onChange,
   initialSignature,
-  initialValue, // Handle both prop names
+  initialValue, // Support for initialValue prop
   label = "Assinatura",
-  width = 400,
-  height = 200,
-  className = "",
+  width = 300,
+  height = 150
 }) => {
-  // Use either initialValue or initialSignature
-  const initialSignatureValue = initialValue || initialSignature || '';
+  const sigCanvas = useRef<SignatureCanvas>(null);
+  const [isEmpty, setIsEmpty] = useState(true);
   
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(!!initialSignatureValue);
-  const [signatureUrl, setSignatureUrl] = useState(initialSignatureValue);
-
-  const getContext = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = 'black';
-    
-    return ctx;
-  };
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const ctx = getContext();
-    if (!ctx) return;
-    
-    setIsDrawing(true);
-    
-    let clientX, clientY;
-    
-    if ('touches' in e) {
-      // Touch event
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      // Mouse event
-      clientX = e.clientX;
-      clientY = e.clientY;
+  // Initialize with initial signature if provided
+  useEffect(() => {
+    if (sigCanvas.current) {
+      if (initialSignature || initialValue) {
+        const signatureData = initialSignature || initialValue;
+        sigCanvas.current.fromDataURL(signatureData);
+        setIsEmpty(false);
+      }
     }
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    
-    const ctx = getContext();
-    if (!ctx) return;
-    
-    let clientX, clientY;
-    
-    if ('touches' in e) {
-      // Touch event
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      
-      // Prevent scrolling while drawing
-      e.preventDefault();
-    } else {
-      // Mouse event
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
-    ctx.stroke();
-  };
-
-  const endDrawing = () => {
-    if (!isDrawing) return;
-    
-    const ctx = getContext();
-    if (!ctx) return;
-    
-    ctx.closePath();
-    setIsDrawing(false);
-    setHasSignature(true);
-    
-    // Save the signature as an image
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    // Convert to transparent background PNG
-    const url = canvas.toDataURL('image/png');
-    setSignatureUrl(url);
-    
-    // Call onChange if provided
-    if (onChange) {
-      onChange(url);
-    }
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    const ctx = getContext();
-    
-    if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setHasSignature(false);
-      setSignatureUrl('');
-      
-      // Call onChange if provided
+  }, [initialSignature, initialValue]);
+  
+  const clear = () => {
+    if (sigCanvas.current) {
+      sigCanvas.current.clear();
+      setIsEmpty(true);
       if (onChange) {
         onChange('');
       }
     }
   };
-
-  const saveSignature = () => {
-    if (!hasSignature) {
-      toast.warning("Assinatura vazia", {
-        description: "Por favor, assine antes de salvar."
-      });
-      return;
+  
+  const undo = () => {
+    if (sigCanvas.current) {
+      const data = sigCanvas.current.toData();
+      if (data.length > 0) {
+        data.pop();
+        sigCanvas.current.fromData(data);
+        setIsEmpty(data.length === 0);
+        
+        // Call onChange if provided
+        if (onChange && data.length === 0) {
+          onChange('');
+        } else if (onChange) {
+          onChange(sigCanvas.current.toDataURL('image/png'));
+        }
+      }
     }
-    
-    if (onSave) {
-      onSave(signatureUrl);
-    }
-    
-    if (onChange) {
-      onChange(signatureUrl);
-    }
-    
-    toast.success("Assinatura salva", {
-      description: "A assinatura foi salva com sucesso."
-    });
   };
-
-  const loadInitialSignature = () => {
-    if (!initialSignatureValue || !canvasRef.current) return;
-    
-    const ctx = getContext();
-    if (!ctx) return;
-    
-    const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-    };
-    img.src = initialSignatureValue;
-  };
-
-  useEffect(() => {
-    if (initialSignatureValue) {
-      loadInitialSignature();
+  
+  const save = () => {
+    if (sigCanvas.current && !isEmpty) {
+      const dataURL = sigCanvas.current.toDataURL('image/png');
+      if (onSave) {
+        onSave(dataURL);
+      }
+      if (onChange) {
+        onChange(dataURL);
+      }
     }
-  }, [initialSignatureValue]);
-
+  };
+  
+  const handleEnd = () => {
+    setIsEmpty(sigCanvas.current?.isEmpty() || true);
+    // Call onChange whenever the signature changes
+    if (onChange && sigCanvas.current && !sigCanvas.current.isEmpty()) {
+      onChange(sigCanvas.current.toDataURL('image/png'));
+    }
+  };
+  
   return (
-    <div className={`space-y-2 ${className}`}>
-      <Label>{label}</Label>
-      
-      <div className="border rounded-md bg-white">
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          className="touch-none cursor-crosshair w-full h-full border-0"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={endDrawing}
-          onMouseLeave={endDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={endDrawing}
-        />
-      </div>
-      
-      <div className="flex space-x-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={clearSignature}
-          className="flex-1"
-        >
-          <Trash2 className="mr-2 h-4 w-4" /> Limpar
-        </Button>
-        <Button
-          type="button"
-          variant="default"
-          onClick={saveSignature}
-          disabled={!hasSignature}
-          className="flex-1"
-        >
-          <Save className="mr-2 h-4 w-4" /> Salvar
-        </Button>
-      </div>
-      
-      {initialSignatureValue && (
-        <div className="mt-2 text-sm text-muted-foreground">
-          Você já possui uma assinatura salva. Desenhe uma nova para substituí-la.
+    <Card className="w-full">
+      <CardContent className="p-4 space-y-4">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="border rounded-md overflow-hidden bg-white">
+          <SignatureCanvas
+            ref={sigCanvas}
+            penColor="black"
+            canvasProps={{
+              width: width,
+              height: height,
+              className: "signature-canvas"
+            }}
+            onEnd={handleEnd}
+          />
         </div>
-      )}
-    </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={undo}
+            disabled={isEmpty}
+          >
+            <Undo2 className="h-4 w-4 mr-1" />
+            Desfazer
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={clear}
+            disabled={isEmpty}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Limpar
+          </Button>
+          {onSave && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={save}
+              disabled={isEmpty}
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Salvar
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
