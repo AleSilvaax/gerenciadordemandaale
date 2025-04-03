@@ -1,30 +1,34 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Search as SearchIcon, Clock, MapPin, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { getServices, ServiceStatus } from "@/services/api";
+import { getServices } from "@/services/api";
 import { Service } from "@/types/serviceTypes";
-import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, ArrowLeft, Filter, X } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDate } from "@/utils/formatters";
 
 const Search: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    // Load recent searches from localStorage
+    const savedSearches = localStorage.getItem("recentSearches");
+    if (savedSearches) {
+      setRecentSearches(JSON.parse(savedSearches));
+    }
 
+    // Load services
     const fetchServices = async () => {
       try {
         const data = await getServices();
         setServices(data);
+        setFilteredServices(data);
       } catch (error) {
         console.error("Error fetching services:", error);
       } finally {
@@ -35,117 +39,179 @@ const Search: React.FC = () => {
     fetchServices();
   }, []);
 
-  useEffect(() => {
-    const filtered = services.filter((service) => {
-      // First apply status filter
-      if (statusFilter !== "all" && service.status !== statusFilter) {
-        return false;
-      }
-      
-      // Then apply search term filter
-      if (!searchTerm.trim()) {
-        return true;
-      }
-      
-      const term = searchTerm.toLowerCase();
-      return (
-        service.id.toLowerCase().includes(term) ||
-        service.title.toLowerCase().includes(term) ||
-        service.location.toLowerCase().includes(term) ||
-        (service.client && service.client.toLowerCase().includes(term)) ||
-        service.technician.name.toLowerCase().includes(term)
-      );
-    });
-    
-    setFilteredServices(filtered);
-  }, [searchTerm, services, statusFilter]);
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setFilteredServices(services);
+      return;
+    }
 
-  const clearSearch = () => {
-    setSearchTerm("");
-    inputRef.current?.focus();
+    const query = searchQuery.toLowerCase();
+    const results = services.filter(
+      (service) =>
+        service.title.toLowerCase().includes(query) ||
+        service.description?.toLowerCase().includes(query) ||
+        service.location.toLowerCase().includes(query) ||
+        service.client?.toLowerCase().includes(query) ||
+        service.technician.name.toLowerCase().includes(query) ||
+        service.id.toLowerCase().includes(query)
+    );
+
+    setFilteredServices(results);
+
+    // Save to recent searches if not already present
+    if (searchQuery.trim() && !recentSearches.includes(searchQuery)) {
+      const updatedSearches = [searchQuery, ...recentSearches.slice(0, 4)];
+      setRecentSearches(updatedSearches);
+      localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
+    }
+  };
+
+  const handleRecentSearchClick = (search: string) => {
+    setSearchQuery(search);
+    
+    // Implementation of the search logic when clicking on recent search
+    const query = search.toLowerCase();
+    const results = services.filter(
+      (service) =>
+        service.title.toLowerCase().includes(query) ||
+        service.description?.toLowerCase().includes(query) ||
+        service.location.toLowerCase().includes(query) ||
+        service.client?.toLowerCase().includes(query) ||
+        service.technician.name.toLowerCase().includes(query) ||
+        service.id.toLowerCase().includes(query)
+    );
+
+    setFilteredServices(results);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setFilteredServices(services);
+  };
+
+  // Render suggestions based on recent searches and recent services
+  const renderSuggestions = () => {
+    if (searchQuery || filteredServices.length !== services.length) {
+      return null;
+    }
+
+    return (
+      <div className="space-y-6 mt-4">
+        {recentSearches.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Buscas recentes</h3>
+            <div className="flex flex-wrap gap-2">
+              {recentSearches.map((search, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center"
+                  onClick={() => handleRecentSearchClick(search)}
+                >
+                  <Clock className="h-3 w-3 mr-2" />
+                  {search}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h3 className="text-sm font-medium mb-2">Sugestões</h3>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="flex items-center" onClick={() => handleRecentSearchClick("pendente")}>
+              <SearchIcon className="h-3 w-3 mr-2" />
+              pendente
+            </Button>
+            <Button variant="outline" size="sm" className="flex items-center" onClick={() => handleRecentSearchClick("instalação")}>
+              <SearchIcon className="h-3 w-3 mr-2" />
+              instalação
+            </Button>
+            <Button variant="outline" size="sm" className="flex items-center" onClick={() => handleRecentSearchClick("vistoria")}>
+              <SearchIcon className="h-3 w-3 mr-2" />
+              vistoria
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="container py-4 space-y-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen p-4 pb-20 page-transition">
+      <div className="flex items-center mb-6">
+        <Link
+          to="/"
+          className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4"
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <h1 className="text-xl font-bold">Buscar demandas</h1>
+      </div>
+
+      <div className="relative">
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Buscar por título, local, cliente, técnico..."
+          className="pr-20"
+        />
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-12 top-1/2 transform -translate-y-1/2 h-8 px-2"
+            onClick={handleClearSearch}
+          >
+            Limpar
+          </Button>
+        )}
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="mr-2"
+          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-10"
+          size="sm"
+          onClick={handleSearch}
         >
-          <ArrowLeft className="h-5 w-5" />
+          <SearchIcon size={16} />
         </Button>
-        <h1 className="text-xl font-bold">Busca</h1>
-        <div className="w-10"></div> {/* Spacer for alignment */}
       </div>
 
-      <div className="space-y-4">
-        <div className="relative">
-          <SearchIcon
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-            size={16}
-          />
-          <Input
-            ref={inputRef}
-            type="text"
-            placeholder="Buscar demandas, clientes, técnicos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearSearch}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-            >
-              <span className="sr-only">Limpar</span>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+      {renderSuggestions()}
 
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
-        >
-          <SelectTrigger className="w-full">
-            <div className="flex items-center">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filtrar por status" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="pendente">Pendente</SelectItem>
-            <SelectItem value="concluido">Concluído</SelectItem>
-            <SelectItem value="cancelado">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="mt-6 space-y-4 pb-20">
+      <div className="mt-6">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : filteredServices.length > 0 ? (
-          <div className="space-y-3 overflow-x-auto">
-            {filteredServices.map((service) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nenhum resultado encontrado." : "Digite algo para buscar."}
-            </p>
-          </div>
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium">
+                {searchQuery ? `Resultados para "${searchQuery}"` : "Todas as demandas"}
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {filteredServices.length} demandas encontradas
+              </span>
+            </div>
+
+            {filteredServices.length > 0 ? (
+              <div className="space-y-4">
+                {filteredServices.map((service) => (
+                  <ServiceCard key={service.id} service={service} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  Nenhuma demanda encontrada para "{searchQuery}".
+                </p>
+                <Button className="mt-4" onClick={handleClearSearch}>
+                  Limpar busca
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

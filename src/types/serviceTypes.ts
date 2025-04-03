@@ -6,7 +6,7 @@ export interface TeamMember {
   phone?: string;
   role?: string;
   avatar?: string;
-  signature?: string; // Add signature property
+  signature?: string;
 }
 
 export interface CustomField {
@@ -14,7 +14,7 @@ export interface CustomField {
   label: string;
   type: 'text' | 'number' | 'textarea' | 'boolean' | 'select';
   value: string | number | boolean;
-  options?: string[]; // For select type
+  options?: string[];
 }
 
 export interface ReportData {
@@ -26,7 +26,7 @@ export interface ReportData {
   customFields?: CustomField[];
   technicalComments?: string;
   clientSignature?: string;
-  clientName?: string; // Add client name property
+  clientName?: string;
 
   // Inspection specific
   inspectionDate?: string;
@@ -67,15 +67,39 @@ export interface ReportData {
 
 export type ServiceStatus = 'pendente' | 'concluido' | 'cancelado';
 
+export interface ServiceFeedback {
+  clientRating?: number; // 1-5 stars
+  clientComment?: string;
+  technicianFeedback?: string;
+}
+
+export interface ServiceMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
 export interface Service {
   id: string;
   title: string;
   description?: string;
   status: ServiceStatus;
   date?: string;
+  dueDate?: string;
   location: string;
+  address?: string;
+  city?: string;
+  client?: string;
+  notes?: string;
   technician: TeamMember;
   reportData?: ReportData;
   photos?: string[];
-  photoTitles?: string[]; // Add photoTitles property
+  photoTitles?: string[];
+  feedback?: ServiceFeedback;
+  messages?: ServiceMessage[];
+  serviceType?: 'inspection' | 'installation';
 }

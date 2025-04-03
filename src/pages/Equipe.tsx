@@ -6,7 +6,6 @@ import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -39,9 +38,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { currentUser, teamMembers, UserRole } from "@/data/mockData";
+import { useToast } from "@/hooks/use-toast";
+import { TeamMember } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/api";
+
+type UserRole = "tecnico" | "administrador" | "gestor";
 
 interface Permission {
   id: string;
@@ -51,7 +52,7 @@ interface Permission {
 }
 
 const Equipe: React.FC = () => {
-  const [team, setTeam] = useState(teamMembers);
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", role: "tecnico" as UserRole });
   const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
@@ -151,20 +152,16 @@ const Equipe: React.FC = () => {
       
       try {
         const deletedMember = team.find(member => member.id === memberToDelete);
-        const success = await deleteTeamMember(memberToDelete);
+        await deleteTeamMember(memberToDelete);
         
-        if (success) {
-          const updatedTeam = team.filter(member => member.id !== memberToDelete);
-          setTeam(updatedTeam);
-          
-          toast({
-            title: "Membro removido",
-            description: `${deletedMember?.name} foi removido da equipe.`,
-            variant: "destructive",
-          });
-        } else {
-          throw new Error("Failed to delete team member");
-        }
+        const updatedTeam = team.filter(member => member.id !== memberToDelete);
+        setTeam(updatedTeam);
+        
+        toast({
+          title: "Membro removido",
+          description: `${deletedMember?.name} foi removido da equipe.`,
+          variant: "destructive",
+        });
       } catch (error) {
         console.error("Error deleting team member:", error);
         toast({

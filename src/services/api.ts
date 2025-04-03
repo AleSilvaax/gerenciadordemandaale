@@ -1,7 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Service, TeamMember, ServiceStatus } from '@/types/serviceTypes';
-import { mockServices, mockTeamMembers } from '@/data/mockData';
+import { Service, TeamMember } from '@/types/serviceTypes';
+import { services as mockServices, teamMembers as mockTeamMembers } from '@/data/mockData';
 import { toast } from '@/hooks/use-toast';
 
 // Simulate a local database
@@ -86,7 +86,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
 };
 
 // CREATE a team member
-export const createTeamMember = async (memberData: Omit<TeamMember, 'id'>): Promise<TeamMember> => {
+export const addTeamMember = async (memberData: Omit<TeamMember, 'id'>): Promise<TeamMember> => {
   await delay(1000); // Simulate API delay
   
   const newMember: TeamMember = {
@@ -99,25 +99,25 @@ export const createTeamMember = async (memberData: Omit<TeamMember, 'id'>): Prom
 };
 
 // UPDATE a team member
-export const updateTeamMember = async (updatedMember: TeamMember): Promise<TeamMember> => {
+export const updateTeamMember = async (id: string, updatedData: Partial<TeamMember>): Promise<boolean> => {
   await delay(800); // Simulate API delay
   
-  const index = teamMembers.findIndex(member => member.id === updatedMember.id);
+  const index = teamMembers.findIndex(member => member.id === id);
   
   if (index === -1) {
-    throw new Error(`Team member with ID ${updatedMember.id} not found`);
+    throw new Error(`Team member with ID ${id} not found`);
   }
   
   teamMembers[index] = {
     ...teamMembers[index],
-    ...updatedMember
+    ...updatedData
   };
   
-  return {...teamMembers[index]};
+  return true;
 };
 
 // DELETE a team member
-export const deleteTeamMember = async (id: string): Promise<void> => {
+export const deleteTeamMember = async (id: string): Promise<boolean> => {
   await delay(800); // Simulate API delay
   
   const memberExists = teamMembers.find(member => member.id === id);
@@ -134,7 +134,39 @@ export const deleteTeamMember = async (id: string): Promise<void> => {
   }
   
   teamMembers = teamMembers.filter(member => member.id !== id);
+  return true;
 };
 
-// Export ServiceStatus type
-export { ServiceStatus };
+// Add messages to a service
+export const addServiceMessage = async (serviceId: string, message: Omit<ServiceMessage, 'id' | 'timestamp' | 'isRead'>): Promise<Service> => {
+  const service = await getService(serviceId);
+  
+  const newMessage = {
+    id: uuidv4(),
+    ...message,
+    timestamp: new Date().toISOString(),
+    isRead: false
+  };
+  
+  const updatedService = {
+    ...service,
+    messages: [...(service.messages || []), newMessage]
+  };
+  
+  return updateService(updatedService);
+};
+
+// Add feedback to a service
+export const addServiceFeedback = async (serviceId: string, feedback: ServiceFeedback): Promise<Service> => {
+  const service = await getService(serviceId);
+  
+  const updatedService = {
+    ...service,
+    feedback
+  };
+  
+  return updateService(updatedService);
+};
+
+// Export types
+export type { ServiceStatus };

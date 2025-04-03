@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, BarChart2, Users } from "lucide-react";
+import { FileText, BarChart2, Users, Download } from "lucide-react";
 import { getServices } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
@@ -50,6 +50,12 @@ const Index: React.FC = () => {
     })
     .slice(0, 3);
 
+  // Handle report export (placeholder)
+  const handleExportReport = (format: 'pdf' | 'excel') => {
+    const message = format === 'pdf' ? 'Exportando relatório em PDF...' : 'Exportando relatório em Excel...';
+    alert(message); // Replace with actual export functionality
+  };
+
   return (
     <div className="container py-4 space-y-6 pb-24">
       <div className="flex justify-between items-center">
@@ -81,6 +87,20 @@ const Index: React.FC = () => {
           description="Total de técnicos ativos"
           className="border-blue-600/20 bg-gradient-to-br from-blue-900/10 to-blue-700/10"
         />
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={() => handleExportReport('excel')}>
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleExportReport('pdf')}>
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
       
       <Separator className="my-6" />

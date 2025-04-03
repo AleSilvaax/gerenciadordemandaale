@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { ArrowLeft, BellDot, BarChart2, Calendar, Filter, CalendarDays, MapPin } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, BellDot, BarChart2, Calendar, Filter, CalendarDays, MapPin, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -13,18 +13,138 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartLine } from "@/components/ui-custom/ChartLine";
 import { ChartCircle } from "@/components/ui-custom/ChartCircle";
-import { 
-  monthlyData, 
-  teamPerformance, 
-  weeklyData, 
-  serviceTypeData, 
-  regionData 
-} from "@/data/mockData";
+import { getServices } from "@/services/api";
+import { Service } from "@/types/serviceTypes";
+
+interface ChartData {
+  name: string;
+  value: number;
+}
 
 const Estatisticas: React.FC = () => {
   const [activeMonth, setActiveMonth] = useState("Mai");
   const [timeFilter, setTimeFilter] = useState("monthly");
   const [chartType, setChartType] = useState("time");
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [monthlyData, setMonthlyData] = useState<ChartData[]>([]);
+  const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
+  const [serviceTypeData, setServiceTypeData] = useState<ChartData[]>([]);
+  const [regionData, setRegionData] = useState<ChartData[]>([]);
+  const [teamPerformance, setTeamPerformance] = useState<{name: string; color: string; services: number}[]>([]);
+  
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const data = await getServices();
+        setServices(data);
+        
+        // Generate Chart Data
+        generateChartData(data);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchServices();
+  }, []);
+  
+  const generateChartData = (services: Service[]) => {
+    // Generate monthly data
+    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const monthCounts = Array(12).fill(0);
+    
+    // Generate weekly data
+    const days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+    const dayCounts = Array(7).fill(0);
+    
+    // Service type counters
+    const serviceTypes = new Map<string, number>();
+    
+    // Region counters
+    const regions = new Map<string, number>();
+    
+    services.forEach(service => {
+      if (service.date) {
+        const date = new Date(service.date);
+        // Count by month
+        monthCounts[date.getMonth()]++;
+        
+        // Count by day of week
+        dayCounts[date.getDay()]++;
+      }
+      
+      // Count by service type
+      const type = service.serviceType || "outros";
+      serviceTypes.set(type, (serviceTypes.get(type) || 0) + 1);
+      
+      // Count by region/city
+      const region = service.city || service.location || "outros";
+      regions.set(region, (regions.get(region) || 0) + 1);
+    });
+    
+    // Create chart data arrays
+    const monthlyChartData = months.map((name, index) => ({
+      name,
+      value: monthCounts[index]
+    }));
+    
+    const weeklyChartData = days.map((name, index) => ({
+      name,
+      value: dayCounts[index]
+    }));
+    
+    const serviceTypeChartData = Array.from(serviceTypes.entries()).map(([name, value]) => ({
+      name: name === "inspection" ? "Vistoria" : 
+            name === "installation" ? "Instalação" : 
+            name === "outros" ? "Outros" : name,
+      value
+    }));
+    
+    const regionChartData = Array.from(regions.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6) // Take top 6 regions
+      .map(([name, value]) => ({
+        name,
+        value
+      }));
+    
+    // Create team performance data
+    const colors = ["#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
+    
+    const technicianPerformance = 
+      services.reduce((performance, service) => {
+        const techId = service.technician.id;
+        const techName = service.technician.name;
+        
+        if (!performance[techId]) {
+          performance[techId] = {
+            id: techId,
+            name: techName,
+            services: 0,
+            color: ""
+          };
+        }
+        
+        performance[techId].services++;
+        return performance;
+      }, {} as Record<string, {id: string; name: string; services: number; color: string}>);
+    
+    const teamData = Object.values(technicianPerformance)
+      .sort((a, b) => b.services - a.services)
+      .map((tech, index) => ({
+        ...tech,
+        color: colors[index % colors.length]
+      }));
+    
+    setMonthlyData(monthlyChartData);
+    setWeeklyData(weeklyChartData);
+    setServiceTypeData(serviceTypeChartData);
+    setRegionData(regionChartData);
+    setTeamPerformance(teamData);
+  };
   
   // Get the appropriate data based on the selected filters
   const getChartData = () => {
@@ -37,6 +157,20 @@ const Estatisticas: React.FC = () => {
     }
     return monthlyData;
   };
+  
+  // Handle report export
+  const handleExportReport = (format: 'pdf' | 'excel') => {
+    const message = format === 'pdf' ? 'Exportando estatísticas em PDF...' : 'Exportando estatísticas em Excel...';
+    alert(message); // Replace with actual export functionality
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen p-4 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen p-4 pb-20 page-transition">
@@ -52,13 +186,27 @@ const Estatisticas: React.FC = () => {
       
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg">Visualização de dados</h2>
-        <button className="flex items-center text-sm text-primary">
-          <Filter size={16} className="mr-1" />
-          Filtros
-        </button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleExportReport('excel')}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleExportReport('pdf')}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
       
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none">
+      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none pb-2">
         <Button 
           variant={chartType === "time" ? "default" : "outline"}
           size="sm" 
@@ -116,7 +264,7 @@ const Estatisticas: React.FC = () => {
         </h2>
         <div className="text-2xl font-bold">
           {chartType === "time" 
-            ? `${timeFilter === "monthly" ? "74" : "54"} instalações`
+            ? `${services.length} demandas`
             : chartType === "type"
               ? "Serviços realizados"
               : "Distribuição geográfica"}
@@ -125,7 +273,7 @@ const Estatisticas: React.FC = () => {
         <ChartLine data={getChartData()} activeMonth={activeMonth} />
         
         {chartType === "time" && timeFilter === "monthly" && (
-          <div className="flex justify-between mt-2">
+          <div className="flex justify-between mt-2 overflow-x-auto scrollbar-none pb-1">
             {monthlyData.map(month => (
               <button
                 key={month.name}
@@ -170,7 +318,10 @@ const Estatisticas: React.FC = () => {
           
           <TabsContent value="performance">
             <div className="flex justify-center mt-4">
-              <ChartCircle value={55} size={160} />
+              <ChartCircle 
+                value={services.filter(s => s.status === "concluido").length / Math.max(services.length, 1) * 100} 
+                size={160} 
+              />
             </div>
             
             <div className="mt-6 space-y-2">
@@ -184,7 +335,7 @@ const Estatisticas: React.FC = () => {
                     <span>{member.name}</span>
                   </div>
                   <span className="text-sm font-medium">
-                    {Math.floor(Math.random() * 30) + 5} serviços
+                    {member.services} serviços
                   </span>
                 </div>
               ))}
@@ -193,24 +344,47 @@ const Estatisticas: React.FC = () => {
           
           <TabsContent value="productivity">
             <div className="grid grid-cols-2 gap-4">
-              {teamPerformance.map((member, index) => (
-                <div 
-                  key={index} 
-                  className="p-4 rounded-lg glass-card flex flex-col items-center"
-                >
+              {teamPerformance.map((member, index) => {
+                // Calculate productivity percentage based on completed services vs assigned
+                const memberServices = services.filter(s => s.technician.id === member.id);
+                const completedServices = memberServices.filter(s => s.status === "concluido");
+                const productivityPercentage = memberServices.length > 0 
+                  ? (completedServices.length / memberServices.length) * 100 
+                  : 0;
+                
+                // Calculate average completion time in days
+                const completionTimes = completedServices
+                  .filter(s => s.date) // Only services with date
+                  .map(s => {
+                    const startDate = new Date(s.date!);
+                    const endDate = new Date(); // Assume completed today if no completion date
+                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
+                  });
+                
+                const avgCompletionTime = completionTimes.length > 0
+                  ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
+                  : 0;
+                
+                return (
                   <div 
-                    className="w-full h-1 mb-4 rounded-full"
-                    style={{ backgroundColor: member.color }}
-                  />
-                  <h3 className="text-sm font-medium">{member.name}</h3>
-                  <div className="text-xl font-bold mt-2">
-                    {Math.floor(Math.random() * 100)}%
+                    key={index} 
+                    className="p-4 rounded-lg glass-card flex flex-col items-center"
+                  >
+                    <div 
+                      className="w-full h-1 mb-4 rounded-full"
+                      style={{ backgroundColor: member.color }}
+                    />
+                    <h3 className="text-sm font-medium">{member.name}</h3>
+                    <div className="text-xl font-bold mt-2">
+                      {Math.round(productivityPercentage)}%
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {Math.round(avgCompletionTime)} dias de média
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {Math.floor(Math.random() * 10) + 1} dias de média
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
         </Tabs>

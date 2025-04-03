@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CustomField } from './CustomFieldManager';
+import { CustomField } from '@/types/serviceTypes';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface CustomFieldRendererProps {
