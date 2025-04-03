@@ -1,196 +1,137 @@
 
-import React, { useState, useEffect } from "react";
-import { Search, CheckCircle, ClipboardList, XCircle, BarChart, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { StatCard } from "@/components/ui-custom/StatCard";
-import { currentUser, stats, TeamMember } from "@/data/mockData";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getTeamMembers, getServices } from "@/services/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileText, BarChart2, Users, Settings } from "lucide-react";
+import { getServices } from "@/services/api";
+import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { Separator } from "@/components/ui/separator";
+import { StatCard } from "@/components/ui-custom/StatCard";
 
 const Index: React.FC = () => {
-  const [team, setTeam] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const services = getServices();
   
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        // Load team members
-        const members = await getTeamMembers();
-        if (members && members.length > 0) {
-          setTeam(members);
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
+  // Calculate statistics
+  const pendingServices = services.filter(
+    (service) => service.status === "pendente"
+  ).length;
+  
+  const completedServices = services.filter(
+    (service) => service.status === "concluido"
+  ).length;
+  
+  const technicians = [...new Set(services.map((service) => service.technician.id))].length;
+  
+  // Get 3 most recent services
+  const recentServices = [...services]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 3);
 
   return (
-    <div className="min-h-screen p-4 page-transition">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <TeamMemberAvatar 
-            src={currentUser.avatar} 
-            name={currentUser.name} 
-            size="lg" 
-          />
-          <div>
-            <h2 className="text-lg font-bold">Olá {currentUser.name.split(" ")[0]}</h2>
-            <p className="text-xs text-muted-foreground">{currentUser.role === "gestor" ? "Coordenador de projetos" : currentUser.role}</p>
-          </div>
-        </div>
-        <Link to="/search" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
-          <Search size={18} />
-        </Link>
+    <div className="container py-4 space-y-6 pb-24">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
       </div>
       
-      <h1 className="text-2xl font-bold mt-6">Minha equipe</h1>
-      
-      <div className="flex space-x-3 mt-4 overflow-x-auto scrollbar-none pb-2">
-        {isLoading ? (
-          <div className="flex items-center justify-center w-full py-4">
-            <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full mr-2"></div>
-            <span className="text-sm text-muted-foreground">Carregando equipe...</span>
-          </div>
-        ) : team.length > 0 ? (
-          team.map(member => (
-            <div key={member.id} className="flex flex-col items-center space-y-1">
-              <TeamMemberAvatar src={member.avatar} name={member.name} />
-              <span className="text-xs whitespace-nowrap">{member.name}</span>
-            </div>
-          ))
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            Nenhum membro na equipe.
-            <Link to="/equipe" className="ml-2 text-primary">
-              Adicionar membros
-            </Link>
-          </div>
-        )}
-      </div>
-      
-      <div className="flex justify-between items-center mt-6">
-        <h2 className="text-xl font-bold">Resumo</h2>
-        <Link to="/estatisticas">
-          <Button variant="link" className="text-sm text-primary p-0 h-auto">
-            Ver estatísticas
-            <ArrowRight size={14} className="ml-1" />
-          </Button>
-        </Link>
-      </div>
-      
-      <div className="flex space-x-2 mt-4 overflow-x-auto scrollbar-none pb-2">
-        <Link to="/demandas" className="nav-tab active">Geral</Link>
-        <Link to="/demandas" onClick={() => localStorage.setItem("demandasTab", "pendente")} className="nav-tab">Pendentes</Link>
-        <Link to="/demandas" onClick={() => localStorage.setItem("demandasTab", "concluido")} className="nav-tab">Concluídos</Link>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        <Link to="/demandas">
-          <StatCard 
-            title="Vistorias totais" 
-            value={stats.total} 
-            icon={<BarChart size={24} className="text-white" />}
-            className="bg-gradient-to-br from-secondary to-secondary/70"
-          />
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <StatCard
+          title="Demandas Pendentes"
+          value={pendingServices}
+          icon={<FileText className="h-5 w-5" />}
+          description="Total de demandas aguardando conclusão"
+          className="border-yellow-600/20 bg-gradient-to-br from-yellow-900/10 to-yellow-700/10"
+        />
         
-        <Link to="/demandas" onClick={() => localStorage.setItem("demandasTab", "concluido")}>
-          <StatCard 
-            title="Vistorias concluídas" 
-            value={stats.completed} 
-            icon={<CheckCircle size={24} className="text-white" />}
-            className="bg-gradient-to-br from-green-600 to-green-700"
-          />
-        </Link>
+        <StatCard
+          title="Demandas Concluídas"
+          value={completedServices}
+          icon={<BarChart2 className="h-5 w-5" />}
+          description="Total de demandas finalizadas"
+          className="border-green-600/20 bg-gradient-to-br from-green-900/10 to-green-700/10"
+        />
         
-        <Link to="/demandas" onClick={() => localStorage.setItem("demandasTab", "pendente")}>
-          <StatCard 
-            title="Vistorias pendentes" 
-            value={stats.pending} 
-            icon={<ClipboardList size={24} className="text-white" />}
-            className="bg-gradient-to-br from-orange-600 to-orange-700"
-          />
-        </Link>
-        
-        <Link to="/demandas" onClick={() => localStorage.setItem("demandasTab", "cancelado")}>
-          <StatCard 
-            title="Vistorias canceladas" 
-            value={stats.cancelled} 
-            icon={<XCircle size={24} className="text-white" />}
-            className="bg-gradient-to-br from-red-600 to-red-700"
-          />
-        </Link>
+        <StatCard
+          title="Técnicos"
+          value={technicians}
+          icon={<Users className="h-5 w-5" />}
+          description="Total de técnicos ativos"
+          className="border-blue-600/20 bg-gradient-to-br from-blue-900/10 to-blue-700/10"
+        />
       </div>
       
-      <div className="mt-6">
+      <Separator className="my-6" />
+      
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Demandas recentes</h2>
-          <Link to="/demandas">
-            <Button variant="link" className="text-sm text-primary p-0 h-auto">
-              Ver todas
-              <ArrowRight size={14} className="ml-1" />
-            </Button>
-          </Link>
+          <h2 className="text-xl font-semibold">Demandas Recentes</h2>
+          <Button variant="outline" onClick={() => navigate("/demandas")}>
+            Ver todas
+          </Button>
         </div>
         
-        <div className="mt-4 space-y-4">
-          {/* Display some recent demands as cards with links to the detail page */}
-          <Link to="/demandas/6430" className="block">
-            <div className="p-4 rounded-lg glass-card">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium">Vistoria Pedro Penacchione</h3>
-                <span className="text-sm font-medium text-primary">#6430</span>
+        <div className="grid grid-cols-1 gap-4">
+          {recentServices.map((service) => (
+            <ServiceCard key={service.id} service={service} />
+          ))}
+        </div>
+      </div>
+      
+      <div className="space-y-4 mt-8">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Opções do sistema</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/demandas")}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-primary/20">
+                <FileText className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <span>Status: </span>
-                <span className="status-badge status-concluido ml-1">Concluído</span>
+              <div>
+                <h3 className="font-medium">Demandas</h3>
+                <p className="text-sm text-muted-foreground">Gerenciar demandas</p>
               </div>
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-xs text-muted-foreground">
-                  Av. Airton Pretini
-                </div>
-                <div className="flex items-center">
-                  <TeamMemberAvatar 
-                    src={team.length > 0 ? team[0].avatar : ""}
-                    name={team.length > 0 ? team[0].name : "Técnico"}
-                    size="sm" 
-                  />
-                </div>
-              </div>
-            </div>
-          </Link>
+            </CardContent>
+          </Card>
           
-          <Link to="/demandas/6431" className="block">
-            <div className="p-4 rounded-lg glass-card">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium">Vistoria Pedro Penacchione</h3>
-                <span className="text-sm font-medium text-primary">#6431</span>
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/estatisticas")}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-primary/20">
+                <BarChart2 className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <span>Status: </span>
-                <span className="status-badge status-pendente ml-1">Pendente</span>
+              <div>
+                <h3 className="font-medium">Estatísticas</h3>
+                <p className="text-sm text-muted-foreground">Visualizar relatórios</p>
               </div>
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-xs text-muted-foreground">
-                  Av. Airton Pretini
-                </div>
-                <div className="flex items-center">
-                  <TeamMemberAvatar 
-                    src={team.length > 0 ? team[0].avatar : ""}
-                    name={team.length > 0 ? team[0].name : "Técnico"}
-                    size="sm" 
-                  />
-                </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/equipe")}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-primary/20">
+                <Users className="h-6 w-6 text-primary" />
               </div>
-            </div>
-          </Link>
+              <div>
+                <h3 className="font-medium">Equipe</h3>
+                <p className="text-sm text-muted-foreground">Gerenciar técnicos</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/settings")}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-primary/20">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium">Configurações</h3>
+                <p className="text-sm text-muted-foreground">Configurar campos personalizados</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

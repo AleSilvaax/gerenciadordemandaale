@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomField } from './CustomFieldManager';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface CustomFieldRendererProps {
   fields: CustomField[];
@@ -23,74 +24,79 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {fields.map((field) => (
-        <div key={field.id}>
-          <Label htmlFor={field.id}>{field.label}</Label>
-          
-          {field.type === 'text' && (
-            <Input
-              id={field.id}
-              value={field.value as string}
-              onChange={(e) => onFieldChange(field.id, e.target.value)}
-              disabled={disabled}
-            />
-          )}
-          
-          {field.type === 'number' && (
-            <Input
-              id={field.id}
-              type="number"
-              value={field.value as number}
-              onChange={(e) => onFieldChange(field.id, parseFloat(e.target.value) || 0)}
-              disabled={disabled}
-            />
-          )}
-          
-          {field.type === 'textarea' && (
-            <Textarea
-              id={field.id}
-              value={field.value as string}
-              onChange={(e) => onFieldChange(field.id, e.target.value)}
-              rows={3}
-              disabled={disabled}
-            />
-          )}
-          
-          {field.type === 'boolean' && (
-            <div className="flex items-center space-x-2 mt-2">
-              <Switch
+    <Card className="mt-4">
+      <CardContent className="pt-6 space-y-4">
+        {fields.map((field) => (
+          <div key={field.id}>
+            <Label htmlFor={field.id}>{field.label}</Label>
+            
+            {field.type === 'text' && (
+              <Input
                 id={field.id}
-                checked={field.value as boolean}
-                onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                value={field.value as string}
+                onChange={(e) => onFieldChange(field.id, e.target.value)}
                 disabled={disabled}
+                className="mt-1"
               />
-              <Label htmlFor={field.id} className="cursor-pointer">
-                {field.value ? 'Sim' : 'Não'}
-              </Label>
-            </div>
-          )}
-          
-          {field.type === 'select' && field.options && (
-            <Select
-              value={field.value as string}
-              onValueChange={(value) => onFieldChange(field.id, value)}
-              disabled={disabled}
-            >
-              <SelectTrigger id={field.id}>
-                <SelectValue placeholder="Selecione uma opção" />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options.map((option, index) => (
-                  <SelectItem key={index} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      ))}
-    </div>
+            )}
+            
+            {field.type === 'number' && (
+              <Input
+                id={field.id}
+                type="number"
+                value={field.value as number}
+                onChange={(e) => onFieldChange(field.id, parseFloat(e.target.value) || 0)}
+                disabled={disabled}
+                className="mt-1"
+              />
+            )}
+            
+            {field.type === 'textarea' && (
+              <Textarea
+                id={field.id}
+                value={field.value as string}
+                onChange={(e) => onFieldChange(field.id, e.target.value)}
+                rows={3}
+                disabled={disabled}
+                className="mt-1"
+              />
+            )}
+            
+            {field.type === 'boolean' && (
+              <div className="flex items-center space-x-2 mt-2">
+                <Switch
+                  id={field.id}
+                  checked={field.value as boolean}
+                  onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                  disabled={disabled}
+                />
+                <Label htmlFor={field.id} className="cursor-pointer">
+                  {field.value ? 'Sim' : 'Não'}
+                </Label>
+              </div>
+            )}
+            
+            {field.type === 'select' && field.options && (
+              <Select
+                value={field.value as string}
+                onValueChange={(value) => onFieldChange(field.id, value)}
+                disabled={disabled}
+              >
+                <SelectTrigger id={field.id} className="mt-1">
+                  <SelectValue placeholder="Selecione uma opção" />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options.map((option, index) => (
+                    <SelectItem key={index} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 };

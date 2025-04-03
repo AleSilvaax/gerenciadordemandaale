@@ -66,7 +66,9 @@ export interface Service {
   client: string;
   address: string;
   type: string;
-  technician: TeamMember;
+  technician: TeamMember & {
+    signature?: string;
+  };
   notes?: string;
   photos?: string[];
   photoTitles?: string[];

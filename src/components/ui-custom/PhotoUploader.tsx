@@ -13,7 +13,7 @@ interface PhotoDetails {
 
 interface PhotoUploaderProps {
   photos: PhotoDetails[];
-  onAddPhoto: (file: File, title: string) => Promise<void>;
+  onAddPhoto: (file: File, title: string) => Promise<string>;
   onRemovePhoto: (index: number) => Promise<void>;
   onUpdateTitle: (index: number, title: string) => Promise<void>;
   className?: string;
@@ -139,7 +139,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                 </button>
               </div>
               
-              <div className="p-2 bg-gray-50 border-t">
+              <div className="p-2 bg-gray-50 border-t dark:bg-gray-800 dark:border-gray-700">
                 {editingIndex === index ? (
                   <div className="flex">
                     <Input

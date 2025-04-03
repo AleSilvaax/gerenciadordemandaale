@@ -5,13 +5,13 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 // Background image for cover page (modern car charging station)
-const BACKGROUND_IMAGE = "/lovable-uploads/c07b66f2-08a6-4eb2-889b-44eb703fb728.png"; // Updated reference
+const BACKGROUND_IMAGE = "/lovable-uploads/e58ff3e8-39f6-4a65-bb06-64492bc943b0.png"; // Updated reference to the car charger image
 // Company logo
-const COMPANY_LOGO = "/lovable-uploads/e8144b55-8f09-4d05-bee1-568575cd0162.png";
+const COMPANY_LOGO = "/lovable-uploads/19fb615f-4ff2-43e9-a389-d33021334af2.png"; // REVO logo
 // Signature image (empty signature line)
 const SIGNATURE_LINE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCAYAAABkOJMpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgSURBVHgB7cMBDQAAAMKg909tDjegAAAAAAAAAAAAPgYQCAABy4qsDQAAAABJRU5ErkJggg==";
 // EV icon
-const EV_ICON = "/lovable-uploads/7290ab74-2d07-4b8f-a09b-add8f81ed7c2.png";
+const EV_ICON = "/lovable-uploads/37cf9901-f118-4c42-b3cf-04ab77db70b0.png"; // Yellow EV icon
 
 // Function to create a new jsPDF instance with consistent styling
 const createPdfDocument = () => {
@@ -81,10 +81,10 @@ const generateCoverPage = (pdf, service) => {
   addSemiTransparentOverlay(pdf, 0, 0, 210, 297, "black", 0.5);
   
   // Add company logo with proper proportions
-  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
   // Add EV icon with proper proportions
-  safelyAddImage(pdf, EV_ICON, 'PNG', 170, 20, 20, 20);
+  safelyAddImage(pdf, EV_ICON, 'PNG', 170, 20, 15, 15);
   
   // Add date with modern styling
   pdf.setTextColor(255, 255, 255);
@@ -127,7 +127,7 @@ const generateTechniciansPage = (pdf, service) => {
   pdf.rect(0, 0, 210, 297, "F");
   
   // Add company logo as header with proper proportions
-  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
   // Add title
   pdf.setFontSize(30);
@@ -138,8 +138,8 @@ const generateTechniciansPage = (pdf, service) => {
   
   // Add technician photo with proper aspect ratio and smaller size
   if (service.technician && service.technician.avatar) {
-    // Using smaller dimensions for better fitting
-    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 100, 45, 45);
+    // Using smaller dimensions for better fitting - reduced size to improve quality
+    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 100, 35, 35);
   }
   
   // Add technician info with better spacing
@@ -159,7 +159,7 @@ const generateDescriptionPage = (pdf, service) => {
   pdf.rect(0, 0, 210, 297, "F");
   
   // Add company logo as header with proper proportions
-  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
   // Add title
   pdf.setFontSize(30);
@@ -195,11 +195,21 @@ const generateDescriptionPage = (pdf, service) => {
     const padding = 10;
     const xPos1 = 20;
     const xPos2 = 105;
+    const pageMargin = 20; // Ensure photos respect page margins
     
     for (let i = 0; i < Math.min(4, service.photos.length); i++) {
       // Calculate positioning for 2 photos per row
       const xPos = i % 2 === 0 ? xPos1 : xPos2;
       if (i % 2 === 0 && i > 0) yPos += photoHeight + 30; // New row
+      
+      // Make sure photos don't exceed page bounds
+      if (yPos + photoHeight > 277) {
+        pdf.addPage();
+        pdf.setFillColor(30, 30, 30);
+        pdf.rect(0, 0, 210, 297, "F");
+        safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
+        yPos = 50;
+      }
       
       if (safelyAddImage(pdf, service.photos[i], 'JPEG', xPos, yPos, photoWidth, photoHeight)) {
         // Add photo title/caption if available
@@ -227,7 +237,7 @@ const generateDescriptionPage = (pdf, service) => {
       pdf.rect(0, 0, 210, 297, "F");
       
       // Add company logo as header with proper proportions
-      safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+      safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
       
       pdf.setFontSize(16);
       pdf.setTextColor(255, 240, 0);
@@ -239,6 +249,15 @@ const generateDescriptionPage = (pdf, service) => {
         // Calculate positioning for 2 photos per row
         const xPos = (i - 4) % 2 === 0 ? xPos1 : xPos2;
         if ((i - 4) % 2 === 0 && (i - 4) > 0) yPos += photoHeight + 30; // New row
+        
+        // Make sure photos don't exceed page bounds
+        if (yPos + photoHeight > 277) {
+          pdf.addPage();
+          pdf.setFillColor(30, 30, 30);
+          pdf.rect(0, 0, 210, 297, "F");
+          safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
+          yPos = 50;
+        }
         
         if (safelyAddImage(pdf, service.photos[i], 'JPEG', xPos, yPos, photoWidth, photoHeight)) {
           // Add photo title/caption if available
@@ -278,7 +297,7 @@ const generateDetailsPage = (pdf, service) => {
   pdf.rect(0, 0, 210, 297, "F");
   
   // Add company logo as header with proper proportions
-  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
   // Add title
   pdf.setFontSize(30);
@@ -446,6 +465,42 @@ const generateDetailsPage = (pdf, service) => {
       pdf.text(adjustmentLines, xPos1, yPos);
     }
   }
+  
+  // Add custom fields if any
+  if (service.reportData?.customFields && service.reportData.customFields.length > 0) {
+    yPos += lineHeight * 2;
+    pdf.setTextColor(255, 240, 0);
+    pdf.text("CAMPOS PERSONALIZADOS:", xPos1, yPos);
+    yPos += lineHeight;
+    
+    pdf.setTextColor(255, 255, 255);
+    service.reportData.customFields.forEach(field => {
+      let displayValue = "";
+      
+      if (field.type === 'boolean') {
+        displayValue = field.value ? "Sim" : "Não";
+      } else if (field.type === 'select') {
+        displayValue = field.value as string;
+      } else {
+        displayValue = String(field.value || "");
+      }
+      
+      pdf.setTextColor(255, 240, 0);
+      pdf.text(`${field.label}:`, xPos1, yPos);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(displayValue, xPos2, yPos);
+      yPos += lineHeight;
+      
+      // Check if we need a new page
+      if (yPos > 280) {
+        pdf.addPage();
+        pdf.setFillColor(30, 30, 30);
+        pdf.rect(0, 0, 210, 297, "F");
+        safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
+        yPos = 40;
+      }
+    });
+  }
 };
 
 // Generate signature page with improved layout for digital signatures
@@ -455,7 +510,7 @@ const generateSignaturePage = (pdf, service) => {
   pdf.rect(0, 0, 210, 297, "F");
   
   // Add company logo as header with proper proportions
-  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 40, 15);
+  safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
   // Add title
   pdf.setFontSize(30);
@@ -473,8 +528,28 @@ const generateSignaturePage = (pdf, service) => {
   
   // Add client signature if it exists or signature line
   if (service.reportData?.clientSignature) {
-    // Directly add the signature image without a background
-    safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
+    // Signature without white background - directly add signature with transparent background
+    try {
+      const img = new Image();
+      img.src = service.reportData.clientSignature;
+      
+      // Create a temporary canvas to remove the white background
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 200;
+      canvas.height = 80;
+      
+      // Draw the image without white background
+      ctx.drawImage(img, 0, 0, 200, 80);
+      
+      // Add the signature with white text color
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.5);
+      safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
+    } catch (error) {
+      // Fallback to original method
+      safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
+    }
   } else {
     // Add signature line for client
     safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 135, 170, 1);
@@ -493,8 +568,28 @@ const generateSignaturePage = (pdf, service) => {
   
   // Add technician signature if it exists or signature line
   if (service.technician.signature) {
-    // Directly add the signature image without a background
-    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
+    // Signature without white background - directly add signature with transparent background
+    try {
+      const img = new Image();
+      img.src = service.technician.signature;
+      
+      // Create a temporary canvas to remove the white background
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 200;
+      canvas.height = 80;
+      
+      // Draw the image without white background
+      ctx.drawImage(img, 0, 0, 200, 80);
+      
+      // Add the signature with white text color
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.5);
+      safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
+    } catch (error) {
+      // Fallback to original method
+      safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
+    }
   } else {
     // Add signature line for technician
     safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 215, 170, 1);
