@@ -1,5 +1,5 @@
 
-import { Service } from "@/data/mockData";
+import { Service } from "@/types/serviceTypes";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -10,8 +10,6 @@ const BACKGROUND_IMAGE = "/lovable-uploads/e58ff3e8-39f6-4a65-bb06-64492bc943b0.
 const COMPANY_LOGO = "/lovable-uploads/19fb615f-4ff2-43e9-a389-d33021334af2.png"; // REVO logo
 // Signature image (empty signature line)
 const SIGNATURE_LINE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCAYAAABkOJMpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgSURBVHgB7cMBDQAAAMKg909tDjegAAAAAAAAAAAAPgYQCAABy4qsDQAAAABJRU5ErkJggg==";
-// EV icon
-const EV_ICON = "/lovable-uploads/37cf9901-f118-4c42-b3cf-04ab77db70b0.png"; // Yellow EV icon
 
 // Function to create a new jsPDF instance with consistent styling
 const createPdfDocument = () => {
@@ -83,9 +81,6 @@ const generateCoverPage = (pdf, service) => {
   // Add company logo with proper proportions
   safelyAddImage(pdf, COMPANY_LOGO, 'PNG', 20, 20, 30, 12);
   
-  // Add EV icon with proper proportions
-  safelyAddImage(pdf, EV_ICON, 'PNG', 170, 20, 15, 15);
-  
   // Add date with modern styling
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
@@ -136,20 +131,20 @@ const generateTechniciansPage = (pdf, service) => {
   pdf.setTextColor(255, 240, 0);
   pdf.text("RESPONSÁVEIS", 20, 75);
   
-  // Add technician photo with proper aspect ratio and smaller size
+  // Add technician photo with proper aspect ratio and smaller size (reduced size even more)
   if (service.technician && service.technician.avatar) {
-    // Using smaller dimensions for better fitting - reduced size to improve quality
-    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 100, 35, 35);
+    // Using smaller dimensions for better fitting and quality
+    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 100, 25, 25);
   }
   
   // Add technician info with better spacing
   pdf.setFontSize(18);
   pdf.setTextColor(255, 240, 0);
-  pdf.text(`${service.technician.name}`, 75, 115);
+  pdf.text(`${service.technician.name}`, 60, 115);
   
   pdf.setFontSize(14);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("Eletricista instalador", 75, 130);
+  pdf.text("Eletricista instalador", 60, 130);
 };
 
 // Generate the service description page with improved layout
@@ -202,8 +197,8 @@ const generateDescriptionPage = (pdf, service) => {
       const xPos = i % 2 === 0 ? xPos1 : xPos2;
       if (i % 2 === 0 && i > 0) yPos += photoHeight + 30; // New row
       
-      // Make sure photos don't exceed page bounds
-      if (yPos + photoHeight > 277) {
+      // Make sure photos don't exceed page bounds - reduced page bounds to respect margins
+      if (yPos + photoHeight > 260) {
         pdf.addPage();
         pdf.setFillColor(30, 30, 30);
         pdf.rect(0, 0, 210, 297, "F");
@@ -250,8 +245,8 @@ const generateDescriptionPage = (pdf, service) => {
         const xPos = (i - 4) % 2 === 0 ? xPos1 : xPos2;
         if ((i - 4) % 2 === 0 && (i - 4) > 0) yPos += photoHeight + 30; // New row
         
-        // Make sure photos don't exceed page bounds
-        if (yPos + photoHeight > 277) {
+        // Make sure photos don't exceed page bounds - respect margins
+        if (yPos + photoHeight > 260) {
           pdf.addPage();
           pdf.setFillColor(30, 30, 30);
           pdf.rect(0, 0, 210, 297, "F");
@@ -492,7 +487,7 @@ const generateDetailsPage = (pdf, service) => {
       yPos += lineHeight;
       
       // Check if we need a new page
-      if (yPos > 280) {
+      if (yPos > 260) {
         pdf.addPage();
         pdf.setFillColor(30, 30, 30);
         pdf.rect(0, 0, 210, 297, "F");
@@ -528,28 +523,11 @@ const generateSignaturePage = (pdf, service) => {
   
   // Add client signature if it exists or signature line
   if (service.reportData?.clientSignature) {
-    // Signature without white background - directly add signature with transparent background
-    try {
-      const img = new Image();
-      img.src = service.reportData.clientSignature;
-      
-      // Create a temporary canvas to remove the white background
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = 200;
-      canvas.height = 80;
-      
-      // Draw the image without white background
-      ctx.drawImage(img, 0, 0, 200, 80);
-      
-      // Add the signature with white text color
-      pdf.setDrawColor(255, 255, 255);
-      pdf.setLineWidth(0.5);
-      safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
-    } catch (error) {
-      // Fallback to original method
-      safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
-    }
+    // Add the signature without white background
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.5);
+    pdf.setTextColor(255, 255, 255);
+    safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 125, 120, 40);
   } else {
     // Add signature line for client
     safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 135, 170, 1);
@@ -568,28 +546,11 @@ const generateSignaturePage = (pdf, service) => {
   
   // Add technician signature if it exists or signature line
   if (service.technician.signature) {
-    // Signature without white background - directly add signature with transparent background
-    try {
-      const img = new Image();
-      img.src = service.technician.signature;
-      
-      // Create a temporary canvas to remove the white background
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = 200;
-      canvas.height = 80;
-      
-      // Draw the image without white background
-      ctx.drawImage(img, 0, 0, 200, 80);
-      
-      // Add the signature with white text color
-      pdf.setDrawColor(255, 255, 255);
-      pdf.setLineWidth(0.5);
-      safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
-    } catch (error) {
-      // Fallback to original method
-      safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
-    }
+    // Add the signature without white background
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.5);
+    pdf.setTextColor(255, 255, 255);
+    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 205, 120, 40);
   } else {
     // Add signature line for technician
     safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 215, 170, 1);

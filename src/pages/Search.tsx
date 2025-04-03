@@ -1,145 +1,153 @@
 
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, Search as SearchIcon, X, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { getServices } from "@/services/api";
-import { Service } from "@/data/mockData";
+import { Service } from "@/types/serviceTypes";
+import { useNavigate } from "react-router-dom";
+import { Search as SearchIcon, ArrowLeft, Filter, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Search: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Add a refresh function to reload data
-  const refreshServices = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getServices();
-      setServices(data);
-      setFilteredServices(data);
-    } catch (error) {
-      console.error("Error loading services:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pendente" | "concluido" | "cancelado">("all");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    refreshServices();
+    inputRef.current?.focus();
+
+    const fetchServices = async () => {
+      try {
+        const data = await getServices();
+        setServices(data);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchServices();
   }, []);
 
   useEffect(() => {
-    // Filter services based on search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      const filtered = services.filter(
-        service =>
-          service.title.toLowerCase().includes(query) ||
-          service.id.toLowerCase().includes(query) ||
-          service.location.toLowerCase().includes(query) ||
-          service.technician.name.toLowerCase().includes(query) ||
-          (service.reportData?.client && service.reportData.client.toLowerCase().includes(query)) ||
-          (service.reportData?.servicePhase && 
-            (service.reportData.servicePhase === "inspection" && "vistoria".includes(query) ||
-             service.reportData.servicePhase === "installation" && "instalação".includes(query))
-          ) ||
-          (service.reportData?.wallboxBrand && service.reportData.wallboxBrand.toLowerCase().includes(query)) ||
-          (service.reportData?.artNumber && service.reportData.artNumber.toLowerCase().includes(query))
+    const filtered = services.filter((service) => {
+      // First apply status filter
+      if (statusFilter !== "all" && service.status !== statusFilter) {
+        return false;
+      }
+      
+      // Then apply search term filter
+      if (!searchTerm.trim()) {
+        return true;
+      }
+      
+      const term = searchTerm.toLowerCase();
+      return (
+        service.id.toLowerCase().includes(term) ||
+        service.title.toLowerCase().includes(term) ||
+        service.location.toLowerCase().includes(term) ||
+        (service.client && service.client.toLowerCase().includes(term)) ||
+        service.technician.name.toLowerCase().includes(term)
       );
-      setFilteredServices(filtered);
-    } else {
-      setFilteredServices(services);
-    }
-  }, [searchQuery, services]);
+    });
+    
+    setFilteredServices(filtered);
+  }, [searchTerm, services, statusFilter]);
 
   const clearSearch = () => {
-    setSearchQuery("");
+    setSearchTerm("");
+    inputRef.current?.focus();
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 page-transition">
-      <div className="flex items-center mb-6">
-        <Link to="/" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
-          <ArrowLeft size={18} />
-        </Link>
-        <h1 className="text-xl font-bold">Pesquisa</h1>
+    <div className="container py-4 space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="mr-2"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-bold">Busca</h1>
+        <div className="w-10"></div> {/* Spacer for alignment */}
       </div>
 
-      <div className="relative mb-6">
+      <div className="space-y-4">
         <div className="relative">
-          <SearchIcon size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-10 pr-10"
-            placeholder="Pesquisar demandas, clientes, locais..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+          <SearchIcon
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+            size={16}
           />
-          {searchQuery && (
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder="Buscar demandas, clientes, técnicos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchTerm && (
             <Button
               variant="ghost"
               size="sm"
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
               onClick={clearSearch}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
             >
-              <X size={16} />
+              <span className="sr-only">Limpar</span>
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
+
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setStatusFilter(value as "all" | "pendente" | "concluido" | "cancelado")}
+        >
+          <SelectTrigger className="w-full">
+            <div className="flex items-center">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Filtrar por status" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="pendente">Pendente</SelectItem>
+            <SelectItem value="concluido">Concluído</SelectItem>
+            <SelectItem value="cancelado">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-12">
-          <Loader2 size={32} className="animate-spin mb-2 text-primary" />
-          <p className="text-muted-foreground">Carregando resultados...</p>
-        </div>
-      ) : filteredServices.length > 0 ? (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-sm text-muted-foreground">
-              {searchQuery
-                ? `${filteredServices.length} resultado${filteredServices.length !== 1 ? "s" : ""} encontrado${
-                    filteredServices.length !== 1 ? "s" : ""
-                  }`
-                : "Todas as demandas"}
-            </p>
-            <Button variant="outline" size="sm" onClick={refreshServices}>
-              <Loader2 size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
+      <div className="mt-6 space-y-4 pb-20">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              id={service.id}
-              title={service.title}
-              status={service.status}
-              location={service.location}
-              technician={service.technician}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center p-12 text-center">
-          <SearchIcon size={64} className="text-muted-foreground mb-4 opacity-20" />
-          <h2 className="text-xl font-medium mb-1">Nenhum resultado encontrado</h2>
-          <p className="text-muted-foreground">
-            Não encontramos nenhuma demanda que corresponda à sua pesquisa
-          </p>
-          {searchQuery && (
-            <Button variant="outline" className="mt-4" onClick={clearSearch}>
-              Limpar pesquisa
-            </Button>
-          )}
-          <Button variant="outline" className="mt-2" onClick={refreshServices}>
-            <Loader2 size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar dados
-          </Button>
-        </div>
-      )}
+        ) : filteredServices.length > 0 ? (
+          <div className="space-y-3 overflow-x-auto">
+            {filteredServices.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">
+              {searchTerm ? "Nenhum resultado encontrado." : "Digite algo para buscar."}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

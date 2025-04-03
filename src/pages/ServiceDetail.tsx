@@ -1,1510 +1,551 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { 
-  ArrowLeft, Save, Camera, Upload, Image, File, X, FileText,
-  Check, CheckCircle2, XCircle, Download, Clipboard, Zap, Wrench, FileDown 
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
-import { useForm } from "react-hook-form";
+import {
+  FileText,
+  CheckCircle,
+  Calendar,
+  Camera,
+  Download,
+  ArrowLeft,
+  Edit,
+  User,
+  MapPin,
+  ClipboardCheck,
+  X
+} from "lucide-react";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { SignatureCanvas } from "@/components/ui-custom/SignatureCanvas";
+import { Separator } from "@/components/ui/separator";
+import { SignatureCapture } from "@/components/ui-custom/SignatureCapture";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
-import { Service, ServiceStatus, TeamMember, teamMembers } from "@/data/mockData";
-import { 
-  generatePDF, 
-  downloadPDF, 
-  downloadInspectionPDF,
-  downloadInstallationPDF 
-} from "@/utils/pdfGenerator";
-import { 
-  getServiceById, 
-  updateService, 
-  updateReportData, 
-  updateServicePhotos,
-  addPhotoToService
-} from "@/services/api";
+import { getService, updateService } from "@/services/api";
+import { toast } from "@/hooks/use-toast";
+import { downloadPDF, downloadInspectionPDF, downloadInstallationPDF } from "@/utils/pdfGenerator";
+import { Service } from "@/types/serviceTypes";
+import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-interface FormValues {
-  title: string;
-  status: ServiceStatus;
-  servicePhase: "inspection" | "installation";
-  location: string;
-  technician: string;
-  client: string;
-  clientName: string;
-  address: string;
-  city: string;
-  executedBy: string;
-  inspectionDate: string;
-  installationDate: string;
-  modelNumber: string;
-  serialNumberNew: string;
-  serialNumberOld: string;
-  homologatedName: string;
-  compliesWithNBR17019: boolean;
-  homologatedInstallation: boolean;
-  requiredAdjustment: boolean;
-  adjustmentDescription: string;
-  validWarranty: boolean;
-  circuitBreakerEntry: string;
-  chargerCircuitBreaker: string;
-  cableGauge: string;
-  chargerStatus: string;
-  chargerLoad: string;
-  voltage: string;
-  supplyType: string;
-  installationDistance: string;
-  installationObstacles: string;
-  existingPanel: boolean;
-  panelType: string;
-  panelAmps: string;
-  voltageBetweenPhases: string;
-  voltageBetweenPhaseAndNeutral: string;
-  hasThreePhase: boolean;
-  groundingSystem: string;
-  wallboxBrand: string;
-  wallboxPower: string;
-  powerSupplyType: string;
-  needsInfrastructure: boolean;
-  needsScaffolding: boolean;
-  needsTechnicalHole: boolean;
-  needsMasonry: boolean;
-  artNumber: string;
-  technicalComments: string;
-}
-
-interface PhotoDetails {
-  url: string;
-  title: string;
-}
-
-const ServiceDetail = () => {
+const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("general");
-  const [photoDetails, setPhotoDetails] = useState<PhotoDetails[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pdfGenerated, setPdfGenerated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [service, setService] = useState<Service | null>(null);
-  const [clientSignature, setClientSignature] = useState<string>("");
-  const [technicianSignature, setTechnicianSignature] = useState<string>("");
-  
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("details");
+  const [clientSignature, setClientSignature] = useState<string | null>(null);
+  const [technicianSignature, setTechnicianSignature] = useState<string | null>(null);
+  const [clientName, setClientName] = useState("");
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     const fetchService = async () => {
       if (!id) return;
       
       try {
-        setIsLoading(true);
-        const fetchedService = await getServiceById(id);
+        const fetchedService = await getService(id);
+        setService(fetchedService);
         
-        if (fetchedService) {
-          setService(fetchedService);
-          
-          // Initialize photo details if available
-          if (fetchedService.photos && fetchedService.photos.length > 0) {
-            const photos = fetchedService.photos.map((url, index) => ({
-              url,
-              title: fetchedService.photoTitles?.[index] || `Foto ${index + 1}`
-            }));
-            setPhotoDetails(photos);
-          }
-          
-          // Initialize signatures if available
-          if (fetchedService.reportData?.clientSignature) {
-            setClientSignature(fetchedService.reportData.clientSignature);
-          }
-          
-          if (fetchedService.technician.signature) {
-            setTechnicianSignature(fetchedService.technician.signature);
-          }
-        } else {
-          toast({
-            title: "Erro",
-            description: "Demanda não encontrada",
-            variant: "destructive",
-          });
-          navigate('/demandas');
+        // Initialize signatures if they exist
+        if (fetchedService.reportData?.clientSignature) {
+          setClientSignature(fetchedService.reportData.clientSignature);
+        }
+        
+        if (fetchedService.technician?.signature) {
+          setTechnicianSignature(fetchedService.technician.signature);
+        }
+        
+        // Initialize client name
+        if (fetchedService.reportData?.clientName) {
+          setClientName(fetchedService.reportData.clientName);
         }
       } catch (error) {
         console.error("Error fetching service:", error);
-        toast({
-          title: "Erro",
-          description: "Falha ao carregar os dados da demanda",
-          variant: "destructive",
+        toast.error("Erro ao carregar a demanda", {
+          description: "Não foi possível carregar os detalhes desta demanda."
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
+
     fetchService();
-  }, [id, navigate, toast]);
-  
-  const form = useForm<FormValues>({
-    defaultValues: {
-      title: "",
-      status: "pendente",
-      servicePhase: "inspection",
-      location: "",
-      technician: "",
-      client: "",
-      clientName: "",
-      address: "",
-      city: "",
-      executedBy: "",
-      inspectionDate: "",
-      installationDate: "",
-      modelNumber: "",
-      serialNumberNew: "",
-      serialNumberOld: "",
-      homologatedName: "",
-      compliesWithNBR17019: false,
-      homologatedInstallation: false,
-      requiredAdjustment: false,
-      adjustmentDescription: "",
-      validWarranty: false,
-      circuitBreakerEntry: "",
-      chargerCircuitBreaker: "",
-      cableGauge: "",
-      chargerStatus: "",
-      chargerLoad: "",
-      voltage: "",
-      supplyType: "",
-      installationDistance: "",
-      installationObstacles: "",
-      existingPanel: false,
-      panelType: "",
-      panelAmps: "",
-      voltageBetweenPhases: "",
-      voltageBetweenPhaseAndNeutral: "",
-      hasThreePhase: false,
-      groundingSystem: "",
-      wallboxBrand: "",
-      wallboxPower: "",
-      powerSupplyType: "",
-      needsInfrastructure: false,
-      needsScaffolding: false,
-      needsTechnicalHole: false,
-      needsMasonry: false,
-      artNumber: "",
-      technicalComments: ""
-    }
-  });
+  }, [id]);
 
-  useEffect(() => {
-    if (service) {
-      form.reset({
-        title: service.title || "",
-        status: service.status || "pendente",
-        servicePhase: service.reportData?.servicePhase || "inspection",
-        location: service.location || "",
-        technician: service.technician?.id || "",
-        client: service.reportData?.client || "",
-        clientName: service.reportData?.clientName || "",
-        address: service.reportData?.address || "",
-        city: service.reportData?.city || "",
-        executedBy: service.reportData?.executedBy || "",
-        inspectionDate: service.reportData?.inspectionDate || "",
-        installationDate: service.reportData?.installationDate || "",
-        modelNumber: service.reportData?.modelNumber || "",
-        serialNumberNew: service.reportData?.serialNumberNew || "",
-        serialNumberOld: service.reportData?.serialNumberOld || "",
-        homologatedName: service.reportData?.homologatedName || "",
-        compliesWithNBR17019: service.reportData?.compliesWithNBR17019 || false,
-        homologatedInstallation: service.reportData?.homologatedInstallation || false,
-        requiredAdjustment: service.reportData?.requiredAdjustment || false,
-        adjustmentDescription: service.reportData?.adjustmentDescription || "",
-        validWarranty: service.reportData?.validWarranty || false,
-        circuitBreakerEntry: service.reportData?.circuitBreakerEntry || "",
-        chargerCircuitBreaker: service.reportData?.chargerCircuitBreaker || "",
-        cableGauge: service.reportData?.cableGauge || "",
-        chargerStatus: service.reportData?.chargerStatus || "",
-        chargerLoad: service.reportData?.chargerLoad || "",
-        voltage: service.reportData?.voltage || "",
-        supplyType: service.reportData?.supplyType || "",
-        installationDistance: service.reportData?.installationDistance || "",
-        installationObstacles: service.reportData?.installationObstacles || "",
-        existingPanel: service.reportData?.existingPanel || false,
-        panelType: service.reportData?.panelType || "",
-        panelAmps: service.reportData?.panelAmps || "",
-        voltageBetweenPhases: service.reportData?.voltageBetweenPhases || "",
-        voltageBetweenPhaseAndNeutral: service.reportData?.voltageBetweenPhaseAndNeutral || "",
-        hasThreePhase: service.reportData?.hasThreePhase || false,
-        groundingSystem: service.reportData?.groundingSystem || "",
-        wallboxBrand: service.reportData?.wallboxBrand || "",
-        wallboxPower: service.reportData?.wallboxPower || "",
-        powerSupplyType: service.reportData?.powerSupplyType || "",
-        needsInfrastructure: service.reportData?.needsInfrastructure || false,
-        needsScaffolding: service.reportData?.needsScaffolding || false,
-        needsTechnicalHole: service.reportData?.needsTechnicalHole || false,
-        needsMasonry: service.reportData?.needsMasonry || false,
-        artNumber: service.reportData?.artNumber || "",
-        technicalComments: service.reportData?.technicalComments || ""
-      });
-    }
-  }, [service, form]);
-
-  const onSubmit = async (data: FormValues) => {
-    if (!id || !service) return;
-    
-    setIsSubmitting(true);
-    toast({
-      title: "Salvando alterações",
-      description: "Por favor aguarde enquanto salvamos as informações..."
-    });
+  const handleStatusChange = async (newStatus: "pendente" | "concluido" | "cancelado") => {
+    if (!service) return;
     
     try {
-      const selectedTechnician = teamMembers.find(t => t.id === data.technician) || service.technician;
+      const updatedService = { ...service, status: newStatus };
+      await updateService(updatedService);
+      setService(updatedService);
       
-      // Update technician signature if changed
-      if (technicianSignature !== service.technician.signature) {
-        selectedTechnician.signature = technicianSignature;
-      }
-      
-      const serviceUpdated = await updateService(id, {
-        title: data.title,
-        status: data.status,
-        location: data.location,
-        technician: selectedTechnician
+      toast.success("Status atualizado", {
+        description: `O status da demanda foi alterado para ${
+          newStatus === "pendente" ? "pendente" :
+          newStatus === "concluido" ? "concluído" : "cancelado"
+        }.`
       });
-      
-      // Extract photo URLs and titles
-      const photoUrls = photoDetails.map(p => p.url);
-      const photoTitles = photoDetails.map(p => p.title);
-      
-      const reportUpdated = await updateReportData(id, {
-        servicePhase: data.servicePhase,
-        client: data.client,
-        clientName: data.clientName,
-        clientSignature: clientSignature,
-        address: data.address,
-        city: data.city,
-        executedBy: data.executedBy,
-        inspectionDate: data.inspectionDate,
-        installationDate: data.installationDate,
-        modelNumber: data.modelNumber,
-        serialNumberNew: data.serialNumberNew,
-        serialNumberOld: data.serialNumberOld,
-        homologatedName: data.homologatedName,
-        compliesWithNBR17019: data.compliesWithNBR17019,
-        homologatedInstallation: data.homologatedInstallation,
-        requiredAdjustment: data.requiredAdjustment,
-        adjustmentDescription: data.adjustmentDescription,
-        validWarranty: data.validWarranty,
-        circuitBreakerEntry: data.circuitBreakerEntry,
-        chargerCircuitBreaker: data.chargerCircuitBreaker,
-        cableGauge: data.cableGauge,
-        chargerStatus: data.chargerStatus,
-        chargerLoad: data.chargerLoad,
-        voltage: data.voltage,
-        supplyType: data.supplyType,
-        installationDistance: data.installationDistance,
-        installationObstacles: data.installationObstacles,
-        existingPanel: data.existingPanel,
-        panelType: data.panelType,
-        panelAmps: data.panelAmps,
-        voltageBetweenPhases: data.voltageBetweenPhases,
-        voltageBetweenPhaseAndNeutral: data.voltageBetweenPhaseAndNeutral,
-        hasThreePhase: data.hasThreePhase,
-        groundingSystem: data.groundingSystem,
-        wallboxBrand: data.wallboxBrand,
-        wallboxPower: data.wallboxPower,
-        powerSupplyType: data.powerSupplyType,
-        needsInfrastructure: data.needsInfrastructure,
-        needsScaffolding: data.needsScaffolding,
-        needsTechnicalHole: data.needsTechnicalHole,
-        needsMasonry: data.needsMasonry,
-        artNumber: data.artNumber,
-        technicalComments: data.technicalComments
-      });
-      
-      // Update photos and titles
-      let photosUpdated = true;
-      if (JSON.stringify(service.photos) !== JSON.stringify(photoUrls) || 
-          JSON.stringify(service.photoTitles) !== JSON.stringify(photoTitles)) {
-        photosUpdated = await updateServicePhotos(id, photoUrls, photoTitles);
-      }
-      
-      if (serviceUpdated && reportUpdated && photosUpdated) {
-        const updatedService = await getServiceById(id);
-        if (updatedService) {
-          setService(updatedService);
-        }
-        
-        toast({
-          title: "Demanda atualizada",
-          description: `As alterações na demanda ${id} foram salvas com sucesso.`,
-        });
-        
-        if (data.status === "concluido" && !pdfGenerated) {
-          setTimeout(() => {
-            toast({
-              title: "Relatório disponível",
-              description: "O serviço foi concluído. Deseja gerar o PDF do relatório?",
-              action: (
-                <Button variant="default" size="sm" onClick={() => handleGeneratePDF()}>
-                  Gerar PDF
-                </Button>
-              ),
-            });
-          }, 500);
-        }
-      } else {
-        throw new Error("Falha ao salvar alguma das informações");
-      }
     } catch (error) {
-      console.error("Error updating service:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao salvar as alterações da demanda",
-        variant: "destructive",
+      console.error("Error updating service status:", error);
+      toast.error("Erro ao atualizar status", {
+        description: "Não foi possível atualizar o status da demanda."
       });
-    } finally {
-      setIsSubmitting(false);
     }
+  };
+
+  const saveSignatures = async () => {
+    if (!service) return;
+    
+    try {
+      // Update reportData with clientSignature and clientName
+      const updatedReportData = {
+        ...service.reportData,
+        clientSignature,
+        clientName
+      };
+      
+      // Update the technician's signature and the reportData
+      const updatedService = {
+        ...service,
+        technician: {
+          ...service.technician,
+          signature: technicianSignature
+        },
+        reportData: updatedReportData
+      };
+      
+      await updateService(updatedService);
+      setService(updatedService);
+      
+      toast.success("Assinaturas salvas", {
+        description: "As assinaturas foram salvas com sucesso."
+      });
+    } catch (error) {
+      console.error("Error saving signatures:", error);
+      toast.error("Erro ao salvar assinaturas", {
+        description: "Não foi possível salvar as assinaturas."
+      });
+    }
+  };
+
+  const handleClientSignatureChange = (dataUrl: string) => {
+    setClientSignature(dataUrl);
+  };
+
+  const handleTechnicianSignatureChange = (dataUrl: string) => {
+    setTechnicianSignature(dataUrl);
   };
 
   const handleAddPhoto = async (file: File, title: string) => {
-    if (!id) return;
+    if (!service) return "";
     
-    try {
-      const photoUrl = await addPhotoToService(id, file);
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
       
-      // Add new photo with title
-      const newPhotoDetails = [...photoDetails, { url: photoUrl, title }];
-      setPhotoDetails(newPhotoDetails);
+      reader.onload = async (event) => {
+        if (!event.target?.result) {
+          reject("Failed to read file");
+          return;
+        }
+        
+        const photoUrl = event.target.result as string;
+        
+        try {
+          // Create updated photos and photoTitles arrays
+          const updatedPhotos = [...(service.photos || []), photoUrl];
+          const updatedPhotoTitles = [...(service.photoTitles || []), title];
+          
+          // Update the service
+          const updatedService = {
+            ...service,
+            photos: updatedPhotos,
+            photoTitles: updatedPhotoTitles
+          };
+          
+          await updateService(updatedService);
+          setService(updatedService);
+          
+          toast.success("Foto adicionada", {
+            description: "A foto foi adicionada com sucesso."
+          });
+          
+          resolve(photoUrl);
+        } catch (error) {
+          console.error("Error adding photo:", error);
+          reject("Failed to add photo");
+        }
+      };
       
-      toast({
-        title: "Foto adicionada",
-        description: "A foto foi adicionada ao relatório com sucesso.",
-      });
+      reader.onerror = () => {
+        reject("Failed to read file");
+      };
       
-      return photoUrl;
-    } catch (error) {
-      console.error("Erro ao fazer upload da foto:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar a foto. Por favor, tente novamente.",
-        variant: "destructive",
-      });
-      throw error;
-    }
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleRemovePhoto = async (index: number) => {
-    if (!id) return;
+    if (!service) return;
     
     try {
-      const updatedPhotoDetails = [...photoDetails];
-      updatedPhotoDetails.splice(index, 1);
-      setPhotoDetails(updatedPhotoDetails);
+      // Create updated photos and photoTitles arrays
+      const updatedPhotos = [...(service.photos || [])];
+      const updatedPhotoTitles = [...(service.photoTitles || [])];
       
-      // Extract URLs and titles
-      const photoUrls = updatedPhotoDetails.map(p => p.url);
-      const photoTitles = updatedPhotoDetails.map(p => p.title);
+      // Remove the photo and its title at the specified index
+      updatedPhotos.splice(index, 1);
+      updatedPhotoTitles.splice(index, 1);
       
-      const success = await updateServicePhotos(id, photoUrls, photoTitles);
+      // Update the service
+      const updatedService = {
+        ...service,
+        photos: updatedPhotos,
+        photoTitles: updatedPhotoTitles
+      };
       
-      if (success) {
-        toast({
-          title: "Foto removida",
-          description: "A foto foi removida do relatório.",
-        });
-      } else {
-        // Revert if update failed
-        setPhotoDetails(photoDetails);
-        toast({
-          title: "Erro",
-          description: "Falha ao remover a foto do relatório",
-          variant: "destructive",
-        });
-      }
+      await updateService(updatedService);
+      setService(updatedService);
+      
+      toast.success("Foto removida", {
+        description: "A foto foi removida com sucesso."
+      });
     } catch (error) {
       console.error("Error removing photo:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao remover a foto",
-        variant: "destructive",
+      toast.error("Erro ao remover foto", {
+        description: "Não foi possível remover a foto."
       });
     }
   };
 
   const handleUpdatePhotoTitle = async (index: number, newTitle: string) => {
-    if (!id) return;
+    if (!service) return;
     
     try {
-      const updatedPhotoDetails = [...photoDetails];
-      updatedPhotoDetails[index].title = newTitle;
-      setPhotoDetails(updatedPhotoDetails);
+      // Create updated photoTitles array
+      const updatedPhotoTitles = [...(service.photoTitles || [])];
       
-      // Extract URLs and titles
-      const photoUrls = updatedPhotoDetails.map(p => p.url);
-      const photoTitles = updatedPhotoDetails.map(p => p.title);
+      // Update the title at the specified index
+      updatedPhotoTitles[index] = newTitle;
       
-      const success = await updateServicePhotos(id, photoUrls, photoTitles);
+      // Update the service
+      const updatedService = {
+        ...service,
+        photoTitles: updatedPhotoTitles
+      };
       
-      if (!success) {
-        // Revert if update failed
-        setPhotoDetails(photoDetails);
-        toast({
-          title: "Erro",
-          description: "Falha ao atualizar o título da foto",
-          variant: "destructive",
-        });
-      }
+      await updateService(updatedService);
+      setService(updatedService);
+      
+      toast.success("Título atualizado", {
+        description: "O título da foto foi atualizado com sucesso."
+      });
     } catch (error) {
       console.error("Error updating photo title:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar o título da foto",
-        variant: "destructive",
+      toast.error("Erro ao atualizar título", {
+        description: "Não foi possível atualizar o título da foto."
       });
     }
   };
 
-  const handleGeneratePDF = () => {
-    if (!service) return;
-    
-    const updatedService = prepareServiceForPDF();
-    
-    const result = generatePDF(updatedService);
-    
-    if (result) {
-      setPdfGenerated(true);
-      toast({
-        title: "PDF gerado",
-        description: "O PDF do relatório foi gerado com sucesso.",
-      });
-    } else {
-      toast({
-        title: "Erro",
-        description: "Falha ao gerar o PDF do relatório",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadPDF = () => {
-    if (!service) return;
-    
-    const updatedService = prepareServiceForPDF();
-    downloadPDF(updatedService);
-  };
-
-  const handleDownloadInspectionPDF = () => {
-    if (!service) return;
-    
-    const updatedService = prepareServiceForPDF();
-    downloadInspectionPDF(updatedService);
-  };
-
-  const handleDownloadInstallationPDF = () => {
-    if (!service) return;
-    
-    const updatedService = prepareServiceForPDF();
-    downloadInstallationPDF(updatedService);
-  };
-
-  const prepareServiceForPDF = () => {
-    // Prepare updated service with all current data for PDF generation
-    return {
-      ...service,
-      title: form.getValues("title"),
-      status: form.getValues("status") as ServiceStatus,
-      location: form.getValues("location"),
-      technician: {
-        ...service.technician,
-        signature: technicianSignature
-      },
-      reportData: {
-        servicePhase: form.getValues("servicePhase"),
-        client: form.getValues("client"),
-        clientName: form.getValues("clientName"),
-        clientSignature: clientSignature,
-        address: form.getValues("address"),
-        city: form.getValues("city"),
-        executedBy: form.getValues("executedBy"),
-        inspectionDate: form.getValues("inspectionDate"),
-        installationDate: form.getValues("installationDate"),
-        modelNumber: form.getValues("modelNumber"),
-        serialNumberNew: form.getValues("serialNumberNew"),
-        serialNumberOld: form.getValues("serialNumberOld"),
-        homologatedName: form.getValues("homologatedName"),
-        compliesWithNBR17019: form.getValues("compliesWithNBR17019"),
-        homologatedInstallation: form.getValues("homologatedInstallation"),
-        requiredAdjustment: form.getValues("requiredAdjustment"),
-        adjustmentDescription: form.getValues("adjustmentDescription"),
-        validWarranty: form.getValues("validWarranty"),
-        circuitBreakerEntry: form.getValues("circuitBreakerEntry"),
-        chargerCircuitBreaker: form.getValues("chargerCircuitBreaker"),
-        cableGauge: form.getValues("cableGauge"),
-        chargerStatus: form.getValues("chargerStatus"),
-        chargerLoad: form.getValues("chargerLoad"),
-        voltage: form.getValues("voltage"),
-        supplyType: form.getValues("supplyType"),
-        installationDistance: form.getValues("installationDistance"),
-        installationObstacles: form.getValues("installationObstacles"),
-        existingPanel: form.getValues("existingPanel"),
-        panelType: form.getValues("panelType"),
-        panelAmps: form.getValues("panelAmps"),
-        voltageBetweenPhases: form.getValues("voltageBetweenPhases"),
-        voltageBetweenPhaseAndNeutral: form.getValues("voltageBetweenPhaseAndNeutral"),
-        hasThreePhase: form.getValues("hasThreePhase"),
-        groundingSystem: form.getValues("groundingSystem"),
-        wallboxBrand: form.getValues("wallboxBrand"),
-        wallboxPower: form.getValues("wallboxPower"),
-        powerSupplyType: form.getValues("powerSupplyType"),
-        needsInfrastructure: form.getValues("needsInfrastructure"),
-        needsScaffolding: form.getValues("needsScaffolding"),
-        needsTechnicalHole: form.getValues("needsTechnicalHole"),
-        needsMasonry: form.getValues("needsMasonry"),
-        artNumber: form.getValues("artNumber"),
-        technicalComments: form.getValues("technicalComments")
-      },
-      photos: photoDetails.map(p => p.url),
-      photoTitles: photoDetails.map(p => p.title)
-    };
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin mb-4">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
-            </svg>
-          </div>
-          <p className="text-muted-foreground">Carregando dados da demanda...</p>
-        </div>
+      <div className="container py-6 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!service) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Demanda não encontrada</h2>
-          <p className="text-muted-foreground mb-4">A demanda solicitada não existe ou foi removida.</p>
-          <Button onClick={() => navigate('/demandas')}>Voltar para Demandas</Button>
-        </div>
+      <div className="container py-6">
+        <h1 className="text-2xl font-bold mb-4">Demanda não encontrada</h1>
+        <p className="mb-4">A demanda solicitada não foi encontrada.</p>
+        <Button onClick={() => navigate("/demandas")}>Voltar para Demandas</Button>
       </div>
     );
   }
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Não especificado";
+    
+    try {
+      return new Date(dateString).toLocaleDateString("pt-BR");
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  const photos = service.photos || [];
+  const photoDetails = photos.map((url, index) => ({
+    url,
+    title: service.photoTitles?.[index] || `Foto ${index + 1}`
+  }));
+
   return (
-    <div className="min-h-screen p-4 pb-32 page-transition">
-      <div className="flex items-center mb-6">
-        <Link to="/demandas" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
-          <ArrowLeft size={18} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold">
-            {id ? `Demanda #${id}` : "Nova Demanda"}
-          </h1>
-          {service?.status && (
-            <div className="flex items-center mt-1">
-              <span className="text-sm text-muted-foreground mr-2">Status:</span>
-              <StatusBadge status={service.status} />
-              {service.reportData?.servicePhase && (
-                <span className="ml-2 text-sm bg-secondary/60 text-primary px-2 py-0.5 rounded">
-                  {service.reportData.servicePhase === "inspection" ? "Vistoria" : "Instalação"}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+    <div className={`container py-4 space-y-6 ${isMobile ? 'pb-28' : 'pb-8'}`}>
+      <div className="flex items-center">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl font-bold">Detalhes da Demanda</h1>
       </div>
-
-      <Tabs defaultValue="general" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 mb-4">
-          <TabsTrigger value="general">Geral</TabsTrigger>
-          <TabsTrigger value="inspection">Vistoria</TabsTrigger>
-          <TabsTrigger value="installation">Instalação</TabsTrigger>
-          <TabsTrigger value="photos">Fotos</TabsTrigger>
-          <TabsTrigger value="signatures">Assinaturas</TabsTrigger>
-        </TabsList>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <TabsContent value="general" className="space-y-4">
-              <FormField
-                control={form.control}
-                name="servicePhase"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fase do Serviço</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a fase" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="inspection">Vistoria</SelectItem>
-                        <SelectItem value="installation">Instalação</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Título</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Local</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="concluido">Concluído</SelectItem>
-                        <SelectItem value="cancelado">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="technician"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Técnico Responsável</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o técnico" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {teamMembers
-                          .filter(member => member.role === "tecnico")
-                          .map(technician => (
-                            <SelectItem 
-                              key={technician.id} 
-                              value={technician.id}
-                              className="flex items-center"
-                            >
-                              <div className="flex items-center">
-                                <TeamMemberAvatar
-                                  src={technician.avatar}
-                                  name={technician.name}
-                                  size="sm"
-                                  className="mr-2"
-                                />
-                                {technician.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cliente</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="clientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome Completo do Cliente</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Endereço</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cidade</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="executedBy"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Executante</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="inspection" className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
-                <Clipboard className="h-5 w-5 text-primary" />
-                <h3 className="text-md font-medium">Levantamento Infraestrutural e Elétrico</h3>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="inspectionDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data da Vistoria</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="text" placeholder="DD/MM/AAAA" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="voltage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tensão do local (V)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="supplyType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de alimentação</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="monofasico">Monofásico</SelectItem>
-                          <SelectItem value="bifasico">Bifásico</SelectItem>
-                          <SelectItem value="trifasico">Trifásico</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="installationDistance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Distância até o ponto de instalação (m)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="installationObstacles"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Obstáculos no percurso</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-4 mt-4">
-                <h3 className="text-lg font-medium">Wallbox</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="wallboxBrand"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Marca do Wallbox</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="wallboxPower"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Potência do Wallbox (kW)</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="powerSupplyType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo de Alimentação</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="existingPanel"
-                  render={({ field }) => (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="existingPanel" 
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                      <Label htmlFor="existingPanel">Possui quadro elétrico existente</Label>
-                    </div>
-                  )}
-                />
-
-                {form.watch("existingPanel") && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6 pl-2 border-l-2 border-secondary/50">
-                    <FormField
-                      control={form.control}
-                      name="panelType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de quadro</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="panelAmps"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Corrente do quadro (A)</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="voltageBetweenPhases"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tensão entre fases (V)</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="voltageBetweenPhaseAndNeutral"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tensão fase/neutro (V)</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="hasThreePhase"
-                      render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="hasThreePhase" 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <Label htmlFor="hasThreePhase">Trifásico</Label>
-                        </div>
-                      )}
-                    />
+      
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="lg:w-2/3 space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-xl font-bold">{service.title}</CardTitle>
+                  <div className="flex items-center mt-1">
+                    <StatusBadge status={service.status} className="mr-2" />
+                    <span className="text-sm text-muted-foreground">ID: {service.id}</span>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-4 mt-4">
-                <h3 className="text-lg font-medium">Infraestrutura Necessária</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="needsInfrastructure"
-                  render={({ field }) => (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="needsInfrastructure" 
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                      <Label htmlFor="needsInfrastructure">Necessita de infraestrutura</Label>
-                    </div>
-                  )}
-                />
-                
-                {form.watch("needsInfrastructure") && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ml-6 pl-2 border-l-2 border-secondary/50">
-                    <FormField
-                      control={form.control}
-                      name="needsScaffolding"
-                      render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="needsScaffolding" 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <Label htmlFor="needsScaffolding">Necessita andaime</Label>
-                        </div>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="needsTechnicalHole"
-                      render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="needsTechnicalHole" 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <Label htmlFor="needsTechnicalHole">Necessita furo técnico</Label>
-                        </div>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="needsMasonry"
-                      render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="needsMasonry" 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <Label htmlFor="needsMasonry">Necessita alvenaria</Label>
-                        </div>
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <FormField
-                control={form.control}
-                name="groundingSystem"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sistema de aterramento</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o sistema" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="TN-S">TN-S</SelectItem>
-                        <SelectItem value="TN-C">TN-C</SelectItem>
-                        <SelectItem value="TN-C-S">TN-C-S</SelectItem>
-                        <SelectItem value="TT">TT</SelectItem>
-                        <SelectItem value="IT">IT</SelectItem>
-                        <SelectItem value="Inexistente">Inexistente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="artNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número da ART</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="technicalComments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações da vistoria</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} className="min-h-[100px]" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
-
-            <TabsContent value="installation" className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
-                <Zap className="h-5 w-5 text-primary" />
-                <h3 className="text-md font-medium">Detalhes da Instalação</h3>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="installationDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data da Instalação</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="text" placeholder="DD/MM/AAAA" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="modelNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marca e Modelo</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="serialNumberNew"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Série (novo)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="serialNumberOld"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Série (antigo)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="homologatedName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Homologado</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="chargerLoad"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Potência do carregador (kW)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-4 mt-4">
-                <h3 className="text-lg font-medium">Características da Instalação</h3>
-                
-                <div className="space-y-2">
-                  <FormField
-                    control={form.control}
-                    name="compliesWithNBR17019"
-                    render={({ field }) => (
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="compliesWithNBR17019" 
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <Label htmlFor="compliesWithNBR17019">Instalação existente atende NBR17019</Label>
-                      </div>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="homologatedInstallation"
-                    render={({ field }) => (
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="homologatedInstallation" 
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <Label htmlFor="homologatedInstallation">Foi realizada com homologado</Label>
-                      </div>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="requiredAdjustment"
-                    render={({ field }) => (
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="requiredAdjustment" 
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <Label htmlFor="requiredAdjustment">Foi necessário adequação</Label>
-                      </div>
-                    )}
-                  />
-
-                  {form.watch("requiredAdjustment") && (
-                    <FormField
-                      control={form.control}
-                      name="adjustmentDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Descreva a adequação realizada</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="validWarranty"
-                    render={({ field }) => (
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="validWarranty" 
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <Label htmlFor="validWarranty">Garantia Procede</Label>
-                      </div>
-                    )}
-                  />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="circuitBreakerEntry"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Disjuntor de entrada</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="chargerCircuitBreaker"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Disjuntor do carregador</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="cableGauge"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bitola do cabo</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="chargerStatus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status do carregador</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="photos" className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
-                <Image className="h-5 w-5 text-primary" />
-                <h3 className="text-md font-medium">Registros Fotográficos</h3>
-              </div>
-              
-              <PhotoUploader
-                photos={photoDetails}
-                onAddPhoto={handleAddPhoto}
-                onRemovePhoto={handleRemovePhoto}
-                onUpdateTitle={handleUpdatePhotoTitle}
-                className="mt-4"
-              />
-            </TabsContent>
-
-            <TabsContent value="signatures" className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 rounded-md bg-secondary/30 mb-4">
-                <FileText className="h-5 w-5 text-primary" />
-                <h3 className="text-md font-medium">Assinaturas Digitais</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <SignatureCanvas
-                  id="client-signature"
-                  label="Assinatura do Cliente"
-                  value={clientSignature}
-                  onChange={setClientSignature}
-                />
-                
-                <SignatureCanvas
-                  id="technician-signature"
-                  label="Assinatura do Técnico"
-                  value={technicianSignature}
-                  onChange={setTechnicianSignature}
-                />
-              </div>
-            </TabsContent>
-
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-50 shadow-lg">
-              <div className="container flex justify-between items-center max-w-5xl mx-auto">
-                <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
-                  Cancelar
-                </Button>
                 <div className="flex gap-2">
-                  {(form.watch("status") === "concluido" || service?.status === "concluido") && (
-                    <div className="flex gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={handleDownloadInspectionPDF}
-                      >
-                        <FileDown size={16} className="mr-2" />
-                        Baixar PDF Vistoria
-                      </Button>
-                      
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={handleDownloadInstallationPDF}
-                      >
-                        <FileDown size={16} className="mr-2" />
-                        Baixar PDF Instalação
-                      </Button>
-                      
-                      <Button 
-                        type="button" 
-                        variant="secondary"
-                        onClick={handleGeneratePDF}
-                      >
-                        <FileText size={16} className="mr-2" />
-                        Gerar PDF Atual
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="animate-spin mr-2">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
-                          </svg>
-                        </span>
-                        Salvando...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} className="mr-2" />
-                        Salvar
-                      </>
-                    )}
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/editar-demanda/${service.id}`)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
                   </Button>
                 </div>
               </div>
-            </div>
-          </form>
-        </Form>
-      </Tabs>
+            </CardHeader>
+            
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Data da demanda:</span>
+                    <span className="ml-2">{formatDate(service.date)}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-sm">
+                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Data de vencimento:</span>
+                    <span className="ml-2">{formatDate(service.dueDate)}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-sm">
+                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Cliente:</span>
+                    <span className="ml-2">{service.client || "Não especificado"}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Endereço:</span>
+                    <span className="ml-2">{service.address || "Não especificado"}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-sm">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Cidade:</span>
+                    <span className="ml-2">{service.city || "Não especificado"}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-sm">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">Local:</span>
+                    <span className="ml-2">{service.location || "Não especificado"}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-2">Notas:</h3>
+                <p className="text-sm">{service.notes || "Nenhuma nota adicional."}</p>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="pt-0 flex-col items-start">
+              <Separator className="my-4 w-full" />
+              
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <Button 
+                  className={`${service.status === "pendente" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                  disabled={service.status === "concluido"}
+                  onClick={() => handleStatusChange("concluido")}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Marcar como Concluído
+                </Button>
+                
+                <Button 
+                  variant={service.status === "pendente" ? "outline" : "default"}
+                  disabled={service.status === "pendente"}
+                  onClick={() => handleStatusChange("pendente")}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Marcar como Pendente
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  disabled={service.status === "cancelado"}
+                  onClick={() => handleStatusChange("cancelado")}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar Demanda
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="details">
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Detalhes Técnicos
+              </TabsTrigger>
+              <TabsTrigger value="photos">
+                <Camera className="h-4 w-4 mr-2" />
+                Fotos
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Dados do Relatório</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {service.reportData ? (
+                    <div className="space-y-6">
+                      {/* Render custom fields if any */}
+                      {service.reportData.customFields && service.reportData.customFields.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="font-semibold text-lg">Campos Personalizados</h3>
+                          <CustomFieldRenderer fields={service.reportData.customFields} />
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:w-auto"
+                          onClick={() => downloadInspectionPDF(service)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Gerar Relatório de Vistoria
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:w-auto"
+                          onClick={() => downloadInstallationPDF(service)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Gerar Relatório de Instalação
+                        </Button>
+                        
+                        <Button 
+                          className="w-full sm:w-auto"
+                          onClick={() => downloadPDF(service)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Gerar Relatório
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">Nenhum dado de relatório disponível.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="photos" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fotos do Serviço</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PhotoUploader
+                    photos={photoDetails}
+                    onAddPhoto={handleAddPhoto}
+                    onRemovePhoto={handleRemovePhoto}
+                    onUpdateTitle={handleUpdatePhotoTitle}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+        
+        <div className="lg:w-1/3 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Técnico Responsável</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <TeamMemberAvatar
+                  src={service.technician.avatar}
+                  name={service.technician.name}
+                  size="lg"
+                  className="mr-4"
+                />
+                <div>
+                  <h3 className="font-semibold">{service.technician.name}</h3>
+                  <p className="text-sm text-muted-foreground">{service.technician.role}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Assinaturas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="clientName" className="text-sm font-medium">
+                  Nome do Cliente
+                </label>
+                <input
+                  id="clientName"
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="Digite o nome do cliente"
+                />
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-2">Assinatura do Cliente</h3>
+                <SignatureCapture
+                  onChange={handleClientSignatureChange}
+                  initialValue={clientSignature}
+                  height={150}
+                />
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-2">Assinatura do Técnico</h3>
+                <SignatureCapture
+                  onChange={handleTechnicianSignatureChange}
+                  initialValue={technicianSignature}
+                  height={150}
+                />
+              </div>
+              
+              <Button className="w-full" onClick={saveSignatures}>
+                Salvar Assinaturas
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
