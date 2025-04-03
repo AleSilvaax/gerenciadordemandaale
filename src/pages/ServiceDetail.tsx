@@ -79,8 +79,8 @@ const ServiceDetail: React.FC = () => {
     
     try {
       const updatedService = { ...service, status: newStatus };
-      await updateService(updatedService);
-      setService(updatedService);
+      const result = await updateService(updatedService);
+      setService(result);
       
       toast.success("Status atualizado", {
         description: `O status da demanda foi alterado para ${
@@ -117,8 +117,8 @@ const ServiceDetail: React.FC = () => {
         reportData: updatedReportData
       };
       
-      await updateService(updatedService);
-      setService(updatedService);
+      const result = await updateService(updatedService);
+      setService(result);
       
       toast.success("Assinaturas salvas", {
         description: "As assinaturas foram salvas com sucesso."
@@ -165,8 +165,8 @@ const ServiceDetail: React.FC = () => {
             photoTitles: updatedPhotoTitles
           };
           
-          await updateService(updatedService);
-          setService(updatedService);
+          const result = await updateService(updatedService);
+          setService(result);
           
           toast.success("Foto adicionada", {
             description: "A foto foi adicionada com sucesso."
@@ -206,8 +206,8 @@ const ServiceDetail: React.FC = () => {
         photoTitles: updatedPhotoTitles
       };
       
-      await updateService(updatedService);
-      setService(updatedService);
+      const result = await updateService(updatedService);
+      setService(result);
       
       toast.success("Foto removida", {
         description: "A foto foi removida com sucesso."
@@ -236,8 +236,8 @@ const ServiceDetail: React.FC = () => {
         photoTitles: updatedPhotoTitles
       };
       
-      await updateService(updatedService);
-      setService(updatedService);
+      const result = await updateService(updatedService);
+      setService(result);
       
       toast.success("Título atualizado", {
         description: "O título da foto foi atualizado com sucesso."

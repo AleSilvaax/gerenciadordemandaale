@@ -16,7 +16,7 @@ interface CustomFieldRendererProps {
 
 export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
   fields,
-  onFieldChange = () => {}, // Add default empty function
+  onFieldChange,
   disabled = false
 }) => {
   if (!fields || fields.length === 0) {

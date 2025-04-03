@@ -7,9 +7,9 @@ import { toast } from "@/hooks/use-toast";
 
 interface SignatureCaptureProps {
   onSave?: (signatureUrl: string) => void;
-  onChange?: (signatureUrl: string) => void; // Add this for compatibility
+  onChange?: (dataUrl: string) => void; // Add onChange prop
   initialSignature?: string;
-  initialValue?: string; // Add this for compatibility
+  initialValue?: string; // Add initialValue prop
   label?: string;
   width?: number;
   height?: number;
