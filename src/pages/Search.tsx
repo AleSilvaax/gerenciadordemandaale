@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { getServices } from "@/services/api";
+import { getServices, ServiceStatus } from "@/services/api";
 import { Service } from "@/types/serviceTypes";
 import { useNavigate } from "react-router-dom";
 import { Search as SearchIcon, ArrowLeft, Filter, X } from "lucide-react";
@@ -14,7 +14,7 @@ const Search: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"all" | "pendente" | "concluido" | "cancelado">("all");
+  const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -109,7 +109,7 @@ const Search: React.FC = () => {
 
         <Select
           value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as "all" | "pendente" | "concluido" | "cancelado")}
+          onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
         >
           <SelectTrigger className="w-full">
             <div className="flex items-center">

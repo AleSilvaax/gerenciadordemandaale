@@ -1,13 +1,15 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Trash2, Edit2, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface SignatureCaptureProps {
-  onSave: (signatureUrl: string) => void;
+  onSave?: (signatureUrl: string) => void;
+  onChange?: (signatureUrl: string) => void; // Add this for compatibility
   initialSignature?: string;
+  initialValue?: string; // Add this for compatibility
   label?: string;
   width?: number;
   height?: number;
@@ -16,16 +18,21 @@ interface SignatureCaptureProps {
 
 export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   onSave,
+  onChange,
   initialSignature,
+  initialValue, // Handle both prop names
   label = "Assinatura",
   width = 400,
   height = 200,
   className = "",
 }) => {
+  // Use either initialValue or initialSignature
+  const initialSignatureValue = initialValue || initialSignature || '';
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(!!initialSignature);
-  const [signatureUrl, setSignatureUrl] = useState(initialSignature || '');
+  const [hasSignature, setHasSignature] = useState(!!initialSignatureValue);
+  const [signatureUrl, setSignatureUrl] = useState(initialSignatureValue);
 
   const getContext = () => {
     const canvas = canvasRef.current;
@@ -113,6 +120,11 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
     // Convert to transparent background PNG
     const url = canvas.toDataURL('image/png');
     setSignatureUrl(url);
+    
+    // Call onChange if provided
+    if (onChange) {
+      onChange(url);
+    }
   };
 
   const clearSignature = () => {
@@ -123,6 +135,11 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       setHasSignature(false);
       setSignatureUrl('');
+      
+      // Call onChange if provided
+      if (onChange) {
+        onChange('');
+      }
     }
   };
 
@@ -134,14 +151,21 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       return;
     }
     
-    onSave(signatureUrl);
+    if (onSave) {
+      onSave(signatureUrl);
+    }
+    
+    if (onChange) {
+      onChange(signatureUrl);
+    }
+    
     toast.success("Assinatura salva", {
       description: "A assinatura foi salva com sucesso."
     });
   };
 
   const loadInitialSignature = () => {
-    if (!initialSignature || !canvasRef.current) return;
+    if (!initialSignatureValue || !canvasRef.current) return;
     
     const ctx = getContext();
     if (!ctx) return;
@@ -151,14 +175,14 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
     };
-    img.src = initialSignature;
+    img.src = initialSignatureValue;
   };
 
-  React.useEffect(() => {
-    if (initialSignature) {
+  useEffect(() => {
+    if (initialSignatureValue) {
       loadInitialSignature();
     }
-  }, [initialSignature]);
+  }, [initialSignatureValue]);
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -200,7 +224,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
         </Button>
       </div>
       
-      {initialSignature && (
+      {initialSignatureValue && (
         <div className="mt-2 text-sm text-muted-foreground">
           Você já possui uma assinatura salva. Desenhe uma nova para substituí-la.
         </div>

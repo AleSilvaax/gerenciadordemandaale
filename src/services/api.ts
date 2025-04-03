@@ -2,6 +2,9 @@ import { Service } from "@/types/serviceTypes";
 import { ReportData, TeamMember } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
+// Define the ServiceStatus type that was missing
+export type ServiceStatus = "pendente" | "concluido" | "cancelado";
+
 // Helper function to handle localStorage storage limits
 const safelyStoreData = (key: string, data: any): boolean => {
   try {
@@ -121,7 +124,25 @@ export const getServices = (): Promise<Service[]> => {
   });
 };
 
-// Get a service by ID
+// Get a service by ID - needed for ServiceDetail page
+export const getService = (id: string): Promise<Service> => {
+  return new Promise((resolve, reject) => {
+    // Sync with localStorage before fetching
+    syncServicesWithLocalStorage();
+    
+    setTimeout(() => {
+      const service = localServices.find((s) => s.id === id);
+      if (service) {
+        // Return a deep copy to avoid reference issues
+        resolve(JSON.parse(JSON.stringify(service)));
+      } else {
+        reject(new Error(`Service with id ${id} not found`));
+      }
+    }, 300);
+  });
+};
+
+// Keep previous getServiceById for backward compatibility
 export const getServiceById = (id: string): Promise<Service | null> => {
   return new Promise((resolve) => {
     // Sync with localStorage before fetching
@@ -166,36 +187,31 @@ export const createService = (service: Partial<Service>): Promise<Service> => {
 };
 
 // Update an existing service
-export const updateService = (id: string, updates: Partial<Service>): Promise<boolean> => {
-  return new Promise((resolve) => {
+export const updateService = (updatedService: Service): Promise<Service> => {
+  return new Promise((resolve, reject) => {
     try {
       // Sync with localStorage before updating
       syncServicesWithLocalStorage();
       
-      const index = localServices.findIndex((s) => s.id === id);
+      const index = localServices.findIndex((s) => s.id === updatedService.id);
       
       if (index === -1) {
-        resolve(false);
+        reject(new Error(`Service with id ${updatedService.id} not found`));
         return;
       }
 
-      // Create a deep copy of the service to avoid reference issues
-      const updatedService = JSON.parse(JSON.stringify(localServices[index]));
-      
-      // Apply updates
-      Object.assign(updatedService, updates);
-      
       // Update in the array
-      localServices[index] = updatedService;
+      localServices[index] = JSON.parse(JSON.stringify(updatedService));
 
-      const success = safelyStoreData("services", localServices);
+      safelyStoreData("services", localServices);
       
       setTimeout(() => {
-        resolve(success);
+        // Return a deep copy to avoid reference issues
+        resolve(JSON.parse(JSON.stringify(localServices[index])));
       }, 300);
     } catch (error) {
       console.error("Error updating service:", error);
-      resolve(false);
+      reject(error);
     }
   });
 };

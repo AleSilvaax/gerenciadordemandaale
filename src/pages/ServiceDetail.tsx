@@ -422,7 +422,7 @@ const ServiceDetail: React.FC = () => {
                       {service.reportData.customFields && service.reportData.customFields.length > 0 && (
                         <div className="space-y-4">
                           <h3 className="font-semibold text-lg">Campos Personalizados</h3>
-                          <CustomFieldRenderer fields={service.reportData.customFields} />
+                          <CustomFieldRenderer fields={service.reportData.customFields} disabled={true} />
                         </div>
                       )}
                       
@@ -524,8 +524,8 @@ const ServiceDetail: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2">Assinatura do Cliente</h3>
                 <SignatureCapture
-                  onChange={handleClientSignatureChange}
-                  initialValue={clientSignature}
+                  onSave={handleClientSignatureChange}
+                  initialValue={clientSignature || ''}
                   height={150}
                 />
               </div>
@@ -533,8 +533,8 @@ const ServiceDetail: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2">Assinatura do Técnico</h3>
                 <SignatureCapture
-                  onChange={handleTechnicianSignatureChange}
-                  initialValue={technicianSignature}
+                  onSave={handleTechnicianSignatureChange}
+                  initialValue={technicianSignature || ''}
                   height={150}
                 />
               </div>

@@ -10,18 +10,25 @@ import { Card, CardContent } from '@/components/ui/card';
 
 interface CustomFieldRendererProps {
   fields: CustomField[];
-  onFieldChange: (fieldId: string, value: string | number | boolean) => void;
+  onFieldChange?: (fieldId: string, value: string | number | boolean) => void;
   disabled?: boolean;
 }
 
 export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
   fields,
-  onFieldChange,
+  onFieldChange = () => {}, // Add default empty function
   disabled = false
 }) => {
   if (!fields || fields.length === 0) {
     return <div className="text-sm text-muted-foreground">Nenhum campo personalizado configurado</div>;
   }
+
+  // Handle field changes only if the callback is provided
+  const handleFieldChange = (fieldId: string, value: string | number | boolean) => {
+    if (onFieldChange) {
+      onFieldChange(fieldId, value);
+    }
+  };
 
   return (
     <Card className="mt-4">
@@ -34,9 +41,10 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
               <Input
                 id={field.id}
                 value={field.value as string}
-                onChange={(e) => onFieldChange(field.id, e.target.value)}
+                onChange={(e) => handleFieldChange(field.id, e.target.value)}
                 disabled={disabled}
                 className="mt-1"
+                readOnly={!onFieldChange}
               />
             )}
             
@@ -45,9 +53,10 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
                 id={field.id}
                 type="number"
                 value={field.value as number}
-                onChange={(e) => onFieldChange(field.id, parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleFieldChange(field.id, parseFloat(e.target.value) || 0)}
                 disabled={disabled}
                 className="mt-1"
+                readOnly={!onFieldChange}
               />
             )}
             
@@ -55,10 +64,11 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
               <Textarea
                 id={field.id}
                 value={field.value as string}
-                onChange={(e) => onFieldChange(field.id, e.target.value)}
+                onChange={(e) => handleFieldChange(field.id, e.target.value)}
                 rows={3}
                 disabled={disabled}
                 className="mt-1"
+                readOnly={!onFieldChange}
               />
             )}
             
@@ -67,8 +77,8 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
                 <Switch
                   id={field.id}
                   checked={field.value as boolean}
-                  onCheckedChange={(checked) => onFieldChange(field.id, checked)}
-                  disabled={disabled}
+                  onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
+                  disabled={disabled || !onFieldChange}
                 />
                 <Label htmlFor={field.id} className="cursor-pointer">
                   {field.value ? 'Sim' : 'Não'}
@@ -79,8 +89,8 @@ export const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
             {field.type === 'select' && field.options && (
               <Select
                 value={field.value as string}
-                onValueChange={(value) => onFieldChange(field.id, value)}
-                disabled={disabled}
+                onValueChange={(value) => handleFieldChange(field.id, value)}
+                disabled={disabled || !onFieldChange}
               >
                 <SelectTrigger id={field.id} className="mt-1">
                   <SelectValue placeholder="Selecione uma opção" />
