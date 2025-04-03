@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Camera, Image, Edit2 } from "lucide-react";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface PhotoDetails {
   url: string;
@@ -122,11 +123,13 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           {photos.map((photo, index) => (
             <div key={index} className="relative border rounded-lg overflow-hidden group">
               <div className="relative">
-                <img 
-                  src={photo.url} 
-                  alt={photo.title} 
-                  className="w-full h-32 object-cover"
-                />
+                <AspectRatio ratio={4/3}>
+                  <img 
+                    src={photo.url} 
+                    alt={photo.title} 
+                    className="w-full h-full object-cover"
+                  />
+                </AspectRatio>
                 <button
                   type="button"
                   onClick={() => onRemovePhoto(index)}

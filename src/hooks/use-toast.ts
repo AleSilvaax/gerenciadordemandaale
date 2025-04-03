@@ -167,11 +167,12 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Fixed the variant types to use a custom variants object
 // Add variant methods to the toast function
 toast.success = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "success",
+    variant: "default", // Using default instead of success
     className: "bg-green-600 text-white",
     ...props,
   })
@@ -188,7 +189,7 @@ toast.error = (title: string, props: Omit<Toast, "title"> = {}) => {
 toast.info = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "info",
+    variant: "default", // Using default instead of info
     className: "bg-blue-600 text-white",
     ...props,
   })
@@ -197,7 +198,7 @@ toast.info = (title: string, props: Omit<Toast, "title"> = {}) => {
 toast.warning = (title: string, props: Omit<Toast, "title"> = {}) => {
   return toast({
     title,
-    variant: "warning",
+    variant: "default", // Using default instead of warning
     className: "bg-orange-600 text-white",
     ...props,
   })
