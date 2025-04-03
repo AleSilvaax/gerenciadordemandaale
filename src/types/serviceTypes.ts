@@ -58,14 +58,16 @@ export interface ReportData {
 export interface Service {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   status: "pendente" | "concluido" | "cancelado";
-  date: string;
-  dueDate: string;
-  priority: "low" | "medium" | "high";
-  client: string;
-  address: string;
-  type: string;
+  date?: string;
+  dueDate?: string;
+  priority?: "low" | "medium" | "high";
+  client?: string;
+  address?: string;
+  city?: string;
+  location: string;
+  type?: string;
   technician: TeamMember & {
     signature?: string;
   };
@@ -73,4 +75,8 @@ export interface Service {
   photos?: string[];
   photoTitles?: string[];
   reportData?: ReportData;
+  signatures?: {
+    client?: string;
+    technician?: string;
+  };
 }

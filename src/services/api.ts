@@ -1,4 +1,5 @@
-import { Service, ServiceStatus, ReportData, TeamMember } from "@/data/mockData";
+import { Service } from "@/types/serviceTypes";
+import { ReportData, TeamMember } from "@/data/mockData";
 import { v4 as uuidv4 } from "uuid";
 
 // Helper function to handle localStorage storage limits

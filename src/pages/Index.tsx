@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,10 +8,27 @@ import { getServices } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/ui-custom/StatCard";
+import { Service } from "@/types/serviceTypes";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
-  const services = getServices();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const data = await getServices();
+        setServices(data);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchServices();
+  }, []);
   
   // Calculate statistics
   const pendingServices = services.filter(
@@ -26,7 +43,11 @@ const Index: React.FC = () => {
   
   // Get 3 most recent services
   const recentServices = [...services]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 3);
 
   return (
@@ -73,9 +94,15 @@ const Index: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 gap-4">
-          {recentServices.map((service) => (
-            <ServiceCard key={service.id} service={service} />
-          ))}
+          {isLoading ? (
+            <p>Carregando demandas...</p>
+          ) : recentServices.length > 0 ? (
+            recentServices.map((service) => (
+              <ServiceCard key={service.id} service={service} />
+            ))
+          ) : (
+            <p>Nenhuma demanda encontrada.</p>
+          )}
         </div>
       </div>
       

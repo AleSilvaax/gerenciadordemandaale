@@ -6,6 +6,7 @@ interface StatCardProps {
   title: string;
   value: number | string;
   icon?: React.ReactNode;
+  description?: string;
   className?: string;
   valueClassName?: string;
   titleClassName?: string;
@@ -15,6 +16,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
   icon,
+  description,
   className,
   valueClassName,
   titleClassName,
@@ -27,6 +29,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       {icon && <div className="mb-2">{icon}</div>}
       <div className={cn("text-2xl font-bold", valueClassName)}>{value}</div>
       <div className={cn("text-xs text-muted-foreground mt-1", titleClassName)}>{title}</div>
+      {description && <div className="text-xs text-muted-foreground mt-1">{description}</div>}
     </div>
   );
 };

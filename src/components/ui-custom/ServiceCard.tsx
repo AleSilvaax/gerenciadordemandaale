@@ -12,30 +12,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import { Service } from "@/types/serviceTypes";
 
 interface ServiceCardProps {
-  id: string;
-  title: string;
-  status: "concluido" | "pendente" | "cancelado";
-  location: string;
-  technician: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
+  service: Service;
   className?: string;
   onDelete?: (id: string) => void;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({
-  id,
-  title,
-  status,
-  location,
-  technician,
+  service,
   className,
   onDelete,
 }) => {
+  const { id, title, status, location, technician } = service;
+  
   return (
     <div 
       className={cn(
