@@ -5,10 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
   requiredPermission?: string;
+  children?: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  requiredPermission 
+  requiredPermission,
+  children
 }) => {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
@@ -24,6 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // User is authenticated and has permission, render the children
-  return <Outlet />;
+  // User is authenticated and has permission
+  // If children are provided, render them, otherwise use Outlet for nested routes
+  return children ? <>{children}</> : <Outlet />;
 };
