@@ -3,6 +3,7 @@ import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Toaster } from "./components/ui/sonner";
+import React from "react"; // Ensuring React is imported
 
 // Pages
 import Index from "./pages/Index";
@@ -23,25 +24,27 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Index />} />
-            <Route path="demandas" element={<Demandas />} />
-            <Route path="demandas/:id" element={<ServiceDetail />} />
-            <Route path="demandas/:id/edit" element={<ServiceDetail editMode={true} />} />
-            <Route path="nova-demanda" element={<NewService />} />
-            <Route path="estatisticas" element={<Estatisticas />} />
-            <Route path="equipe" element={<Equipe />} />
-            <Route path="buscar" element={<Search />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </Router>
+    <>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<Index />} />
+              <Route path="demandas" element={<Demandas />} />
+              <Route path="demandas/:id" element={<ServiceDetail />} />
+              <Route path="demandas/:id/edit" element={<ServiceDetail editMode={true} />} />
+              <Route path="nova-demanda" element={<NewService />} />
+              <Route path="estatisticas" element={<Estatisticas />} />
+              <Route path="equipe" element={<Equipe />} />
+              <Route path="buscar" element={<Search />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </Router>
+      </QueryClientProvider>
       <Toaster />
-    </QueryClientProvider>
+    </>
   );
 }
 
