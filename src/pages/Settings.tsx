@@ -9,17 +9,32 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { UserCircle2, Bell, Moon, FileText, Shield, LogOut } from "lucide-react";
-import { TeamMember } from "@/types/serviceTypes";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 const Settings: React.FC = () => {
-  const [profile, setProfile] = useState<Partial<TeamMember>>({
-    id: "current-user",
-    name: "Usuário Atual",
-    email: "usuario@exemplo.com",
-    role: "Administrador",
-    avatar: "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png", 
+  const { user, logout } = useAuth();
+  
+  const [profile, setProfile] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    role: user?.role || '',
+    phone: user?.phone || '',
+    avatar: user?.avatar || '',
   });
+
+  // Update profile when user changes
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name,
+        email: user.email || '',
+        role: user.role || '',
+        phone: user.phone || '',
+        avatar: user.avatar,
+      });
+    }
+  }, [user]);
 
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<boolean>(true);
@@ -31,8 +46,7 @@ const Settings: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Simulação de logout
-    toast.info("Sessão encerrada");
+    logout();
   };
 
   return (
@@ -66,8 +80,8 @@ const Settings: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <TeamMemberAvatar 
-                  src={profile.avatar || ""} 
-                  name={profile.name || ""} 
+                  src={profile.avatar} 
+                  name={profile.name} 
                   size="lg" 
                   className="w-20 h-20"
                 />
@@ -95,7 +109,8 @@ const Settings: React.FC = () => {
                     <Input 
                       id="role" 
                       value={profile.role} 
-                      onChange={(e) => setProfile({...profile, role: e.target.value})}
+                      readOnly
+                      className="bg-muted/50"
                     />
                   </div>
                 </div>
@@ -115,7 +130,7 @@ const Settings: React.FC = () => {
                     <Input 
                       id="phone" 
                       type="tel" 
-                      value={profile.phone || ""} 
+                      value={profile.phone} 
                       onChange={(e) => setProfile({...profile, phone: e.target.value})}
                       placeholder="(XX) XXXXX-XXXX"
                     />

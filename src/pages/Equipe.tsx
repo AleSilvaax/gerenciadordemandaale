@@ -38,9 +38,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { TeamMember } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 type UserRole = "tecnico" | "administrador" | "gestor";
 
@@ -52,15 +53,20 @@ interface Permission {
 }
 
 const Equipe: React.FC = () => {
+  const { user } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isAddingMember, setIsAddingMember] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", role: "tecnico" as UserRole });
+  const [newMember, setNewMember] = useState({ 
+    name: "", 
+    role: "tecnico" as UserRole,
+    email: "",
+    phone: ""
+  });
   const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole | "todos">("todos");
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const { toast } = useToast();
 
   // Permissions list
   const [permissions, setPermissions] = useState<Permission[]>([
@@ -104,6 +110,17 @@ const Equipe: React.FC = () => {
     };
     
     loadTeamMembers();
+    
+    // Load permissions from localStorage
+    const storedPermissions = localStorage.getItem('permissions');
+    if (storedPermissions) {
+      try {
+        const parsedPermissions = JSON.parse(storedPermissions);
+        setPermissions(parsedPermissions);
+      } catch (error) {
+        console.error("Error loading permissions:", error);
+      }
+    }
   }, []);
 
   const filteredTeam = team.filter(member => 
@@ -111,34 +128,35 @@ const Equipe: React.FC = () => {
   );
 
   const handleAddMember = async () => {
-    if (newMember.name.trim()) {
+    if (newMember.name.trim() && newMember.email.trim()) {
       setIsSaving(true);
       
       try {
         const newTeamMember = await addTeamMember({
           name: newMember.name,
           role: newMember.role,
+          email: newMember.email,
+          phone: newMember.phone,
           avatar: ""
         });
         
         setTeam([...team, newTeamMember]);
-        setNewMember({ name: "", role: "tecnico" });
+        setNewMember({ name: "", role: "tecnico", email: "", phone: "" });
         setIsAddingMember(false);
         
-        toast({
-          title: "Membro adicionado",
-          description: `${newMember.name} foi adicionado à equipe como ${newMember.role}.`,
-        });
+        toast.success(`Membro adicionado`,
+          {
+            description: `${newMember.name} foi adicionado à equipe como ${newMember.role}.`
+          }
+        );
       } catch (error) {
         console.error("Error adding team member:", error);
-        toast({
-          title: "Erro",
-          description: "Falha ao adicionar novo membro.",
-          variant: "destructive",
-        });
+        toast.error("Falha ao adicionar novo membro.");
       } finally {
         setIsSaving(false);
       }
+    } else {
+      toast.error("Preencha nome e email do membro.");
     }
   };
 
@@ -157,18 +175,14 @@ const Equipe: React.FC = () => {
         const updatedTeam = team.filter(member => member.id !== memberToDelete);
         setTeam(updatedTeam);
         
-        toast({
-          title: "Membro removido",
-          description: `${deletedMember?.name} foi removido da equipe.`,
-          variant: "destructive",
-        });
+        toast.success(`Membro removido`,
+          {
+            description: `${deletedMember?.name} foi removido da equipe.`
+          }
+        );
       } catch (error) {
         console.error("Error deleting team member:", error);
-        toast({
-          title: "Erro",
-          description: "Falha ao remover membro da equipe.",
-          variant: "destructive",
-        });
+        toast.error("Falha ao remover membro da equipe.");
       } finally {
         setMemberToDelete(null);
         setIsSaving(false);
@@ -185,11 +199,7 @@ const Equipe: React.FC = () => {
       
       reader.onload = async (event) => {
         if (!event.target || !event.target.result) {
-          toast({
-            title: "Erro",
-            description: "Falha ao ler a imagem",
-            variant: "destructive",
-          });
+          toast.error("Falha ao ler a imagem");
           setUploadingAvatar(null);
           return;
         }
@@ -215,31 +225,20 @@ const Equipe: React.FC = () => {
             
             setTeam(updatedTeam);
             
-            toast({
-              title: "Foto atualizada",
-              description: "A foto do perfil foi atualizada com sucesso.",
-            });
+            toast.success("A foto do perfil foi atualizada com sucesso.");
           } else {
             throw new Error("Failed to update team member photo");
           }
         } catch (error) {
           console.error("Error updating team member photo:", error);
-          toast({
-            title: "Erro",
-            description: "Falha ao atualizar a foto do membro.",
-            variant: "destructive",
-          });
+          toast.error("Falha ao atualizar a foto do membro.");
         } finally {
           setUploadingAvatar(null);
         }
       };
       
       reader.onerror = () => {
-        toast({
-          title: "Erro",
-          description: "Erro ao ler o arquivo",
-          variant: "destructive",
-        });
+        toast.error("Erro ao ler o arquivo");
         setUploadingAvatar(null);
       };
       
@@ -272,20 +271,13 @@ const Equipe: React.FC = () => {
     setIsSaving(true);
     
     try {
-      // Save permissions to localStorage (in a real app, would save to a backend)
+      // Save permissions to localStorage
       localStorage.setItem("permissions", JSON.stringify(permissions));
       
-      toast({
-        title: "Permissões salvas",
-        description: "As permissões da equipe foram atualizadas com sucesso.",
-      });
+      toast.success("As permissões da equipe foram atualizadas com sucesso.");
     } catch (error) {
       console.error("Error saving permissions:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao salvar as permissões.",
-        variant: "destructive",
-      });
+      toast.error("Falha ao salvar as permissões.");
     } finally {
       setIsSaving(false);
     }
@@ -344,6 +336,27 @@ const Equipe: React.FC = () => {
                   placeholder="Nome do membro"
                   value={newMember.name}
                   onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone (opcional)</Label>
+                <Input
+                  id="phone"
+                  placeholder="(00) 00000-0000"
+                  value={newMember.phone}
+                  onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
                 />
               </div>
               

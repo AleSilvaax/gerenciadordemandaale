@@ -1,12 +1,39 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
-import { services as initialServices, teamMembers as initialTeamMembers } from '@/data/mockData';
-import { toast } from '@/hooks/use-toast';
+import { services as initialServices } from '@/data/mockData';
+import { toast } from 'sonner';
 
 // Simulate a local database
 let services = [...initialServices];
-let teamMembers = [...initialTeamMembers];
+
+// Initial team members with emails for login
+let teamMembers: TeamMember[] = [
+  {
+    id: '1',
+    name: 'João Silva',
+    email: 'joao@exemplo.com',
+    phone: '(11) 99999-1234',
+    role: 'tecnico',
+    avatar: '/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png',
+  },
+  {
+    id: '2',
+    name: 'Maria Oliveira',
+    email: 'maria@exemplo.com',
+    phone: '(11) 98888-5678',
+    role: 'administrador',
+    avatar: '/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png',
+  },
+  {
+    id: '3',
+    name: 'Carlos Rodrigues',
+    email: 'carlos@exemplo.com',
+    phone: '(11) 97777-9012',
+    role: 'gestor',
+    avatar: '/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png',
+  }
+];
 
 // Helper to find service by ID
 const findServiceById = (id: string): Service | undefined => {
@@ -99,7 +126,7 @@ export const addTeamMember = async (memberData: Omit<TeamMember, 'id'>): Promise
     ...memberData,
   };
   
-  teamMembers.push(newMember as any); // Type assertion
+  teamMembers.push(newMember);
   return newMember;
 };
 
@@ -116,7 +143,7 @@ export const updateTeamMember = async (id: string, updatedData: Partial<TeamMemb
   teamMembers[index] = {
     ...teamMembers[index],
     ...updatedData
-  } as any; // Type assertion
+  };
   
   return true;
 };
