@@ -10,9 +10,10 @@ import { formatDate } from "@/utils/formatters";
 
 interface ServiceCardProps {
   service: Service;
+  onDelete?: (id: string) => Promise<void>;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
