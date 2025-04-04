@@ -8,7 +8,7 @@ import { ArrowLeft, FileSpreadsheet, FilePenLine, Camera, MessageSquare, Star, C
 import { getService, updateService, addServiceMessage, addServiceFeedback } from '@/services/api';
 import { Service, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
-import { exportServicesToExcel, exportServicesToPDF, downloadPDF } from '@/utils/reportExport';
+import { exportServicesToExcel, exportServicesToPDF } from '@/utils/reportExport';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
