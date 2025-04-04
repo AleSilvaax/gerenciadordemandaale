@@ -8,12 +8,57 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { UserCircle2, Bell, Moon, FileText, Shield, LogOut } from "lucide-react";
+import { UserCircle2, Bell, Moon, FileText, Shield, LogOut, Upload, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { updateTeamMember } from "@/services/api";
 import { toast } from "sonner";
 
+// Custom hook for theme management
+const useTheme = () => {
+  const [darkMode, setDarkMode] = useState<boolean>(
+    window.matchMedia('(prefers-color-scheme: dark)').matches || 
+    localStorage.getItem('theme') === 'dark'
+  );
+  
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    if (darkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+  
+  return { darkMode, setDarkMode };
+};
+
+// Custom hook for managing user preferences
+const useUserPreferences = () => {
+  const [notifications, setNotifications] = useState<boolean>(
+    localStorage.getItem('notifications') !== 'false'
+  );
+  const [emailNotifications, setEmailNotifications] = useState<boolean>(
+    localStorage.getItem('emailNotifications') === 'true'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('notifications', notifications.toString());
+  }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('emailNotifications', emailNotifications.toString());
+  }, [emailNotifications]);
+  
+  return { notifications, setNotifications, emailNotifications, setEmailNotifications };
+};
+
 const Settings: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserInfo } = useAuth();
+  const { darkMode, setDarkMode } = useTheme();
+  const { notifications, setNotifications, emailNotifications, setEmailNotifications } = useUserPreferences();
   
   const [profile, setProfile] = useState({
     name: user?.name || '',
@@ -22,6 +67,12 @@ const Settings: React.FC = () => {
     phone: user?.phone || '',
     avatar: user?.avatar || '',
   });
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   // Update profile when user changes
   useEffect(() => {
@@ -36,17 +87,103 @@ const Settings: React.FC = () => {
     }
   }, [user]);
 
-  const [darkMode, setDarkMode] = useState<boolean>(true);
-  const [notifications, setNotifications] = useState<boolean>(true);
-  const [emailNotifications, setEmailNotifications] = useState<boolean>(false);
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+    
+    try {
+      setIsUpdating(true);
+      await updateTeamMember(user.id, {
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+      });
+      
+      // Update local auth context
+      updateUserInfo({
+        ...user,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+      });
+      
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Falha ao atualizar o perfil");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-  const handleProfileUpdate = () => {
-    // Simulação de atualização de perfil
-    toast.success("Perfil atualizado com sucesso!");
+  const handlePasswordUpdate = async () => {
+    // Reset error
+    setPasswordError('');
+    
+    // Validate passwords
+    if (!currentPassword) {
+      setPasswordError('Senha atual é obrigatória');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas não conferem');
+      return;
+    }
+    
+    try {
+      setIsUpdating(true);
+      
+      // In a real app, this would call an API to update the password
+      // For this demo, we'll just simulate a successful password change
+      setTimeout(() => {
+        toast.success("Senha atualizada com sucesso!");
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setIsUpdating(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Error updating password:", error);
+      toast.error("Falha ao atualizar a senha");
+      setIsUpdating(false);
+    }
   };
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // In a real app, this would upload the file to a server
+      // For this demo, we'll just simulate a successful upload
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProfile({
+          ...profile,
+          avatar: result
+        });
+        
+        if (user) {
+          // Update local auth context
+          updateUserInfo({
+            ...user,
+            avatar: result
+          });
+        }
+        
+        toast.success("Foto de perfil atualizada");
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -86,7 +223,15 @@ const Settings: React.FC = () => {
                   className="w-20 h-20"
                 />
                 <div className="flex-1">
-                  <Button variant="outline" size="sm">
+                  <input
+                    type="file"
+                    id="avatar-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                  <Button variant="outline" size="sm" onClick={() => document.getElementById('avatar-upload')?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
                     Alterar foto
                   </Button>
                 </div>
@@ -108,7 +253,10 @@ const Settings: React.FC = () => {
                     <Label htmlFor="role">Cargo</Label>
                     <Input 
                       id="role" 
-                      value={profile.role} 
+                      value={profile.role === "tecnico" ? "Técnico" : 
+                             profile.role === "administrador" ? "Administrador" : 
+                             profile.role === "gestor" ? "Gestor" : 
+                             profile.role || ""} 
                       readOnly
                       className="bg-muted/50"
                     />
@@ -139,7 +287,13 @@ const Settings: React.FC = () => {
               </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button onClick={handleProfileUpdate}>Salvar alterações</Button>
+              <Button 
+                onClick={handleProfileUpdate} 
+                disabled={isUpdating}
+              >
+                {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar alterações
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -210,18 +364,43 @@ const Settings: React.FC = () => {
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="current-password">Senha atual</Label>
-                  <Input id="current-password" type="password" />
+                  <Input 
+                    id="current-password" 
+                    type="password" 
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-password">Nova senha</Label>
-                    <Input id="new-password" type="password" />
+                    <Input 
+                      id="new-password" 
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-                    <Input id="confirm-password" type="password" />
+                    <Input 
+                      id="confirm-password" 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
                   </div>
                 </div>
+                {passwordError && (
+                  <p className="text-sm text-red-500">{passwordError}</p>
+                )}
+                <Button 
+                  onClick={handlePasswordUpdate}
+                  disabled={isUpdating || !currentPassword || !newPassword || !confirmPassword}
+                >
+                  {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Atualizar senha
+                </Button>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">

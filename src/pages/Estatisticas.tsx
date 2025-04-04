@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, BellDot, BarChart2, Calendar, Filter, CalendarDays, MapPin, Download } from "lucide-react";
+import { ArrowLeft, BellDot, Filter, Download, Calendar, Clock, BarChart2, CalendarDays, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Select,
   SelectContent,
@@ -10,158 +12,179 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartLine } from "@/components/ui-custom/ChartLine";
 import { ChartCircle } from "@/components/ui-custom/ChartCircle";
-import { getServices } from "@/services/api";
-import { Service } from "@/types/serviceTypes";
-
-interface ChartData {
-  name: string;
-  value: number;
-}
+import { getServices, getTeamMembers } from "@/services/api";
+import { Service, TeamMember } from "@/types/serviceTypes";
+import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 
 const Estatisticas: React.FC = () => {
-  const [activeMonth, setActiveMonth] = useState("Mai");
-  const [timeFilter, setTimeFilter] = useState("monthly");
-  const [chartType, setChartType] = useState("time");
+  const [timeFilter, setTimeFilter] = useState("30days");
   const [services, setServices] = useState<Service[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [monthlyData, setMonthlyData] = useState<ChartData[]>([]);
-  const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
-  const [serviceTypeData, setServiceTypeData] = useState<ChartData[]>([]);
-  const [regionData, setRegionData] = useState<ChartData[]>([]);
-  const [teamPerformance, setTeamPerformance] = useState<{name: string; color: string; services: number}[]>([]);
+  const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
+  const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
+  const isMobile = useIsMobile();
   
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getServices();
-        setServices(data);
+        const [servicesData, teamData] = await Promise.all([
+          getServices(),
+          getTeamMembers()
+        ]);
         
-        // Generate Chart Data
-        generateChartData(data);
+        setServices(servicesData);
+        setTeamMembers(teamData);
       } catch (error) {
-        console.error("Error fetching services:", error);
+        console.error("Error fetching data:", error);
+        toast("Erro ao carregar dados estatísticos");
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchServices();
+    fetchData();
   }, []);
   
-  const generateChartData = (services: Service[]) => {
-    // Generate monthly data
-    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    const monthCounts = Array(12).fill(0);
+  useEffect(() => {
+    // Apply filters
+    let result = [...services];
     
-    // Generate weekly data
-    const days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-    const dayCounts = Array(7).fill(0);
+    // Filter by time period
+    if (timeFilter !== "all") {
+      const cutoffDate = getDateFromFilter(timeFilter);
+      result = result.filter(service => {
+        return service.date && new Date(service.date) >= cutoffDate;
+      });
+    }
     
-    // Service type counters
-    const serviceTypes = new Map<string, number>();
+    // Filter by technician
+    if (selectedTechnician !== "all") {
+      result = result.filter(service => service.technician.id === selectedTechnician);
+    }
     
-    // Region counters
-    const regions = new Map<string, number>();
+    // Filter by service type
+    if (selectedServiceType !== "all") {
+      result = result.filter(service => service.serviceType === selectedServiceType);
+    }
     
-    services.forEach(service => {
-      if (service.date) {
-        const date = new Date(service.date);
-        // Count by month
-        monthCounts[date.getMonth()]++;
-        
-        // Count by day of week
-        dayCounts[date.getDay()]++;
-      }
-      
-      // Count by service type
-      const type = service.serviceType || "outros";
-      serviceTypes.set(type, (serviceTypes.get(type) || 0) + 1);
-      
-      // Count by region/city
-      const region = service.city || service.location || "outros";
-      regions.set(region, (regions.get(region) || 0) + 1);
-    });
+    setFilteredServices(result);
+  }, [services, timeFilter, selectedTechnician, selectedServiceType]);
+  
+  const getDateFromFilter = (filter: string): Date => {
+    const today = new Date();
     
-    // Create chart data arrays
-    const monthlyChartData = months.map((name, index) => ({
-      name,
-      value: monthCounts[index]
-    }));
-    
-    const weeklyChartData = days.map((name, index) => ({
-      name,
-      value: dayCounts[index]
-    }));
-    
-    const serviceTypeChartData = Array.from(serviceTypes.entries()).map(([name, value]) => ({
-      name: name === "inspection" ? "Vistoria" : 
-            name === "installation" ? "Instalação" : 
-            name === "outros" ? "Outros" : name,
-      value
-    }));
-    
-    const regionChartData = Array.from(regions.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6) // Take top 6 regions
-      .map(([name, value]) => ({
-        name,
-        value
-      }));
-    
-    // Create team performance data
-    const colors = ["#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
-    
-    const technicianPerformance = 
-      services.reduce((performance, service) => {
-        const techId = service.technician.id;
-        const techName = service.technician.name;
-        
-        if (!performance[techId]) {
-          performance[techId] = {
-            id: techId,
-            name: techName,
-            services: 0,
-            color: ""
-          };
-        }
-        
-        performance[techId].services++;
-        return performance;
-      }, {} as Record<string, {id: string; name: string; services: number; color: string}>);
-    
-    const teamData = Object.values(technicianPerformance)
-      .sort((a, b) => b.services - a.services)
-      .map((tech, index) => ({
-        ...tech,
-        color: colors[index % colors.length]
-      }));
-    
-    setMonthlyData(monthlyChartData);
-    setWeeklyData(weeklyChartData);
-    setServiceTypeData(serviceTypeChartData);
-    setRegionData(regionChartData);
-    setTeamPerformance(teamData);
+    switch (filter) {
+      case "7days":
+        return subDays(today, 7);
+      case "30days":
+        return subDays(today, 30);
+      case "90days":
+        return subDays(today, 90);
+      case "year":
+        return new Date(today.getFullYear(), 0, 1); // First day of current year
+      default:
+        return new Date(0); // Beginning of time
+    }
   };
   
-  // Get the appropriate data based on the selected filters
-  const getChartData = () => {
-    if (chartType === "time") {
-      return timeFilter === "monthly" ? monthlyData : weeklyData;
-    } else if (chartType === "type") {
-      return serviceTypeData;
-    } else if (chartType === "region") {
-      return regionData;
+  // Calculate statistics
+  const calculateStatistics = () => {
+    // Total services statistics
+    const totalServices = filteredServices.length;
+    const completedServices = filteredServices.filter(s => s.status === "concluido").length;
+    const pendingServices = filteredServices.filter(s => s.status === "pendente").length;
+    const cancelledServices = filteredServices.filter(s => s.status === "cancelado").length;
+    
+    // Completion rate
+    const completionRate = totalServices > 0 
+      ? Math.round((completedServices / totalServices) * 100) 
+      : 0;
+    
+    // Overdue services
+    const overdue = filteredServices.filter(service => {
+      if (service.status !== "pendente" || !service.dueDate) return false;
+      return new Date(service.dueDate) < new Date();
+    }).length;
+    
+    // Average completion time (in days)
+    const completedWithDates = filteredServices.filter(s => 
+      s.status === "concluido" && s.date
+    );
+    
+    let avgCompletionTime = 0;
+    if (completedWithDates.length > 0) {
+      const totalDays = completedWithDates.reduce((sum, service) => {
+        const startDate = new Date(service.date!);
+        // If there's a last updated date use that, otherwise use current date
+        const endDate = new Date(); // In a real app this would be the completion date
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return sum + diffDays;
+      }, 0);
+      
+      avgCompletionTime = Math.round(totalDays / completedWithDates.length);
     }
-    return monthlyData;
+    
+    // Priority distribution
+    const priorities = {
+      baixa: filteredServices.filter(s => s.priority === "baixa").length,
+      media: filteredServices.filter(s => s.priority === "media").length,
+      alta: filteredServices.filter(s => s.priority === "alta").length,
+      urgente: filteredServices.filter(s => s.priority === "urgente").length,
+    };
+    
+    return {
+      totalServices,
+      completedServices,
+      pendingServices,
+      cancelledServices,
+      completionRate,
+      overdue,
+      avgCompletionTime,
+      priorities
+    };
   };
+  
+  const stats = calculateStatistics();
   
   // Handle report export
   const handleExportReport = (format: 'pdf' | 'excel') => {
     const message = format === 'pdf' ? 'Exportando estatísticas em PDF...' : 'Exportando estatísticas em Excel...';
-    alert(message); // Replace with actual export functionality
+    toast(message);
+    // Implementation would connect to actual export functionality
   };
+  
+  // Calculate technician productivity
+  const calculateTechnicianProductivity = () => {
+    return teamMembers
+      .filter(member => member.role === "tecnico")
+      .map(tech => {
+        const techServices = services.filter(s => s.technician.id === tech.id);
+        const completed = techServices.filter(s => s.status === "concluido").length;
+        const total = techServices.length;
+        const productivity = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        return {
+          ...tech,
+          completed,
+          total,
+          productivity
+        };
+      })
+      .sort((a, b) => b.productivity - a.productivity);
+  };
+  
+  const technicianProductivity = calculateTechnicianProductivity();
   
   if (isLoading) {
     return (
@@ -205,188 +228,245 @@ const Estatisticas: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none pb-2">
-        <Button 
-          variant={chartType === "time" ? "default" : "outline"}
-          size="sm" 
-          className="rounded-full flex-shrink-0"
-          onClick={() => setChartType("time")}
-        >
-          <Calendar size={16} className="mr-2" />
-          Tempo
-        </Button>
-        <Button 
-          variant={chartType === "type" ? "default" : "outline"}
-          size="sm" 
-          className="rounded-full flex-shrink-0"
-          onClick={() => setChartType("type")}
-        >
-          <BarChart2 size={16} className="mr-2" />
-          Tipo
-        </Button>
-        <Button 
-          variant={chartType === "region" ? "default" : "outline"}
-          size="sm" 
-          className="rounded-full flex-shrink-0"
-          onClick={() => setChartType("region")}
-        >
-          <MapPin size={16} className="mr-2" />
-          Região
-        </Button>
-      </div>
-      
-      {chartType === "time" && (
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm text-muted-foreground">Período</h3>
-          <Select
-            value={timeFilter}
-            onValueChange={(value) => setTimeFilter(value)}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="monthly">Mensal</SelectItem>
-              <SelectItem value="weekly">Semanal</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      
-      <div className="mt-2">
-        <h2 className="text-lg text-muted-foreground">
-          {chartType === "time" 
-            ? `Atendimento de chamados ${timeFilter === "monthly" ? "mensais" : "semanais"}`
-            : chartType === "type" 
-              ? "Distribuição por tipo de serviço"
-              : "Distribuição por região"}
-        </h2>
-        <div className="text-2xl font-bold">
-          {chartType === "time" 
-            ? `${services.length} demandas`
-            : chartType === "type"
-              ? "Serviços realizados"
-              : "Distribuição geográfica"}
+      {/* Filter section */}
+      <div className="mb-6 bg-card rounded-lg border border-white/10 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium flex items-center">
+            <Filter className="h-4 w-4 mr-2" />
+            Filtros
+          </h3>
         </div>
         
-        <ChartLine data={getChartData()} activeMonth={activeMonth} />
-        
-        {chartType === "time" && timeFilter === "monthly" && (
-          <div className="flex justify-between mt-2 overflow-x-auto scrollbar-none pb-1">
-            {monthlyData.map(month => (
-              <button
-                key={month.name}
-                className={`px-2 py-1 rounded-full text-sm transition-all ${
-                  activeMonth === month.name 
-                    ? "bg-primary text-white" 
-                    : "text-muted-foreground"
-                }`}
-                onClick={() => setActiveMonth(month.name)}
-              >
-                {month.name}
-              </button>
-            ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <Select
+              value={timeFilter}
+              onValueChange={setTimeFilter}
+            >
+              <SelectTrigger className="w-full">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7days">Últimos 7 dias</SelectItem>
+                <SelectItem value="30days">Últimos 30 dias</SelectItem>
+                <SelectItem value="90days">Últimos 90 dias</SelectItem>
+                <SelectItem value="year">Este ano</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        )}
-        
-        {chartType === "time" && timeFilter === "weekly" && (
-          <div className="flex justify-between mt-2">
-            {weeklyData.map(day => (
-              <button
-                key={day.name}
-                className={`px-2 py-1 rounded-full text-sm text-muted-foreground`}
-              >
-                {day.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      <div className="mt-8">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg">Acompanhamento da equipe</h2>
-          <button className="text-sm text-primary">Mais detalhes</button>
-        </div>
-        
-        <Tabs defaultValue="performance" className="mt-4">
-          <TabsList className="grid grid-cols-2 mb-4">
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="productivity">Produtividade</TabsTrigger>
-          </TabsList>
           
-          <TabsContent value="performance">
-            <div className="flex justify-center mt-4">
-              <ChartCircle 
-                value={services.filter(s => s.status === "concluido").length / Math.max(services.length, 1) * 100} 
-                size={160} 
-              />
+          <div>
+            <Select
+              value={selectedTechnician}
+              onValueChange={setSelectedTechnician}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Técnico" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os técnicos</SelectItem>
+                {teamMembers
+                  .filter(member => member.role === "tecnico")
+                  .map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Select
+              value={selectedServiceType}
+              onValueChange={setSelectedServiceType}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Tipo de serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="inspection">Vistoria</SelectItem>
+                <SelectItem value="installation">Instalação</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold">{stats.totalServices}</div>
+            <p className="text-xs text-muted-foreground">Total de Demandas</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-green-500">{stats.completedServices}</div>
+            <p className="text-xs text-muted-foreground">Concluídas</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-yellow-500">{stats.pendingServices}</div>
+            <p className="text-xs text-muted-foreground">Pendentes</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
+            <p className="text-xs text-muted-foreground">Atrasadas</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Charts */}
+      <StatisticsCards 
+        services={filteredServices} 
+        teamMembers={teamMembers}
+        className="mb-6" 
+      />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Completion Rate */}
+        <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Taxa de Conclusão</h3>
+          <div className="flex flex-col items-center">
+            <ChartCircle 
+              value={stats.completionRate} 
+              size={160} 
+            />
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">Tempo médio de conclusão</p>
+              <div className="text-2xl font-bold">{stats.avgCompletionTime} dias</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Priority Distribution */}
+        <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm">
+          <h3 className="text-lg font-medium mb-4">Distribuição por Prioridade</h3>
+          <div className="space-y-4">
+            {/* Baixa priority */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                  Baixa
+                </span>
+                <span>{stats.priorities.baixa}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full" 
+                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.baixa / stats.totalServices * 100) : 0}%` }}
+                ></div>
+              </div>
             </div>
             
-            <div className="mt-6 space-y-2">
-              {teamPerformance.map((member, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-2" 
-                      style={{ backgroundColor: member.color }}
-                    />
-                    <span>{member.name}</span>
+            {/* Media priority */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
+                  Média
+                </span>
+                <span>{stats.priorities.media}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-yellow-500 h-2 rounded-full" 
+                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.media / stats.totalServices * 100) : 0}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* Alta priority */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>
+                  Alta
+                </span>
+                <span>{stats.priorities.alta}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-orange-500 h-2 rounded-full" 
+                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.alta / stats.totalServices * 100) : 0}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* Urgente priority */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                  Urgente
+                </span>
+                <span>{stats.priorities.urgente}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-red-500 h-2 rounded-full" 
+                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.urgente / stats.totalServices * 100) : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg">Desempenho da Equipe</h2>
+          <Link to="/equipe" className="text-sm text-primary">Ver equipe completa</Link>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Produtividade por Técnico</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {technicianProductivity.map(tech => (
+                <div key={tech.id} className="flex items-center">
+                  <TeamMemberAvatar
+                    src={tech.avatar}
+                    name={tech.name}
+                    size="sm"
+                    className="mr-3"
+                  />
+                  <div className="flex-grow">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{tech.name}</span>
+                      <span>{tech.productivity}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full" 
+                        style={{ width: `${tech.productivity}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>{tech.completed} concluídos</span>
+                      <span>{tech.total} total</span>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium">
-                    {member.services} serviços
-                  </span>
                 </div>
               ))}
             </div>
-          </TabsContent>
-          
-          <TabsContent value="productivity">
-            <div className="grid grid-cols-2 gap-4">
-              {teamPerformance.map((member, index) => {
-                // Calculate productivity percentage based on completed services vs assigned
-                const memberServices = services.filter(s => s.technician.name === member.name);
-                const completedServices = memberServices.filter(s => s.status === "concluido");
-                const productivityPercentage = memberServices.length > 0 
-                  ? (completedServices.length / memberServices.length) * 100 
-                  : 0;
-                
-                // Calculate average completion time in days
-                const completionTimes = completedServices
-                  .filter(s => s.date) // Only services with date
-                  .map(s => {
-                    const startDate = new Date(s.date!);
-                    const endDate = new Date(); // Assume completed today if no completion date
-                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
-                  });
-                
-                const avgCompletionTime = completionTimes.length > 0
-                  ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
-                  : 0;
-                
-                return (
-                  <div 
-                    key={index} 
-                    className="p-4 rounded-lg glass-card flex flex-col items-center"
-                  >
-                    <div 
-                      className="w-full h-1 mb-4 rounded-full"
-                      style={{ backgroundColor: member.color }}
-                    />
-                    <h3 className="text-sm font-medium">{member.name}</h3>
-                    <div className="text-xl font-bold mt-2">
-                      {Math.round(productivityPercentage)}%
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {Math.round(avgCompletionTime)} dias de média
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </TabsContent>
-        </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

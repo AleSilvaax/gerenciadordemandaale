@@ -1,59 +1,68 @@
 
 import React, { useState } from 'react';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LogIn, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const registerSchema = z.object({
-  name: z.string().min(3, { message: 'Nome deve ter no mínimo 3 caracteres' }),
-  email: z.string().email({ message: 'E-mail inválido' }),
-  password: z.string().min(6, { message: 'Senha deve ter no mínimo 6 caracteres' }),
-  confirmPassword: z.string().min(6, { message: 'Confirme sua senha' }),
-  role: z.enum(['tecnico', 'administrador', 'gestor'], {
-    required_error: 'Por favor selecione um cargo',
-  })
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não conferem",
-  path: ["confirmPassword"],
-});
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Register: React.FC = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('tecnico');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, register } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { register, user } = useAuth();
   const navigate = useNavigate();
-
-  const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'tecnico',
-    },
-  });
 
   // If user is already logged in, redirect to home
   if (user) {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = async (values: RegisterFormValues) => {
+  const validateForm = () => {
+    setError(null);
+    
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Todos os campos são obrigatórios');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return false;
+    }
+    
+    if (password !== confirmPassword) {
+      setError('As senhas não conferem');
+      return false;
+    }
+    
+    if (!email.includes('@')) {
+      setError('Email inválido');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      const success = await register(values.name, values.email, values.password, values.role);
+      const success = await register(name, email, password, role);
       if (success) {
         navigate('/');
       }
@@ -72,119 +81,111 @@ const Register: React.FC = () => {
         
         <Card className="border-white/10">
           <CardHeader>
-            <CardTitle>Cadastro no sistema</CardTitle>
+            <CardTitle>Criar conta</CardTitle>
             <CardDescription>
-              Preencha os dados abaixo para criar sua conta
+              Preencha os dados abaixo para se cadastrar no sistema
             </CardDescription>
           </CardHeader>
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome completo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Seu nome completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+            
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo</Label>
+                <Input
+                  id="name"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="seu.email@exemplo.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Senha</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirme sua senha</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cargo</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione seu cargo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="tecnico">Técnico</SelectItem>
-                          <SelectItem value="administrador">Administrador</SelectItem>
-                          <SelectItem value="gestor">Gestor</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
+              </div>
               
-              <CardFooter className="flex flex-col space-y-3">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Cadastrando...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus size={16} className="mr-2" />
-                      Criar conta
-                    </>
-                  )}
-                </Button>
-                
-                <div className="text-sm text-center mt-4">
-                  Já possui uma conta?{" "}
-                  <Link to="/login" className="text-primary hover:underline">
-                    Entrar
-                  </Link>
-                </div>
-              </CardFooter>
-            </form>
-          </Form>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu.email@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirmar senha</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="role">Função</Label>
+                <Select
+                  value={role}
+                  onValueChange={setRole}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Selecione sua função" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tecnico">Técnico</SelectItem>
+                    <SelectItem value="administrador">Administrador</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-3">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} className="mr-2" />
+                    Criar conta
+                  </>
+                )}
+              </Button>
+              
+              <div className="text-sm text-center mt-4">
+                Já possui uma conta?{" "}
+                <Link to="/login" className="text-primary hover:underline">
+                  <LogIn className="inline-block h-3 w-3 mr-1" />
+                  Entrar
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
         </Card>
       </div>
     </div>

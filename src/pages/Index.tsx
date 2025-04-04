@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, BarChart2, Users, Download } from "lucide-react";
+import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
 import { getServices } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
@@ -13,6 +13,8 @@ import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { getTeamMembers } from "@/services/api";
 import { TeamMember } from "@/types/serviceTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ const Index: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -30,6 +33,7 @@ const Index: React.FC = () => {
         setTeamMembers(teamData);
       } catch (error) {
         console.error("Error fetching data:", error);
+        toast.error("Erro ao carregar dados");
       } finally {
         setIsLoading(false);
       }
@@ -49,6 +53,12 @@ const Index: React.FC = () => {
   
   const technicians = [...new Set(services.map((service) => service.technician.id))].length;
   
+  // Get overdue services
+  const overdueServices = services.filter(service => {
+    if (service.status !== "pendente" || !service.dueDate) return false;
+    return new Date(service.dueDate) < new Date();
+  }).length;
+  
   // Get 3 most recent services
   const recentServices = [...services]
     .sort((a, b) => {
@@ -58,20 +68,45 @@ const Index: React.FC = () => {
     })
     .slice(0, 3);
 
+  // Get technician-specific services if user is a technician
+  const technicianServices = user && user.role === 'tecnico'
+    ? services.filter(service => service.technician.id === user.id)
+    : [];
+  
+  const upcomingDueServices = user && user.role === 'tecnico'
+    ? technicianServices
+        .filter(service => 
+          service.status === 'pendente' && 
+          service.dueDate && 
+          new Date(service.dueDate) >= new Date() &&
+          new Date(service.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Next 7 days
+        )
+        .sort((a, b) => {
+          const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+          const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+          return dateA - dateB;
+        })
+    : [];
+
   // Handle report export (placeholder)
   const handleExportReport = (format: 'pdf' | 'excel') => {
     const message = format === 'pdf' ? 'Exportando relatório em PDF...' : 'Exportando relatório em Excel...';
-    alert(message); // Replace with actual export functionality
+    toast(message);
   };
 
   return (
     <div className="container py-4 space-y-6 pb-24">
       <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        <h1 className="text-3xl font-bold text-foreground">
+          {user ? `Olá, ${user.name.split(' ')[0]}!` : 'Dashboard'}
+        </h1>
+        
+        {(user?.role === 'administrador' || user?.role === 'gestor') && (
+          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        )}
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="Demandas Pendentes"
           value={pendingServices}
@@ -95,31 +130,65 @@ const Index: React.FC = () => {
           description="Total de técnicos ativos"
           className="border-blue-600/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20"
         />
+        
+        <StatCard
+          title="Demandas Atrasadas"
+          value={overdueServices}
+          icon={<AlertTriangle className="h-5 w-5" />}
+          description="Demandas com prazo vencido"
+          className="border-red-600/20 bg-gradient-to-br from-red-500/20 to-red-600/20"
+        />
       </div>
       
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => handleExportReport('excel')}>
-            <Download className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExportReport('pdf')}>
-            <Download className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
+      {(user?.role === 'administrador' || user?.role === 'gestor') && (
+        <>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm" onClick={() => handleExportReport('excel')}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleExportReport('pdf')}>
+                <Download className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+            </div>
+          </div>
+          
+          <Separator className="my-6" />
+        </>
+      )}
+      
+      {/* Technician upcoming deadlines section */}
+      {user?.role === 'tecnico' && upcomingDueServices.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold flex items-center">
+              <Calendar className="mr-2 h-5 w-5 text-primary" />
+              Prazos Próximos
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcomingDueServices.map((service) => (
+              <ServiceCard key={service.id} service={service} compact={true} />
+            ))}
+          </div>
+          
+          <Separator className="my-6" />
         </div>
-      </div>
-      
-      <Separator className="my-6" />
+      )}
 
       {/* Equipe section */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Equipe</h2>
-          <Button variant="outline" onClick={() => navigate("/equipe")}>
-            Ver todos
-          </Button>
+          {(user?.role === 'administrador' || user?.role === 'gestor') && (
+            <Button variant="outline" onClick={() => navigate("/equipe")}>
+              Ver todos
+            </Button>
+          )}
         </div>
         
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -136,7 +205,7 @@ const Index: React.FC = () => {
                 className="mb-2 cursor-pointer hover:scale-105 transition-transform"
               />
               <span className="text-sm font-medium line-clamp-1">{member.name}</span>
-              <span className="text-xs text-muted-foreground line-clamp-1">{member.role || 'Técnico'}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">{member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}</span>
             </div>
           ))}
         </div>

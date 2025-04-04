@@ -1,67 +1,119 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, Calendar, MapPin, User, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Service } from "@/types/serviceTypes";
-import { TeamMemberAvatar } from "./TeamMemberAvatar";
-import { StatusBadge } from "./StatusBadge";
-import { MapPin, Calendar } from "lucide-react";
-import { formatDate } from "@/utils/formatters";
+import { StatusBadge } from "@/components/ui-custom/StatusBadge";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { DeadlineManager } from "./DeadlineManager";
+import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
   service: Service;
-  onDelete?: (id: string) => Promise<void>;
+  compact?: boolean;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete }) => {
-  const navigate = useNavigate();
+export const ServiceCard = ({ service, compact = false }: ServiceCardProps) => {
+  const formattedDate = service.date
+    ? format(new Date(service.date), "dd 'de' MMMM", { locale: ptBR })
+    : "Data não informada";
 
-  const handleClick = () => {
-    navigate(`/demandas/${service.id}`);
+  // Determine service type display name
+  const serviceTypeDisplay = () => {
+    switch(service.serviceType) {
+      case 'inspection':
+        return 'Vistoria';
+      case 'installation':
+        return 'Instalação';
+      default:
+        return service.serviceType || 'Serviço';
+    }
+  };
+
+  // Determine priority badge styling
+  const getPriorityBadge = () => {
+    if (!service.priority) return null;
+    
+    const priorityColors = {
+      baixa: "bg-blue-500/20 text-blue-500",
+      media: "bg-yellow-500/20 text-yellow-500",
+      alta: "bg-orange-500/20 text-orange-500",
+      urgente: "bg-red-500/20 text-red-500",
+    };
+    
+    const priorityLabels = {
+      baixa: "Baixa",
+      media: "Média",
+      alta: "Alta",
+      urgente: "Urgente",
+    };
+    
+    return (
+      <span className={cn("text-xs px-2 py-1 rounded-full", priorityColors[service.priority])}>
+        {priorityLabels[service.priority]}
+      </span>
+    );
   };
 
   return (
-    <Card 
-      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-      onClick={handleClick}
+    <Link
+      to={`/demandas/${service.id}`}
+      className="block transition-all hover:translate-y-[-2px]"
     >
-      <CardContent className="p-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-start gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <StatusBadge status={service.status} />
-                <h3 className="font-medium line-clamp-1">
-                  {service.title}
-                </h3>
-              </div>
-
-              <div className="flex items-center text-muted-foreground text-sm gap-1 mt-1">
-                <MapPin className="h-3 w-3" />
-                <span className="line-clamp-1">{service.location}</span>
-              </div>
-            </div>
+      <div className="bg-card hover:bg-card/80 rounded-lg p-4 border border-white/10 shadow-sm transition-all">
+        <div className="flex justify-between items-start">
+          <div>
+            <span className="text-xs text-muted-foreground">
+              {serviceTypeDisplay()} #{service.id.split('-')[0]}
+            </span>
+            <h3 className="font-medium text-foreground mt-1">{service.title}</h3>
           </div>
-          
-          <div className="flex justify-between items-center pt-2">
-            <div className="flex items-center gap-2">
-              <TeamMemberAvatar 
-                src={service.technician.avatar} 
-                name={service.technician.name} 
-                size="sm"
-              />
-              <span className="text-sm line-clamp-1">{service.technician.name}</span>
-            </div>
-            
-            {service.date && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(service.date)}</span>
-              </div>
-            )}
-          </div>
+          <StatusBadge status={service.status} />
         </div>
-      </CardContent>
-    </Card>
+
+        {!compact && (
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3 mr-1" />
+              {formattedDate}
+              
+              {getPriorityBadge() && (
+                <span className="mx-2">•</span>
+              )}
+              {getPriorityBadge()}
+            </div>
+
+            {service.dueDate && (
+              <DeadlineManager 
+                dueDate={service.dueDate}
+                creationDate={service.date}
+                priority={service.priority}
+                completed={service.status === 'concluido'}
+                className="mt-2"
+              />
+            )}
+
+            <div className="flex items-center text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 mr-1" />
+              {service.location}
+            </div>
+
+            <div className="flex justify-between items-center mt-4">
+              <div className="flex items-center">
+                <TeamMemberAvatar
+                  src={service.technician.avatar}
+                  name={service.technician.name}
+                  size="sm"
+                />
+                <span className="ml-2 text-sm">{service.technician.name}</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+      </div>
+    </Link>
   );
 };

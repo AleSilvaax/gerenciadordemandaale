@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { services as initialServices } from '@/data/mockData';
@@ -35,6 +34,14 @@ let teamMembers: TeamMember[] = [
   }
 ];
 
+// Add priority to services
+services = services.map(service => ({
+  ...service,
+  priority: service.priority || 'media',
+  // Add some dummy deadlines for existing services
+  dueDate: service.dueDate || new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+}));
+
 // Helper to find service by ID
 const findServiceById = (id: string): Service | undefined => {
   return services.find(service => service.id === id);
@@ -69,6 +76,7 @@ export const createService = async (serviceData: Omit<Service, 'id'>): Promise<S
     id: `SRV-${uuidv4().substring(0, 8)}`,
     ...serviceData,
     date: serviceData.date || new Date().toISOString(),
+    priority: serviceData.priority || 'media',
   };
   
   services.push(newService as any); // Type assertion to handle the incompatibility temporarily
@@ -87,7 +95,9 @@ export const updateService = async (updatedService: Service): Promise<Service> =
   
   services[index] = {
     ...services[index],
-    ...updatedService
+    ...updatedService,
+    // Keep track of when the service was last updated
+    lastUpdated: new Date().toISOString(),
   } as any; // Type assertion to handle the incompatibility
   
   return {...services[index]};
@@ -145,6 +155,17 @@ export const updateTeamMember = async (id: string, updatedData: Partial<TeamMemb
     ...updatedData
   };
   
+  // Also update this team member in all services they're assigned to
+  services = services.map(service => {
+    if (service.technician.id === id) {
+      return {
+        ...service,
+        technician: teamMembers[index]
+      };
+    }
+    return service;
+  });
+  
   return true;
 };
 
@@ -195,6 +216,45 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
   const updatedService = {
     ...service,
     feedback
+  };
+  
+  return updateService(updatedService);
+};
+
+// Update service report data
+export const updateServiceReportData = async (serviceId: string, reportData: any): Promise<Service> => {
+  const service = await getService(serviceId);
+  
+  const updatedService = {
+    ...service,
+    reportData: {
+      ...service.reportData,
+      ...reportData
+    }
+  };
+  
+  return updateService(updatedService);
+};
+
+// Update service status
+export const updateServiceStatus = async (serviceId: string, status: ServiceStatus): Promise<Service> => {
+  const service = await getService(serviceId);
+  
+  const updatedService = {
+    ...service,
+    status
+  };
+  
+  return updateService(updatedService);
+};
+
+// Update service deadline
+export const updateServiceDeadline = async (serviceId: string, dueDate: string): Promise<Service> => {
+  const service = await getService(serviceId);
+  
+  const updatedService = {
+    ...service,
+    dueDate
   };
   
   return updateService(updatedService);

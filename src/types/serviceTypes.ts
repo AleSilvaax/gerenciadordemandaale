@@ -89,7 +89,8 @@ export interface Service {
   description?: string;
   status: ServiceStatus;
   date?: string;
-  dueDate?: string;
+  dueDate?: string; // Already existed, will be used for deadline functionality
+  priority?: 'baixa' | 'media' | 'alta' | 'urgente'; // Added priority level
   location: string;
   address?: string;
   city?: string;
@@ -102,4 +103,6 @@ export interface Service {
   feedback?: ServiceFeedback;
   messages?: ServiceMessage[];
   serviceType?: 'inspection' | 'installation';
+  estimatedHours?: number; // Added for time estimation
+  progressPercentage?: number; // Added to track progress
 }

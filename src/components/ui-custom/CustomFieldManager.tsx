@@ -1,347 +1,227 @@
-
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Edit, Save, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-
-export type FieldType = 'text' | 'number' | 'boolean' | 'select' | 'textarea';
-
-export interface CustomField {
-  id: string;
-  label: string;
-  type: FieldType;
-  value: string | number | boolean;
-  options?: string[]; // For select type
-}
+import { CustomField } from '@/types/serviceTypes';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 interface CustomFieldManagerProps {
   fields: CustomField[];
-  onAddField: (field: CustomField) => void;
-  onUpdateField: (fieldId: string, updates: Partial<CustomField>) => void;
-  onRemoveField: (fieldId: string) => void;
-  categoryName?: string;
+  onChange: (fields: CustomField[]) => void;
 }
 
 export const CustomFieldManager: React.FC<CustomFieldManagerProps> = ({
   fields,
-  onAddField,
-  onUpdateField,
-  onRemoveField,
-  categoryName = "Campos personalizados"
+  onChange
 }) => {
-  const [newField, setNewField] = useState<Partial<CustomField>>({
-    label: '',
-    type: 'text',
-    value: '',
-  });
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<CustomField>>({});
-  const [newOption, setNewOption] = useState('');
-  const [selectOptions, setSelectOptions] = useState<string[]>([]);
-
-  const generateId = () => {
-    return `field_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-  };
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'textarea' | 'boolean' | 'select'>('text');
+  const [newFieldOptions, setNewFieldOptions] = useState('');
 
   const handleAddField = () => {
-    if (!newField.label) {
-      toast.warning("Campo inválido", { 
-        description: "O campo precisa ter um nome." 
-      });
+    if (!newFieldLabel.trim()) {
+      toast.error('O rótulo do campo não pode estar vazio');
       return;
     }
 
-    const fieldToAdd: CustomField = {
-      id: generateId(),
-      label: newField.label || 'Campo',
-      type: newField.type as FieldType || 'text',
-      value: newField.type === 'boolean' ? false : newField.value || '',
-      ...(newField.type === 'select' ? { options: selectOptions } : {})
+    // Create default value based on field type
+    let defaultValue: string | number | boolean = '';
+    if (newFieldType === 'number') defaultValue = 0;
+    if (newFieldType === 'boolean') defaultValue = false;
+
+    // Create options array for select field
+    const options = newFieldType === 'select' 
+      ? newFieldOptions.split(',').map(option => option.trim()).filter(option => option !== '')
+      : undefined;
+
+    if (newFieldType === 'select' && (!options || options.length === 0)) {
+      toast.error('Selecione pelo menos uma opção para o campo de seleção');
+      return;
+    }
+
+    const newField: CustomField = {
+      id: `field-${Date.now()}`,
+      label: newFieldLabel,
+      type: newFieldType,
+      value: defaultValue,
+      options
     };
 
-    onAddField(fieldToAdd);
-    setNewField({ label: '', type: 'text', value: '' });
-    setSelectOptions([]);
+    onChange([...fields, newField]);
     
-    toast.success("Campo adicionado", { 
-      description: `O campo "${fieldToAdd.label}" foi adicionado com sucesso.` 
-    });
-  };
-
-  const handleEditField = (field: CustomField) => {
-    setEditingField(field.id);
-    setEditForm({...field});
-    if (field.type === 'select' && field.options) {
-      setSelectOptions([...field.options]);
-    } else {
-      setSelectOptions([]);
-    }
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingField || !editForm.label) return;
+    // Reset form
+    setNewFieldLabel('');
+    setNewFieldType('text');
+    setNewFieldOptions('');
     
-    const updatedField: Partial<CustomField> = {...editForm};
-    
-    if (updatedField.type === 'select') {
-      updatedField.options = selectOptions;
-    }
-    
-    onUpdateField(editingField, updatedField);
-    setEditingField(null);
-    
-    toast.success("Campo atualizado", { 
-      description: `O campo "${updatedField.label}" foi atualizado com sucesso.` 
-    });
+    toast.success('Campo adicionado com sucesso');
   };
 
-  const handleCancelEdit = () => {
-    setEditingField(null);
-    setEditForm({});
-    setSelectOptions([]);
+  const handleRemoveField = (fieldId: string) => {
+    onChange(fields.filter(field => field.id !== fieldId));
+    toast.success('Campo removido com sucesso');
   };
 
-  const handleAddOption = () => {
-    if (!newOption) return;
-    setSelectOptions([...selectOptions, newOption]);
-    setNewOption('');
-  };
-
-  const handleRemoveOption = (index: number) => {
-    const newOptions = [...selectOptions];
-    newOptions.splice(index, 1);
-    setSelectOptions(newOptions);
-  };
-
-  const handleTypeChange = (type: string, isEditing = false) => {
-    if (isEditing) {
-      setEditForm({ ...editForm, type: type as FieldType });
-      if (type === 'boolean') {
-        setEditForm({ ...editForm, type: type as FieldType, value: false });
-      } else if (type === 'number') {
-        setEditForm({ ...editForm, type: type as FieldType, value: 0 });
-      } else {
-        setEditForm({ ...editForm, type: type as FieldType, value: '' });
+  const handleFieldChange = (fieldId: string, value: string | number | boolean) => {
+    const updatedFields = fields.map(field => {
+      if (field.id === fieldId) {
+        return { ...field, value };
       }
-    } else {
-      setNewField({ ...newField, type: type as FieldType });
-      if (type === 'boolean') {
-        setNewField({ ...newField, type: type as FieldType, value: false });
-      } else if (type === 'number') {
-        setNewField({ ...newField, type: type as FieldType, value: 0 });
-      } else {
-        setNewField({ ...newField, type: type as FieldType, value: '' });
-      }
-    }
+      return field;
+    });
+    onChange(updatedFields);
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{categoryName}</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-lg">Campos Personalizados</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {fields.length > 0 ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <Label htmlFor="newFieldLabel">Nome do campo</Label>
-                <Input
-                  id="newFieldLabel"
-                  value={newField.label}
-                  onChange={(e) => setNewField({ ...newField, label: e.target.value })}
-                  placeholder="Ex: Tensão do circuito"
-                />
-              </div>
-              <div>
-                <Label htmlFor="newFieldType">Tipo de campo</Label>
-                <Select 
-                  defaultValue="text" 
-                  onValueChange={(value) => handleTypeChange(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Texto</SelectItem>
-                    <SelectItem value="number">Número</SelectItem>
-                    <SelectItem value="boolean">Sim/Não</SelectItem>
-                    <SelectItem value="select">Lista de opções</SelectItem>
-                    <SelectItem value="textarea">Área de texto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
+            {fields.map(field => (
+              <div key={field.id} className="flex items-start gap-2">
+                <div className="flex-grow">
+                  <Label htmlFor={field.id}>{field.label}</Label>
+                  
+                  {field.type === 'text' && (
+                    <Input
+                      id={field.id}
+                      value={field.value as string}
+                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                      className="mt-1"
+                    />
+                  )}
+                  
+                  {field.type === 'number' && (
+                    <Input
+                      id={field.id}
+                      type="number"
+                      value={field.value as number}
+                      onChange={(e) => handleFieldChange(field.id, parseFloat(e.target.value) || 0)}
+                      className="mt-1"
+                    />
+                  )}
+                  
+                  {field.type === 'boolean' && (
+                    <Select
+                      value={(field.value as boolean).toString()}
+                      onValueChange={(value) => handleFieldChange(field.id, value === 'true')}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Sim</SelectItem>
+                        <SelectItem value="false">Não</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  
+                  {field.type === 'textarea' && (
+                    <textarea
+                      id={field.id}
+                      value={field.value as string}
+                      onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                      className="w-full p-2 mt-1 border rounded-md"
+                      rows={3}
+                    />
+                  )}
+                  
+                  {field.type === 'select' && field.options && (
+                    <Select
+                      value={field.value as string}
+                      onValueChange={(value) => handleFieldChange(field.id, value)}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options.map((option, index) => (
+                          <SelectItem key={index} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
                 <Button 
-                  type="button" 
-                  onClick={handleAddField}
-                  className="w-full"
+                  variant="ghost" 
+                  size="icon"
+                  className="mt-4"
+                  onClick={() => handleRemoveField(field.id)}
                 >
-                  <PlusCircle className="mr-2 h-4 w-4" /> 
-                  Adicionar Campo
+                  <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </div>
-            </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-muted-foreground">
+            Nenhum campo personalizado adicionado
+          </div>
+        )}
 
-            {newField.type === 'select' && (
-              <div className="border p-4 rounded-md mt-4 bg-secondary/50">
-                <Label>Opções para seleção</Label>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Input
-                    value={newOption}
-                    onChange={(e) => setNewOption(e.target.value)}
-                    placeholder="Nova opção"
-                  />
-                  <Button type="button" variant="outline" onClick={handleAddOption}>
-                    Adicionar
-                  </Button>
-                </div>
-                {selectOptions.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {selectOptions.map((option, index) => (
-                      <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded">
-                        <span>{option}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveOption(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        <div className="border-t pt-6">
+          <h3 className="font-medium mb-4">Adicionar novo campo</h3>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-field-label">Rótulo do Campo</Label>
+              <Input
+                id="new-field-label"
+                value={newFieldLabel}
+                onChange={(e) => setNewFieldLabel(e.target.value)}
+                placeholder="Ex: Número do Equipamento"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-field-type">Tipo do Campo</Label>
+              <Select
+                value={newFieldType}
+                onValueChange={(value) => setNewFieldType(value as any)}
+              >
+                <SelectTrigger id="new-field-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Texto</SelectItem>
+                  <SelectItem value="number">Número</SelectItem>
+                  <SelectItem value="textarea">Texto Longo</SelectItem>
+                  <SelectItem value="boolean">Sim/Não</SelectItem>
+                  <SelectItem value="select">Selecionar Opções</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {newFieldType === 'select' && (
+              <div className="space-y-2">
+                <Label htmlFor="new-field-options">Opções (separadas por vírgula)</Label>
+                <Input
+                  id="new-field-options"
+                  value={newFieldOptions}
+                  onChange={(e) => setNewFieldOptions(e.target.value)}
+                  placeholder="Opção 1, Opção 2, Opção 3"
+                />
               </div>
             )}
+            
+            <Button 
+              type="button" 
+              onClick={handleAddField}
+              className="w-full"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Adicionar Campo
+            </Button>
           </div>
-
-          {fields.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Campos configurados</h3>
-              <div className="space-y-4">
-                {fields.map((field) => (
-                  <div 
-                    key={field.id} 
-                    className="border rounded-md p-4 flex justify-between items-center"
-                  >
-                    {editingField === field.id ? (
-                      <div className="w-full space-y-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <div>
-                            <Label htmlFor={`edit-${field.id}-label`}>Nome do campo</Label>
-                            <Input
-                              id={`edit-${field.id}-label`}
-                              value={editForm.label || ''}
-                              onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`edit-${field.id}-type`}>Tipo de campo</Label>
-                            <Select 
-                              value={editForm.type} 
-                              onValueChange={(value) => handleTypeChange(value, true)}
-                            >
-                              <SelectTrigger id={`edit-${field.id}-type`}>
-                                <SelectValue placeholder="Selecione um tipo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="text">Texto</SelectItem>
-                                <SelectItem value="number">Número</SelectItem>
-                                <SelectItem value="boolean">Sim/Não</SelectItem>
-                                <SelectItem value="select">Lista de opções</SelectItem>
-                                <SelectItem value="textarea">Área de texto</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        {editForm.type === 'select' && (
-                          <div className="border p-4 rounded-md mt-2 bg-secondary/50">
-                            <Label>Opções para seleção</Label>
-                            <div className="flex items-center space-x-2 mt-2">
-                              <Input
-                                value={newOption}
-                                onChange={(e) => setNewOption(e.target.value)}
-                                placeholder="Nova opção"
-                              />
-                              <Button type="button" variant="outline" onClick={handleAddOption}>
-                                Adicionar
-                              </Button>
-                            </div>
-                            {selectOptions.length > 0 && (
-                              <div className="mt-2 space-y-2">
-                                {selectOptions.map((option, index) => (
-                                  <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded">
-                                    <span>{option}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleRemoveOption(index)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        <div className="flex space-x-2 justify-end">
-                          <Button type="button" variant="outline" onClick={handleCancelEdit}>
-                            <X className="mr-2 h-4 w-4" /> Cancelar
-                          </Button>
-                          <Button type="button" onClick={handleSaveEdit}>
-                            <Save className="mr-2 h-4 w-4" /> Salvar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div>
-                          <div className="font-medium">{field.label}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Tipo: {field.type === 'text' ? 'Texto' : 
-                                  field.type === 'number' ? 'Número' : 
-                                  field.type === 'boolean' ? 'Sim/Não' : 
-                                  field.type === 'select' ? 'Lista de opções' : 
-                                  field.type === 'textarea' ? 'Área de texto' : field.type}
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleEditField(field)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                              onRemoveField(field.id);
-                              toast.success("Campo removido", { 
-                                description: `O campo "${field.label}" foi removido com sucesso.` 
-                              });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
