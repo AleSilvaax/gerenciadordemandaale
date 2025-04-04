@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -33,6 +34,24 @@ const Login: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+  
+  const handleDemoLogin = async (role: string) => {
+    let demoEmail = '';
+    switch(role) {
+      case 'tecnico':
+        demoEmail = 'joao@exemplo.com';
+        break;
+      case 'administrador':
+        demoEmail = 'maria@exemplo.com';
+        break;
+      case 'gestor':
+        demoEmail = 'carlos@exemplo.com';
+        break;
+    }
+    
+    setEmail(demoEmail);
+    setPassword('123456');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -41,6 +60,42 @@ const Login: React.FC = () => {
           <h1 className="text-3xl font-bold">Sistema de Gestão</h1>
           <p className="text-muted-foreground mt-2">Entre com suas credenciais para acessar</p>
         </div>
+        
+        <Alert className="mb-4 bg-muted/50 border-primary/20">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <p className="text-sm">Credenciais de demonstração:</p>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => handleDemoLogin('tecnico')}
+              >
+                Técnico
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => handleDemoLogin('administrador')}
+              >
+                Administrador
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => handleDemoLogin('gestor')}
+              >
+                Gestor
+              </Button>
+              <div className="col-span-2 text-xs text-muted-foreground mt-1">
+                Senha para todos: 123456
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
         
         <Card className="border-white/10">
           <CardHeader>
@@ -74,13 +129,10 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Todas as senhas demo são: 123456
-                </p>
               </div>
             </CardContent>
             
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-3">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
@@ -94,6 +146,14 @@ const Login: React.FC = () => {
                   </>
                 )}
               </Button>
+              
+              <div className="text-sm text-center mt-4">
+                Não possui uma conta?{" "}
+                <Link to="/register" className="text-primary hover:underline">
+                  <UserPlus className="inline-block h-3 w-3 mr-1" />
+                  Cadastre-se
+                </Link>
+              </div>
             </CardFooter>
           </form>
         </Card>

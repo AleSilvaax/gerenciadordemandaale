@@ -16,6 +16,7 @@ import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 // Providers
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -32,8 +33,9 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
-              {/* Public route */}
+              {/* Public routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
