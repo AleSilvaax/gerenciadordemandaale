@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, BellDot, BarChart2, Calendar, Filter, CalendarDays, MapPin, Download } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -346,7 +345,7 @@ const Estatisticas: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               {teamPerformance.map((member, index) => {
                 // Calculate productivity percentage based on completed services vs assigned
-                const memberServices = services.filter(s => s.technician.id === member.id);
+                const memberServices = services.filter(s => s.technician.name === member.name);
                 const completedServices = memberServices.filter(s => s.status === "concluido");
                 const productivityPercentage = memberServices.length > 0 
                   ? (completedServices.length / memberServices.length) * 100 

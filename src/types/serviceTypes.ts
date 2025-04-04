@@ -5,7 +5,7 @@ export interface TeamMember {
   email?: string;
   phone?: string;
   role?: string;
-  avatar?: string;
+  avatar: string; // Changed from optional to required
   signature?: string;
 }
 
