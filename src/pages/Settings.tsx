@@ -1,202 +1,229 @@
 
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomFieldManager, CustomField } from "@/components/ui-custom/CustomFieldManager";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { UserCircle2, Bell, Moon, FileText, Shield, LogOut } from "lucide-react";
+import { TeamMember } from "@/types/serviceTypes";
+import { toast } from "sonner";
 
-const SettingsPage: React.FC = () => {
-  const [inspectionFields, setInspectionFields] = useState<CustomField[]>([]);
-  const [installationFields, setInstallationFields] = useState<CustomField[]>([]);
+const Settings: React.FC = () => {
+  const [profile, setProfile] = useState<Partial<TeamMember>>({
+    id: "current-user",
+    name: "Usuário Atual",
+    email: "usuario@exemplo.com",
+    role: "Administrador",
+    avatar: "/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png", 
+  });
 
-  // Load custom fields from localStorage on component mount
-  React.useEffect(() => {
-    const savedInspectionFields = localStorage.getItem('inspectionCustomFields');
-    const savedInstallationFields = localStorage.getItem('installationCustomFields');
-    
-    if (savedInspectionFields) {
-      try {
-        setInspectionFields(JSON.parse(savedInspectionFields));
-      } catch (e) {
-        console.error("Error loading inspection custom fields:", e);
-      }
-    }
-    
-    if (savedInstallationFields) {
-      try {
-        setInstallationFields(JSON.parse(savedInstallationFields));
-      } catch (e) {
-        console.error("Error loading installation custom fields:", e);
-      }
-    }
-  }, []);
+  const [darkMode, setDarkMode] = useState<boolean>(true);
+  const [notifications, setNotifications] = useState<boolean>(true);
+  const [emailNotifications, setEmailNotifications] = useState<boolean>(false);
 
-  // Save custom fields to localStorage when they change
-  React.useEffect(() => {
-    localStorage.setItem('inspectionCustomFields', JSON.stringify(inspectionFields));
-  }, [inspectionFields]);
-
-  React.useEffect(() => {
-    localStorage.setItem('installationCustomFields', JSON.stringify(installationFields));
-  }, [installationFields]);
-
-  const handleAddInspectionField = (field: CustomField) => {
-    setInspectionFields([...inspectionFields, field]);
+  const handleProfileUpdate = () => {
+    // Simulação de atualização de perfil
+    toast.success("Perfil atualizado com sucesso!");
   };
 
-  const handleUpdateInspectionField = (fieldId: string, updates: Partial<CustomField>) => {
-    setInspectionFields(
-      inspectionFields.map(field => (field.id === fieldId ? { ...field, ...updates } : field))
-    );
-  };
-
-  const handleRemoveInspectionField = (fieldId: string) => {
-    setInspectionFields(inspectionFields.filter(field => field.id !== fieldId));
-  };
-
-  const handleAddInstallationField = (field: CustomField) => {
-    setInstallationFields([...installationFields, field]);
-  };
-
-  const handleUpdateInstallationField = (fieldId: string, updates: Partial<CustomField>) => {
-    setInstallationFields(
-      installationFields.map(field => (field.id === fieldId ? { ...field, ...updates } : field))
-    );
-  };
-
-  const handleRemoveInstallationField = (fieldId: string) => {
-    setInstallationFields(installationFields.filter(field => field.id !== fieldId));
-  };
-
-  const handleExportFields = () => {
-    const data = {
-      inspectionFields,
-      installationFields
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'campos-personalizados.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast.success("Campos exportados", {
-      description: "Os campos personalizados foram exportados com sucesso."
-    });
-  };
-
-  const handleImportFields = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string);
-        if (data.inspectionFields) {
-          setInspectionFields(data.inspectionFields);
-        }
-        if (data.installationFields) {
-          setInstallationFields(data.installationFields);
-        }
-        
-        toast.success("Campos importados", {
-          description: "Os campos personalizados foram importados com sucesso."
-        });
-      } catch (error) {
-        console.error("Error importing fields:", error);
-        toast.error("Erro ao importar", {
-          description: "Ocorreu um erro ao importar os campos personalizados."
-        });
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
+  const handleLogout = () => {
+    // Simulação de logout
+    toast.info("Sessão encerrada");
   };
 
   return (
-    <div className="container py-4 pb-20">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">Configurações</h1>
-      </div>
+    <div className="container py-4 space-y-6 pb-24">
+      <h1 className="text-3xl font-bold">Configurações</h1>
 
-      <Tabs defaultValue="inspection">
-        <TabsList className="w-full mb-4">
-          <TabsTrigger value="inspection" className="w-1/2">Vistoria</TabsTrigger>
-          <TabsTrigger value="installation" className="w-1/2">Instalação</TabsTrigger>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="profile">
+            <UserCircle2 className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Perfil</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences">
+            <Bell className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Preferências</span>
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <Shield className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Segurança</span>
+          </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="inspection">
+
+        <TabsContent value="profile" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Campos Personalizados para Vistoria</CardTitle>
+              <CardTitle>Perfil</CardTitle>
               <CardDescription>
-                Configure campos adicionais para os relatórios de vistoria
+                Gerencie informações do seu perfil e configurações da conta.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <CustomFieldManager
-                fields={inspectionFields}
-                onAddField={handleAddInspectionField}
-                onUpdateField={handleUpdateInspectionField}
-                onRemoveField={handleRemoveInspectionField}
-                categoryName="Campos de vistoria"
-              />
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <TeamMemberAvatar 
+                  src={profile.avatar || ""} 
+                  name={profile.name || ""} 
+                  size="lg" 
+                  className="w-20 h-20"
+                />
+                <div className="flex-1">
+                  <Button variant="outline" size="sm">
+                    Alterar foto
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome completo</Label>
+                    <Input 
+                      id="name" 
+                      value={profile.name} 
+                      onChange={(e) => setProfile({...profile, name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Cargo</Label>
+                    <Input 
+                      id="role" 
+                      value={profile.role} 
+                      onChange={(e) => setProfile({...profile, role: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={profile.email} 
+                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input 
+                      id="phone" 
+                      type="tel" 
+                      value={profile.phone || ""} 
+                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                      placeholder="(XX) XXXXX-XXXX"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button onClick={handleProfileUpdate}>Salvar alterações</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferências</CardTitle>
+              <CardDescription>
+                Personalize sua experiência no aplicativo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dark-mode">Modo escuro</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ative o tema escuro para reduzir o brilho da tela.
+                  </p>
+                </div>
+                <Switch
+                  id="dark-mode"
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notifications">Notificações no aplicativo</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba alertas sobre novas demandas e atualizações.
+                  </p>
+                </div>
+                <Switch
+                  id="notifications"
+                  checked={notifications}
+                  onCheckedChange={setNotifications}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="email-notifications">Notificações por e-mail</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba alertas por e-mail sobre novas demandas.
+                  </p>
+                </div>
+                <Switch
+                  id="email-notifications"
+                  checked={emailNotifications}
+                  onCheckedChange={setEmailNotifications}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="installation">
+
+        <TabsContent value="security" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Campos Personalizados para Instalação</CardTitle>
+              <CardTitle>Segurança</CardTitle>
               <CardDescription>
-                Configure campos adicionais para os relatórios de instalação
+                Gerencie as configurações de segurança da sua conta.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <CustomFieldManager
-                fields={installationFields}
-                onAddField={handleAddInstallationField}
-                onUpdateField={handleUpdateInstallationField}
-                onRemoveField={handleRemoveInstallationField}
-                categoryName="Campos de instalação"
-              />
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Senha atual</Label>
+                  <Input id="current-password" type="password" />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nova senha</Label>
+                    <Input id="new-password" type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                    <Input id="confirm-password" type="password" />
+                  </div>
+                </div>
+              </div>
             </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <FileText className="mr-2 h-4 w-4" />
+                Baixar dados da conta
+              </Button>
+              <Button variant="destructive" className="w-full sm:w-auto" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="mt-8 flex flex-wrap gap-4">
-        <Button onClick={handleExportFields}>Exportar Campos</Button>
-        <div>
-          <input
-            type="file"
-            id="import-fields"
-            className="hidden"
-            accept=".json"
-            onChange={handleImportFields}
-          />
-          <Button
-            variant="outline"
-            onClick={() => document.getElementById('import-fields')?.click()}
-          >
-            Importar Campos
-          </Button>
-        </div>
-      </div>
     </div>
   );
 };
 
-export default SettingsPage;
+export default Settings;

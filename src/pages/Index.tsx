@@ -9,25 +9,33 @@ import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/ui-custom/StatCard";
 import { Service } from "@/types/serviceTypes";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { getTeamMembers } from "@/services/api";
+import { TeamMember } from "@/types/serviceTypes";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
   
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getServices();
-        setServices(data);
+        const servicesData = await getServices();
+        const teamData = await getTeamMembers();
+        setServices(servicesData);
+        setTeamMembers(teamData);
       } catch (error) {
-        console.error("Error fetching services:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchServices();
+    fetchData();
   }, []);
   
   // Calculate statistics
@@ -58,7 +66,7 @@ const Index: React.FC = () => {
 
   return (
     <div className="container py-4 space-y-6 pb-24">
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
         <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
       </div>
@@ -69,7 +77,7 @@ const Index: React.FC = () => {
           value={pendingServices}
           icon={<FileText className="h-5 w-5" />}
           description="Total de demandas aguardando conclusão"
-          className="border-yellow-600/20 bg-gradient-to-br from-yellow-900/10 to-yellow-700/10"
+          className="border-yellow-600/20 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20"
         />
         
         <StatCard
@@ -77,7 +85,7 @@ const Index: React.FC = () => {
           value={completedServices}
           icon={<BarChart2 className="h-5 w-5" />}
           description="Total de demandas finalizadas"
-          className="border-green-600/20 bg-gradient-to-br from-green-900/10 to-green-700/10"
+          className="border-green-600/20 bg-gradient-to-br from-green-500/20 to-green-600/20"
         />
         
         <StatCard
@@ -85,7 +93,7 @@ const Index: React.FC = () => {
           value={technicians}
           icon={<Users className="h-5 w-5" />}
           description="Total de técnicos ativos"
-          className="border-blue-600/20 bg-gradient-to-br from-blue-900/10 to-blue-700/10"
+          className="border-blue-600/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20"
         />
       </div>
       
@@ -100,6 +108,37 @@ const Index: React.FC = () => {
             <Download className="h-4 w-4 mr-2" />
             PDF
           </Button>
+        </div>
+      </div>
+      
+      <Separator className="my-6" />
+
+      {/* Equipe section */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Equipe</h2>
+          <Button variant="outline" onClick={() => navigate("/equipe")}>
+            Ver todos
+          </Button>
+        </div>
+        
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {teamMembers.slice(0, 5).map((member) => (
+            <div 
+              key={member.id} 
+              className="flex flex-col items-center p-2 min-w-[100px] text-center"
+              onClick={() => navigate(`/equipe#${member.id}`)}
+            >
+              <TeamMemberAvatar 
+                src={member.avatar} 
+                name={member.name} 
+                size="lg"
+                className="mb-2 cursor-pointer hover:scale-105 transition-transform"
+              />
+              <span className="text-sm font-medium line-clamp-1">{member.name}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">{member.role || 'Técnico'}</span>
+            </div>
+          ))}
         </div>
       </div>
       

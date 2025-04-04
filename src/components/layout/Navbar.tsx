@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-secondary/90 backdrop-blur-md border-t border-white/10 z-10">
       {isMobile ? (
-        <ScrollArea className="w-full">
+        <ScrollArea orientation="horizontal" className="w-full">
           <div className="flex justify-start items-center py-3 px-4 w-max min-w-full">
             <Link 
               to="/" 
