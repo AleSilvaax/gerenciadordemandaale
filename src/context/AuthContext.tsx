@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
 import { UserRole } from '@/types/serviceTypes';
@@ -46,7 +46,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Check Supabase session
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (session?.user) {
+              // Get user profile from Supabase
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+              // Get user role from Supabase
+              const { data: userRole } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', session.user.id)
+                .single();
+
+              if (profile) {
+                const authUser: AuthUser = {
+                  id: session.user.id,
+                  email: session.user.email,
+                  name: profile.name,
+                  avatar: profile.avatar || '/placeholder.svg',
+                  role: userRole?.role as UserRole || 'tecnico',
+                  permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
+                };
+                
+                setUser(authUser);
+              } else {
+                setUser(null);
+              }
+            } else {
+              setUser(null);
+            }
+          }
+        );
+
+        // THEN check for existing session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -122,7 +160,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) {
-        console.log('Supabase login error, falling back to demo mode:', error);
+        console.log('Supabase login error, details:', error);
+        
+        // Check if it's a "User not found" error for a Supabase account
+        if (error.message.includes("Email not confirmed") || error.message.includes("Email link is invalid or has expired")) {
+          toast.warning('Verifique seu email para confirmar sua conta');
+          return false;
+        }
         
         // Fallback to demo mode
         const foundUser = demoUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
@@ -211,7 +255,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) {
-        console.log('Supabase registration error, falling back to demo mode:', error);
+        console.log('Supabase registration error:', error);
+        
+        // Check for common errors
+        if (error.message.includes("User already registered")) {
+          toast.error('Este email já está em uso');
+          return false;
+        }
         
         // Fallback to demo mode
         if (userData.email && demoUsers.some(u => u.email?.toLowerCase() === userData.email?.toLowerCase())) {
@@ -239,12 +289,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       if (data.user) {
-        toast.success('Registro concluído! Por favor, verifique seu email para confirmar sua conta.');
-        return true;
+        // Log the user in automatically after registration
+        // This approach logs them in directly
+        try {
+          const loginResult = await login(userData.email, userData.password);
+          if (loginResult) {
+            toast.success('Registro concluído com sucesso!');
+            return true;
+          }
+        } catch (loginError) {
+          console.error('Error logging in after registration:', loginError);
+          toast.success('Registro concluído! Por favor, verifique seu email para confirmar sua conta.');
+        }
       }
       
-      toast.error('Erro ao registrar');
-      return false;
+      return true;
     } catch (error) {
       console.error('Register error:', error);
       toast.error('Erro ao registrar');
