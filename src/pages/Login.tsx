@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,13 +8,26 @@ import { Label } from '@/components/ui/label';
 import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log("Login page rendered, user:", user?.email, "isSubmitting:", isSubmitting);
+    
+    // Reset submission state if we're reloading the page
+    return () => {
+      if (isSubmitting) {
+        setIsSubmitting(false);
+      }
+    };
+  }, [user]);
 
   // If user is already logged in, redirect to home
   if (user) {
@@ -24,20 +37,32 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return; // Prevent multiple submissions
     
-    console.log("Submitting login form with email:", email);
+    if (!email || !password) {
+      setErrorMsg("Por favor, preencha todos os campos");
+      return;
+    }
+    
+    if (isSubmitting) {
+      console.log("Already submitting, preventing duplicate submission");
+      return;
+    }
+    
+    setErrorMsg(null);
     setIsSubmitting(true);
+    console.log("Submitting login form with email:", email);
     
     try {
       const success = await login(email, password);
       console.log("Login result:", success);
-      if (success) {
-        navigate('/');
+      
+      if (!success) {
+        setErrorMsg("Email ou senha inválidos");
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Login error:", error);
-    } finally {
+      setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
       setIsSubmitting(false);
     }
   };
@@ -63,18 +88,21 @@ const Login: React.FC = () => {
     setEmail(demoEmail);
     setPassword(demoPassword);
     setIsSubmitting(true);
+    setErrorMsg(null);
     
     // Automatically submit after setting credentials
     try {
       console.log("Using demo login with role:", role, "email:", demoEmail);
       const success = await login(demoEmail, demoPassword);
       console.log("Demo login result:", success);
-      if (success) {
-        navigate('/');
+      
+      if (!success) {
+        setErrorMsg("Erro ao fazer login com credenciais de demonstração");
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Demo login error:", error);
-    } finally {
+      setErrorMsg("Erro ao fazer login com credenciais de demonstração");
       setIsSubmitting(false);
     }
   };
@@ -136,6 +164,12 @@ const Login: React.FC = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {errorMsg && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertDescription>{errorMsg}</AlertDescription>
+                </Alert>
+              )}
+            
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

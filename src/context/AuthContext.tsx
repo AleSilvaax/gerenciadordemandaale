@@ -46,51 +46,63 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkSession = async () => {
       try {
+        console.log("Checking auth session...");
+        setIsLoading(true);
+        
         // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             console.log('Auth state change event:', event);
             
             if (session?.user) {
               console.log('User from session:', session.user.email);
-              // Get user profile from Supabase
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-                
-              if (profileError) {
-                console.error('Error fetching profile:', profileError);
-              }
               
-              // Get user role from Supabase
-              const { data: userRole, error: roleError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id)
-                .single();
-                
-              if (roleError) {
-                console.error('Error fetching user role:', roleError);
-              }
+              // Use setTimeout to prevent Supabase auth deadlock
+              setTimeout(async () => {
+                try {
+                  // Get user profile from Supabase
+                  const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+                    
+                  if (profileError) {
+                    console.error('Error fetching profile:', profileError);
+                  }
+                  
+                  // Get user role from Supabase
+                  const { data: userRole, error: roleError } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', session.user.id)
+                    .single();
+                    
+                  if (roleError) {
+                    console.error('Error fetching user role:', roleError);
+                  }
 
-              if (profile) {
-                console.log('Profile found:', profile);
-                const authUser: AuthUser = {
-                  id: session.user.id,
-                  email: session.user.email,
-                  name: profile.name,
-                  avatar: profile.avatar || '/placeholder.svg',
-                  role: userRole?.role as UserRole || 'tecnico',
-                  permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
-                };
-                
-                setUser(authUser);
-              } else {
-                console.log('No profile found for user');
-                setUser(null);
-              }
+                  if (profile) {
+                    console.log('Profile found:', profile);
+                    const authUser: AuthUser = {
+                      id: session.user.id,
+                      email: session.user.email,
+                      name: profile.name,
+                      avatar: profile.avatar || '/placeholder.svg',
+                      role: userRole?.role as UserRole || 'tecnico',
+                      permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
+                    };
+                    
+                    setUser(authUser);
+                  } else {
+                    console.log('No profile found for user');
+                    setUser(null);
+                  }
+                } catch (err) {
+                  console.error('Error handling auth state change:', err);
+                  setUser(null);
+                }
+              }, 0);
             } else {
               console.log('No session user, setting user to null');
               setUser(null);
@@ -103,75 +115,83 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (sessionError) {
           console.error('Error getting session:', sessionError);
-          throw sessionError;
+          checkLocalStorageFallback();
+          return;
         }
         
         if (session?.user) {
           console.log('Existing session found:', session.user.email);
-          // Get user profile from Supabase
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (profileError) {
-            console.error('Error fetching profile:', profileError);
-          }
-          
-          // Get user role from Supabase
-          const { data: userRole, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .single();
-            
-          if (roleError) {
-            console.error('Error fetching user role:', roleError);
-          }
-
-          if (profile) {
-            console.log('Profile found:', profile);
-            const authUser: AuthUser = {
-              id: session.user.id,
-              email: session.user.email,
-              name: profile.name,
-              avatar: profile.avatar || '/placeholder.svg',
-              role: userRole?.role as UserRole || 'tecnico',
-              permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
-            };
-            
-            setUser(authUser);
-          } else {
-            // Try to get from localStorage as fallback for demo mode
-            const savedUser = localStorage.getItem('user');
-            if (savedUser) {
-              try {
-                setUser(JSON.parse(savedUser));
-              } catch (error) {
-                console.error('Failed to parse saved user', error);
-                localStorage.removeItem('user');
-              }
+          try {
+            // Get user profile from Supabase
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (profileError) {
+              console.error('Error fetching profile:', profileError);
+              checkLocalStorageFallback();
+              return;
             }
+            
+            // Get user role from Supabase
+            const { data: userRole, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .single();
+              
+            if (roleError) {
+              console.error('Error fetching user role:', roleError);
+            }
+
+            if (profile) {
+              console.log('Profile found:', profile);
+              const authUser: AuthUser = {
+                id: session.user.id,
+                email: session.user.email,
+                name: profile.name,
+                avatar: profile.avatar || '/placeholder.svg',
+                role: userRole?.role as UserRole || 'tecnico',
+                permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
+              };
+              
+              setUser(authUser);
+            } else {
+              console.log('No profile found, checking localStorage');
+              checkLocalStorageFallback();
+            }
+          } catch (error) {
+            console.error('Error processing session:', error);
+            checkLocalStorageFallback();
           }
         } else {
-          console.log('No existing session');
-          // Try to get from localStorage as fallback for demo mode
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            try {
-              console.log('Found user in localStorage:', savedUser);
-              setUser(JSON.parse(savedUser));
-            } catch (error) {
-              console.error('Failed to parse saved user', error);
-              localStorage.removeItem('user');
-            }
-          }
+          console.log('No existing session, checking localStorage');
+          checkLocalStorageFallback();
         }
       } catch (error) {
         console.error('Error checking session:', error);
+        checkLocalStorageFallback();
       } finally {
         setIsLoading(false);
+      }
+    };
+    
+    // Helper function to check localStorage as fallback for demo mode
+    const checkLocalStorageFallback = () => {
+      try {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          console.log('Found user in localStorage');
+          setUser(JSON.parse(savedUser));
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved user', error);
+        localStorage.removeItem('user');
+        setUser(null);
       }
     };
     
@@ -213,7 +233,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Check if it's a "User not found" error for a Supabase account
         if (error.message.includes("Email not confirmed") || error.message.includes("Email link is invalid or has expired")) {
-          toast.warning('Verifique seu email para confirmar sua conta');
+          toast({
+            title: "Confirme seu email",
+            description: "Verifique sua caixa de entrada para confirmar sua conta",
+            variant: "warning",
+          });
+          setIsLoading(false);
           return false;
         }
         
@@ -225,10 +250,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log('Demo user found:', foundUser.name);
           setUser(foundUser);
           localStorage.setItem('user', JSON.stringify(foundUser));
-          toast.success(`Bem-vindo, ${foundUser.name}!`);
+          toast({
+            title: "Login realizado com sucesso",
+            description: `Bem-vindo, ${foundUser.name}!`,
+            variant: "success",
+          });
+          setIsLoading(false);
           return true;
         } else {
-          toast.error('Email ou senha inválidos');
+          toast({
+            title: "Erro de autenticação",
+            description: "Email ou senha inválidos",
+            variant: "destructive",
+          });
+          setIsLoading(false);
           return false;
         }
       }
@@ -236,53 +271,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Supabase login successful, user:', data.user?.email);
       
       if (data.user) {
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
+        try {
+          // Get user profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error('Error fetching profile after login:', profileError);
+            setIsLoading(false);
+            return false;
+          }
           
-        if (profileError) {
-          console.error('Error fetching profile after login:', profileError);
-        }
-        
-        // Get user role
-        const { data: userRole, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
-          .single();
-          
-        if (roleError) {
-          console.error('Error fetching role after login:', roleError);
-        }
+          // Get user role
+          const { data: userRole, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .single();
+            
+          if (roleError) {
+            console.error('Error fetching role after login:', roleError);
+          }
 
-        if (profile) {
-          console.log('Profile found after login:', profile);
-          const authUser: AuthUser = {
-            id: data.user.id,
-            email: data.user.email,
-            name: profile.name,
-            avatar: profile.avatar || '/placeholder.svg',
-            role: userRole?.role as UserRole || 'tecnico',
-            permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
-          };
-          
-          setUser(authUser);
-          toast.success(`Bem-vindo, ${authUser.name}!`);
-          return true;
+          if (profile) {
+            console.log('Profile found after login:', profile);
+            const authUser: AuthUser = {
+              id: data.user.id,
+              email: data.user.email,
+              name: profile.name,
+              avatar: profile.avatar || '/placeholder.svg',
+              role: userRole?.role as UserRole || 'tecnico',
+              permissions: getPermissionsByRole(userRole?.role as UserRole || 'tecnico')
+            };
+            
+            setUser(authUser);
+            toast({
+              title: "Login realizado com sucesso",
+              description: `Bem-vindo, ${authUser.name}!`,
+              variant: "success",
+            });
+            setIsLoading(false);
+            return true;
+          }
+        } catch (error) {
+          console.error('Error processing login:', error);
         }
       }
       
-      toast.error('Erro ao fazer login');
+      toast({
+        title: "Erro ao fazer login",
+        description: "Ocorreu um erro ao processar seu login",
+        variant: "destructive",
+      });
+      setIsLoading(false);
       return false;
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Erro ao fazer login');
-      return false;
-    } finally {
+      toast({
+        title: "Erro ao fazer login",
+        description: "Ocorreu um erro ao processar seu login",
+        variant: "destructive",
+      });
       setIsLoading(false);
+      return false;
     }
   };
   
@@ -293,10 +347,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await supabase.auth.signOut();
       setUser(null);
       localStorage.removeItem('user');
-      toast.success('Sessão encerrada');
+      toast({
+        title: "Sessão encerrada",
+        description: "Você saiu do sistema com sucesso",
+        variant: "success",
+      });
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Erro ao sair');
+      toast({
+        title: "Erro ao sair",
+        description: "Ocorreu um erro ao encerrar sua sessão",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -325,13 +387,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Check for common errors
         if (error.message.includes("User already registered")) {
-          toast.error('Este email já está em uso');
+          toast({
+            title: "Erro no cadastro",
+            description: "Este email já está em uso",
+            variant: "destructive",
+          });
+          setIsLoading(false);
           return false;
         }
         
         // Fallback to demo mode
         if (userData.email && demoUsers.some(u => u.email?.toLowerCase() === userData.email?.toLowerCase())) {
-          toast.error('Este email já está em uso');
+          toast({
+            title: "Erro no cadastro",
+            description: "Este email já está em uso",
+            variant: "destructive",
+          });
+          setIsLoading(false);
           return false;
         }
         
@@ -351,40 +423,106 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(newUser);
         localStorage.setItem('user', JSON.stringify(newUser));
         
-        toast.success('Registro concluído com sucesso!');
+        toast({
+          title: "Registro concluído",
+          description: "Sua conta foi criada com sucesso!",
+          variant: "success",
+        });
+        
+        setIsLoading(false);
         return true;
       }
       
       console.log('Supabase registration successful, user data:', data);
       
       if (data.user) {
+        // Check if email verification is required
+        if (data.user.identities?.length === 0 || 
+            data.user.identities?.[0]?.identity_data?.email_verified === false) {
+          toast({
+            title: "Quase lá!",
+            description: "Verifique seu email para confirmar sua conta",
+            variant: "success",
+          });
+          setIsLoading(false);
+          return true;
+        }
+        
         console.log('Auto-logging in after registration');
         // Log the user in automatically after registration
         try {
+          // Criar o perfil do usuário manualmente para garantir que existe
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: data.user.id,
+                name: userData.name,
+                avatar: '/placeholder.svg'
+              }
+            ]);
+            
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+          }
+          
+          // Criar o papel do usuário
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert([
+              {
+                user_id: data.user.id,
+                role: userData.role
+              }
+            ]);
+            
+          if (roleError) {
+            console.error("Error setting user role:", roleError);
+          }
+        
           const loginResult = await login(userData.email, userData.password);
           if (loginResult) {
             console.log('Auto-login successful');
-            toast.success('Registro concluído com sucesso!');
+            toast({
+              title: "Registro concluído",
+              description: "Sua conta foi criada com sucesso!",
+              variant: "success",
+            });
+            setIsLoading(false);
             return true;
           } else {
             console.log('Auto-login failed, but registration succeeded');
-            toast.success('Registro concluído! Por favor, faça login.');
+            toast({
+              title: "Registro concluído",
+              description: "Conta criada! Por favor, faça login.",
+              variant: "success",
+            });
+            setIsLoading(false);
             return true;
           }
         } catch (loginError) {
           console.error('Error logging in after registration:', loginError);
-          toast.success('Registro concluído! Por favor, verifique seu email para confirmar sua conta.');
+          toast({
+            title: "Registro concluído",
+            description: "Verifique seu email para confirmar sua conta.",
+            variant: "success",
+          });
+          setIsLoading(false);
           return true;
         }
       }
       
+      setIsLoading(false);
       return true;
     } catch (error) {
       console.error('Register error:', error);
-      toast.error('Erro ao registrar');
-      return false;
-    } finally {
+      toast({
+        title: "Erro ao registrar",
+        description: "Ocorreu um erro durante o cadastro. Tente novamente.",
+        variant: "destructive",
+      });
       setIsLoading(false);
+      return false;
     }
   };
   
@@ -410,7 +548,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
         if (error) {
           console.error('Error updating profile:', error);
-          toast.error('Erro ao atualizar perfil');
+          toast({
+            title: "Erro ao atualizar",
+            description: "Não foi possível atualizar seu perfil",
+            variant: "destructive",
+          });
+          setIsLoading(false);
           return false;
         }
       } else {
@@ -427,14 +570,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
       
-      toast.success('Perfil atualizado com sucesso');
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso",
+        variant: "success",
+      });
+      
+      setIsLoading(false);
       return true;
     } catch (error) {
       console.error('Update user error:', error);
-      toast.error('Erro ao atualizar perfil');
-      return false;
-    } finally {
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar seu perfil",
+        variant: "destructive",
+      });
       setIsLoading(false);
+      return false;
     }
   };
 

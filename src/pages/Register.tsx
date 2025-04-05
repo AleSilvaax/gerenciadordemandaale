@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { RegisterForm } from '@/components/forms/RegisterForm';
 import { useAuth } from '@/context/AuthContext';
@@ -7,7 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 const Register: React.FC = () => {
   const { user, isLoading } = useAuth();
 
-  console.log("Register page - User:", user?.email, "Loading:", isLoading);
+  useEffect(() => {
+    console.log("Register page - User:", user?.email, "Loading:", isLoading);
+  }, [user, isLoading]);
 
   if (user) {
     console.log("User already logged in, redirecting to home");

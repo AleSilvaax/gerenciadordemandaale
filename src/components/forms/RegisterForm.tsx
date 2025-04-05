@@ -56,7 +56,10 @@ export const RegisterForm: React.FC = () => {
       return;
     }
     
-    if (isSubmitting) return; // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log("Already submitting, preventing duplicate submission");
+      return;
+    }
     
     setIsSubmitting(true);
     console.log("Submitting registration form for:", email);
@@ -76,11 +79,13 @@ export const RegisterForm: React.FC = () => {
       if (success) {
         // Navigate to home if registration was successful and auto-login occurred
         navigate('/');
+      } else {
+        setError('Ocorreu um erro durante o registro. Verifique se o email já está em uso.');
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Registration error:", error);
       setError('Ocorreu um erro durante o registro. Tente novamente.');
-    } finally {
       setIsSubmitting(false);
     }
   };
