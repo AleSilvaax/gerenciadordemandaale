@@ -1,170 +1,215 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { toast } from 'sonner';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { TeamMember } from '@/types/serviceTypes';
+import { toast } from 'sonner';
 
-interface User extends TeamMember {
-  email: string;
-  role: string;
+// Extend TeamMember with additional user properties
+export interface User extends Omit<TeamMember, 'role'> {
+  role: string; // Allow string instead of restricting to UserRole
+  email?: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, role: string) => Promise<boolean>;
   logout: () => void;
-  updateUserInfo: (updatedUser: User) => void;
+  register: (userData: Partial<User>) => Promise<boolean>;
+  updateUser: (userData: Partial<User>) => Promise<boolean>;
   hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+// Demo users for testing
+const demoUsers: User[] = [
+  {
+    id: 'user-1',
+    name: 'João Silva',
+    avatar: '/avatars/user-1.png',
+    role: 'tecnico',
+    email: 'joao@example.com',
+    phone: '(11) 98765-4321',
+    permissions: ['view_services', 'update_services']
+  },
+  {
+    id: 'user-2',
+    name: 'Maria Oliveira',
+    avatar: '/avatars/user-2.png',
+    role: 'administrador',
+    email: 'maria@example.com',
+    phone: '(11) 91234-5678',
+    permissions: ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
+  },
+  {
+    id: 'user-3',
+    name: 'Carlos Santos',
+    avatar: '/avatars/user-3.png',
+    role: 'tecnico',
+    email: 'carlos@example.com',
+    phone: '(11) 99876-5432',
+    permissions: ['view_services', 'update_services']
+  },
+  {
+    id: 'user-5',
+    name: 'Pedro Costa',
+    avatar: '/avatars/user-5.png',
+    role: 'gestor',
+    email: 'pedro@example.com',
+    phone: '(11) 95678-1234',
+    permissions: ['view_services', 'update_services', 'add_members', 'view_stats']
+  }
+];
 
-  // On mount, check if user is already logged in (from localStorage)
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Check for saved session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Error parsing stored user:", e);
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Failed to parse saved user', error);
         localStorage.removeItem('user');
       }
     }
-    // Set loading to false after checking for user
     setIsLoading(false);
   }, []);
-
-  // Mock users for the demo
-  const mockUsers = [
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao@exemplo.com',
-      password: '123456',
-      role: 'tecnico',
-      avatar: '/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png',
-      phone: '(11) 99999-1234',
-    },
-    {
-      id: '2',
-      name: 'Maria Oliveira',
-      email: 'maria@exemplo.com',
-      password: '123456',
-      role: 'administrador',
-      avatar: '/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png',
-      phone: '(11) 98888-5678',
-    },
-    {
-      id: '3',
-      name: 'Carlos Rodrigues',
-      email: 'carlos@exemplo.com',
-      password: '123456',
-      role: 'gestor',
-      avatar: '/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png',
-      phone: '(11) 97777-9012',
-    }
-  ];
   
-  // Function to check permissions based on user role
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    
-    // Define role-based permissions
-    const permissions = {
-      tecnico: ['view_own_services', 'update_own_services'],
-      administrador: ['view_own_services', 'update_own_services', 'view_stats', 'add_members'],
-      gestor: ['view_own_services', 'update_own_services', 'view_stats', 'add_members', 'delete_services'],
-    };
-    
-    // Get permissions for the user's role
-    const rolePermissions = permissions[user.role as keyof typeof permissions] || [];
-    
-    return rolePermissions.includes(permission);
-  };
-  
+  // Mock login function
   const login = async (email: string, password: string): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      // In a real app, this would call an API
-      const foundUser = mockUsers.find(u => u.email === email && u.password === password);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (!foundUser) {
-        toast.error('Email ou senha incorretos');
+      const user = demoUsers.find(u => u.email === email);
+      
+      if (user && password.length >= 6) {
+        setUser(user);
+        localStorage.setItem('user', JSON.stringify(user));
+        toast.success(`Bem-vindo, ${user.name}!`);
+        return true;
+      } else {
+        toast.error('Email ou senha inválidos');
         return false;
       }
-      
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = foundUser;
-      const userToSet = userWithoutPassword as User;
-      
-      // Save in local state and localStorage
-      setUser(userToSet);
-      localStorage.setItem('user', JSON.stringify(userToSet));
-      
-      toast.success(`Bem-vindo, ${userToSet.name}!`);
-      return true;
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao fazer login');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  const register = async (name: string, email: string, password: string, role: string): Promise<boolean> => {
-    try {
-      // Check if email already exists
-      if (mockUsers.some(u => u.email === email)) {
-        toast.error('Este email já está em uso');
-        return false;
-      }
-      
-      // In a real app, this would call an API to create a new user
-      // For this demo, we'll create a mock user
-      const newUser = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role,
-        avatar: '/lovable-uploads/placeholder.svg', // Default avatar
-      };
-      
-      // Save in local state and localStorage
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      
-      toast.success('Conta criada com sucesso!');
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error);
-      toast.error('Erro ao criar conta');
-      return false;
-    }
-  };
-  
+  // Mock logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
     toast.success('Sessão encerrada');
   };
   
-  const updateUserInfo = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+  // Mock register function
+  const register = async (userData: Partial<User>): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Check if email is already used
+      if (userData.email && demoUsers.some(u => u.email === userData.email)) {
+        toast.error('Este email já está em uso');
+        return false;
+      }
+      
+      // Create new user
+      const newUser: User = {
+        id: `user-${Date.now()}`,
+        name: userData.name || 'Usuário',
+        avatar: userData.avatar || '/placeholder.svg',
+        role: userData.role || 'tecnico',
+        email: userData.email,
+        phone: userData.phone || '',
+        permissions: userData.role === 'administrador' 
+          ? ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
+          : userData.role === 'gestor'
+          ? ['view_services', 'update_services', 'add_members', 'view_stats']
+          : ['view_services', 'update_services']
+      };
+      
+      // Add to demo users and log in
+      demoUsers.push(newUser);
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      
+      toast.success('Registro concluído com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Register error:', error);
+      toast.error('Erro ao registrar');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
-
+  
+  // Update user data
+  const updateUser = async (userData: Partial<User>): Promise<boolean> => {
+    if (!user) return false;
+    
+    setIsLoading(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const updatedUser = { ...user, ...userData };
+      
+      // Update in demo users array
+      const index = demoUsers.findIndex(u => u.id === user.id);
+      if (index !== -1) {
+        demoUsers[index] = updatedUser;
+      }
+      
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      toast.success('Perfil atualizado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Update user error:', error);
+      toast.error('Erro ao atualizar perfil');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Check if user has specific permission
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'administrador') return true;
+    return user.permissions?.includes(permission) || false;
+  };
+  
   return (
     <AuthContext.Provider value={{ 
       user, 
-      login, 
-      register, 
-      logout, 
-      updateUserInfo, 
-      hasPermission,
-      isLoading 
+      isLoading, 
+      isAuthenticated: !!user,
+      login,
+      logout,
+      register,
+      updateUser,
+      hasPermission
     }}>
       {children}
     </AuthContext.Provider>

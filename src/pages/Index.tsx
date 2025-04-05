@@ -1,16 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
-import { getServices } from "@/services/api";
+import { getServices, getTeamMembers } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/ui-custom/StatCard";
 import { Service } from "@/types/serviceTypes";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { getTeamMembers } from "@/services/api";
 import { TeamMember } from "@/types/serviceTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
@@ -62,8 +60,8 @@ const Index: React.FC = () => {
   // Get 3 most recent services
   const recentServices = [...services]
     .sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
+      const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
       return dateB - dateA;
     })
     .slice(0, 3);

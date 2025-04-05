@@ -1,10 +1,9 @@
-
 import { Service, TeamMember, StatData, ChartData, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { services as mockServices, stats as mockStats, monthlyData as mockMonthlyData, weeklyData as mockWeeklyData, serviceTypeData as mockServiceTypeData, regionData as mockRegionData } from '@/data/mockData';
 import { toast } from 'sonner';
 
 // Re-export ServiceStatus type for components that need it
-export { ServiceStatus } from '@/types/serviceTypes';
+export type { ServiceStatus } from '@/types/serviceTypes';
 
 // Helper function to simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

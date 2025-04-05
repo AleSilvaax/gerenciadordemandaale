@@ -46,11 +46,11 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2">
                 <TeamMemberAvatar 
-                  src={technician.avatar} 
-                  name={technician.name}
+                  src={technician?.avatar} 
+                  name={technician?.name}
                   size="sm"
                 />
-                <span className="text-sm">{technician.name}</span>
+                <span className="text-sm">{technician?.name}</span>
               </div>
               
               {onDelete && (
