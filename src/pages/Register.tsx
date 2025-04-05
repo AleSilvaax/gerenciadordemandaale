@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +20,6 @@ const Register: React.FC = () => {
   const { register, user } = useAuth();
   const navigate = useNavigate();
 
-  // If user is already logged in, redirect to home
   if (user) {
     return <Navigate to="/" replace />;
   }

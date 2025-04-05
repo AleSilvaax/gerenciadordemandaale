@@ -9,6 +9,7 @@ export interface TeamMember {
   role: UserRole;
   email?: string;
   phone?: string;
+  signature?: string;
 }
 
 export interface ServiceMessage {
