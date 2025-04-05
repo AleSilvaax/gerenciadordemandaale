@@ -270,7 +270,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .update({
             name: userData.name,
             avatar: userData.avatar,
-            updated_at: new Date()
+            updated_at: new Date().toISOString() // Fix: Convert Date to string
           })
           .eq('id', user.id);
           

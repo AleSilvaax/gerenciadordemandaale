@@ -14,6 +14,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  variant?: "default" | "destructive" | "success" | "info" | "warning";
 };
 
 const actionTypes = {
@@ -151,6 +152,39 @@ function toast({ ...props }: Toast) {
     update,
   };
 }
+
+// Add variant helper functions
+toast.error = (title: string, props?: Omit<Toast, "title" | "variant">) => {
+  return toast({
+    title,
+    variant: "destructive",
+    ...props,
+  });
+};
+
+toast.success = (title: string, props?: Omit<Toast, "title" | "variant">) => {
+  return toast({
+    title,
+    variant: "success",
+    ...props,
+  });
+};
+
+toast.info = (title: string, props?: Omit<Toast, "title" | "variant">) => {
+  return toast({
+    title,
+    variant: "info",
+    ...props,
+  });
+};
+
+toast.warning = (title: string, props?: Omit<Toast, "title" | "variant">) => {
+  return toast({
+    title,
+    variant: "warning",
+    ...props,
+  });
+};
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);

@@ -1,4 +1,3 @@
-
 import { Service } from "@/types/serviceTypes";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -601,7 +600,6 @@ export function generatePDF(service: Service, reportType: "inspection" | "instal
   }
 }
 
-// Export necessary functions
 export function downloadPDF(service: Service): void {
   generatePDF(service);
 }
