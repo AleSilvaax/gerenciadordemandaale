@@ -49,22 +49,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
+            console.log('Auth state change event:', event);
+            
             if (session?.user) {
+              console.log('User from session:', session.user.email);
               // Get user profile from Supabase
-              const { data: profile } = await supabase
+              const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
                 
+              if (profileError) {
+                console.error('Error fetching profile:', profileError);
+              }
+              
               // Get user role from Supabase
-              const { data: userRole } = await supabase
+              const { data: userRole, error: roleError } = await supabase
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', session.user.id)
                 .single();
+                
+              if (roleError) {
+                console.error('Error fetching user role:', roleError);
+              }
 
               if (profile) {
+                console.log('Profile found:', profile);
                 const authUser: AuthUser = {
                   id: session.user.id,
                   email: session.user.email,
@@ -76,33 +88,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 setUser(authUser);
               } else {
+                console.log('No profile found for user');
                 setUser(null);
               }
             } else {
+              console.log('No session user, setting user to null');
               setUser(null);
             }
           }
         );
 
         // THEN check for existing session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          throw sessionError;
+        }
         
         if (session?.user) {
+          console.log('Existing session found:', session.user.email);
           // Get user profile from Supabase
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
             
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          }
+          
           // Get user role from Supabase
-          const { data: userRole } = await supabase
+          const { data: userRole, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', session.user.id)
             .single();
+            
+          if (roleError) {
+            console.error('Error fetching user role:', roleError);
+          }
 
           if (profile) {
+            console.log('Profile found:', profile);
             const authUser: AuthUser = {
               id: session.user.id,
               email: session.user.email,
@@ -113,12 +142,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             
             setUser(authUser);
+          } else {
+            // Try to get from localStorage as fallback for demo mode
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+              try {
+                setUser(JSON.parse(savedUser));
+              } catch (error) {
+                console.error('Failed to parse saved user', error);
+                localStorage.removeItem('user');
+              }
+            }
           }
         } else {
+          console.log('No existing session');
           // Try to get from localStorage as fallback for demo mode
           const savedUser = localStorage.getItem('user');
           if (savedUser) {
             try {
+              console.log('Found user in localStorage:', savedUser);
               setUser(JSON.parse(savedUser));
             } catch (error) {
               console.error('Failed to parse saved user', error);
@@ -134,6 +176,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     checkSession();
+    
+    // Return cleanup function to unsubscribe
+    return () => {
+      console.log('Cleanup auth provider');
+      supabase.auth.onAuthStateChange(() => {});
+    };
   }, []);
   
   // Helper function to get permissions based on role
@@ -150,6 +198,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('Attempting login with:', email);
     setIsLoading(true);
     
     try {
@@ -169,9 +218,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         
         // Fallback to demo mode
+        console.log('Trying demo mode login');
         const foundUser = demoUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
         
         if (foundUser && password.length >= 6) {
+          console.log('Demo user found:', foundUser.name);
           setUser(foundUser);
           localStorage.setItem('user', JSON.stringify(foundUser));
           toast.success(`Bem-vindo, ${foundUser.name}!`);
@@ -182,22 +233,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
+      console.log('Supabase login successful, user:', data.user?.email);
+      
       if (data.user) {
         // Get user profile
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
           .single();
           
+        if (profileError) {
+          console.error('Error fetching profile after login:', profileError);
+        }
+        
         // Get user role
-        const { data: userRole } = await supabase
+        const { data: userRole, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', data.user.id)
           .single();
+          
+        if (roleError) {
+          console.error('Error fetching role after login:', roleError);
+        }
 
         if (profile) {
+          console.log('Profile found after login:', profile);
           const authUser: AuthUser = {
             id: data.user.id,
             email: data.user.email,
@@ -227,6 +289,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Logout function
   const logout = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
       setUser(null);
       localStorage.removeItem('user');
@@ -234,11 +297,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Erro ao sair');
+    } finally {
+      setIsLoading(false);
     }
   };
   
   // Register function
   const register = async (userData: RegisterFormData): Promise<boolean> => {
+    console.log('Registering new user:', userData.email);
     setIsLoading(true);
     
     try {
@@ -270,6 +336,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         
         // Create new demo user
+        console.log('Creating demo user');
         const newUser: AuthUser = {
           id: `user-${Date.now()}`,
           name: userData.name || 'Usuário',
@@ -288,18 +355,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       }
       
+      console.log('Supabase registration successful, user data:', data);
+      
       if (data.user) {
+        console.log('Auto-logging in after registration');
         // Log the user in automatically after registration
-        // This approach logs them in directly
         try {
           const loginResult = await login(userData.email, userData.password);
           if (loginResult) {
+            console.log('Auto-login successful');
             toast.success('Registro concluído com sucesso!');
+            return true;
+          } else {
+            console.log('Auto-login failed, but registration succeeded');
+            toast.success('Registro concluído! Por favor, faça login.');
             return true;
           }
         } catch (loginError) {
           console.error('Error logging in after registration:', loginError);
           toast.success('Registro concluído! Por favor, verifique seu email para confirmar sua conta.');
+          return true;
         }
       }
       
@@ -329,7 +404,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .update({
             name: userData.name,
             avatar: userData.avatar,
-            updated_at: new Date().toISOString() // Fix: Convert Date to string
+            updated_at: new Date().toISOString() // Convert Date to string
           })
           .eq('id', user.id);
           

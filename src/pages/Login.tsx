@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,29 +13,38 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // If user is already logged in, redirect to home
   if (user) {
+    console.log("User already logged in, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent multiple submissions
+    
+    console.log("Submitting login form with email:", email);
     setIsSubmitting(true);
     
     try {
       const success = await login(email, password);
+      console.log("Login result:", success);
       if (success) {
         navigate('/');
       }
+    } catch (error) {
+      console.error("Login error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleDemoLogin = async (role: string) => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     let demoEmail = '';
     let demoPassword = '123456';
     
@@ -53,14 +62,21 @@ const Login: React.FC = () => {
     
     setEmail(demoEmail);
     setPassword(demoPassword);
+    setIsSubmitting(true);
     
     // Automatically submit after setting credentials
-    setTimeout(async () => {
+    try {
+      console.log("Using demo login with role:", role, "email:", demoEmail);
       const success = await login(demoEmail, demoPassword);
+      console.log("Demo login result:", success);
       if (success) {
         navigate('/');
       }
-    }, 300);
+    } catch (error) {
+      console.error("Demo login error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,6 +97,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('tecnico')}
+                disabled={isSubmitting}
               >
                 Técnico
               </Button>
@@ -89,6 +106,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('administrador')}
+                disabled={isSubmitting}
               >
                 Administrador
               </Button>
@@ -97,6 +115,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('gestor')}
+                disabled={isSubmitting}
               >
                 Gestor
               </Button>
@@ -127,6 +146,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="transition-medium"
+                  disabled={isSubmitting}
                 />
               </div>
               
@@ -140,6 +160,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="transition-medium"
+                  disabled={isSubmitting}
                 />
               </div>
             </CardContent>

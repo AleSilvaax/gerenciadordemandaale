@@ -56,7 +56,10 @@ export const RegisterForm: React.FC = () => {
       return;
     }
     
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     setIsSubmitting(true);
+    console.log("Submitting registration form for:", email);
     
     try {
       const userData: RegisterFormData = {
@@ -68,9 +71,15 @@ export const RegisterForm: React.FC = () => {
       };
       
       const success = await register(userData);
+      console.log("Registration result:", success);
+      
       if (success) {
+        // Navigate to home if registration was successful and auto-login occurred
         navigate('/');
       }
+    } catch (error) {
+      console.error("Registration error:", error);
+      setError('Ocorreu um erro durante o registro. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,6 +117,7 @@ export const RegisterForm: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -120,6 +130,7 @@ export const RegisterForm: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -132,6 +143,7 @@ export const RegisterForm: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -144,6 +156,7 @@ export const RegisterForm: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -152,6 +165,7 @@ export const RegisterForm: React.FC = () => {
             <Select
               value={role}
               onValueChange={handleRoleChange}
+              disabled={isSubmitting}
             >
               <SelectTrigger id="role">
                 <SelectValue placeholder="Selecione sua função" />

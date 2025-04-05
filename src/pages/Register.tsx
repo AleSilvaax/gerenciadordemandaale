@@ -5,9 +5,12 @@ import { RegisterForm } from '@/components/forms/RegisterForm';
 import { useAuth } from '@/context/AuthContext';
 
 const Register: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  console.log("Register page - User:", user?.email, "Loading:", isLoading);
 
   if (user) {
+    console.log("User already logged in, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
