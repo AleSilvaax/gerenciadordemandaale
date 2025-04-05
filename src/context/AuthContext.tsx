@@ -1,11 +1,9 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { TeamMember } from '@/types/serviceTypes';
 import { toast } from 'sonner';
 
 // Extend TeamMember with additional user properties
-export interface User extends Omit<TeamMember, 'role'> {
-  role: string; // Allow string instead of restricting to UserRole
+export interface User extends TeamMember {
   email?: string;
   permissions?: string[];
 }
@@ -16,8 +14,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Partial<User>) => Promise<boolean>;
+  register: (userData: Partial<User> & { password: string }) => Promise<boolean>;
   updateUser: (userData: Partial<User>) => Promise<boolean>;
+  updateUserInfo: (userData: User) => void;
   hasPermission: (permission: string) => boolean;
 }
 
@@ -26,39 +25,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Demo users for testing
 const demoUsers: User[] = [
   {
-    id: 'user-1',
-    name: 'João Silva',
-    avatar: '/avatars/user-1.png',
-    role: 'tecnico',
-    email: 'joao@example.com',
-    phone: '(11) 98765-4321',
+    id: "user-1",
+    name: "João Silva",
+    avatar: "/avatars/user-1.png",
+    role: "tecnico",
+    email: "joao@example.com",
+    phone: "(11) 98765-4321",
     permissions: ['view_services', 'update_services']
   },
   {
-    id: 'user-2',
-    name: 'Maria Oliveira',
-    avatar: '/avatars/user-2.png',
-    role: 'administrador',
-    email: 'maria@example.com',
-    phone: '(11) 91234-5678',
+    id: "user-2",
+    name: "Maria Oliveira",
+    avatar: "/avatars/user-2.png",
+    role: "administrador",
+    email: "maria@example.com",
+    phone: "(11) 91234-5678",
     permissions: ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
   },
   {
-    id: 'user-3',
-    name: 'Carlos Santos',
-    avatar: '/avatars/user-3.png',
-    role: 'tecnico',
-    email: 'carlos@example.com',
-    phone: '(11) 99876-5432',
+    id: "user-3",
+    name: "Carlos Santos",
+    avatar: "/avatars/user-3.png",
+    role: "tecnico",
+    email: "carlos@example.com",
+    phone: "(11) 99876-5432",
     permissions: ['view_services', 'update_services']
   },
   {
-    id: 'user-5',
-    name: 'Pedro Costa',
-    avatar: '/avatars/user-5.png',
-    role: 'gestor',
-    email: 'pedro@example.com',
-    phone: '(11) 95678-1234',
+    id: "user-5",
+    name: "Pedro Costa",
+    avatar: "/avatars/user-5.png",
+    role: "gestor",
+    email: "pedro@example.com",
+    phone: "(11) 95678-1234",
     permissions: ['view_services', 'update_services', 'add_members', 'view_stats']
   }
 ];
@@ -117,7 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   // Mock register function
-  const register = async (userData: Partial<User>): Promise<boolean> => {
+  const register = async (userData: Partial<User> & { password: string }): Promise<boolean> => {
     setIsLoading(true);
     
     try {
@@ -192,6 +191,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
+
+  // Direct user info update (without API call)
+  const updateUserInfo = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
   
   // Check if user has specific permission
   const hasPermission = (permission: string): boolean => {
@@ -209,6 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       register,
       updateUser,
+      updateUserInfo,
       hasPermission
     }}>
       {children}

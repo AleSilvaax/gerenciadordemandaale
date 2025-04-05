@@ -1,15 +1,14 @@
-
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
-export type UserRole = "tecnico" | "administrador" | "gestor";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
+export type UserRole = "tecnico" | "administrador" | "gestor";
 
 export interface TeamMember {
   id: string;
   name: string;
   avatar: string;
-  role?: UserRole;
+  role: UserRole;
+  email?: string;
   phone?: string;
-  signature?: string;
 }
 
 export interface ServiceMessage {
@@ -50,7 +49,6 @@ export interface Service {
     technician?: string;
   };
   
-  // Add missing fields
   date?: string;
   description?: string;
   client?: string;
@@ -154,12 +152,10 @@ export interface ReportData {
   infraAreaPhoto?: string;
   chargerLocationPhoto?: string;
   
-  // Add missing fields
   clientName?: string;
   clientSignature?: string;
 }
 
-// Add the missing interfaces for the chart data
 export interface StatData {
   total: number;
   completed: number;

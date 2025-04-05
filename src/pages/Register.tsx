@@ -62,7 +62,12 @@ const Register: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const success = await register(name, email, password, role);
+      const success = await register({
+        name,
+        email,
+        role,
+        password
+      });
       if (success) {
         navigate('/');
       }

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Save, PlusCircle, Trash2, UserPlus, Upload, User, ShieldCheck, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -39,11 +38,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { TeamMember } from "@/types/serviceTypes";
+import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
-
-type UserRole = "tecnico" | "administrador" | "gestor";
 
 interface Permission {
   id: string;

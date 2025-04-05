@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { UserCircle2, Bell, Moon, FileText, Shield, LogOut, Upload, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { updateTeamMember } from "@/services/api";
 import { toast } from "sonner";
 
 // Custom hook for theme management
@@ -56,7 +55,7 @@ const useUserPreferences = () => {
 };
 
 const Settings: React.FC = () => {
-  const { user, logout, updateUserInfo } = useAuth();
+  const { user, logout, updateUser, updateUserInfo } = useAuth();
   const { darkMode, setDarkMode } = useTheme();
   const { notifications, setNotifications, emailNotifications, setEmailNotifications } = useUserPreferences();
   
@@ -92,19 +91,23 @@ const Settings: React.FC = () => {
     
     try {
       setIsUpdating(true);
-      await updateTeamMember(user.id, {
+      
+      // Update user profile
+      await updateUser({
         name: profile.name,
         email: profile.email,
         phone: profile.phone,
       });
       
       // Update local auth context
-      updateUserInfo({
-        ...user,
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
-      });
+      if (user) {
+        updateUserInfo({
+          ...user,
+          name: profile.name,
+          email: profile.email,
+          phone: profile.phone,
+        });
+      }
       
       toast.success("Perfil atualizado com sucesso!");
     } catch (error) {
@@ -161,9 +164,6 @@ const Settings: React.FC = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real app, this would upload the file to a server
-      // For this demo, we'll just simulate a successful upload
-      
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
