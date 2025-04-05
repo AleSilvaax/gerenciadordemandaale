@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { TeamMember } from '@/types/serviceTypes';
 import { toast } from 'sonner';
+import { UserRole } from '@/types/interfaces/auth';
 
 // Extend TeamMember with additional user properties
 export interface User extends TeamMember {
@@ -29,7 +31,7 @@ const demoUsers: User[] = [
     name: "João Silva",
     avatar: "/avatars/user-1.png",
     role: "tecnico",
-    email: "joao@example.com",
+    email: "joao@exemplo.com",
     phone: "(11) 98765-4321",
     permissions: ['view_services', 'update_services']
   },
@@ -38,7 +40,7 @@ const demoUsers: User[] = [
     name: "Maria Oliveira",
     avatar: "/avatars/user-2.png",
     role: "administrador",
-    email: "maria@example.com",
+    email: "maria@exemplo.com",
     phone: "(11) 91234-5678",
     permissions: ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
   },
@@ -46,19 +48,10 @@ const demoUsers: User[] = [
     id: "user-3",
     name: "Carlos Santos",
     avatar: "/avatars/user-3.png",
-    role: "tecnico",
-    email: "carlos@example.com",
-    phone: "(11) 99876-5432",
-    permissions: ['view_services', 'update_services']
-  },
-  {
-    id: "user-5",
-    name: "Pedro Costa",
-    avatar: "/avatars/user-5.png",
     role: "gestor",
-    email: "pedro@example.com",
-    phone: "(11) 95678-1234",
-    permissions: ['view_services', 'update_services', 'add_members', 'view_stats']
+    email: "carlos@exemplo.com",
+    phone: "(11) 99876-5432",
+    permissions: ['view_services', 'update_services', 'view_stats']
   }
 ];
 
@@ -88,12 +81,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const user = demoUsers.find(u => u.email === email);
+      const foundUser = demoUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
       
-      if (user && password.length >= 6) {
-        setUser(user);
-        localStorage.setItem('user', JSON.stringify(user));
-        toast.success(`Bem-vindo, ${user.name}!`);
+      if (foundUser && password.length >= 6) {
+        setUser(foundUser);
+        localStorage.setItem('user', JSON.stringify(foundUser));
+        toast.success(`Bem-vindo, ${foundUser.name}!`);
         return true;
       } else {
         toast.error('Email ou senha inválidos');
@@ -124,7 +117,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Check if email is already used
-      if (userData.email && demoUsers.some(u => u.email === userData.email)) {
+      if (userData.email && demoUsers.some(u => u.email?.toLowerCase() === userData.email?.toLowerCase())) {
         toast.error('Este email já está em uso');
         return false;
       }
@@ -140,7 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         permissions: userData.role === 'administrador' 
           ? ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
           : userData.role === 'gestor'
-          ? ['view_services', 'update_services', 'add_members', 'view_stats']
+          ? ['view_services', 'update_services', 'view_stats']
           : ['view_services', 'update_services']
       };
       

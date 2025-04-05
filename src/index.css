@@ -36,6 +36,102 @@
     --ring: 217.2 91.2% 59.8%;
 
     --radius: 0.75rem;
+    --animation-speed-factor: 1;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fadeSlideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0);
+    }
+    50% {
+      box-shadow: 0 0 20px 0 rgba(var(--primary-rgb), 0.25);
+    }
+  }
+
+  /* Color scheme variables */
+  [data-color-scheme="default"] {
+    /* Keep default theme colors */
+  }
+
+  [data-color-scheme="blue"] {
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 98%;
+    --ring: 210 100% 50%;
+  }
+
+  [data-color-scheme="green"] {
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 98%;
+    --ring: 142 76% 36%;
+  }
+
+  [data-color-scheme="purple"] {
+    --primary: 270 76% 60%;
+    --primary-foreground: 0 0% 98%;
+    --ring: 270 76% 60%;
+  }
+
+  [data-color-scheme="orange"] {
+    --primary: 32 86% 58%;
+    --primary-foreground: 0 0% 98%;
+    --ring: 32 86% 58%;
+  }
+
+  /* Layout density variables */
+  [data-layout="compact"] {
+    --spacing-unit: 0.75;
+  }
+
+  [data-layout="balanced"] {
+    --spacing-unit: 1;
+  }
+
+  [data-layout="spacious"] {
+    --spacing-unit: 1.25;
   }
 }
 
@@ -95,4 +191,98 @@
   .page-transition {
     @apply animate-fadeIn;
   }
+
+  /* Animation utilities */
+  .animate-fadeIn {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .animate-fadeSlideIn {
+    animation: fadeSlideIn 0.5s ease-out;
+  }
+
+  .animate-fadeSlideInRight {
+    animation: fadeSlideInRight 0.5s ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .animate-pulseGlow {
+    animation: pulseGlow 2s infinite;
+  }
+
+  /* Animation durations based on global speed factor */
+  .hover-scale {
+    @apply transition-transform hover:scale-105;
+    transition-duration: calc(200ms * var(--animation-speed-factor));
+  }
+
+  .hover-glow {
+    @apply transition-shadow;
+    transition-duration: calc(200ms * var(--animation-speed-factor));
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 15px 0 rgba(var(--primary-rgb), 0.3);
+  }
+
+  .transition-fast {
+    transition-duration: calc(150ms * var(--animation-speed-factor));
+  }
+
+  .transition-medium {
+    transition-duration: calc(300ms * var(--animation-speed-factor));
+  }
+
+  .transition-slow {
+    transition-duration: calc(500ms * var(--animation-speed-factor));
+  }
 }
+
+/* Extract primary color RGB values for glow effects */
+:root {
+  --primary-rgb: 59, 130, 246; /* Default blue RGB values */
+}
+
+[data-color-scheme="blue"] {
+  --primary-rgb: 59, 130, 246;
+}
+
+[data-color-scheme="green"] {
+  --primary-rgb: 34, 197, 94;
+}
+
+[data-color-scheme="purple"] {
+  --primary-rgb: 168, 85, 247;
+}
+
+[data-color-scheme="orange"] {
+  --primary-rgb: 249, 115, 22;
+}
+
+/* Card and UI element hover effects */
+.card {
+  @apply transition-all hover:shadow-md;
+  transition-duration: calc(300ms * var(--animation-speed-factor));
+}
+
+/* Update button hover animations */
+button:not(.no-animation) {
+  @apply transition-all;
+  transition-duration: calc(200ms * var(--animation-speed-factor));
+}
+
+/* Staggered list item animations */
+.staggered-list > * {
+  animation: fadeSlideIn 0.5s ease-out backwards;
+}
+
+.staggered-list > *:nth-child(1) { animation-delay: 0.1s; }
+.staggered-list > *:nth-child(2) { animation-delay: 0.2s; }
+.staggered-list > *:nth-child(3) { animation-delay: 0.3s; }
+.staggered-list > *:nth-child(4) { animation-delay: 0.4s; }
+.staggered-list > *:nth-child(5) { animation-delay: 0.5s; }
+.staggered-list > *:nth-child(6) { animation-delay: 0.6s; }
+.staggered-list > *:nth-child(7) { animation-delay: 0.7s; }
+.staggered-list > *:nth-child(8) { animation-delay: 0.8s; }

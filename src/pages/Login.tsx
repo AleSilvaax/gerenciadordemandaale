@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,8 @@ const Login: React.FC = () => {
   
   const handleDemoLogin = async (role: string) => {
     let demoEmail = '';
+    let demoPassword = '123456';
+    
     switch(role) {
       case 'tecnico':
         demoEmail = 'joao@exemplo.com';
@@ -50,26 +52,34 @@ const Login: React.FC = () => {
     }
     
     setEmail(demoEmail);
-    setPassword('123456');
+    setPassword(demoPassword);
+    
+    // Automatically submit after setting credentials
+    setTimeout(async () => {
+      const success = await login(demoEmail, demoPassword);
+      if (success) {
+        navigate('/');
+      }
+    }, 300);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full animate-scaleIn">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold">Sistema de Gestão</h1>
           <p className="text-muted-foreground mt-2">Entre com suas credenciais para acessar</p>
         </div>
         
-        <Alert className="mb-4 bg-muted/50 border-primary/20">
+        <Alert className="mb-4 bg-muted/50 border-primary/20 animate-fadeIn">
           <Info className="h-4 w-4" />
           <AlertDescription>
             <p className="text-sm">Credenciais de demonstração:</p>
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-2 mt-2">
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-xs"
+                className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('tecnico')}
               >
                 Técnico
@@ -77,7 +87,7 @@ const Login: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-xs"
+                className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('administrador')}
               >
                 Administrador
@@ -85,19 +95,19 @@ const Login: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-xs"
+                className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('gestor')}
               >
                 Gestor
               </Button>
-              <div className="col-span-2 text-xs text-muted-foreground mt-1">
+              <div className="col-span-3 text-xs text-muted-foreground mt-1">
                 Senha para todos: 123456
               </div>
             </div>
           </AlertDescription>
         </Alert>
         
-        <Card className="border-white/10">
+        <Card className="border-white/10 animate-fadeSlideIn">
           <CardHeader>
             <CardTitle>Acesso ao sistema</CardTitle>
             <CardDescription>
@@ -116,6 +126,7 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="transition-medium"
                 />
               </div>
               
@@ -128,12 +139,17 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="transition-medium"
                 />
               </div>
             </CardContent>
             
             <CardFooter className="flex flex-col space-y-3">
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                className="w-full transition-medium hover-scale" 
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
@@ -147,9 +163,9 @@ const Login: React.FC = () => {
                 )}
               </Button>
               
-              <div className="text-sm text-center mt-4">
+              <div className="text-sm text-center mt-4 animate-fadeIn" style={{ animationDelay: "0.2s" }}>
                 Não possui uma conta?{" "}
-                <Link to="/register" className="text-primary hover:underline">
+                <Link to="/register" className="text-primary hover:underline transition-colors">
                   <UserPlus className="inline-block h-3 w-3 mr-1" />
                   Cadastre-se
                 </Link>
