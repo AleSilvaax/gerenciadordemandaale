@@ -9,6 +9,29 @@ export interface TeamMember {
   avatar: string;
   role?: UserRole;
   phone?: string;
+  signature?: string;
+}
+
+export interface ServiceMessage {
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  timestamp?: string;
+}
+
+export interface ServiceFeedback {
+  clientRating: number;
+  clientComment?: string;
+  technicianFeedback?: string;
+}
+
+export interface CustomField {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select';
+  value: string | number | boolean;
+  options?: string[];
 }
 
 export interface Service {
@@ -26,11 +49,26 @@ export interface Service {
     client?: string;
     technician?: string;
   };
+  
+  // Add missing fields
+  date?: string;
+  description?: string;
+  client?: string;
+  address?: string;
+  city?: string;
+  notes?: string;
+  serviceType?: "inspection" | "installation" | "maintenance";
+  estimatedHours?: number;
+  photoTitles?: string[];
+  messages?: ServiceMessage[];
+  feedback?: ServiceFeedback;
+  customFields?: CustomField[];
 }
 
 export interface ServiceCardProps {
   service: Service;
   onDelete?: (id: string) => Promise<void>;
+  compact?: boolean;
 }
 
 export interface ReportData {
@@ -115,6 +153,10 @@ export interface ReportData {
   electricalPanelPhoto?: string;
   infraAreaPhoto?: string;
   chargerLocationPhoto?: string;
+  
+  // Add missing fields
+  clientName?: string;
+  clientSignature?: string;
 }
 
 // Add the missing interfaces for the chart data

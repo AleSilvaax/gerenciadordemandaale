@@ -1,51 +1,40 @@
 
-import React from "react";
-import { cn } from "@/lib/utils";
+import React from 'react';
 import { Badge } from "@/components/ui/badge";
-
-type StatusType = "concluido" | "pendente" | "cancelado";
+import { CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ServiceStatus } from '@/types/serviceTypes';
 
 interface StatusBadgeProps {
-  status: StatusType;
-  className?: string;
+  status: ServiceStatus;
+  small?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => {
-  const getStatusConfig = (status: StatusType) => {
-    switch (status) {
-      case "concluido":
-        return {
-          label: "Concluído",
-          variant: "default" as const,
-          className: "bg-green-500 hover:bg-green-600",
-        };
-      case "pendente":
-        return {
-          label: "Pendente",
-          variant: "secondary" as const,
-          className: "bg-yellow-500 hover:bg-yellow-600 text-black",
-        };
-      case "cancelado":
-        return {
-          label: "Cancelado",
-          variant: "destructive" as const,
-        };
-      default:
-        return {
-          label: "Desconhecido",
-          variant: "outline" as const,
-        };
-    }
-  };
-
-  const { label, variant, className: statusClassName } = getStatusConfig(status);
-
-  return (
-    <Badge 
-      variant={variant} 
-      className={cn("text-xs font-medium", statusClassName, className)}
-    >
-      {label}
-    </Badge>
-  );
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, small = false }) => {
+  const iconSize = small ? 12 : 14;
+  
+  switch (status) {
+    case 'concluido':
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200">
+          <CheckCircle className={`mr-1 h-${iconSize/4} w-${iconSize/4}`} />
+          {small ? 'OK' : 'Concluído'}
+        </Badge>
+      );
+    case 'pendente':
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200">
+          <Clock className={`mr-1 h-${iconSize/4} w-${iconSize/4}`} />
+          {small ? 'Pend.' : 'Pendente'}
+        </Badge>
+      );
+    case 'cancelado':
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200">
+          <XCircle className={`mr-1 h-${iconSize/4} w-${iconSize/4}`} />
+          {small ? 'Canc.' : 'Cancelado'}
+        </Badge>
+      );
+    default:
+      return null;
+  }
 };
