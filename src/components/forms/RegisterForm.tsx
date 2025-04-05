@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserRole } from '@/types/serviceTypes';
 import { useAuth } from '@/context/AuthContext';
+import { RegisterFormData } from '@/types/auth';
 
 export const RegisterForm: React.FC = () => {
   const [name, setName] = useState('');
@@ -58,12 +59,15 @@ export const RegisterForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const success = await register({
+      const userData: RegisterFormData = {
         name,
         email,
         role,
-        password
-      });
+        password,
+        confirmPassword
+      };
+      
+      const success = await register(userData);
       if (success) {
         navigate('/');
       }
