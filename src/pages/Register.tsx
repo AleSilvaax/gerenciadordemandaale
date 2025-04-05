@@ -76,6 +76,11 @@ const Register: React.FC = () => {
     }
   };
 
+  // Handle role change with proper type casting
+  const handleRoleChange = (value: string) => {
+    setRole(value as UserRole);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="max-w-md w-full">
@@ -153,7 +158,7 @@ const Register: React.FC = () => {
                 <Label htmlFor="role">Função</Label>
                 <Select
                   value={role}
-                  onValueChange={setRole}
+                  onValueChange={handleRoleChange}
                 >
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Selecione sua função" />
