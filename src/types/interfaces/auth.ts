@@ -1,7 +1,7 @@
 
 import { UserRole } from '@/types/serviceTypes';
 
-export { UserRole };
+export type { UserRole };
 
 export interface RegisterFormData {
   name: string;
