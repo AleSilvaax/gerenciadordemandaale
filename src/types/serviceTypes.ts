@@ -1,34 +1,59 @@
 
+export type ServiceStatus = "concluido" | "pendente" | "cancelado";
+export type UserRole = "tecnico" | "administrador" | "gestor";
+export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
+
 export interface TeamMember {
   id: string;
   name: string;
-  email?: string;
+  avatar: string;
+  role?: UserRole;
   phone?: string;
-  role?: string;
-  avatar: string; // Changed from optional to required
-  signature?: string;
 }
 
-export interface CustomField {
+export interface Service {
   id: string;
-  label: string;
-  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select';
-  value: string | number | boolean;
-  options?: string[];
+  title: string;
+  status: ServiceStatus;
+  location: string;
+  technician: TeamMember;
+  priority?: ServicePriority;
+  dueDate?: string;
+  creationDate?: string;
+  reportData?: ReportData;
+  photos?: string[];
+  signatures?: {
+    client?: string;
+    technician?: string;
+  };
+}
+
+export interface ServiceCardProps {
+  service: Service;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export interface ReportData {
-  // General properties
   client?: string;
   address?: string;
   city?: string;
-  servicePhase?: 'inspection' | 'installation';
-  customFields?: CustomField[];
+  executedBy?: string;
+  servicePhase?: "inspection" | "installation";
+  installationDate?: string;
+  modelNumber?: string;
+  serialNumberNew?: string;
+  serialNumberOld?: string;
+  homologatedName?: string;
+  compliesWithNBR17019?: boolean;
+  homologatedInstallation?: boolean;
+  requiredAdjustment?: boolean;
+  adjustmentDescription?: string;
+  validWarranty?: boolean;
+  circuitBreakerEntry?: string;
+  chargerCircuitBreaker?: string;
+  cableGauge?: string;
+  chargerStatus?: string;
   technicalComments?: string;
-  clientSignature?: string;
-  clientName?: string;
-
-  // Inspection specific
   inspectionDate?: string;
   voltage?: string;
   supplyType?: string;
@@ -37,72 +62,70 @@ export interface ReportData {
   existingPanel?: boolean;
   panelType?: string;
   panelAmps?: string;
-  voltageBetweenPhases?: string;
-  voltageBetweenPhaseAndNeutral?: string;
-  hasThreePhase?: boolean;
+  groundingSystem?: string;
+  chargerLoad?: string;
+  
   wallboxBrand?: string;
   wallboxPower?: string;
   powerSupplyType?: string;
+  phaseAmperage?: string;
+  cableSection?: string;
+  energyMeter?: boolean;
   needsInfrastructure?: boolean;
+  artNumber?: string;
+  projectNumber?: string;
+  
+  installationTime?: string;
+  daysCount?: string;
+  clientRepresentative?: string;
+  greenCableLength?: string;
+  blackCableLength?: string;
+  ppCableLength?: string;
+  
+  breakerDetails?: string;
+  drDetails?: string;
+  dpsDetails?: string;
+  conduitType?: string;
+  hasGroundingSystem?: boolean;
+  groundingDetails?: string;
+  earthBarrierDetails?: string;
+  neutralBarrierDetails?: string;
+  
+  voltageBetweenPhases?: string;
+  voltageBetweenPhaseAndNeutral?: string;
+  hasThreePhase?: boolean;
+  hasMainBreaker?: boolean;
+  hasDps?: boolean;
+  
+  distanceToPanelAndCharger?: string;
+  conduitInstallationType?: string;
+  chargerPositionAgreed?: boolean;
+  externalInstallation?: boolean;
   needsScaffolding?: boolean;
   needsTechnicalHole?: boolean;
   needsMasonry?: boolean;
-  groundingSystem?: string;
-  artNumber?: string;
-
-  // Installation specific
-  installationDate?: string;
-  modelNumber?: string;
-  serialNumberNew?: string;
-  chargerLoad?: string;
-  cableGauge?: string;
-  chargerCircuitBreaker?: string;
-  chargerStatus?: string;
-  compliesWithNBR17019?: boolean;
-  homologatedInstallation?: boolean;
-  validWarranty?: boolean;
-  requiredAdjustment?: boolean;
-  adjustmentDescription?: string;
+  needsWallPainting?: boolean;
+  needsConduitPainting?: boolean;
+  needsArtEmission?: boolean;
+  needsAdditionalDocumentation?: boolean;
+  hasWifiOrCellSignal?: boolean;
+  workingHours?: string;
+  
+  mainBreakerPhoto?: string;
+  electricalPanelPhoto?: string;
+  infraAreaPhoto?: string;
+  chargerLocationPhoto?: string;
 }
 
-export type ServiceStatus = 'pendente' | 'concluido' | 'cancelado';
-
-export interface ServiceFeedback {
-  clientRating?: number; // 1-5 stars
-  clientComment?: string;
-  technicianFeedback?: string;
+// Add the missing interfaces for the chart data
+export interface StatData {
+  total: number;
+  completed: number;
+  pending: number;
+  cancelled: number;
 }
 
-export interface ServiceMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderRole: string;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-}
-
-export interface Service {
-  id: string;
-  title: string;
-  description?: string;
-  status: ServiceStatus;
-  date?: string;
-  dueDate?: string; // Already existed, will be used for deadline functionality
-  priority?: 'baixa' | 'media' | 'alta' | 'urgente'; // Added priority level
-  location: string;
-  address?: string;
-  city?: string;
-  client?: string;
-  notes?: string;
-  technician: TeamMember;
-  reportData?: ReportData;
-  photos?: string[];
-  photoTitles?: string[];
-  feedback?: ServiceFeedback;
-  messages?: ServiceMessage[];
-  serviceType?: 'inspection' | 'installation';
-  estimatedHours?: number; // Added for time estimation
-  progressPercentage?: number; // Added to track progress
+export interface ChartData {
+  name: string;
+  value: number;
 }

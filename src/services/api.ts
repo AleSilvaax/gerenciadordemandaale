@@ -1,264 +1,147 @@
-import { v4 as uuidv4 } from 'uuid';
-import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
-import { services as initialServices } from '@/data/mockData';
+
+import { Service, TeamMember, StatData, ChartData } from '@/types/serviceTypes';
+import { services as mockServices, stats as mockStats, monthlyData as mockMonthlyData, weeklyData as mockWeeklyData, serviceTypeData as mockServiceTypeData, regionData as mockRegionData } from '@/data/mockData';
 import { toast } from 'sonner';
 
-// Simulate a local database
-let services = [...initialServices];
-
-// Initial team members with emails for login
-let teamMembers: TeamMember[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao@exemplo.com',
-    phone: '(11) 99999-1234',
-    role: 'tecnico',
-    avatar: '/lovable-uploads/373df2cb-1338-42cc-aebf-c1ce0a83b032.png',
-  },
-  {
-    id: '2',
-    name: 'Maria Oliveira',
-    email: 'maria@exemplo.com',
-    phone: '(11) 98888-5678',
-    role: 'administrador',
-    avatar: '/lovable-uploads/2e312c47-0298-4854-8d13-f07ec36e7176.png',
-  },
-  {
-    id: '3',
-    name: 'Carlos Rodrigues',
-    email: 'carlos@exemplo.com',
-    phone: '(11) 97777-9012',
-    role: 'gestor',
-    avatar: '/lovable-uploads/bd3b11fc-9a17-4507-b28b-d47cf1678ad8.png',
-  }
-];
-
-// Add priority to services
-services = services.map(service => ({
-  ...service,
-  priority: service.priority || 'media',
-  // Add some dummy deadlines for existing services
-  dueDate: service.dueDate || new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-}));
-
-// Helper to find service by ID
-const findServiceById = (id: string): Service | undefined => {
-  return services.find(service => service.id === id);
-};
-
-// Helper to simulate API delay
+// Helper function to simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// GET all services
+// Get all services
 export const getServices = async (): Promise<Service[]> => {
-  await delay(800); // Simulate API delay
-  return [...services];
-};
-
-// GET a single service by ID
-export const getService = async (id: string): Promise<Service> => {
-  await delay(500); // Simulate API delay
-  const service = findServiceById(id);
-  
-  if (!service) {
-    throw new Error(`Service with ID ${id} not found`);
+  try {
+    // Simulate API call delay
+    await delay(800);
+    return [...mockServices];
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    toast.error('Falha ao carregar demandas');
+    return [];
   }
-  
-  return {...service};
 };
 
-// CREATE a new service
-export const createService = async (serviceData: Omit<Service, 'id'>): Promise<Service> => {
-  await delay(1000); // Simulate API delay
-  
-  const newService: Service = {
-    id: `SRV-${uuidv4().substring(0, 8)}`,
-    ...serviceData,
-    date: serviceData.date || new Date().toISOString(),
-    priority: serviceData.priority || 'media',
-  };
-  
-  services.push(newService as any); // Type assertion to handle the incompatibility temporarily
-  return newService;
-};
-
-// UPDATE a service
-export const updateService = async (updatedService: Service): Promise<Service> => {
-  await delay(800); // Simulate API delay
-  
-  const index = services.findIndex(service => service.id === updatedService.id);
-  
-  if (index === -1) {
-    throw new Error(`Service with ID ${updatedService.id} not found`);
+// Get service by ID
+export const getServiceById = async (id: string): Promise<Service | null> => {
+  try {
+    // Simulate API call delay
+    await delay(600);
+    const service = mockServices.find(service => service.id === id);
+    return service || null;
+  } catch (error) {
+    console.error(`Error fetching service ${id}:`, error);
+    toast.error('Falha ao carregar demanda');
+    return null;
   }
-  
-  services[index] = {
-    ...services[index],
-    ...updatedService,
-    // Keep track of when the service was last updated
-    lastUpdated: new Date().toISOString(),
-  } as any; // Type assertion to handle the incompatibility
-  
-  return {...services[index]};
 };
 
-// DELETE a service
-export const deleteService = async (id: string): Promise<void> => {
-  await delay(800); // Simulate API delay
-  
-  const serviceExists = findServiceById(id);
-  
-  if (!serviceExists) {
-    throw new Error(`Service with ID ${id} not found`);
+// Update service
+export const updateService = async (updatedService: Service): Promise<boolean> => {
+  try {
+    // Simulate API call delay
+    await delay(1000);
+    console.log('Service updated:', updatedService);
+    toast.success('Demanda atualizada com sucesso');
+    return true;
+  } catch (error) {
+    console.error('Error updating service:', error);
+    toast.error('Falha ao atualizar demanda');
+    return false;
   }
-  
-  services = services.filter(service => service.id !== id);
 };
 
-// GET all team members
-export const getTeamMembers = async (): Promise<TeamMember[]> => {
-  await delay(500); // Simulate API delay
-  return [...teamMembers];
-};
-
-// CREATE a team member
-export const addTeamMember = async (memberData: Omit<TeamMember, 'id'>): Promise<TeamMember> => {
-  await delay(1000); // Simulate API delay
-  
-  // Ensure avatar is provided
-  if (!memberData.avatar) {
-    memberData.avatar = '/lovable-uploads/placeholder.svg';
+// Create new service
+export const createService = async (newService: Partial<Service>): Promise<Service | null> => {
+  try {
+    // Simulate API call delay
+    await delay(1000);
+    
+    // Create a new service with an ID
+    const createdService: Service = {
+      id: `SERVICE-${Date.now()}`,
+      title: newService.title || 'Nova Demanda',
+      status: newService.status || 'pendente',
+      location: newService.location || '',
+      technician: newService.technician || { id: '', name: '', avatar: '' },
+      priority: newService.priority || 'media',
+      dueDate: newService.dueDate || '',
+      creationDate: new Date().toISOString().split('T')[0], // Today's date
+      photos: newService.photos || [],
+      reportData: newService.reportData || {},
+      signatures: newService.signatures || {}
+    };
+    
+    console.log('Service created:', createdService);
+    toast.success('Demanda criada com sucesso');
+    return createdService;
+  } catch (error) {
+    console.error('Error creating service:', error);
+    toast.error('Falha ao criar demanda');
+    return null;
   }
-  
-  const newMember: TeamMember = {
-    id: uuidv4(),
-    ...memberData,
-  };
-  
-  teamMembers.push(newMember);
-  return newMember;
 };
 
-// UPDATE a team member
-export const updateTeamMember = async (id: string, updatedData: Partial<TeamMember>): Promise<boolean> => {
-  await delay(800); // Simulate API delay
-  
-  const index = teamMembers.findIndex(member => member.id === id);
-  
-  if (index === -1) {
-    throw new Error(`Team member with ID ${id} not found`);
+// Delete service
+export const deleteService = async (id: string): Promise<boolean> => {
+  try {
+    // Simulate API call delay
+    await delay(800);
+    console.log('Service deleted:', id);
+    toast.success('Demanda excluída com sucesso');
+    return true;
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    toast.error('Falha ao excluir demanda');
+    return false;
   }
-  
-  teamMembers[index] = {
-    ...teamMembers[index],
-    ...updatedData
-  };
-  
-  // Also update this team member in all services they're assigned to
-  services = services.map(service => {
-    if (service.technician.id === id) {
-      return {
-        ...service,
-        technician: teamMembers[index]
-      };
-    }
-    return service;
-  });
-  
-  return true;
 };
 
-// DELETE a team member
-export const deleteTeamMember = async (id: string): Promise<boolean> => {
-  await delay(800); // Simulate API delay
-  
-  const memberExists = teamMembers.find(member => member.id === id);
-  
-  if (!memberExists) {
-    throw new Error(`Team member with ID ${id} not found`);
+// Get statistics data
+export const getStatistics = async (): Promise<{
+  stats: StatData;
+  monthlyData: ChartData[];
+  weeklyData: ChartData[];
+  serviceTypeData: ChartData[];
+  regionData: ChartData[];
+}> => {
+  try {
+    // Simulate API call delay
+    await delay(1000);
+    return {
+      stats: mockStats,
+      monthlyData: mockMonthlyData,
+      weeklyData: mockWeeklyData,
+      serviceTypeData: mockServiceTypeData,
+      regionData: mockRegionData
+    };
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+    toast.error('Falha ao carregar estatísticas');
+    return {
+      stats: { total: 0, completed: 0, pending: 0, cancelled: 0 },
+      monthlyData: [],
+      weeklyData: [],
+      serviceTypeData: [],
+      regionData: []
+    };
   }
-  
-  // Check if member is assigned to any services
-  const assignedServices = services.filter(service => service.technician.id === id);
-  
-  if (assignedServices.length > 0) {
-    throw new Error(`Cannot delete team member with ID ${id} because they are assigned to ${assignedServices.length} service(s)`);
+};
+
+// Update mock services - this is just for demo purposes
+// In a real app, you would make an actual API call
+export const updateMockServices = (updatedServices: Service[]): void => {
+  // Update the mock services array with new data
+  // This would be replaced with a real API call in production
+  Object.assign(mockServices, updatedServices);
+};
+
+// Add new mock service - this is just for demo purposes
+export const addMockService = (newService: Service): void => {
+  mockServices.push(newService);
+};
+
+// Delete mock service - this is just for demo purposes
+export const deleteMockService = (id: string): void => {
+  const index = mockServices.findIndex(service => service.id === id);
+  if (index !== -1) {
+    mockServices.splice(index, 1);
   }
-  
-  teamMembers = teamMembers.filter(member => member.id !== id);
-  return true;
 };
-
-// Add messages to a service
-export const addServiceMessage = async (serviceId: string, message: Omit<ServiceMessage, 'id' | 'timestamp' | 'isRead'>): Promise<Service> => {
-  const service = await getService(serviceId);
-  
-  const newMessage: ServiceMessage = {
-    id: uuidv4(),
-    ...message,
-    timestamp: new Date().toISOString(),
-    isRead: false
-  };
-  
-  const updatedService = {
-    ...service,
-    messages: [...(service.messages || []), newMessage]
-  };
-  
-  return updateService(updatedService);
-};
-
-// Add feedback to a service
-export const addServiceFeedback = async (serviceId: string, feedback: ServiceFeedback): Promise<Service> => {
-  const service = await getService(serviceId);
-  
-  const updatedService = {
-    ...service,
-    feedback
-  };
-  
-  return updateService(updatedService);
-};
-
-// Update service report data
-export const updateServiceReportData = async (serviceId: string, reportData: any): Promise<Service> => {
-  const service = await getService(serviceId);
-  
-  const updatedService = {
-    ...service,
-    reportData: {
-      ...service.reportData,
-      ...reportData
-    }
-  };
-  
-  return updateService(updatedService);
-};
-
-// Update service status
-export const updateServiceStatus = async (serviceId: string, status: ServiceStatus): Promise<Service> => {
-  const service = await getService(serviceId);
-  
-  const updatedService = {
-    ...service,
-    status
-  };
-  
-  return updateService(updatedService);
-};
-
-// Update service deadline
-export const updateServiceDeadline = async (serviceId: string, dueDate: string): Promise<Service> => {
-  const service = await getService(serviceId);
-  
-  const updatedService = {
-    ...service,
-    dueDate
-  };
-  
-  return updateService(updatedService);
-};
-
-// Export type
-export type { ServiceStatus };

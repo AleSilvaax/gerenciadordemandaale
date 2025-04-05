@@ -1,124 +1,5 @@
 
-export type ServiceStatus = "concluido" | "pendente" | "cancelado";
-export type UserRole = "tecnico" | "administrador" | "gestor";
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  avatar: string;
-  role?: UserRole;
-}
-
-export interface Service {
-  id: string;
-  title: string;
-  status: ServiceStatus;
-  location: string;
-  technician: TeamMember;
-  reportData?: ReportData;
-  photos?: string[];
-  signatures?: {
-    client?: string;
-    technician?: string;
-  };
-}
-
-export interface ReportData {
-  client?: string;
-  address?: string;
-  city?: string;
-  executedBy?: string;
-  servicePhase?: "inspection" | "installation";
-  installationDate?: string;
-  modelNumber?: string;
-  serialNumberNew?: string;
-  serialNumberOld?: string;
-  homologatedName?: string;
-  compliesWithNBR17019?: boolean;
-  homologatedInstallation?: boolean;
-  requiredAdjustment?: boolean;
-  adjustmentDescription?: string;
-  validWarranty?: boolean;
-  circuitBreakerEntry?: string;
-  chargerCircuitBreaker?: string;
-  cableGauge?: string;
-  chargerStatus?: string;
-  technicalComments?: string;
-  inspectionDate?: string;
-  voltage?: string;
-  supplyType?: string;
-  installationDistance?: string;
-  installationObstacles?: string;
-  existingPanel?: boolean;
-  panelType?: string;
-  panelAmps?: string;
-  groundingSystem?: string;
-  chargerLoad?: string;
-  
-  wallboxBrand?: string;
-  wallboxPower?: string;
-  powerSupplyType?: string;
-  phaseAmperage?: string;
-  cableSection?: string;
-  energyMeter?: boolean;
-  needsInfrastructure?: boolean;
-  artNumber?: string;
-  projectNumber?: string;
-  
-  installationTime?: string;
-  daysCount?: string;
-  clientRepresentative?: string;
-  greenCableLength?: string;
-  blackCableLength?: string;
-  ppCableLength?: string;
-  
-  breakerDetails?: string;
-  drDetails?: string;
-  dpsDetails?: string;
-  conduitType?: string;
-  hasGroundingSystem?: boolean;
-  groundingDetails?: string;
-  earthBarrierDetails?: string;
-  neutralBarrierDetails?: string;
-  
-  voltageBetweenPhases?: string;
-  voltageBetweenPhaseAndNeutral?: string;
-  hasThreePhase?: boolean;
-  hasMainBreaker?: boolean;
-  hasDps?: boolean;
-  
-  distanceToPanelAndCharger?: string;
-  conduitInstallationType?: string;
-  chargerPositionAgreed?: boolean;
-  externalInstallation?: boolean;
-  needsScaffolding?: boolean;
-  needsTechnicalHole?: boolean;
-  needsMasonry?: boolean;
-  needsWallPainting?: boolean;
-  needsConduitPainting?: boolean;
-  needsArtEmission?: boolean;
-  needsAdditionalDocumentation?: boolean;
-  hasWifiOrCellSignal?: boolean;
-  workingHours?: string;
-  
-  mainBreakerPhoto?: string;
-  electricalPanelPhoto?: string;
-  infraAreaPhoto?: string;
-  chargerLocationPhoto?: string;
-}
-
-// Add the missing interfaces for the chart data
-export interface StatData {
-  total: number;
-  completed: number;
-  pending: number;
-  cancelled: number;
-}
-
-export interface ChartData {
-  name: string;
-  value: number;
-}
+import { Service, TeamMember, StatData, ChartData, ServiceStatus, UserRole, ServicePriority } from '@/types/serviceTypes';
 
 export const teamMembers: TeamMember[] = [
   {
@@ -167,6 +48,9 @@ export const services: Service[] = [
     status: "concluido",
     location: "Av. Airton Pretini",
     technician: teamMembers[0],
+    priority: "media",
+    dueDate: "2025-04-10",
+    creationDate: "2025-03-28",
     reportData: {
       client: "Pedro Penacchione",
       address: "Av. Airton Pretini, 123",
@@ -230,56 +114,80 @@ export const services: Service[] = [
     title: "Vistoria Pedro Penacchione",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technician: teamMembers[0]
+    technician: teamMembers[0],
+    priority: "alta",
+    dueDate: "2025-04-15",
+    creationDate: "2025-03-30"
   },
   {
     id: "6432",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technician: teamMembers[2]
+    technician: teamMembers[2],
+    priority: "baixa",
+    dueDate: "2025-04-20",
+    creationDate: "2025-03-25"
   },
   {
     id: "6433",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technician: teamMembers[0]
+    technician: teamMembers[0],
+    priority: "media",
+    dueDate: "2025-04-05",
+    creationDate: "2025-03-20"
   },
   {
     id: "6434",
     title: "Vistoria Luan de Jesus",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technician: teamMembers[1]
+    technician: teamMembers[1],
+    priority: "urgente",
+    dueDate: "2025-04-07",
+    creationDate: "2025-04-01"
   },
   {
     id: "6435",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technician: teamMembers[2]
+    technician: teamMembers[2],
+    priority: "media",
+    dueDate: "2025-04-12",
+    creationDate: "2025-03-15"
   },
   {
     id: "6436",
     title: "Vistoria Pedro Penacchione",
     status: "concluido",
     location: "Av. Airton Pretini",
-    technician: teamMembers[0]
+    technician: teamMembers[0],
+    priority: "baixa",
+    dueDate: "2025-03-30",
+    creationDate: "2025-03-10"
   },
   {
     id: "6437",
     title: "Vistoria Luan de Jesus",
     status: "pendente",
     location: "Av. Airton Pretini",
-    technician: teamMembers[1]
+    technician: teamMembers[1],
+    priority: "alta",
+    dueDate: "2025-04-18",
+    creationDate: "2025-03-28"
   },
   {
     id: "6438",
     title: "Vistoria Luan de Jesus",
     status: "cancelado",
     location: "Av. Airton Pretini",
-    technician: teamMembers[2]
+    technician: teamMembers[2],
+    priority: "urgente",
+    dueDate: "2025-04-03",
+    creationDate: "2025-03-29"
   }
 ];
 

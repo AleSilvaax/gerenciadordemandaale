@@ -10,16 +10,19 @@ interface User extends TeamMember {
 
 interface AuthContextType {
   user: User | null;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string, role: string) => Promise<boolean>;
   logout: () => void;
   updateUserInfo: (updatedUser: User) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // On mount, check if user is already logged in (from localStorage)
   useEffect(() => {
@@ -32,6 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('user');
       }
     }
+    // Set loading to false after checking for user
+    setIsLoading(false);
   }, []);
 
   // Mock users for the demo
@@ -64,6 +69,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: '(11) 97777-9012',
     }
   ];
+  
+  // Function to check permissions based on user role
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    
+    // Define role-based permissions
+    const permissions = {
+      tecnico: ['view_own_services', 'update_own_services'],
+      administrador: ['view_own_services', 'update_own_services', 'view_stats', 'add_members'],
+      gestor: ['view_own_services', 'update_own_services', 'view_stats', 'add_members', 'delete_services'],
+    };
+    
+    // Get permissions for the user's role
+    const rolePermissions = permissions[user.role as keyof typeof permissions] || [];
+    
+    return rolePermissions.includes(permission);
+  };
   
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -135,7 +157,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUserInfo }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      register, 
+      logout, 
+      updateUserInfo, 
+      hasPermission,
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
