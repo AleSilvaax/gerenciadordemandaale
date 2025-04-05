@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -66,7 +65,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     fetchServiceDetails();
   }, [id]);
 
-  // Scroll to bottom of messages when new ones arrive
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -108,14 +106,13 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     setStatusUpdating(true);
     
     try {
-      const updatedService = { 
-        ...service, 
+      const updatedService = await updateService({ 
+        id,
         status: newStatus,
         serviceType: serviceType || service.serviceType
-      };
+      });
       
-      const result = await updateService(updatedService);
-      setService(result);
+      setService(updatedService);
       
       toast.success(`Status da demanda atualizado para ${newStatus}`);
       
@@ -143,9 +140,11 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     setSaving(true);
     
     try {
-      const updatedService = { ...service, ...data };
-      const result = await updateService(updatedService);
-      setService(result);
+      const updatedService = await updateService({ 
+        id,
+        ...data 
+      });
+      setService(updatedService);
       toast.success('Detalhes da demanda atualizados com sucesso');
     } catch (error) {
       console.error('Error saving service details:', error);
@@ -161,16 +160,15 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     setSaving(true);
     
     try {
-      const updatedService = { 
-        ...service, 
+      const updatedService = await updateService({ 
+        id, 
         reportData: {
           ...service.reportData,
           ...data
         }
-      };
+      });
       
-      const result = await updateService(updatedService);
-      setService(result);
+      setService(updatedService);
       toast.success('Dados do relatório atualizados com sucesso');
     } catch (error) {
       console.error('Error saving report data:', error);
@@ -219,7 +217,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           const newPhotoTitles = [...(service.photoTitles || []), title];
           
           const updatedService = await updateService({
-            ...service,
+            id,
             photos: newPhotos,
             photoTitles: newPhotoTitles
           });
@@ -247,7 +245,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       newPhotoTitles.splice(index, 1);
       
       const updatedService = await updateService({
-        ...service,
+        id,
         photos: newPhotos,
         photoTitles: newPhotoTitles
       });
@@ -268,7 +266,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       newPhotoTitles[index] = title;
       
       const updatedService = await updateService({
-        ...service,
+        id,
         photoTitles: newPhotoTitles
       });
       
@@ -284,31 +282,32 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     if (!service || !id) return;
     
     try {
-      const updatedReportData = {
-        ...service.reportData,
-        ...(role === 'client' ? { clientSignature: signatureData } : {})
-      };
-      
-      // For technician signature, update the technician object
-      let updatedService;
       if (role === 'client') {
-        updatedService = await updateService({
-          ...service,
+        const updatedReportData = {
+          ...service.reportData,
+          clientSignature: signatureData
+        };
+        
+        const updatedService = await updateService({
+          id,
           reportData: updatedReportData
         });
+        
+        setService(updatedService);
       } else {
         // In a real app, updating the technician signature would be done differently
         // For now, we'll just add it to the service
-        updatedService = await updateService({
-          ...service,
+        const updatedService = await updateService({
+          id,
           technician: {
             ...service.technician,
             signature: signatureData
           }
         });
+        
+        setService(updatedService);
       }
       
-      setService(updatedService);
       toast.success(`Assinatura ${role === 'client' ? 'do cliente' : 'do técnico'} salva com sucesso`);
     } catch (error) {
       console.error('Error saving signature:', error);
@@ -358,7 +357,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     );
   }
 
-  // Prepare photos data for the PhotoUploader component
   const photosWithTitles = (service.photos || []).map((url, index) => ({
     url,
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`

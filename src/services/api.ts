@@ -1,4 +1,3 @@
-
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { services, teamMembers, stats } from '@/data/mockData';
 import { toast } from "sonner";
@@ -32,16 +31,16 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
 };
 
 // Update a service
-export const updateService = async (id: string, data: Partial<Service>): Promise<boolean> => {
+export const updateService = async (service: Partial<Service> & { id: string }): Promise<Service> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 800));
   
-  const index = services.findIndex(service => service.id === id);
+  const index = services.findIndex(s => s.id === service.id);
   if (index !== -1) {
-    services[index] = { ...services[index], ...data };
-    return true;
+    services[index] = { ...services[index], ...service };
+    return services[index];
   }
-  return false;
+  throw new Error(`Service with id ${service.id} not found`);
 };
 
 // Delete a service
@@ -63,12 +62,12 @@ export const deleteService = async (id: string): Promise<boolean> => {
 export const addServiceMessage = async (
   serviceId: string, 
   message: Omit<ServiceMessage, "timestamp">
-): Promise<boolean> => {
+): Promise<Service> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500));
   
   const service = services.find(s => s.id === serviceId);
-  if (!service) return false;
+  if (!service) throw new Error(`Service with id ${serviceId} not found`);
   
   if (!service.messages) {
     service.messages = [];
@@ -79,22 +78,22 @@ export const addServiceMessage = async (
     timestamp: new Date().toISOString()
   });
   
-  return true;
+  return service;
 };
 
 // Add feedback to a service
 export const addServiceFeedback = async (
   serviceId: string,
   feedback: ServiceFeedback
-): Promise<boolean> => {
+): Promise<Service> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500));
   
   const service = services.find(s => s.id === serviceId);
-  if (!service) return false;
+  if (!service) throw new Error(`Service with id ${serviceId} not found`);
   
   service.feedback = feedback;
-  return true;
+  return service;
 };
 
 // Get team members
