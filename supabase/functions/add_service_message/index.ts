@@ -49,21 +49,13 @@ serve(async (req: Request) => {
       );
     }
     
-    // Create service_messages table if it doesn't exist
-    const { error: createTableError } = await supabaseClient.rpc('create_service_messages_if_not_exists');
-    
-    if (createTableError) {
-      console.error('Error creating service_messages table:', createTableError);
-      // Continue anyway, the table might already exist
-    }
-    
-    // Store message in database
+    // Insert message directly into service_messages table
     const { data: messageData, error: insertError } = await supabaseClient
       .from('service_messages')
       .insert({
         service_id: serviceId,
         sender_id: message.author || 'system',
-        sender_name: message.author || 'System',
+        sender_name: message.author_name || message.author || 'System',
         sender_role: message.type || 'system',
         message: message.text,
         timestamp: new Date().toISOString()
@@ -79,8 +71,33 @@ serve(async (req: Request) => {
     
     console.log('Message added successfully');
     
+    // Get all messages for this service to return updated list
+    const { data: messagesData, error: messagesError } = await supabaseClient
+      .from('service_messages')
+      .select('*')
+      .eq('service_id', serviceId)
+      .order('timestamp', { ascending: true });
+      
+    if (messagesError) {
+      console.error('Error fetching messages:', messagesError);
+      // Still return success but without updated messages list
+      return new Response(
+        JSON.stringify({ success: true, data: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ success: true, data: messageData }),
+      JSON.stringify({ 
+        success: true, 
+        data: messagesData.map(m => ({
+          senderId: m.sender_id,
+          senderName: m.sender_name,
+          senderRole: m.sender_role,
+          message: m.message,
+          timestamp: m.timestamp
+        }))
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 

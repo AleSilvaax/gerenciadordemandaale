@@ -266,7 +266,7 @@ async function assignTechnician(serviceId: string, technicianId: string): Promis
 // Add a message to a service
 export const addServiceMessageToDatabase = async (
   serviceId: string, 
-  message: { text: string, type: string, author: string }
+  message: { text: string, type: string, author: string, author_name?: string }
 ): Promise<boolean> => {
   try {
     console.log('Adding message to service:', serviceId, message);
@@ -279,6 +279,7 @@ export const addServiceMessageToDatabase = async (
           text: message.text,
           type: message.type,
           author: message.author,
+          author_name: message.author_name
         }
       }
     });
@@ -288,7 +289,7 @@ export const addServiceMessageToDatabase = async (
       throw error;
     }
     
-    console.log('Message added successfully');
+    console.log('Message added successfully', data);
     return true;
   } catch (error) {
     console.error('Error in addServiceMessageToDatabase:', error);
