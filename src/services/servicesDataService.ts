@@ -28,10 +28,21 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       throw technicianError;
     }
     
+    // Get all service messages
+    const { data: messagesData, error: messagesError } = await supabase
+      .from('service_messages')
+      .select('*');
+      
+    if (messagesError) {
+      console.error('Error fetching service messages from Supabase:', messagesError);
+      // Continue without messages if there's an error
+      console.log('Continuing without messages due to error');
+    }
+    
     // Transform the data to match our Service type
     const services: Service[] = servicesData.map(service => {
       // Find technician for this service
-      const techRelation = technicianData.find(t => t.service_id === service.id);
+      const techRelation = technicianData?.find(t => t.service_id === service.id);
       
       // Get technician details or use a default
       const technician: TeamMember = techRelation?.profiles ? {
@@ -46,6 +57,19 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         role: 'tecnico',
       };
       
+      // Get messages for this service
+      const serviceMessages = messagesData
+        ? messagesData
+            .filter(m => m.service_id === service.id)
+            .map(m => ({
+              senderId: m.sender_id,
+              senderName: m.sender_name,
+              senderRole: m.sender_role,
+              message: m.message,
+              timestamp: m.timestamp
+            }))
+        : [];
+      
       // Return a properly formatted Service object
       return {
         id: service.id,
@@ -54,6 +78,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         location: service.location,
         technician: technician,
         creationDate: service.created_at,
+        messages: serviceMessages,
         // Provide defaults/placeholders for required properties
         dueDate: undefined,
         priority: undefined,
@@ -104,7 +129,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     console.log('Service created successfully:', data);
     
     // If a technician is assigned, create the relationship
-    if (service.technician && service.technician.id && data.id) {
+    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
       await assignTechnician(data.id, service.technician.id);
     }
     
@@ -114,11 +139,17 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       title: data.title,
       location: data.location,
       status: data.status as any,
-      technician: service.technician,
+      technician: service.technician || {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      },
       creationDate: data.created_at,
       // Provide defaults for required properties
       dueDate: service.dueDate,
       priority: service.priority,
+      messages: service.messages || [],
     };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
@@ -153,7 +184,7 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     console.log('Service updated successfully:', data);
     
     // Update technician if provided
-    if (service.technician && service.technician.id) {
+    if (service.technician && service.technician.id && service.technician.id !== '0') {
       await assignTechnician(service.id, service.technician.id);
     }
     
@@ -173,6 +204,7 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       creationDate: data.created_at,
       dueDate: service.dueDate,
       priority: service.priority,
+      messages: service.messages || [],
     };
   } catch (error) {
     console.error('Error in updateServiceInDatabase:', error);
@@ -239,19 +271,16 @@ export const addServiceMessageToDatabase = async (
   try {
     console.log('Adding message to service:', serviceId, message);
     
-    // Create a new object for the message with the correct payload structure
-    const payload = { 
-      serviceId, 
-      message: {
-        text: message.text,
-        type: message.type,
-        author: message.author,
+    // Call the Edge Function to add a message
+    const { data, error } = await supabase.functions.invoke('add_service_message', {
+      body: { 
+        serviceId, 
+        message: {
+          text: message.text,
+          type: message.type,
+          author: message.author,
+        }
       }
-    };
-    
-    // Using the Edge Function to add a message
-    const { error } = await supabase.functions.invoke('add_service_message', {
-      body: payload
     });
     
     if (error) {
@@ -263,6 +292,7 @@ export const addServiceMessageToDatabase = async (
     return true;
   } catch (error) {
     console.error('Error in addServiceMessageToDatabase:', error);
+    toast.error("Falha ao adicionar mensagem ao serviço");
     return false;
   }
 };

@@ -49,14 +49,38 @@ serve(async (req: Request) => {
       );
     }
     
-    // Store message in database (example - adjust according to your schema)
-    // In this example, we're assuming you'll create a service_messages table
-    // For now, we'll just return success since the table doesn't exist yet
+    // Create service_messages table if it doesn't exist
+    const { error: createTableError } = await supabaseClient.rpc('create_service_messages_if_not_exists');
     
-    console.log('Message would be added to service:', serviceId);
+    if (createTableError) {
+      console.error('Error creating service_messages table:', createTableError);
+      // Continue anyway, the table might already exist
+    }
+    
+    // Store message in database
+    const { data: messageData, error: insertError } = await supabaseClient
+      .from('service_messages')
+      .insert({
+        service_id: serviceId,
+        sender_id: message.author || 'system',
+        sender_name: message.author || 'System',
+        sender_role: message.type || 'system',
+        message: message.text,
+        timestamp: new Date().toISOString()
+      });
+    
+    if (insertError) {
+      console.error('Error inserting message:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to store message' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    console.log('Message added successfully');
     
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, data: messageData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 

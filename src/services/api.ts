@@ -181,12 +181,27 @@ export const addServiceMessage = async (
   serviceId: string, 
   message: Omit<ServiceMessage, "timestamp">
 ): Promise<Service> => {
-  console.log("Adding message to service:", serviceId);
+  console.log("Adding message to service:", serviceId, message);
   
   try {
     // Try to add message to database first
-    // For now we'll continue with the mock implementation
-    // and adapt once we have a database storage solution for messages
+    const added = await addServiceMessageToDatabase(serviceId, {
+      text: message.message,
+      type: message.senderRole,
+      author: message.senderName
+    });
+    
+    if (added) {
+      // Get the updated service
+      const updatedService = await getService(serviceId);
+      if (!updatedService) {
+        throw new Error(`Service with id ${serviceId} not found`);
+      }
+      return updatedService;
+    }
+    
+    // Fall back to mock implementation
+    console.log("Database message addition failed, falling back to mock");
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const service = services.find(s => s.id === serviceId);
