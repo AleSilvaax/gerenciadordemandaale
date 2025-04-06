@@ -45,7 +45,13 @@ export const getService = async (id: string): Promise<Service | undefined> => {
   try {
     // Try to get from database first
     const allServices = await getServices();
-    return allServices.find(service => service.id === id);
+    const service = allServices.find(service => service.id === id);
+    
+    if (!service) {
+      throw new Error(`Service with id ${id} not found`);
+    }
+    
+    return service;
   } catch (error) {
     console.error("Error getting service by ID:", error);
     
@@ -66,6 +72,7 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
     
     if (newDbService) {
       console.log("Service created in database:", newDbService);
+      toast.success("Serviço criado com sucesso!");
       return newDbService;
     }
     
@@ -82,6 +89,7 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
     return newService;
   } catch (error) {
     console.error("Error creating service:", error);
+    toast.error("Falha ao criar serviço no servidor");
     
     // Fall back to mock data
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -98,7 +106,7 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
 
 // Update a service
 export const updateService = async (service: Partial<Service> & { id: string }): Promise<Service> => {
-  console.log("Updating service:", service.id);
+  console.log("Updating service:", service.id, service);
   
   try {
     // Try to update in database first
@@ -106,6 +114,7 @@ export const updateService = async (service: Partial<Service> & { id: string }):
     
     if (updatedDbService) {
       console.log("Service updated in database:", updatedDbService);
+      toast.success("Serviço atualizado com sucesso!");
       return updatedDbService;
     }
     
@@ -121,6 +130,7 @@ export const updateService = async (service: Partial<Service> & { id: string }):
     throw new Error(`Service with id ${service.id} not found`);
   } catch (error) {
     console.error("Error updating service:", error);
+    toast.error("Falha ao atualizar serviço no servidor");
     
     // Fall back to mock data
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -144,6 +154,7 @@ export const deleteService = async (id: string): Promise<boolean> => {
     
     if (dbDeleteResult) {
       console.log("Service deleted from database");
+      toast.success("Serviço excluído com sucesso!");
       return true;
     }
     
@@ -161,6 +172,7 @@ export const deleteService = async (id: string): Promise<boolean> => {
     return initialLength > services.length;
   } catch (error) {
     console.error("Error deleting service:", error);
+    toast.error("Falha ao excluir serviço do servidor");
     
     // Fall back to mock data
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -188,7 +200,8 @@ export const addServiceMessage = async (
     const added = await addServiceMessageToDatabase(serviceId, {
       text: message.message,
       type: message.senderRole,
-      author: message.senderName
+      author: message.senderId,
+      author_name: message.senderName
     });
     
     if (added) {
@@ -219,6 +232,7 @@ export const addServiceMessage = async (
     return service;
   } catch (error) {
     console.error("Error adding message to service:", error);
+    toast.error("Falha ao adicionar mensagem ao serviço");
     
     // Fall back to mock implementation
     await new Promise(resolve => setTimeout(resolve, 500));

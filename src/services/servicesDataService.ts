@@ -3,6 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
+// Interface para a tabela de mensagens de serviço
+interface ServiceMessageRow {
+  id: string;
+  service_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_role: string;
+  message: string;
+  timestamp: string;
+}
+
 // Get all services from Supabase
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
@@ -28,10 +39,14 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       throw technicianError;
     }
     
-    // Get all service messages
+    // Get all service messages - usando query de seleção direta da tabela
     const { data: messagesData, error: messagesError } = await supabase
-      .from('service_messages')
-      .select('*');
+      .rpc('create_service_messages_if_not_exists')
+      .then(() => {
+        return supabase
+          .from('service_messages')
+          .select('*');
+      });
       
     if (messagesError) {
       console.error('Error fetching service messages from Supabase:', messagesError);
@@ -59,7 +74,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       
       // Get messages for this service
       const serviceMessages = messagesData
-        ? messagesData
+        ? (messagesData as ServiceMessageRow[])
             .filter(m => m.service_id === service.id)
             .map(m => ({
               senderId: m.sender_id,

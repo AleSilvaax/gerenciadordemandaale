@@ -18,7 +18,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
         id: userId,
         name,
         avatar,
-        // Additional fields could be added here as needed
+        updated_at: new Date().toISOString()
       }, { 
         onConflict: 'id',
         ignoreDuplicates: false,
@@ -30,6 +30,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
     }
 
     console.log('Profile updated successfully in Supabase');
+    toast.success("Perfil atualizado com sucesso!");
     return true;
   } catch (error) {
     console.error('Error in updateUserProfile:', error);

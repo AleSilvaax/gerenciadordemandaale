@@ -64,7 +64,7 @@ serve(async (req: Request) => {
     if (insertError) {
       console.error('Error inserting message:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to store message' }),
+        JSON.stringify({ error: 'Failed to store message', details: insertError }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
