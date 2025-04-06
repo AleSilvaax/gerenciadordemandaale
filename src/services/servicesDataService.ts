@@ -8,20 +8,60 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
     console.log('Fetching services from database');
     
-    const { data, error } = await supabase
+    // First get all services
+    const { data: servicesData, error: servicesError } = await supabase
       .from('services')
-      .select(`
-        *,
-        service_technicians(*, technician_id)
-      `);
+      .select('*');
     
-    if (error) {
-      console.error('Error fetching services from Supabase:', error);
-      throw error;
+    if (servicesError) {
+      console.error('Error fetching services from Supabase:', servicesError);
+      throw servicesError;
     }
     
-    console.log('Services fetched successfully:', data);
-    return data || [];
+    // Then get all service_technicians relationships
+    const { data: technicianData, error: technicianError } = await supabase
+      .from('service_technicians')
+      .select('*, profiles:technician_id(*)');
+    
+    if (technicianError) {
+      console.error('Error fetching service technicians from Supabase:', technicianError);
+      throw technicianError;
+    }
+    
+    // Transform the data to match our Service type
+    const services: Service[] = servicesData.map(service => {
+      // Find technician for this service
+      const techRelation = technicianData.find(t => t.service_id === service.id);
+      
+      // Get technician details or use a default
+      const technician: TeamMember = techRelation?.profiles ? {
+        id: techRelation.profiles.id,
+        name: techRelation.profiles.name || 'Desconhecido',
+        avatar: techRelation.profiles.avatar || '',
+        role: 'tecnico', // Default role
+      } : {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      };
+      
+      // Return a properly formatted Service object
+      return {
+        id: service.id,
+        title: service.title,
+        status: service.status as any,
+        location: service.location,
+        technician: technician,
+        creationDate: service.created_at,
+        // Provide defaults/placeholders for required properties
+        dueDate: undefined,
+        priority: undefined,
+      };
+    });
+    
+    console.log('Services fetched successfully:', services);
+    return services;
   } catch (error) {
     console.error('Error in getServicesFromDatabase:', error);
     return [];
@@ -33,12 +73,12 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
   try {
     console.log('Creating new service in database:', service);
     
+    // Create service record
     const { data, error } = await supabase
       .from('services')
       .insert([{
         title: service.title,
         location: service.location,
-        number: service.number,
         status: service.status
       }])
       .select()
@@ -51,12 +91,23 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     
     console.log('Service created successfully:', data);
     
-    // If technicians are assigned, create the relationships
-    if (service.technicians && service.technicians.length > 0 && data.id) {
-      await assignTechnicians(data.id, service.technicians);
+    // If a technician is assigned, create the relationship
+    if (service.technician && service.technician.id && data.id) {
+      await assignTechnician(data.id, service.technician.id);
     }
     
-    return data;
+    // Construct and return a properly typed Service object
+    return {
+      id: data.id,
+      title: data.title,
+      location: data.location,
+      status: data.status as any,
+      technician: service.technician,
+      creationDate: data.created_at,
+      // Provide defaults for required properties
+      dueDate: service.dueDate,
+      priority: service.priority,
+    };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
     toast.error("Falha ao criar serviço no servidor");
@@ -89,12 +140,28 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     
     console.log('Service updated successfully:', data);
     
-    // Update technicians if provided
-    if (service.technicians) {
-      await assignTechnicians(service.id, service.technicians);
+    // Update technician if provided
+    if (service.technician && service.technician.id) {
+      await assignTechnician(service.id, service.technician.id);
     }
     
-    return data;
+    // Construct and return a properly typed Service object
+    return {
+      id: data.id,
+      title: data.title,
+      location: data.location,
+      status: data.status as any,
+      technician: service.technician || {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      },
+      // Provide defaults for required properties
+      creationDate: data.created_at,
+      dueDate: service.dueDate,
+      priority: service.priority,
+    };
   } catch (error) {
     console.error('Error in updateServiceInDatabase:', error);
     toast.error("Falha ao atualizar serviço no servidor");
@@ -126,8 +193,8 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
   }
 };
 
-// Helper function to assign technicians to a service
-async function assignTechnicians(serviceId: string, technicians: TeamMember[]): Promise<void> {
+// Helper function to assign a technician to a service
+async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
   try {
     // First, remove existing technician assignments
     const { error: deleteError } = await supabase
@@ -137,21 +204,17 @@ async function assignTechnicians(serviceId: string, technicians: TeamMember[]): 
     
     if (deleteError) throw deleteError;
     
-    // Then add the new assignments
-    if (technicians.length > 0) {
-      const techAssignments = technicians.map(tech => ({
+    // Then add the new assignment
+    const { error } = await supabase
+      .from('service_technicians')
+      .insert({
         service_id: serviceId,
-        technician_id: tech.id
-      }));
-      
-      const { error } = await supabase
-        .from('service_technicians')
-        .insert(techAssignments);
-      
-      if (error) throw error;
-    }
+        technician_id: technicianId
+      });
+    
+    if (error) throw error;
   } catch (error) {
-    console.error('Error assigning technicians:', error);
+    console.error('Error assigning technician:', error);
     throw error;
   }
 }
@@ -164,15 +227,15 @@ export const addServiceMessageToDatabase = async (
   try {
     console.log('Adding message to service:', serviceId, message);
     
-    // For this example, we're assuming messages are stored as JSON in the services table
-    // In a more robust implementation, you might have a separate messages table
-    const { data, error } = await supabase.rpc('add_service_message', { 
-      p_service_id: serviceId,
-      p_message: { 
-        text: message.text,
-        type: message.type,
-        author: message.author,
-        timestamp: new Date().toISOString()
+    // Using the Edge Function to add a message
+    const { error } = await supabase.functions.invoke('add_service_message', {
+      body: { 
+        serviceId, 
+        message: {
+          text: message.text,
+          type: message.type,
+          author: message.author,
+        }
       }
     });
     
