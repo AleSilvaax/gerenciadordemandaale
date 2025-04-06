@@ -11,8 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserRole } from '@/types/serviceTypes';
 import { useAuth } from '@/context/AuthContext';
 import { RegisterFormData } from '@/types/auth';
+import { toast } from '@/hooks/use-toast';
 
-export const RegisterForm: React.FC = () => {
+interface RegisterFormProps {
+  setRegistrationInProgress?: (value: boolean) => void;
+}
+
+export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInProgress }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +67,10 @@ export const RegisterForm: React.FC = () => {
     }
     
     setIsSubmitting(true);
+    if (setRegistrationInProgress) {
+      setRegistrationInProgress(true);
+    }
+    
     console.log("Submitting registration form for:", email);
     
     try {
@@ -77,16 +86,37 @@ export const RegisterForm: React.FC = () => {
       console.log("Registration result:", success);
       
       if (success) {
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Você será redirecionado para a página inicial.",
+          variant: "success",
+        });
         // Navigate to home if registration was successful and auto-login occurred
-        navigate('/');
+        setTimeout(() => navigate('/'), 1000);
       } else {
         setError('Ocorreu um erro durante o registro. Verifique se o email já está em uso.');
+        toast({
+          title: "Erro no cadastro",
+          description: "Verifique se o email já está em uso ou tente novamente mais tarde.",
+          variant: "destructive",
+        });
         setIsSubmitting(false);
+        if (setRegistrationInProgress) {
+          setRegistrationInProgress(false);
+        }
       }
     } catch (error) {
       console.error("Registration error:", error);
       setError('Ocorreu um erro durante o registro. Tente novamente.');
+      toast({
+        title: "Erro no cadastro",
+        description: "Ocorreu um problema ao processar seu cadastro. Tente novamente.",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
+      if (setRegistrationInProgress) {
+        setRegistrationInProgress(false);
+      }
     }
   };
 

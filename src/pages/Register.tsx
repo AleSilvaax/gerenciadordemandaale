@@ -1,15 +1,12 @@
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { RegisterForm } from '@/components/forms/RegisterForm';
 import { useAuth } from '@/context/AuthContext';
 
 const Register: React.FC = () => {
   const { user, isLoading } = useAuth();
-
-  useEffect(() => {
-    console.log("Register page - User:", user?.email, "Loading:", isLoading);
-  }, [user, isLoading]);
+  const [registrationInProgress, setRegistrationInProgress] = useState(false);
 
   if (user) {
     console.log("User already logged in, redirecting to home");
@@ -24,7 +21,7 @@ const Register: React.FC = () => {
           <p className="text-muted-foreground mt-2">Crie sua conta para acessar o sistema</p>
         </div>
         
-        <RegisterForm />
+        <RegisterForm setRegistrationInProgress={setRegistrationInProgress} />
       </div>
     </div>
   );

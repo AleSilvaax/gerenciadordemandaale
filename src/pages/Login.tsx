@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,18 +16,15 @@ const Login: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
   
   useEffect(() => {
-    console.log("Login page rendered, user:", user?.email, "isSubmitting:", isSubmitting);
-    
-    // Reset submission state if we're reloading the page
+    // Reset submission state when component unmounts
     return () => {
       if (isSubmitting) {
         setIsSubmitting(false);
       }
     };
-  }, [user]);
+  }, []);
 
   // If user is already logged in, redirect to home
   if (user) {
@@ -58,11 +55,21 @@ const Login: React.FC = () => {
       
       if (!success) {
         setErrorMsg("Email ou senha inválidos");
+        toast({
+          title: "Erro no login",
+          description: "Verifique suas credenciais e tente novamente",
+          variant: "destructive",
+        });
         setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Login error:", error);
       setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
+      toast({
+        title: "Erro no login",
+        description: "Ocorreu um problema ao processar seu login",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
     }
   };
@@ -98,11 +105,21 @@ const Login: React.FC = () => {
       
       if (!success) {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
+        toast({
+          title: "Erro no login com demo",
+          description: "Não foi possível acessar com as credenciais de demonstração",
+          variant: "destructive",
+        });
         setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Demo login error:", error);
       setErrorMsg("Erro ao fazer login com credenciais de demonstração");
+      toast({
+        title: "Erro no login com demo",
+        description: "Não foi possível acessar com as credenciais de demonstração",
+        variant: "destructive",
+      });
       setIsSubmitting(false);
     }
   };
