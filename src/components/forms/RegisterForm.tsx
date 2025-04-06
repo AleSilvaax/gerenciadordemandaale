@@ -91,6 +91,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
           description: "Você será redirecionado para a página inicial.",
           variant: "success",
         });
+        
         // Navigate to home if registration was successful and auto-login occurred
         setTimeout(() => navigate('/'), 1000);
       } else {

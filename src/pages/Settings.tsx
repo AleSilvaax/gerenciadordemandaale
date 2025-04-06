@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -51,7 +50,7 @@ const ProfileTab = () => {
     try {
       setIsUpdating(true);
       
-      // Update user profile
+      // Update user profile with persistence
       await updateUser({
         name: profile.name,
         email: profile.email,
@@ -81,7 +80,7 @@ const ProfileTab = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
         setProfile({
           ...profile,
@@ -89,14 +88,25 @@ const ProfileTab = () => {
         });
         
         if (user) {
-          // Update local auth context
-          updateUserInfo({
-            ...user,
-            avatar: result
-          });
+          try {
+            // Update with persistence
+            await updateUser({
+              ...user,
+              avatar: result
+            });
+            
+            // Update local auth context
+            updateUserInfo({
+              ...user,
+              avatar: result
+            });
+            
+            toast.success("Foto de perfil atualizada");
+          } catch (error) {
+            console.error("Error updating avatar:", error);
+            toast.error("Falha ao atualizar foto de perfil");
+          }
         }
-        
-        toast.success("Foto de perfil atualizada");
       };
       reader.readAsDataURL(file);
     }

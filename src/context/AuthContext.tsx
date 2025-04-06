@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
 import { UserRole } from '@/types/serviceTypes';
+import { updateUserProfile, fetchUserProfile } from '@/services/profileService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -82,14 +82,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('Existing session found:', session.user.email);
         
         try {
-          // Create a simple user object directly from the session
+          // Try to fetch the user profile from Supabase first
+          const profileData = await fetchUserProfile(session.user.id);
+          
+          // Create a user object combining session and profile data
           const authUser: AuthUser = {
             id: session.user.id,
             email: session.user.email,
-            name: session.user.user_metadata?.name || 'Usuário',
-            avatar: session.user.user_metadata?.avatar || '/placeholder.svg',
-            role: (session.user.user_metadata?.role as UserRole) || 'tecnico',
-            permissions: getPermissionsByRole((session.user.user_metadata?.role as UserRole) || 'tecnico')
+            name: profileData?.name || session.user.user_metadata?.name || 'Usuário',
+            avatar: profileData?.avatar || session.user.user_metadata?.avatar || '/placeholder.svg',
+            role: (profileData?.role || session.user.user_metadata?.role) as UserRole || 'tecnico',
+            phone: profileData?.phone || session.user.user_metadata?.phone,
+            permissions: getPermissionsByRole((profileData?.role || session.user.user_metadata?.role) as UserRole || 'tecnico')
           };
           
           setUser(authUser);
@@ -159,13 +163,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (data.user) {
         try {
+          // Try to fetch the user profile from Supabase first
+          const profileData = await fetchUserProfile(data.user.id);
+          
+          // Create a user object combining session and profile data
           const authUser: AuthUser = {
             id: data.user.id,
             email: data.user.email,
-            name: data.user.user_metadata?.name || 'Usuário',
-            avatar: data.user.user_metadata?.avatar || '/placeholder.svg',
-            role: (data.user.user_metadata?.role as UserRole) || 'tecnico',
-            permissions: getPermissionsByRole((data.user.user_metadata?.role as UserRole) || 'tecnico')
+            name: profileData?.name || data.user.user_metadata?.name || 'Usuário',
+            avatar: profileData?.avatar || data.user.user_metadata?.avatar || '/placeholder.svg',
+            role: (profileData?.role || data.user.user_metadata?.role) as UserRole || 'tecnico',
+            phone: profileData?.phone || data.user.user_metadata?.phone,
+            permissions: getPermissionsByRole((profileData?.role || data.user.user_metadata?.role) as UserRole || 'tecnico')
           };
           
           setUser(authUser);
@@ -302,21 +311,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  // Update user data - simplified
+  // Update user data - enhanced for persistence
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
     
     try {
-      // Just update the local user object
+      // Update the local user object
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      // Update in demo users array
+      // Update in demo users array (for demo mode)
       const index = demoUsers.findIndex(u => u.id === user.id);
       if (index !== -1) {
         demoUsers[index] = updatedUser;
       }
+      
+      // Save to Supabase profiles table for persistence
+      await updateUserProfile(user.id, updatedUser);
       
       toast({
         title: "Perfil atualizado",
@@ -335,6 +347,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateUserInfo = (userData: AuthUser) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Also persist to Supabase profiles
+    updateUserProfile(userData.id, userData).catch(err => {
+      console.error("Failed to persist user info to Supabase:", err);
+    });
   };
   
   // Check if user has specific permission
