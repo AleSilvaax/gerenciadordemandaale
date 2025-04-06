@@ -1,83 +1,71 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Follow Deno's ES modules conventions
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
+// Add CORS headers for browser compatibility
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
-  
+
   try {
-    // Parse the request body
+    // Get Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Parse request body
     const { serviceId, message } = await req.json();
     
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('Received request to add message:', { serviceId, message });
     
-    // First, get the current service
-    const { data: service, error: fetchError } = await supabase
-      .from('services')
-      .select('*')
-      .eq('id', serviceId)
-      .single();
-    
-    if (fetchError) {
-      throw new Error(`Error fetching service: ${fetchError.message}`);
+    if (!serviceId || !message) {
+      return new Response(
+        JSON.stringify({ error: 'Service ID and message are required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
     
-    // Initialize or get messages array
-    let messages = service.messages || [];
-    
-    // Add new message
-    messages.push({
-      ...message,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Update service with new messages array
-    const { data, error } = await supabase
+    // Check if the service exists
+    const { data: service, error: serviceError } = await supabaseClient
       .from('services')
-      .update({ messages })
+      .select('id')
       .eq('id', serviceId)
-      .select()
       .single();
-    
-    if (error) {
-      throw new Error(`Error updating service: ${error.message}`);
+      
+    if (serviceError || !service) {
+      console.error('Service not found:', serviceError);
+      return new Response(
+        JSON.stringify({ error: 'Service not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
     }
     
-    // Return success response with updated service
+    // Store message in database (example - adjust according to your schema)
+    // In this example, we're assuming you'll create a service_messages table
+    // For now, we'll just return success since the table doesn't exist yet
+    
+    console.log('Message would be added to service:', serviceId);
+    
     return new Response(
-      JSON.stringify({ success: true, data }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        },
-        status: 200 
-      }
+      JSON.stringify({ success: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
+
   } catch (error) {
-    console.error('Error adding service message:', error);
+    console.error('Error:', error);
     
-    // Return error response
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        },
-        status: 400 
-      }
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

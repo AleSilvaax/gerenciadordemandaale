@@ -73,14 +73,26 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
   try {
     console.log('Creating new service in database:', service);
     
+    // Generate a service number
+    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+    
+    if (numberError) {
+      console.error('Error generating service number:', numberError);
+      throw numberError;
+    }
+    
+    // Format the service number
+    const number = `SRV-${numberData.toString().padStart(5, '0')}`;
+    
     // Create service record
     const { data, error } = await supabase
       .from('services')
-      .insert([{
+      .insert({
         title: service.title,
         location: service.location,
-        status: service.status
-      }])
+        status: service.status,
+        number: number  // Include the required number field
+      })
       .select()
       .single();
     
@@ -227,16 +239,19 @@ export const addServiceMessageToDatabase = async (
   try {
     console.log('Adding message to service:', serviceId, message);
     
+    // Create a new object for the message with the correct payload structure
+    const payload = { 
+      serviceId, 
+      message: {
+        text: message.text,
+        type: message.type,
+        author: message.author,
+      }
+    };
+    
     // Using the Edge Function to add a message
     const { error } = await supabase.functions.invoke('add_service_message', {
-      body: { 
-        serviceId, 
-        message: {
-          text: message.text,
-          type: message.type,
-          author: message.author,
-        }
-      }
+      body: payload
     });
     
     if (error) {
