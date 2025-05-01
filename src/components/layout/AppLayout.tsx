@@ -20,7 +20,7 @@ export const AppLayout: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
-      <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-16'} overflow-y-auto overflow-x-hidden scrollbar-none`}>
+      <main className={`flex-1 ${isMobile ? 'pb-24' : 'pb-20'} overflow-y-auto overflow-x-hidden scrollbar-none`}>
         <div className="pt-2 min-w-full">
           <Outlet />
         </div>

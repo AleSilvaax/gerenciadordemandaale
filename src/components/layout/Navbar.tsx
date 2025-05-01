@@ -25,10 +25,10 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-secondary/90 backdrop-blur-md border-t border-white/10 z-10">
+    <nav className="fixed bottom-0 left-0 right-0 bg-secondary/90 backdrop-blur-md border-t border-white/10 z-10 h-16 md:h-14">
       {isMobile ? (
-        <ScrollArea className="w-full">
-          <div className="flex justify-between items-center py-3 px-4 w-max min-w-full">
+        <ScrollArea className="w-full h-full">
+          <div className="flex justify-between items-center py-2 px-4 w-max min-w-full h-full">
             <div className="flex items-center space-x-6">
               <Link 
                 to="/" 
@@ -100,7 +100,7 @@ export const Navbar: React.FC = () => {
           </div>
         </ScrollArea>
       ) : (
-        <div className="flex justify-between items-center py-3 px-4 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center h-full py-2 px-4 max-w-7xl mx-auto">
           <div className="flex items-center space-x-8">
             <Link 
               to="/" 
