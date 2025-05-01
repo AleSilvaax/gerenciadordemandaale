@@ -39,10 +39,10 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       throw technicianError;
     }
     
-    // Get all service messages using raw query to avoid TypeScript errors
-    // This is necessary because the types might not be updated yet
+    // Get all service messages - Use raw query to avoid TypeScript errors with service_messages table
+    // We need to cast the result because TypeScript doesn't know about our custom function
     const { data: messagesData, error: messagesError } = await supabase
-      .rpc('get_service_messages');
+      .rpc('get_service_messages') as { data: ServiceMessageRow[] | null, error: any };
       
     if (messagesError) {
       console.error('Error fetching service messages from Supabase:', messagesError);
@@ -68,8 +68,9 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         role: 'tecnico',
       };
       
-      // Get messages for this service
-      const serviceMessages = messagesData
+      // Get messages for this service from our function result
+      // Need to check if messagesData exists and ensure proper typing
+      const serviceMessages = messagesData 
         ? (messagesData as ServiceMessageRow[])
             .filter(m => m.service_id === service.id)
             .map(m => ({
