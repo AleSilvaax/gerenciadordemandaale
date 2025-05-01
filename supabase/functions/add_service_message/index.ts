@@ -49,7 +49,7 @@ serve(async (req: Request) => {
       );
     }
     
-    // Insert message directly into service_messages table
+    // Insert message into service_messages table
     const { data: messageData, error: insertError } = await supabaseClient
       .from('service_messages')
       .insert({

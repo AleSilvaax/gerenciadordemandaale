@@ -39,10 +39,10 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       throw technicianError;
     }
     
-    // Get all service messages directly from service_messages table
+    // Get all service messages using raw query to avoid TypeScript errors
+    // This is necessary because the types might not be updated yet
     const { data: messagesData, error: messagesError } = await supabase
-      .from('service_messages')
-      .select('*');
+      .rpc('get_service_messages');
       
     if (messagesError) {
       console.error('Error fetching service messages from Supabase:', messagesError);
