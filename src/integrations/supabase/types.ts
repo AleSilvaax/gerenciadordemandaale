@@ -279,6 +279,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_service_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          message: string
+          sender_id: string
+          sender_name: string
+          sender_role: string
+          service_id: string | null
+          timestamp: string | null
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
