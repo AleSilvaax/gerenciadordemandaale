@@ -39,14 +39,10 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       throw technicianError;
     }
     
-    // Get all service messages - usando query de seleção direta da tabela
+    // Get all service messages directly from service_messages table
     const { data: messagesData, error: messagesError } = await supabase
-      .rpc('create_service_messages_if_not_exists')
-      .then(() => {
-        return supabase
-          .from('service_messages')
-          .select('*');
-      });
+      .from('service_messages')
+      .select('*');
       
     if (messagesError) {
       console.error('Error fetching service messages from Supabase:', messagesError);
