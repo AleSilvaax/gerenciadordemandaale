@@ -14,13 +14,14 @@ import { CustomFieldManager } from '@/components/ui-custom/CustomFieldManager';
 import { PhotoUploader } from '@/components/ui-custom/PhotoUploader';
 import { DeadlineManager } from '@/components/ui-custom/DeadlineManager';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CustomField } from '@/types/serviceTypes';
+import { CustomField, TeamMember } from '@/types/serviceTypes';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
   const [priority, setPriority] = useState('media');
   const [status, setStatus] = useState('pendente');
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -35,18 +36,33 @@ const NewService: React.FC = () => {
       toast.error('Por favor, insira um título para a demanda.');
       return;
     }
+
+    if (!location.trim()) {
+      toast.error('Por favor, insira uma localização para a demanda.');
+      return;
+    }
     
     try {
       setIsSubmitting(true);
       
+      // Create default technician object since it's required by the type
+      const defaultTechnician: TeamMember = {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      };
+      
       const newService = {
         title,
         description,
+        location, // Add the location property
         priority,
         status,
-        custom_fields: customFields,
+        technician: defaultTechnician, // Add the technician property
+        customFields,
         photos,
-        deadline: deadline ? deadline.toISOString() : null,
+        dueDate: deadline ? deadline.toISOString() : undefined,
       };
       
       const result = await createServiceInDatabase(newService);
@@ -79,6 +95,17 @@ const NewService: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex: Manutenção do ar-condicionado"
+                required
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="location">Localização</Label>
+              <Input
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Ex: Sede Principal - 3º Andar"
                 required
               />
             </div>
