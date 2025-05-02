@@ -130,15 +130,20 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       console.error('Exception generating service number:', numberErr);
     }
     
+    // Create a simplified service object with only the required fields for the database
+    const serviceForDb = {
+      title: service.title,
+      location: service.location,
+      status: service.status,
+      number: serviceNumber  // Use either generated or default number
+    };
+
+    console.log('Sending to database:', serviceForDb);
+    
     // Create service record
     const { data, error } = await supabase
       .from('services')
-      .insert({
-        title: service.title,
-        location: service.location,
-        status: service.status,
-        number: serviceNumber  // Use either generated or default number
-      })
+      .insert(serviceForDb)
       .select()
       .single();
     
@@ -151,7 +156,12 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     
     // If a technician is assigned, create the relationship
     if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
-      await assignTechnician(data.id, service.technician.id);
+      try {
+        await assignTechnician(data.id, service.technician.id);
+      } catch (techError) {
+        console.error('Error assigning technician, but service was created:', techError);
+        // Continue since the main service was created
+      }
     }
     
     // Construct and return a properly typed Service object

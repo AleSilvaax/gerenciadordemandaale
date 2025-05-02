@@ -53,22 +53,29 @@ const NewService: React.FC = () => {
         role: 'tecnico',
       };
       
+      console.log('Preparing to create service...');
+      
       const newService = {
         title,
         description,
-        location, // Add the location property
+        location,
         priority,
         status,
-        technician: defaultTechnician, // Add the technician property
+        technician: defaultTechnician,
         customFields,
         photos,
         dueDate: deadline ? deadline.toISOString() : undefined,
+        messages: [] // Inicializar com array vazio para evitar erro de null/undefined
       };
+      
+      console.log('Submitting service:', newService);
       
       const result = await createServiceInDatabase(newService);
       if (result) {
         toast.success('Demanda criada com sucesso!');
         navigate('/demandas');
+      } else {
+        throw new Error('Falha ao criar demanda - nenhum dado retornado do servidor');
       }
     } catch (error) {
       console.error('Erro ao criar demanda:', error);
@@ -76,6 +83,21 @@ const NewService: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Função para lidar com erros no formulário e fornecer feedback ao usuário
+  const validateForm = (): boolean => {
+    if (!title.trim()) {
+      toast.error('Por favor, insira um título para a demanda.');
+      return false;
+    }
+    
+    if (!location.trim()) {
+      toast.error('Por favor, insira uma localização para a demanda.');
+      return false;
+    }
+    
+    return true;
   };
 
   return (
