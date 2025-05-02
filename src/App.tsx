@@ -2,7 +2,7 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
-import { SonnerToaster } from "./components/ui/sonner";
+import { Toaster as SonnerToaster } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
 import React from "react";
 

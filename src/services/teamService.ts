@@ -1,14 +1,17 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
-import { TeamMember } from '@/types/serviceTypes';
+import { TeamMember, UserRole } from '@/types/serviceTypes';
 
 // Criar uma nova equipe
 export const createTeam = async (name: string): Promise<{ id: string, invite_code: string } | null> => {
   try {
+    const userData = await supabase.auth.getUser();
+    if (!userData.data.user) throw new Error("Usuário não autenticado");
+    
     const { data, error } = await supabase.rpc('create_team', {
       name,
-      creator_id: supabase.auth.getUser().then(res => res.data.user?.id)
+      creator_id: userData.data.user.id
     });
     
     if (error) throw error;
@@ -96,8 +99,10 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     
     if (error) throw error;
     
+    if (!data) return [];
+    
     // Obtemos o papel de cada membro
-    const membersWithRoles = await Promise.all(
+    const membersWithRoles: TeamMember[] = await Promise.all(
       data.map(async (profile) => {
         const { data: roleData } = await supabase
           .from('user_roles')
@@ -109,7 +114,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
           id: profile.id,
           name: profile.name || 'Sem nome',
           avatar: profile.avatar || '',
-          role: roleData?.role || 'tecnico',
+          role: (roleData?.role as UserRole) || 'tecnico',
         };
       })
     );
