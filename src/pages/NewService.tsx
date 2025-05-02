@@ -14,7 +14,7 @@ import { CustomFieldManager } from '@/components/ui-custom/CustomFieldManager';
 import { PhotoUploader } from '@/components/ui-custom/PhotoUploader';
 import { DeadlineManager } from '@/components/ui-custom/DeadlineManager';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CustomField, TeamMember } from '@/types/serviceTypes';
+import { CustomField, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -22,8 +22,8 @@ const NewService: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [priority, setPriority] = useState('media');
-  const [status, setStatus] = useState('pendente');
+  const [priority, setPriority] = useState<ServicePriority>('media');
+  const [status, setStatus] = useState<ServiceStatus>('pendente');
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -124,7 +124,7 @@ const NewService: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="priority">Prioridade</Label>
-                <Select value={priority} onValueChange={setPriority}>
+                <Select value={priority} onValueChange={(value: ServicePriority) => setPriority(value)}>
                   <SelectTrigger id="priority">
                     <SelectValue placeholder="Selecione a prioridade" />
                   </SelectTrigger>
@@ -139,7 +139,7 @@ const NewService: React.FC = () => {
               
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={status} onValueChange={(value: ServiceStatus) => setStatus(value)}>
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
