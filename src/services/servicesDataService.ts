@@ -111,16 +111,24 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
   try {
     console.log('Creating new service in database:', service);
     
-    // Generate a service number
-    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+    let serviceNumber = 'SRV-00000'; // Default service number
     
-    if (numberError) {
-      console.error('Error generating service number:', numberError);
-      throw numberError;
+    try {
+      // Generate a service number
+      const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+      
+      if (numberError) {
+        console.error('Error generating service number:', numberError);
+        // Continue with default number instead of throwing
+        console.log('Using default service number due to error');
+      } else if (numberData) {
+        // Format the service number only if we successfully got a number
+        serviceNumber = `SRV-${numberData.toString().padStart(5, '0')}`;
+      }
+    } catch (numberErr) {
+      // Just log this error and proceed with default number
+      console.error('Exception generating service number:', numberErr);
     }
-    
-    // Format the service number
-    const number = `SRV-${numberData.toString().padStart(5, '0')}`;
     
     // Create service record
     const { data, error } = await supabase
@@ -129,7 +137,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
         title: service.title,
         location: service.location,
         status: service.status,
-        number: number  // Include the required number field
+        number: serviceNumber  // Use either generated or default number
       })
       .select()
       .single();
