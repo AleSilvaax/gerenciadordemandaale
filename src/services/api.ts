@@ -8,6 +8,7 @@ import {
   deleteServiceFromDatabase,
   addServiceMessageToDatabase
 } from './servicesDataService';
+import { getTeamMembers as getTeamMembersFromTeamService } from './teamService';
 
 // Get all services
 export const getServices = async (): Promise<Service[]> => {
@@ -176,23 +177,12 @@ export const addServiceFeedback = async (
   }
 };
 
-// Get team members - This should be implemented with Supabase
+// Get team members
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
-    // Get team members from Supabase
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*');
-      
-    if (error) throw error;
-    
-    // Transform to TeamMember type
-    return profiles.map(profile => ({
-      id: profile.id,
-      name: profile.name || 'Sem nome',
-      avatar: profile.avatar || '',
-      role: 'tecnico', // Default role, should be fetched from user_roles
-    }));
+    // Usar a nova função de teamService para obter os membros da equipe
+    const members = await getTeamMembersFromTeamService();
+    return members;
   } catch (error) {
     console.error("Error getting team members:", error);
     toast.error("Falha ao carregar membros da equipe");
@@ -200,7 +190,10 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
   }
 };
 
-// Placeholder for updating team member
+// Import supabase client for the new functions
+import { supabase } from '@/integrations/supabase/client';
+
+// Placeholder para atualizando membro da equipe 
 export const updateTeamMember = async (id: string, data: Partial<TeamMember>): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -220,19 +213,12 @@ export const updateTeamMember = async (id: string, data: Partial<TeamMember>): P
   }
 };
 
-// Placeholder for adding new team member
+// Placeholder para adicionar novo membro da equipe
 export const addTeamMember = async (member: Omit<TeamMember, "id">): Promise<TeamMember> => {
-  // This would require creating a new auth user and profile
-  // For now, this is a stub that should be implemented properly
-  throw new Error("Not implemented: Adding team members requires proper Auth integration");
+  throw new Error("Função substituída por teamService.addTeamMember");
 };
 
-// Placeholder for deleting team member
+// Placeholder para remover membro da equipe
 export const deleteTeamMember = async (id: string): Promise<boolean> => {
-  // This would require deleting the user from auth and profile
-  // For now, this is a stub that should be implemented properly
-  throw new Error("Not implemented: Deleting team members requires proper Auth integration");
+  throw new Error("Função substituída por teamService.deleteTeamMember");
 };
-
-// Import supabase client for the new functions
-import { supabase } from '@/integrations/supabase/client';

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Save, CalendarIcon, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -113,7 +113,7 @@ const NewService = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 page-transition">
+    <div className="min-h-screen p-4 pb-32 page-transition"> {/* Aumentei o padding inferior para 32 */}
       <div className="flex items-center mb-6">
         <Link to="/demandas" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
           <ArrowLeft size={18} />
@@ -344,7 +344,7 @@ const NewService = () => {
             )}
           />
 
-          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
+          <div className="fixed bottom-16 md:bottom-14 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
             <div className="flex justify-between items-center max-w-md mx-auto">
               <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
                 Cancelar

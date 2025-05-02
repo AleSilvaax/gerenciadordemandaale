@@ -2,7 +2,7 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
-import { Toaster as SonnerToaster } from "./components/ui/sonner";
+import { SonnerToaster } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
 import React from "react";
 
@@ -13,6 +13,7 @@ import ServiceDetail from "./pages/ServiceDetail";
 import NewService from "./pages/NewService";
 import Estatisticas from "./pages/Estatisticas";
 import Equipe from "./pages/Equipe";
+import TeamManagement from "./pages/TeamManagement";
 import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
@@ -48,6 +49,7 @@ function App() {
                   <Route path="nova-demanda" element={<NewService />} />
                   <Route path="buscar" element={<Search />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="gerenciar-equipe" element={<TeamManagement />} />
                   
                   {/* Routes with specific permissions */}
                   <Route path="estatisticas" element={<ProtectedRoute requiredPermission="view_stats"><Estatisticas /></ProtectedRoute>} />
