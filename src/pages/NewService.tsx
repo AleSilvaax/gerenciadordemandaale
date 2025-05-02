@@ -6,14 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createService } from '@/services/servicesDataService';
+import { createServiceInDatabase } from '@/services/servicesDataService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import CustomFieldManager from '@/components/ui-custom/CustomFieldManager';
-import PhotoUploader from '@/components/ui-custom/PhotoUploader';
-import DeadlineManager from '@/components/ui-custom/DeadlineManager';
+import { CustomFieldManager } from '@/components/ui-custom/CustomFieldManager';
+import { PhotoUploader } from '@/components/ui-custom/PhotoUploader';
+import { DeadlineManager } from '@/components/ui-custom/DeadlineManager';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CustomField } from '@/types/serviceTypes';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const NewService: React.FC = () => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('media');
   const [status, setStatus] = useState('pendente');
-  const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const isMobile = useIsMobile();
@@ -48,7 +49,7 @@ const NewService: React.FC = () => {
         deadline: deadline ? deadline.toISOString() : null,
       };
       
-      const result = await createService(newService);
+      const result = await createServiceInDatabase(newService);
       if (result) {
         toast.success('Demanda criada com sucesso!');
         navigate('/demandas');
@@ -131,15 +132,22 @@ const NewService: React.FC = () => {
         
         <CustomFieldManager 
           fields={customFields} 
-          setFields={setCustomFields}
+          onChange={setCustomFields}
         />
         
-        <PhotoUploader 
-          photos={photos} 
-          setPhotos={setPhotos}
-        />
+        {/* Componente PhotoUploader adaptado para interface simples */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fotos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center p-4 text-muted-foreground">
+              Adicione fotos à sua demanda na página de detalhes após criar.
+            </div>
+          </CardContent>
+        </Card>
         
-        <div className={`sticky ${isMobile ? 'bottom-24' : 'bottom-16'} pt-4 pb-4 bg-background flex justify-end gap-2 z-10`}>
+        <div className={`fixed ${isMobile ? 'bottom-24' : 'bottom-16'} left-0 right-0 pt-4 pb-4 bg-background flex justify-end gap-2 z-30 px-4 md:px-8 border-t shadow-md`}>
           <Button 
             type="button" 
             variant="outline" 
