@@ -1,4 +1,5 @@
-export type ServiceStatus = "concluido" | "pendente" | "cancelado";
+
+export type ServiceStatus = "concluido" | "pendente" | "cancelado" | "em_andamento";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 
@@ -62,6 +63,7 @@ export interface Service {
   messages?: ServiceMessage[];
   feedback?: ServiceFeedback;
   customFields?: CustomField[];
+  team_id?: string;
 }
 
 export interface ServiceCardProps {

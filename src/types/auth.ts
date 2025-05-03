@@ -17,6 +17,9 @@ export interface RegisterFormData {
   password: string;
   confirmPassword?: string;
   role: UserRole;
+  inviteCode?: string;
+  createTeam?: boolean;
+  teamName?: string;
 }
 
 export interface LoginFormData {
