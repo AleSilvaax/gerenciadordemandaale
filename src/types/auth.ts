@@ -31,6 +31,8 @@ export interface AuthUser {
   name: string;
   avatar?: string;
   role: UserRole;
+  phone?: string; // Add phone property
+  team_id?: string; // Add team_id property
 }
 
 export interface AuthState {

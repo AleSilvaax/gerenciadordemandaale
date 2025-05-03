@@ -18,6 +18,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
         id: userId,
         name,
         avatar,
+        phone, // Added phone property
         updated_at: new Date().toISOString()
       }, { 
         onConflict: 'id',

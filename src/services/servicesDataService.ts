@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -6,17 +5,17 @@ import { toast } from "sonner";
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
+    // Fix: Separate the query building to avoid infinite type instantiation
     let query = supabase
       .from('services')
-      .select(`
-        *
-      `);
+      .select('*');
     
     // Se um ID de equipe for fornecido, filtre por essa equipe
     if (teamId) {
       query = query.eq('team_id', teamId);
     }
     
+    // Add order at the end to prevent chaining issues
     const { data, error } = await query.order('created_at', { ascending: false });
     
     if (error) {
@@ -62,7 +61,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         location: item.location,
         technician,
         creationDate: item.created_at,
-        // Outras propriedades podem ser adicionadas conforme necessário
+        // Use optional chaining and type assertion for properties that might not exist in the database
         team_id: item.team_id || undefined,
         description: item.description || ''
       };
@@ -315,8 +314,10 @@ export const assignTechnician = async (serviceId: string, technicianId: string):
 // Obter estatísticas dos serviços
 export const getServiceStats = async (teamId?: string): Promise<any> => {
   try {
-    // Using the proper from() method from the supabase client
-    let query = supabase.from('services').select('status');
+    // Fix: Separate the query building to avoid infinite type instantiation
+    let query = supabase
+      .from('services')
+      .select('status');
     
     // Se um ID de equipe for fornecido, filtre por essa equipe
     if (teamId) {
