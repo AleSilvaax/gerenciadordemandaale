@@ -1,10 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Service, ServiceStatus } from '@/types/serviceTypes';
+import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
-// Obter lista de todos os serviços
-export const getServices = async (teamId?: string): Promise<Service[]> => {
+// Rename getServices to getServicesFromDatabase to match the import in api.ts
+export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
     let query = supabase
       .from('services')
@@ -39,21 +39,21 @@ export const getServices = async (teamId?: string): Promise<Service[]> => {
     }
     
     // Transformar os dados do banco em objetos Service
-    const services: Service[] = data.map((item) => {
+    const services: Service[] = data.map((item: any) => {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
       // Criar um objeto technician padrão caso não encontremos
-      const technician = technicianData ? {
+      const technician: TeamMember = technicianData ? {
         id: technicianData.technician_id,
         name: technicianData.profiles.name || 'Sem nome',
         avatar: technicianData.profiles.avatar || '',
-        role: 'tecnico'
+        role: 'tecnico' as UserRole
       } : {
         id: '0',
         name: 'Não atribuído',
         avatar: '',
-        role: 'tecnico'
+        role: 'tecnico' as UserRole
       };
 
       return {
@@ -64,7 +64,8 @@ export const getServices = async (teamId?: string): Promise<Service[]> => {
         technician,
         creationDate: item.created_at,
         // Outras propriedades podem ser adicionadas conforme necessário
-        team_id: item.team_id
+        team_id: item.team_id,
+        description: item.description
       };
     });
     
@@ -104,16 +105,16 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       .maybeSingle();
     
     // Criar objeto técnico com os dados encontrados ou valores padrão
-    const technician = technicianData ? {
+    const technician: TeamMember = technicianData ? {
       id: technicianData.technician_id,
       name: technicianData.profiles.name || 'Sem nome',
       avatar: technicianData.profiles.avatar || '',
-      role: 'tecnico'
+      role: 'tecnico' as UserRole
     } : {
       id: '0',
       name: 'Não atribuído',
       avatar: '',
-      role: 'tecnico'
+      role: 'tecnico' as UserRole
     };
 
     // Construir e retornar o objeto Service
@@ -134,7 +135,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
   }
 };
 
-// Criar um novo serviço no banco de dados
+// Export createServiceInDatabase (already existed)
 export const createServiceInDatabase = async (service: Omit<Service, "id">): Promise<Service | null> => {
   try {
     console.log('Creating service in DB:', service);
@@ -199,7 +200,8 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       technician: service.technician,
       creationDate: data.created_at,
       // Incluir outros campos conforme necessário
-      team_id: data.team_id
+      team_id: data.team_id,
+      description: data.description
     };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
@@ -207,13 +209,13 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
   }
 };
 
-// Atualizar um serviço existente
-export const updateService = async (id: string, service: Partial<Service>): Promise<boolean> => {
+// Rename updateService to updateServiceInDatabase to match import in api.ts
+export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
   try {
     // Extrair propriedades básicas para atualizar na tabela 'services'
-    const { title, status, location, description } = service;
+    const { title, status, location, description, id } = service;
     
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('services')
       .update({
         title,
@@ -222,7 +224,9 @@ export const updateService = async (id: string, service: Partial<Service>): Prom
         description,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
     
     if (error) throw error;
     
@@ -231,15 +235,21 @@ export const updateService = async (id: string, service: Partial<Service>): Prom
       await assignTechnician(id, service.technician.id);
     }
     
-    return true;
+    // Return the updated service
+    if (data) {
+      const updatedService = await getServiceById(id);
+      return updatedService;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error updating service:', error);
-    return false;
+    throw error;
   }
 };
 
-// Excluir um serviço
-export const deleteService = async (id: string): Promise<boolean> => {
+// Rename deleteService to deleteServiceFromDatabase to match import in api.ts
+export const deleteServiceFromDatabase = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('services')
@@ -250,6 +260,30 @@ export const deleteService = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error deleting service:', error);
+    return false;
+  }
+};
+
+// Add the missing addServiceMessageToDatabase function
+export const addServiceMessageToDatabase = async (
+  serviceId: string, 
+  messageData: { text: string, type: string, author: string, author_name: string }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('service_messages')
+      .insert({
+        service_id: serviceId,
+        message: messageData.text,
+        sender_id: messageData.author,
+        sender_name: messageData.author_name,
+        sender_role: messageData.type
+      });
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error adding message to service:', error);
     return false;
   }
 };
@@ -302,7 +336,7 @@ export const getServiceStats = async (teamId?: string): Promise<any> => {
     };
     
     // Contar os serviços por status
-    data.forEach(service => {
+    data.forEach((service: any) => {
       switch (service.status) {
         case 'concluido':
           stats.completed++;

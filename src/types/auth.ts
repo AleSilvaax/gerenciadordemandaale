@@ -9,6 +9,8 @@ export interface AuthUser {
   avatar?: string;
   phone?: string;
   permissions?: string[];
+  team_id?: string;
+  team_name?: string;
 }
 
 export interface RegisterFormData {
