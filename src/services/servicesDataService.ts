@@ -1,22 +1,36 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
+// Define a type that matches the structure of the services table in Supabase
+type ServiceFromDB = {
+  id: string;
+  title: string;
+  status: string;
+  location: string;
+  created_at: string;
+  updated_at: string;
+  number: string;
+  team_id?: string;
+  description?: string;
+}
+
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Fix: Separate the query building to avoid infinite type instantiation
-    let query = supabase
-      .from('services')
-      .select('*');
+    // Fix: Create query step by step to avoid infinite type instantiation
+    const query = supabase.from('services');
+    const selectQuery = query.select('*');
     
-    // Se um ID de equipe for fornecido, filtre por essa equipe
+    // Apply filter if teamId is provided
+    let filteredQuery = selectQuery;
     if (teamId) {
-      query = query.eq('team_id', teamId);
+      filteredQuery = selectQuery.eq('team_id', teamId);
     }
     
-    // Add order at the end to prevent chaining issues
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Execute the query with ordering
+    const { data, error } = await filteredQuery.order('created_at', { ascending: false });
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -37,7 +51,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
     
     // Transformar os dados do banco em objetos Service
-    const services: Service[] = data.map((item: any) => {
+    const services: Service[] = (data as ServiceFromDB[]).map((item: ServiceFromDB) => {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
@@ -61,8 +75,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         location: item.location,
         technician,
         creationDate: item.created_at,
-        // Use optional chaining and type assertion for properties that might not exist in the database
-        team_id: item.team_id || undefined,
+        team_id: item.team_id,
         description: item.description || ''
       };
     });
@@ -92,6 +105,9 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     if (!data) return null;
     
+    // Type assertion to match our expected structure
+    const serviceData = data as ServiceFromDB;
+    
     // Obter o técnico associado
     const { data: technicianData, error: techError } = await supabase
       .from('service_technicians')
@@ -117,15 +133,14 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     // Construir e retornar o objeto Service
     return {
-      id: data.id,
-      title: data.title,
-      status: data.status as ServiceStatus,
-      location: data.location,
+      id: serviceData.id,
+      title: serviceData.title,
+      status: serviceData.status as ServiceStatus,
+      location: serviceData.location,
       technician,
-      creationDate: data.created_at,
-      description: data.description || '',
-      // Incluir outros campos conforme necessário
-      team_id: data.team_id || undefined
+      creationDate: serviceData.created_at,
+      description: serviceData.description || '',
+      team_id: serviceData.team_id
     };
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
@@ -157,7 +172,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       location: service.location,
       status: service.status,
       number: serviceNumber,  // Use either generated or default number
-      team_id: service.team_id, // Adicionar o ID da equipe
+      team_id: service.team_id,
       description: service.description || ''
     };
 
@@ -179,10 +194,13 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       throw new Error('No data returned after creating service');
     }
     
+    // Type assertion to match our expected structure
+    const serviceData = data as ServiceFromDB;
+    
     // If a technician is assigned, create the relationship
-    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
+    if (service.technician && service.technician.id && service.technician.id !== '0' && serviceData.id) {
       try {
-        await assignTechnician(data.id, service.technician.id);
+        await assignTechnician(serviceData.id, service.technician.id);
       } catch (techError) {
         console.error('Error assigning technician, but service was created:', techError);
         // Continue since the main service was created
@@ -191,15 +209,14 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     
     // Construct and return a properly typed Service object
     return {
-      id: data.id,
-      title: data.title,
-      status: data.status as ServiceStatus,
-      location: data.location,
+      id: serviceData.id,
+      title: serviceData.title,
+      status: serviceData.status as ServiceStatus,
+      location: serviceData.location,
       technician: service.technician,
-      creationDate: data.created_at,
-      // Incluir outros campos conforme necessário
-      team_id: data.team_id || undefined,
-      description: data.description || ''
+      creationDate: serviceData.created_at,
+      team_id: serviceData.team_id,
+      description: serviceData.description || ''
     };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
@@ -228,13 +245,16 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     
     if (error) throw error;
     
+    // Type assertion for the database result
+    const serviceData = data as ServiceFromDB;
+    
     // Se um técnico foi fornecido e é diferente de 'Não atribuído', atualize a relação
     if (service.technician && service.technician.id && service.technician.id !== '0') {
       await assignTechnician(id, service.technician.id);
     }
     
     // Return the updated service
-    if (data) {
+    if (serviceData) {
       const updatedService = await getServiceById(id);
       return updatedService;
     }
@@ -314,17 +334,17 @@ export const assignTechnician = async (serviceId: string, technicianId: string):
 // Obter estatísticas dos serviços
 export const getServiceStats = async (teamId?: string): Promise<any> => {
   try {
-    // Fix: Separate the query building to avoid infinite type instantiation
-    let query = supabase
-      .from('services')
-      .select('status');
+    // Fix: Create query step by step to avoid infinite type instantiation
+    const query = supabase.from('services');
+    const selectQuery = query.select('status');
     
-    // Se um ID de equipe for fornecido, filtre por essa equipe
+    // Apply filter if teamId is provided
+    let filteredQuery = selectQuery;
     if (teamId) {
-      query = query.eq('team_id', teamId);
+      filteredQuery = selectQuery.eq('team_id', teamId);
     }
     
-    const { data, error } = await query;
+    const { data, error } = await filteredQuery;
     
     if (error) throw error;
     
