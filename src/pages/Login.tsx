@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ const Login: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Reset submission state when component unmounts
@@ -53,7 +54,10 @@ const Login: React.FC = () => {
       const success = await login(email, password);
       console.log("Login result:", success);
       
-      if (!success) {
+      if (success) {
+        toast.success("Login realizado com sucesso!");
+        navigate("/");
+      } else {
         setErrorMsg("Email ou senha inválidos");
         toast.error("Erro no login", {
           description: "Verifique suas credenciais e tente novamente",
@@ -99,7 +103,10 @@ const Login: React.FC = () => {
       const success = await login(demoEmail, demoPassword);
       console.log("Demo login result:", success);
       
-      if (!success) {
+      if (success) {
+        toast.success("Login realizado com sucesso!");
+        navigate("/");
+      } else {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
         toast.error("Erro no login com demo", {
           description: "Não foi possível acessar com as credenciais de demonstração",
@@ -134,7 +141,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('tecnico')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || authLoading}
               >
                 Técnico
               </Button>
@@ -143,7 +150,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('administrador')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || authLoading}
               >
                 Administrador
               </Button>
@@ -152,7 +159,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('gestor')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || authLoading}
               >
                 Gestor
               </Button>
@@ -190,7 +197,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="transition-medium"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || authLoading}
                 />
               </div>
               
@@ -204,7 +211,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="transition-medium"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || authLoading}
                 />
               </div>
             </CardContent>
@@ -213,9 +220,9 @@ const Login: React.FC = () => {
               <Button 
                 type="submit" 
                 className="w-full transition-medium hover-scale" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || authLoading}
               >
-                {isSubmitting ? (
+                {isSubmitting || authLoading ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
                     Entrando...

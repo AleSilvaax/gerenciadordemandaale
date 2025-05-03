@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { TeamMember, UserRole } from '@/types/serviceTypes';
@@ -41,10 +40,10 @@ export const createTeam = async (name: string): Promise<{ id: string, invite_cod
     
     console.log("Dados da equipe recuperados:", teamData);
     return teamData;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao criar equipe:", error);
-    toast.error("Falha ao criar a equipe");
-    return null;
+    toast.error("Falha ao criar a equipe: " + (error.message || "Erro desconhecido"));
+    throw error;
   }
 };
 

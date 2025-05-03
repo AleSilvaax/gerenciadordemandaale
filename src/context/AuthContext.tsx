@@ -75,12 +75,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error("Erro de autenticação:", error.message);
+        setState((prev) => ({ ...prev, isLoading: false }));
         throw error;
       }
       
-      if (data && data.user) {
-        console.log("Login bem sucedido para:", data.user.email);
-        
+      if (!data || !data.user) {
+        console.error("Login falhou: dados de usuário ausentes");
+        setState((prev) => ({ ...prev, isLoading: false }));
+        return false;
+      }
+      
+      console.log("Login bem sucedido para:", data.user.email);
+      
+      try {
         // Buscar perfil do usuário
         const profile = await fetchUserProfile(data.user.id);
         console.log("Perfil encontrado:", profile);
@@ -107,10 +114,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         toast.success('Login realizado com sucesso!');
         return true;
+      } catch (profileError) {
+        console.error("Erro ao obter perfil/role:", profileError);
+        // Ainda permitir login mesmo se falhar a obter perfil
+        updateUserInfo({
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || '',
+          avatar: '',
+          role: 'tecnico',
+        });
+        
+        toast.success('Login realizado com sucesso!');
+        return true;
       }
-      
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return false;
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login');
@@ -252,29 +269,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user) {
           console.log("Sessão existente encontrada para:", session.user.email);
           
-          // Buscar perfil do usuário
-          const profile = await fetchUserProfile(session.user.id);
-          console.log("Perfil encontrado para sessão existente:", profile);
-          
-          // Buscar a função do usuário
-          const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
-            user_id: session.user.id
-          });
-          
-          if (roleError) {
-            console.error("Erro ao buscar função do usuário da sessão:", roleError);
+          try {
+            // Buscar perfil do usuário
+            const profile = await fetchUserProfile(session.user.id);
+            console.log("Perfil encontrado para sessão existente:", profile);
+            
+            // Buscar a função do usuário
+            const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
+              user_id: session.user.id
+            });
+            
+            if (roleError) {
+              console.error("Erro ao buscar função do usuário da sessão:", roleError);
+            }
+            
+            console.log("Role do usuário da sessão existente:", roleData);
+            const userRole = roleData as UserRole || 'tecnico';
+            
+            updateUserInfo({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: profile?.name || session.user.user_metadata?.name || '',
+              avatar: profile?.avatar || '',
+              role: userRole,
+            });
+          } catch (error) {
+            console.error("Erro ao obter perfil/role para sessão existente:", error);
+            // Ainda continuar mesmo com erro
+            updateUserInfo({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || '',
+              avatar: '',
+              role: 'tecnico',
+            });
           }
-          
-          console.log("Role do usuário da sessão existente:", roleData);
-          const userRole = roleData as UserRole || 'tecnico';
-          
-          updateUserInfo({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: profile?.name || session.user.user_metadata?.name || '',
-            avatar: profile?.avatar || '',
-            role: userRole,
-          });
         } else {
           setState({
             user: null,
@@ -301,29 +330,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (event === 'SIGNED_IN' && session?.user) {
         console.log("Usuário conectado:", session.user.email);
         
-        // Buscar perfil do usuário
-        const profile = await fetchUserProfile(session.user.id);
-        console.log("Perfil encontrado após login:", profile);
-        
-        // Buscar a função do usuário
-        const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
-          user_id: session.user.id
-        });
-        
-        if (roleError) {
-          console.error("Erro ao buscar função do usuário após login:", roleError);
+        try {
+          // Buscar perfil do usuário
+          const profile = await fetchUserProfile(session.user.id);
+          console.log("Perfil encontrado após login:", profile);
+          
+          // Buscar a função do usuário
+          const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
+            user_id: session.user.id
+          });
+          
+          if (roleError) {
+            console.error("Erro ao buscar função do usuário após login:", roleError);
+          }
+          
+          console.log("Role do usuário após login:", roleData);
+          const userRole = roleData as UserRole || 'tecnico';
+          
+          updateUserInfo({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: profile?.name || session.user.user_metadata?.name || '',
+            avatar: profile?.avatar || '',
+            role: userRole,
+          });
+        } catch (error) {
+          console.error("Erro ao obter perfil/role após login:", error);
+          // Continuar mesmo com erro
+          updateUserInfo({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || '',
+            avatar: '',
+            role: 'tecnico',
+          });
         }
-        
-        console.log("Role do usuário após login:", roleData);
-        const userRole = roleData as UserRole || 'tecnico';
-        
-        updateUserInfo({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: profile?.name || session.user.user_metadata?.name || '',
-          avatar: profile?.avatar || '',
-          role: userRole,
-        });
       } else if (event === 'SIGNED_OUT') {
         console.log("Usuário desconectado");
         setState({
@@ -335,7 +376,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
