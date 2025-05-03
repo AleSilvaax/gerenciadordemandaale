@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { updateUserProfile, fetchUserProfile } from '@/services/profileService';
 import { AuthContextType, AuthState, AuthUser, LoginFormData, RegisterFormData } from '@/types/auth';
 import { createTeam, joinTeamByCode } from '@/services/teamService';
+import { UserRole } from '@/types/serviceTypes';
 
 // Valor inicial do contexto
 const initialState: AuthState = {
@@ -87,7 +88,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: data.user.email || '',
           name: profile?.name || '',
           avatar: profile?.avatar || '',
-          role: roleData || 'tecnico',
+          // Fix: Cast string to UserRole type
+          role: roleData as UserRole || 'tecnico',
         });
         
         toast.success('Login realizado com sucesso!');
@@ -228,7 +230,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: session.user.email || '',
             name: profile?.name || '',
             avatar: profile?.avatar || '',
-            role: roleData || 'tecnico',
+            // Fix: Cast string to UserRole type
+            role: roleData as UserRole || 'tecnico',
           });
         } else {
           setState({
@@ -265,7 +268,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: session.user.email || '',
           name: profile?.name || '',
           avatar: profile?.avatar || '',
-          role: roleData || 'tecnico',
+          // Fix: Cast string to UserRole type
+          role: roleData as UserRole || 'tecnico',
         });
       } else if (event === 'SIGNED_OUT') {
         setState({

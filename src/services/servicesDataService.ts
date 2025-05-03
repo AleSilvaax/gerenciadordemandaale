@@ -64,8 +64,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         technician,
         creationDate: item.created_at,
         // Outras propriedades podem ser adicionadas conforme necessário
-        team_id: item.team_id,
-        description: item.description
+        team_id: item.team_id || undefined,
+        description: item.description || ''
       };
     });
     
@@ -125,9 +125,9 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       location: data.location,
       technician,
       creationDate: data.created_at,
-      description: data.description,
+      description: data.description || '',
       // Incluir outros campos conforme necessário
-      team_id: data.team_id
+      team_id: data.team_id || undefined
     };
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
@@ -160,7 +160,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       status: service.status,
       number: serviceNumber,  // Use either generated or default number
       team_id: service.team_id, // Adicionar o ID da equipe
-      description: service.description
+      description: service.description || ''
     };
 
     console.log('Sending to database:', serviceForDb);
@@ -200,8 +200,8 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       technician: service.technician,
       creationDate: data.created_at,
       // Incluir outros campos conforme necessário
-      team_id: data.team_id,
-      description: data.description
+      team_id: data.team_id || undefined,
+      description: data.description || ''
     };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
@@ -316,6 +316,7 @@ export const assignTechnician = async (serviceId: string, technicianId: string):
 // Obter estatísticas dos serviços
 export const getServiceStats = async (teamId?: string): Promise<any> => {
   try {
+    // Using the proper from() method from the supabase client
     let query = supabase.from('services');
     
     // Se um ID de equipe for fornecido, filtre por essa equipe

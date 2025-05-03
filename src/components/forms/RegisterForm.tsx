@@ -28,8 +28,11 @@ const formSchema = z.object({
   }),
   confirmPassword: z.string(),
   role: z.enum(['tecnico', 'administrador', 'gestor']),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "Você deve aceitar os termos." }),
+  // Fix: change the literal type from true to boolean
+  terms: z.boolean({
+    required_error: "Você deve aceitar os termos."
+  }).refine(val => val === true, {
+    message: "Você deve aceitar os termos."
   }),
   inviteCode: z.string().optional(),
 })
@@ -38,7 +41,12 @@ const formSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export function RegisterForm() {
+// Fix: Update the prop types for the RegisterForm component
+interface RegisterFormProps {
+  setRegistrationInProgress?: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('join');
@@ -62,6 +70,9 @@ export function RegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
+      if (setRegistrationInProgress) {
+        setRegistrationInProgress(true);
+      }
       
       // Cria o objeto de registro com os dados necessários
       const registerData = {
@@ -89,6 +100,9 @@ export function RegisterForm() {
       // Erros já são tratados dentro da função register
     } finally {
       setIsLoading(false);
+      if (setRegistrationInProgress) {
+        setRegistrationInProgress(false);
+      }
     }
   }
 
