@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -65,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Função para fazer login
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      setState({ ...state, isLoading: true });
+      setState((prev) => ({ ...prev, isLoading: true }));
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -75,20 +74,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) throw error;
       
       if (data && data.user) {
+        console.log("Login bem sucedido para:", data.user.email);
+        
         // Buscar perfil do usuário
         const profile = await fetchUserProfile(data.user.id);
+        console.log("Perfil encontrado:", profile);
         
         // Buscar a função do usuário
         const { data: roleData } = await supabase.rpc('get_user_role', {
           user_id: data.user.id
         });
         
+        console.log("Role do usuário:", roleData);
         const userRole = roleData as UserRole || 'tecnico';
         
         updateUserInfo({
           id: data.user.id,
           email: data.user.email || '',
-          name: profile?.name || '',
+          name: profile?.name || data.user.user_metadata?.name || '',
           avatar: profile?.avatar || '',
           role: userRole,
         });
@@ -97,11 +100,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
+      setState((prev) => ({ ...prev, isLoading: false }));
       return false;
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login');
-      setState({ ...state, isLoading: false });
+      setState((prev) => ({ ...prev, isLoading: false }));
       return false;
     }
   };
@@ -218,20 +222,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
+          console.log("Sessão existente encontrada para:", session.user.email);
+          
           // Buscar perfil do usuário
           const profile = await fetchUserProfile(session.user.id);
+          console.log("Perfil encontrado para sessão existente:", profile);
           
           // Buscar a função do usuário
           const { data: roleData } = await supabase.rpc('get_user_role', {
             user_id: session.user.id
           });
           
+          console.log("Role do usuário da sessão existente:", roleData);
           const userRole = roleData as UserRole || 'tecnico';
           
           updateUserInfo({
             id: session.user.id,
             email: session.user.email || '',
-            name: profile?.name || '',
+            name: profile?.name || session.user.user_metadata?.name || '',
             avatar: profile?.avatar || '',
             role: userRole,
           });
@@ -256,25 +264,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Configurar listener para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Evento de autenticação:", event);
+      
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log("Usuário conectado:", session.user.email);
+        
         // Buscar perfil do usuário
         const profile = await fetchUserProfile(session.user.id);
+        console.log("Perfil encontrado após login:", profile);
         
         // Buscar a função do usuário
         const { data: roleData } = await supabase.rpc('get_user_role', {
           user_id: session.user.id
         });
         
+        console.log("Role do usuário após login:", roleData);
         const userRole = roleData as UserRole || 'tecnico';
         
         updateUserInfo({
           id: session.user.id,
           email: session.user.email || '',
-          name: profile?.name || '',
+          name: profile?.name || session.user.user_metadata?.name || '',
           avatar: profile?.avatar || '',
           role: userRole,
         });
       } else if (event === 'SIGNED_OUT') {
+        console.log("Usuário desconectado");
         setState({
           user: null,
           isLoading: false,

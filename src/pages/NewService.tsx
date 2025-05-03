@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createServiceInDatabase } from '@/services/servicesDataService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -17,6 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { CustomField, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { useAuth } from '@/context/AuthContext';
 import { getCurrentTeam } from '@/services/teamService';
+import { createService } from '@/services/api';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -39,10 +39,13 @@ const NewService: React.FC = () => {
       try {
         const teamData = await getCurrentTeam();
         if (teamData) {
+          console.log("Equipe encontrada:", teamData);
           setCurrentTeam({
             id: teamData.id,
             name: teamData.name
           });
+        } else {
+          console.log("Nenhuma equipe encontrada para o usuário");
         }
       } catch (error) {
         console.error("Erro ao buscar informações da equipe:", error);
@@ -87,13 +90,13 @@ const NewService: React.FC = () => {
         customFields,
         photos,
         dueDate: deadline ? deadline.toISOString() : undefined,
-        messages: [], // Inicializar com array vazio para evitar erro de null/undefined
-        team_id: currentTeam.id // Adicionar o ID da equipe ao serviço
+        messages: [],
+        team_id: currentTeam.id
       };
       
       console.log('Submitting service:', newService);
       
-      const result = await createServiceInDatabase(newService);
+      const result = await createService(newService);
       if (result) {
         toast.success('Demanda criada com sucesso!');
         navigate('/demandas');

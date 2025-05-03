@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -18,17 +19,26 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Using a simpler approach with explicit typing to avoid excessive type nesting
+    // Criar uma consulta base
     const query = supabase.from('services');
     
-    // Execute different queries based on whether teamId is provided
-    const response = teamId 
-      ? await query.select('*').eq('team_id', teamId).order('created_at', { ascending: false })
-      : await query.select('*').order('created_at', { ascending: false });
+    // Realizar consulta baseada na presença do teamId
+    let queryResult;
     
-    // Explicitly cast the data to avoid deep type instantiation
-    const data = response.data as ServiceFromDB[] | null;
-    const error = response.error;
+    if (teamId) {
+      queryResult = await query
+        .select('*')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
+    } else {
+      queryResult = await query
+        .select('*')
+        .order('created_at', { ascending: false });
+    }
+    
+    // Obter dados e erros
+    const data = queryResult.data as ServiceFromDB[] | null;
+    const error = queryResult.error;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -36,13 +46,16 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
 
     // Obter todos os técnicos associados
-    const { data: technicians, error: techError } = await supabase
+    const technicianResult = await supabase
       .from('service_technicians')
       .select(`
         service_id,
         technician_id,
         profiles!inner(id, name, avatar)
       `);
+    
+    const technicians = technicianResult.data;
+    const techError = technicianResult.error;
     
     if (techError) {
       console.error("Erro ao buscar técnicos:", techError);

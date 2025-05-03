@@ -6,17 +6,18 @@ import {
   createServiceInDatabase, 
   updateServiceInDatabase, 
   deleteServiceFromDatabase,
-  addServiceMessageToDatabase
+  addServiceMessageToDatabase,
+  getServiceById
 } from './servicesDataService';
 import { getTeamMembers as getTeamMembersFromTeamService } from './teamService';
 
 // Get all services
-export const getServices = async (): Promise<Service[]> => {
-  console.log("Getting all services...");
+export const getServices = async (teamId?: string): Promise<Service[]> => {
+  console.log("Getting all services...", teamId ? `for team: ${teamId}` : "for all teams");
   
   try {
     // Get services from Supabase database
-    const dbServices = await getServicesFromDatabase();
+    const dbServices = await getServicesFromDatabase(teamId);
     console.log("Returning services from database:", dbServices.length);
     return dbServices;
   } catch (error) {
@@ -33,9 +34,8 @@ export const getService = async (id: string): Promise<Service | undefined> => {
   console.log("Getting service by ID:", id);
   
   try {
-    // Get all services and find the one with matching ID
-    const allServices = await getServices();
-    const service = allServices.find(service => service.id === id);
+    // Buscar serviço diretamente pelo ID
+    const service = await getServiceById(id);
     
     if (!service) {
       throw new Error(`Service with id ${id} not found`);
