@@ -83,13 +83,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           user_id: data.user.id
         });
         
+        const userRole = roleData as UserRole || 'tecnico';
+        
         updateUserInfo({
           id: data.user.id,
           email: data.user.email || '',
           name: profile?.name || '',
           avatar: profile?.avatar || '',
-          // Fix: Cast string to UserRole type
-          role: roleData as UserRole || 'tecnico',
+          role: userRole,
         });
         
         toast.success('Login realizado com sucesso!');
@@ -225,13 +226,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             user_id: session.user.id
           });
           
+          const userRole = roleData as UserRole || 'tecnico';
+          
           updateUserInfo({
             id: session.user.id,
             email: session.user.email || '',
             name: profile?.name || '',
             avatar: profile?.avatar || '',
-            // Fix: Cast string to UserRole type
-            role: roleData as UserRole || 'tecnico',
+            role: userRole,
           });
         } else {
           setState({
@@ -263,13 +265,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           user_id: session.user.id
         });
         
+        const userRole = roleData as UserRole || 'tecnico';
+        
         updateUserInfo({
           id: session.user.id,
           email: session.user.email || '',
           name: profile?.name || '',
           avatar: profile?.avatar || '',
-          // Fix: Cast string to UserRole type
-          role: roleData as UserRole || 'tecnico',
+          role: userRole,
         });
       } else if (event === 'SIGNED_OUT') {
         setState({

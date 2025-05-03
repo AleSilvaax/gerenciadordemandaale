@@ -10,15 +10,14 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       .from('services')
       .select(`
         *
-      `)
-      .order('created_at', { ascending: false });
+      `);
     
     // Se um ID de equipe for fornecido, filtre por essa equipe
     if (teamId) {
       query = query.eq('team_id', teamId);
     }
     
-    const { data, error } = await query;
+    const { data, error } = await query.order('created_at', { ascending: false });
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -317,14 +316,14 @@ export const assignTechnician = async (serviceId: string, technicianId: string):
 export const getServiceStats = async (teamId?: string): Promise<any> => {
   try {
     // Using the proper from() method from the supabase client
-    let query = supabase.from('services');
+    let query = supabase.from('services').select('status');
     
     // Se um ID de equipe for fornecido, filtre por essa equipe
     if (teamId) {
       query = query.eq('team_id', teamId);
     }
     
-    const { data, error } = await query.select('status');
+    const { data, error } = await query;
     
     if (error) throw error;
     

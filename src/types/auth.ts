@@ -1,32 +1,36 @@
 
 import { UserRole } from '@/types/serviceTypes';
 
-export interface AuthUser {
-  id: string;
-  email?: string;
-  role?: UserRole;
-  name?: string;
-  avatar?: string;
-  phone?: string;
-  permissions?: string[];
-  team_id?: string;
-  team_name?: string;
-}
+export type { UserRole };
 
 export interface RegisterFormData {
   name: string;
   email: string;
   password: string;
-  confirmPassword?: string;
+  confirmPassword: string;
   role: UserRole;
-  inviteCode?: string;
   createTeam?: boolean;
   teamName?: string;
+  inviteCode?: string;
 }
 
 export interface LoginFormData {
   email: string;
   password: string;
+}
+
+export interface AuthSuccessResponse {
+  success: boolean;
+  user?: any;
+  message?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  role: UserRole;
 }
 
 export interface AuthState {
@@ -40,6 +44,6 @@ export interface AuthContextType extends AuthState {
   logout: () => void;
   register: (userData: RegisterFormData) => Promise<boolean>;
   updateUser: (userData: Partial<AuthUser>) => Promise<boolean>;
-  updateUserInfo: (userData: AuthUser) => void;
+  updateUserInfo: (user: AuthUser) => void;
   hasPermission: (permission: string) => boolean;
 }
