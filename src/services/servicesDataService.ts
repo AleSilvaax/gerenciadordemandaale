@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -19,26 +18,29 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Criar uma consulta base
-    const query = supabase.from('services');
+    // Create base query - explicitly type to avoid deep type instantiation
+    let data: ServiceFromDB[] | null = null;
+    let error = null;
     
-    // Realizar consulta baseada na presença do teamId
-    let queryResult;
-    
+    // Execute the query based on whether teamId is provided
     if (teamId) {
-      queryResult = await query
+      const result = await supabase
+        .from('services')
         .select('*')
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
+      
+      data = result.data as ServiceFromDB[] | null;
+      error = result.error;
     } else {
-      queryResult = await query
+      const result = await supabase
+        .from('services')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      data = result.data as ServiceFromDB[] | null;
+      error = result.error;
     }
-    
-    // Obter dados e erros
-    const data = queryResult.data as ServiceFromDB[] | null;
-    const error = queryResult.error;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
