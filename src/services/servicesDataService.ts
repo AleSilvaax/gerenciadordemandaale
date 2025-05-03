@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -19,24 +18,23 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Break down query construction to avoid excessive type instantiation
-    let query;
+    // Use explicit typing and simpler query construction to avoid excessive type instantiation
+    let queryResult;
     
     if (teamId) {
-      query = supabase
+      queryResult = await supabase
         .from('services')
         .select('*')
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
     } else {
-      query = supabase
+      queryResult = await supabase
         .from('services')
         .select('*')
         .order('created_at', { ascending: false });
     }
     
-    // Execute the query and explicitly type the results
-    const { data, error } = await query;
+    const { data, error } = queryResult;
     const serviceData = data as ServiceFromDB[] | null;
     
     if (error) {
