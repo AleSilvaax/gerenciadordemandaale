@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +13,7 @@ import { UserRole } from '@/types/serviceTypes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 // Schema para validação do formulário
 const formSchema = z.object({
@@ -23,8 +23,8 @@ const formSchema = z.object({
   email: z.string().email({
     message: "Email inválido.",
   }),
-  password: z.string().min(8, {
-    message: "Senha deve ter pelo menos 8 caracteres.",
+  password: z.string().min(6, {
+    message: "Senha deve ter pelo menos 6 caracteres.",
   }),
   confirmPassword: z.string(),
   role: z.enum(['tecnico', 'administrador', 'gestor']),
@@ -69,6 +69,7 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
   // Função executada ao submeter o formulário
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      console.log("Iniciando registro com valores:", values);
       setIsLoading(true);
       if (setRegistrationInProgress) {
         setRegistrationInProgress(true);
@@ -86,17 +87,21 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
         teamName: activeTab === 'create' ? values.inviteCode : undefined, // Reutilizando o campo inviteCode para teamName quando for criar equipe
       };
       
-      console.log("Dados de registro:", registerData);
+      console.log("Dados de registro preparados:", registerData);
       
       // Chama a função de registro do contexto de autenticação
       const success = await register(registerData);
       
       if (!success) {
+        toast.error("Falha no registro. Verifique seus dados e tente novamente.");
         throw new Error("Falha no registro");
+      } else {
+        toast.success("Registro concluído com sucesso!");
       }
       
     } catch (error) {
       console.error("Erro no registro:", error);
+      toast.error("Erro ao criar conta. Por favor, tente novamente.");
       // Erros já são tratados dentro da função register
     } finally {
       setIsLoading(false);

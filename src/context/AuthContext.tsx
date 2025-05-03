@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -66,12 +67,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setState((prev) => ({ ...prev, isLoading: true }));
       
+      console.log("Tentando login com email:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro de autenticação:", error.message);
+        throw error;
+      }
       
       if (data && data.user) {
         console.log("Login bem sucedido para:", data.user.email);
@@ -81,9 +86,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log("Perfil encontrado:", profile);
         
         // Buscar a função do usuário
-        const { data: roleData } = await supabase.rpc('get_user_role', {
+        const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
           user_id: data.user.id
         });
+        
+        if (roleError) {
+          console.error("Erro ao buscar função do usuário:", roleError);
+        }
         
         console.log("Role do usuário:", roleData);
         const userRole = roleData as UserRole || 'tecnico';
@@ -132,6 +141,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setState({ ...state, isLoading: true });
       
+      console.log("Iniciando registro com dados:", userData);
+      
       // Registrar usuário no Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
@@ -144,23 +155,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro no registro:", error);
+        throw error;
+      }
       
       if (data && data.user) {
+        console.log("Usuário criado com sucesso:", data.user.id);
+        
         // Após o registro, tentamos associar o usuário a uma equipe ou criar uma nova
         try {
           // Se for criação de equipe
           if (userData.createTeam && userData.teamName) {
+            console.log("Criando nova equipe:", userData.teamName);
             const team = await createTeam(userData.teamName);
             if (!team) {
+              console.error("Falha ao criar equipe");
               toast.error('Erro ao criar equipe');
+            } else {
+              console.log("Equipe criada com sucesso:", team);
+              toast.success("Equipe criada com sucesso!");
             }
           } 
           // Se for juntar-se a uma equipe existente
           else if (userData.inviteCode) {
+            console.log("Tentando juntar-se à equipe com código:", userData.inviteCode);
             const joined = await joinTeamByCode(userData.inviteCode);
             if (!joined) {
+              console.error("Falha ao entrar na equipe");
               toast.error('Código de equipe inválido');
+            } else {
+              console.log("Entrou na equipe com sucesso");
+              toast.success("Você entrou na equipe com sucesso!");
             }
           }
         } catch (teamError) {
@@ -184,6 +210,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
+      setState((prev) => ({ ...prev, isLoading: false }));
       return false;
     } catch (error: any) {
       console.error('Erro no registro:', error);
@@ -219,6 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("Verificando autenticação...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -229,9 +257,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log("Perfil encontrado para sessão existente:", profile);
           
           // Buscar a função do usuário
-          const { data: roleData } = await supabase.rpc('get_user_role', {
+          const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
             user_id: session.user.id
           });
+          
+          if (roleError) {
+            console.error("Erro ao buscar função do usuário da sessão:", roleError);
+          }
           
           console.log("Role do usuário da sessão existente:", roleData);
           const userRole = roleData as UserRole || 'tecnico';
@@ -274,9 +306,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log("Perfil encontrado após login:", profile);
         
         // Buscar a função do usuário
-        const { data: roleData } = await supabase.rpc('get_user_role', {
+        const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
           user_id: session.user.id
         });
+        
+        if (roleError) {
+          console.error("Erro ao buscar função do usuário após login:", roleError);
+        }
         
         console.log("Role do usuário após login:", roleData);
         const userRole = roleData as UserRole || 'tecnico';

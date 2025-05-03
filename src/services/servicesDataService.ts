@@ -18,29 +18,20 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Create base query - explicitly type to avoid deep type instantiation
-    let data: ServiceFromDB[] | null = null;
-    let error = null;
+    // Explicitly declare the query results to avoid deep type instantiation
+    const query = teamId 
+      ? await supabase
+          .from('services')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('created_at', { ascending: false })
+      : await supabase
+          .from('services')
+          .select('*')
+          .order('created_at', { ascending: false });
     
-    // Execute the query based on whether teamId is provided
-    if (teamId) {
-      const result = await supabase
-        .from('services')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('created_at', { ascending: false });
-      
-      data = result.data as ServiceFromDB[] | null;
-      error = result.error;
-    } else {
-      const result = await supabase
-        .from('services')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      data = result.data as ServiceFromDB[] | null;
-      error = result.error;
-    }
+    const data = query.data as ServiceFromDB[] | null;
+    const error = query.error;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);

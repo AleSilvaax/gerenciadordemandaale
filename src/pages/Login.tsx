@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
+import { LogIn, Loader2, UserPlus, Info, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
@@ -57,14 +58,14 @@ const Login: React.FC = () => {
         toast.error("Erro no login", {
           description: "Verifique suas credenciais e tente novamente",
         });
-        setIsSubmitting(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
+      setErrorMsg(error.message || "Erro ao fazer login. Verifique suas credenciais e tente novamente.");
       toast.error("Erro no login", {
-        description: "Ocorreu um problema ao processar seu login",
+        description: error.message || "Ocorreu um problema ao processar seu login",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -103,14 +104,14 @@ const Login: React.FC = () => {
         toast.error("Erro no login com demo", {
           description: "Não foi possível acessar com as credenciais de demonstração",
         });
-        setIsSubmitting(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Demo login error:", error);
-      setErrorMsg("Erro ao fazer login com credenciais de demonstração");
+      setErrorMsg(error.message || "Erro ao fazer login com credenciais de demonstração");
       toast.error("Erro no login com demo", {
-        description: "Não foi possível acessar com as credenciais de demonstração",
+        description: error.message || "Não foi possível acessar com as credenciais de demonstração",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -174,6 +175,7 @@ const Login: React.FC = () => {
             <CardContent className="space-y-4">
               {errorMsg && (
                 <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4 mr-2" />
                   <AlertDescription>{errorMsg}</AlertDescription>
                 </Alert>
               )}

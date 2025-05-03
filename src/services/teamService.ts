@@ -7,14 +7,25 @@ import { TeamMember, UserRole } from '@/types/serviceTypes';
 export const createTeam = async (name: string): Promise<{ id: string, invite_code: string } | null> => {
   try {
     const userData = await supabase.auth.getUser();
-    if (!userData.data.user) throw new Error("Usuário não autenticado");
+    console.log("Criando equipe para usuário:", userData);
     
+    if (!userData.data.user) {
+      console.error("Usuário não autenticado");
+      throw new Error("Usuário não autenticado");
+    }
+    
+    console.log("Chamando RPC create_team com:", {name, creator_id: userData.data.user.id});
     const { data, error } = await supabase.rpc('create_team', {
       name,
       creator_id: userData.data.user.id
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Erro na chamada RPC create_team:", error);
+      throw error;
+    }
+    
+    console.log("Equipe criada, ID retornado:", data);
     
     // Buscar o código de convite da equipe recém-criada
     const { data: teamData, error: teamError } = await supabase
@@ -23,8 +34,12 @@ export const createTeam = async (name: string): Promise<{ id: string, invite_cod
       .eq('id', data)
       .single();
       
-    if (teamError) throw teamError;
+    if (teamError) {
+      console.error("Erro ao buscar dados da equipe:", teamError);
+      throw teamError;
+    }
     
+    console.log("Dados da equipe recuperados:", teamData);
     return teamData;
   } catch (error) {
     console.error("Erro ao criar equipe:", error);
@@ -39,13 +54,18 @@ export const joinTeamByCode = async (code: string): Promise<boolean> => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw new Error("Usuário não autenticado");
     
+    console.log("Tentando juntar usuário à equipe com código:", code);
     const { data, error } = await supabase.rpc('join_team_by_code', {
       user_id: userData.user.id,
       code
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Erro na chamada RPC join_team_by_code:", error);
+      throw error;
+    }
     
+    console.log("Usuário associado à equipe com sucesso");
     toast.success("Você entrou na equipe com sucesso!");
     return true;
   } catch (error: any) {
