@@ -18,13 +18,28 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Create a base query
-    let baseQuery = supabase.from('services');
+    let data: ServiceFromDB[] | null = null;
+    let error: any = null;
     
-    // Get all services
-    let { data, error } = teamId 
-      ? await baseQuery.select('*').eq('team_id', teamId).order('created_at', { ascending: false })
-      : await baseQuery.select('*').order('created_at', { ascending: false });
+    // Execute separate queries instead of chaining to avoid TypeScript depth issues
+    if (teamId) {
+      const response = await supabase
+        .from('services')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
+        
+      data = response.data as ServiceFromDB[];
+      error = response.error;
+    } else {
+      const response = await supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      data = response.data as ServiceFromDB[];
+      error = response.error;
+    }
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -45,7 +60,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
     
     // Transformar os dados do banco em objetos Service
-    const services: Service[] = (data as ServiceFromDB[]).map((item: ServiceFromDB) => {
+    const services: Service[] = (data || []).map((item: ServiceFromDB) => {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
