@@ -15,10 +15,21 @@ export type ServiceFromDB = {
   description?: string;
 }
 
+// Define the technician data structure explicitly
+type TechnicianWithProfile = {
+  service_id: string;
+  technician_id: string;
+  profiles: {
+    id: string;
+    name: string | null;
+    avatar: string | null;
+  };
+}
+
 // Get all services from the database
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Simplify the query structure to avoid deep type instantiation
+    // Using explicit casting to avoid type inference issues
     let query = supabase.from('services').select('*');
     
     // Add team filter if provided
@@ -26,29 +37,30 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       query = query.eq('team_id', teamId);
     }
     
-    // Execute query with order
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Execute query with order and explicit typing
+    const { data, error } = await query.order('created_at', { ascending: false }) as 
+      { data: ServiceFromDB[] | null, error: any };
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
       throw error;
     }
 
-    // Obter todos os técnicos associados
+    // Obter todos os técnicos associados com tipagem explícita
     const { data: technicians, error: techError } = await supabase
       .from('service_technicians')
       .select(`
         service_id,
         technician_id,
         profiles!inner(id, name, avatar)
-      `);
+      `) as { data: TechnicianWithProfile[] | null, error: any };
     
     if (techError) {
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Transformar os dados do banco em objetos Service
-    const services: Service[] = (data || []).map((item: ServiceFromDB) => {
+    // Transformar os dados do banco em objetos Service com tipagem explícita
+    const services: Service[] = (data || []).map((item: ServiceFromDB): Service => {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
@@ -91,7 +103,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       .from('services')
       .select('*')
       .eq('id', id)
-      .single();
+      .single() as { data: ServiceFromDB | null, error: any };
     
     if (error) {
       console.error("Erro ao buscar detalhes do serviço:", error);
@@ -100,10 +112,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     if (!data) return null;
     
-    // Type assertion to match our expected structure
-    const serviceData = data as ServiceFromDB;
-    
-    // Obter o técnico associado
+    // Obter o técnico associado com tipagem explícita
     const { data: technicianData, error: techError } = await supabase
       .from('service_technicians')
       .select(`
@@ -111,7 +120,10 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
         profiles!inner(id, name, avatar)
       `)
       .eq('service_id', id)
-      .maybeSingle();
+      .maybeSingle() as { 
+        data: { technician_id: string, profiles: { name: string | null, avatar: string | null } } | null, 
+        error: any 
+      };
     
     // Criar objeto técnico com os dados encontrados ou valores padrão
     const technician: TeamMember = technicianData ? {
@@ -128,14 +140,14 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     // Construir e retornar o objeto Service
     return {
-      id: serviceData.id,
-      title: serviceData.title,
-      status: serviceData.status as ServiceStatus,
-      location: serviceData.location,
+      id: data.id,
+      title: data.title,
+      status: data.status as ServiceStatus,
+      location: data.location,
       technician,
-      creationDate: serviceData.created_at,
-      description: serviceData.description || '',
-      team_id: serviceData.team_id
+      creationDate: data.created_at,
+      description: data.description || '',
+      team_id: data.team_id
     };
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);

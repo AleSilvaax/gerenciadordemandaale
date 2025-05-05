@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,7 +9,7 @@ import { UserRole } from '@/types/serviceTypes';
 // Valor inicial do contexto
 const initialState: AuthState = {
   user: null,
-  isLoading: false, // Alterado para false para não começar já carregando
+  isLoading: false, // Changed to false to prevent automatic loading
   isAuthenticated: false,
 };
 
@@ -264,7 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         console.log("Verificando autenticação...");
-        setState(prev => ({ ...prev, isLoading: true })); // Iniciar a verificação
+        setState(prev => ({ ...prev, isLoading: true })); // Only set loading to true when actively checking
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -321,9 +320,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
       }
     };
-
+    
     checkAuth();
-
+    
     // Configurar listener para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Evento de autenticação:", event);
@@ -377,9 +376,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+      authListener?.subscription.unsubscribe();
     };
   }, []);
 
