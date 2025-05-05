@@ -3,12 +3,12 @@ import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } f
 import { toast } from "sonner";
 import { 
   getServicesFromDatabase, 
+  getServiceById, 
   createServiceInDatabase, 
   updateServiceInDatabase, 
   deleteServiceFromDatabase,
-  addServiceMessageToDatabase,
-  getServiceById
-} from './servicesDataService';
+  addServiceMessageToDatabase
+} from './database';
 import { getTeamMembers as getTeamMembersFromTeamService } from './teamService';
 
 // Get all services
