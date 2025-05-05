@@ -59,8 +59,10 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Transformar os dados do banco em objetos Service com tipagem explícita
-    const services: Service[] = (data || []).map((item: ServiceFromDB): Service => {
+    // Usar abordagem manual para evitar inferência excessiva de tipos
+    const mappedServices: Service[] = [];
+    
+    for (const item of data || []) {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
@@ -77,19 +79,20 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         role: 'tecnico' as UserRole
       };
 
-      return {
+      // Adicionar serviço com tipagem explícita
+      mappedServices.push({
         id: item.id,
         title: item.title,
         status: item.status as ServiceStatus,
         location: item.location,
-        technician,
+        technician: technician,
         creationDate: item.created_at,
         team_id: item.team_id,
         description: item.description || ''
-      };
-    });
+      });
+    }
     
-    return services;
+    return mappedServices;
   } catch (error) {
     console.error('Error fetching services:', error);
     return [];
@@ -138,17 +141,19 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       role: 'tecnico' as UserRole
     };
 
-    // Construir e retornar o objeto Service
-    return {
+    // Construir e retornar o objeto Service com tipagem explícita
+    const service: Service = {
       id: data.id,
       title: data.title,
       status: data.status as ServiceStatus,
       location: data.location,
-      technician,
+      technician: technician,
       creationDate: data.created_at,
       description: data.description || '',
       team_id: data.team_id
     };
+    
+    return service;
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
     return null;
