@@ -2,11 +2,14 @@
 // This file now just re-exports from smaller modules for backward compatibility
 import { 
   getServicesFromDatabase,
-  getServiceById,
+  getServiceById
+} from './database/serviceQueries';
+
+import {
   createServiceInDatabase,
   updateServiceInDatabase,
   deleteServiceFromDatabase
-} from './database/serviceQueries';
+} from './database/serviceMutations';
 
 import {
   addServiceMessageToDatabase

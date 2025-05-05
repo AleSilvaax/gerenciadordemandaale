@@ -1,7 +1,6 @@
 
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
-import { assignTechnician } from './technicianService';
 
 // Define a type that matches the structure of the services table in Supabase
 export type ServiceFromDB = {
