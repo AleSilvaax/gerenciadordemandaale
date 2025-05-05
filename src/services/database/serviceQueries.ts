@@ -19,28 +19,24 @@ export type ServiceFromDB = {
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
     // Avoid complex type inference by using a more direct approach
-    let data: ServiceFromDB[] | null = null;
-    let error = null;
+    let result;
     
     // Create separate simple queries to avoid deep type instantiation
     if (teamId) {
-      const result = await supabase
+      result = await supabase
         .from('services')
         .select('*')
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
-      
-      data = result.data as ServiceFromDB[] | null;
-      error = result.error;
     } else {
-      const result = await supabase
+      result = await supabase
         .from('services')
         .select('*')
         .order('created_at', { ascending: false });
-      
-      data = result.data as ServiceFromDB[] | null;
-      error = result.error;
     }
+    
+    const data = result.data as ServiceFromDB[] | null;
+    const error = result.error;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
