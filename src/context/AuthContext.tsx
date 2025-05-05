@@ -10,7 +10,7 @@ import { UserRole } from '@/types/serviceTypes';
 // Valor inicial do contexto
 const initialState: AuthState = {
   user: null,
-  isLoading: true,
+  isLoading: false, // Alterado para false para não começar já carregando
   isAuthenticated: false,
 };
 
@@ -264,6 +264,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         console.log("Verificando autenticação...");
+        setState(prev => ({ ...prev, isLoading: true })); // Iniciar a verificação
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {

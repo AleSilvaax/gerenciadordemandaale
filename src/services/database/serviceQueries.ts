@@ -18,25 +18,16 @@ export type ServiceFromDB = {
 // Get all services from the database
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Avoid complex type inference by using a more direct approach
-    let result;
+    // Simplify the query structure to avoid deep type instantiation
+    let query = supabase.from('services').select('*');
     
-    // Create separate simple queries to avoid deep type instantiation
+    // Add team filter if provided
     if (teamId) {
-      result = await supabase
-        .from('services')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('created_at', { ascending: false });
-    } else {
-      result = await supabase
-        .from('services')
-        .select('*')
-        .order('created_at', { ascending: false });
+      query = query.eq('team_id', teamId);
     }
     
-    const data = result.data as ServiceFromDB[] | null;
-    const error = result.error;
+    // Execute query with order
+    const { data, error } = await query.order('created_at', { ascending: false });
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -44,16 +35,13 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
 
     // Obter todos os técnicos associados
-    const technicianResult = await supabase
+    const { data: technicians, error: techError } = await supabase
       .from('service_technicians')
       .select(`
         service_id,
         technician_id,
         profiles!inner(id, name, avatar)
       `);
-    
-    const technicians = technicianResult.data;
-    const techError = technicianResult.error;
     
     if (techError) {
       console.error("Erro ao buscar técnicos:", techError);
@@ -101,9 +89,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
     const { data, error } = await supabase
       .from('services')
-      .select(`
-        *
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     

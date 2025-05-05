@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Iniciar como false
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
