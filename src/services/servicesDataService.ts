@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -18,24 +19,29 @@ type ServiceFromDB = {
 // Rename getServices to getServicesFromDatabase to match the import in api.ts
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Use explicit typing and simpler query construction to avoid excessive type instantiation
-    let queryResult;
+    // Avoid complex type inference by using more direct approach
+    let data: ServiceFromDB[] | null = null;
+    let error = null;
     
+    // Split into two separate simple queries to avoid deep type instantiation
     if (teamId) {
-      queryResult = await supabase
+      const result = await supabase
         .from('services')
         .select('*')
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
+      
+      data = result.data as ServiceFromDB[] | null;
+      error = result.error;
     } else {
-      queryResult = await supabase
+      const result = await supabase
         .from('services')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      data = result.data as ServiceFromDB[] | null;
+      error = result.error;
     }
-    
-    const { data, error } = queryResult;
-    const serviceData = data as ServiceFromDB[] | null;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -59,7 +65,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
     
     // Transformar os dados do banco em objetos Service
-    const services: Service[] = (serviceData || []).map((item: ServiceFromDB) => {
+    const services: Service[] = (data || []).map((item: ServiceFromDB) => {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
