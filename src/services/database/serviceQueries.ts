@@ -59,8 +59,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Usar abordagem manual para evitar inferência excessiva de tipos
-    const mappedServices: Service[] = [];
+    // Use type assertion to avoid deep type instantiation
+    const mappedServices = [] as Service[];
     
     for (const item of data || []) {
       // Encontrar o técnico associado a este serviço
@@ -79,8 +79,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         role: 'tecnico' as UserRole
       };
 
-      // Adicionar serviço com tipagem explícita
-      mappedServices.push({
+      // Create service object with explicit typing
+      const serviceItem = {
         id: item.id,
         title: item.title,
         status: item.status as ServiceStatus,
@@ -89,7 +89,9 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         creationDate: item.created_at,
         team_id: item.team_id,
         description: item.description || ''
-      });
+      } as Service;
+
+      mappedServices.push(serviceItem);
     }
     
     return mappedServices;
@@ -141,8 +143,8 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       role: 'tecnico' as UserRole
     };
 
-    // Construir e retornar o objeto Service com tipagem explícita
-    const service: Service = {
+    // Construir e retornar o objeto Service com type assertion
+    const service = {
       id: data.id,
       title: data.title,
       status: data.status as ServiceStatus,
@@ -151,7 +153,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       creationDate: data.created_at,
       description: data.description || '',
       team_id: data.team_id
-    };
+    } as Service;
     
     return service;
   } catch (error) {
