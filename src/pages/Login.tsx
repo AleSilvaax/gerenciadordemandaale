@@ -9,16 +9,20 @@ import { LogIn, Loader2, UserPlus, Info, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { cleanupAuthState } from '@/utils/authCleanup';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Iniciar como false
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Limpar estado ao montar o componente
+    cleanupAuthState();
+    
     // Reset submission state when component unmounts
     return () => {
       if (isSubmitting) {
@@ -56,7 +60,7 @@ const Login: React.FC = () => {
       
       if (success) {
         toast.success("Login realizado com sucesso!");
-        navigate("/");
+        // O AuthContext já fará o redirect automático
       } else {
         setErrorMsg("Email ou senha inválidos");
         toast.error("Erro no login", {
@@ -105,7 +109,7 @@ const Login: React.FC = () => {
       
       if (success) {
         toast.success("Login realizado com sucesso!");
-        navigate("/");
+        // O AuthContext já fará o redirect automático
       } else {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
         toast.error("Erro no login com demo", {
