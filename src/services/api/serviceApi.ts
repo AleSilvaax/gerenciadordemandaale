@@ -77,13 +77,19 @@ export const updateService = async (service: Partial<Service> & { id: string }):
   console.log("Updating service:", service.id, service);
   
   try {
-    // Update in database
-    const updatedDbService = await updateServiceInDatabase(service);
+    // Update in database - pass id and updates separately
+    const updateSuccess = await updateServiceInDatabase(service.id, service);
     
-    if (updatedDbService) {
-      console.log("Service updated in database:", updatedDbService);
+    if (updateSuccess) {
+      console.log("Service updated in database");
       toast.success("Serviço atualizado com sucesso!");
-      return updatedDbService;
+      
+      // Get the updated service to return
+      const updatedService = await getServiceById(service.id);
+      if (!updatedService) {
+        throw new Error(`Failed to retrieve updated service with id ${service.id}`);
+      }
+      return updatedService;
     } else {
       throw new Error(`Failed to update service with id ${service.id}`);
     }
