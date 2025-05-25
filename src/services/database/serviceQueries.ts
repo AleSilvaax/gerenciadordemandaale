@@ -29,86 +29,94 @@ type TechnicianWithProfile = {
 // Get all services from the database
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Using explicit casting to avoid type inference issues
-    let query = supabase.from('services').select('*');
+    // Build query step by step with explicit typing
+    const baseQuery = supabase.from('services');
+    let query = baseQuery.select('*');
     
     // Add team filter if provided
     if (teamId) {
       query = query.eq('team_id', teamId);
     }
     
-    // Execute query with order and explicit typing
-    const { data, error } = await query.order('created_at', { ascending: false }) as 
-      { data: ServiceFromDB[] | null, error: any };
+    // Execute query with explicit type assertion to avoid deep inference
+    const servicesResult = await query.order('created_at', { ascending: false });
+    const { data: servicesData, error } = servicesResult;
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
       throw error;
     }
 
-    // Obter todos os técnicos associados com tipagem explícita
-    const { data: technicians, error: techError } = await supabase
+    // Get technicians with explicit query
+    const techniciansResult = await supabase
       .from('service_technicians')
       .select(`
         service_id,
         technician_id,
         profiles!inner(id, name, avatar)
-      `) as { data: TechnicianWithProfile[] | null, error: any };
+      `);
+    
+    const { data: technicians, error: techError } = techniciansResult;
     
     if (techError) {
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Create result array without any type annotation to avoid inference
-    const result = [];
+    // Process services with simple object creation
+    const services: Service[] = [];
     
-    // Process each service individually to avoid complex type operations
-    if (data) {
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
+    if (servicesData) {
+      for (const serviceData of servicesData) {
+        // Cast to our known type
+        const dbService = serviceData as ServiceFromDB;
         
-        // Find technician manually to avoid .find() type inference
-        let foundTechnician = null;
+        // Find technician with simple logic
+        let assignedTechnician: TeamMember;
+        
         if (technicians) {
-          for (let j = 0; j < technicians.length; j++) {
-            if (technicians[j].service_id === item.id) {
-              foundTechnician = technicians[j];
-              break;
-            }
+          const techData = technicians.find(t => t.service_id === dbService.id) as TechnicianWithProfile | undefined;
+          
+          if (techData) {
+            assignedTechnician = {
+              id: techData.technician_id,
+              name: techData.profiles.name || 'Sem nome',
+              avatar: techData.profiles.avatar || '',
+              role: 'tecnico' as UserRole
+            };
+          } else {
+            assignedTechnician = {
+              id: '0',
+              name: 'Não atribuído',
+              avatar: '',
+              role: 'tecnico' as UserRole
+            };
           }
+        } else {
+          assignedTechnician = {
+            id: '0',
+            name: 'Não atribuído',
+            avatar: '',
+            role: 'tecnico' as UserRole
+          };
         }
-        
-        // Create technician object with minimal typing
-        const tech = foundTechnician ? {
-          id: foundTechnician.technician_id,
-          name: foundTechnician.profiles.name || 'Sem nome',
-          avatar: foundTechnician.profiles.avatar || '',
-          role: 'tecnico'
-        } : {
-          id: '0',
-          name: 'Não atribuído',
-          avatar: '',
-          role: 'tecnico'
+
+        // Create service object
+        const service: Service = {
+          id: dbService.id,
+          title: dbService.title,
+          status: dbService.status as ServiceStatus,
+          location: dbService.location,
+          technician: assignedTechnician,
+          creationDate: dbService.created_at,
+          team_id: dbService.team_id,
+          description: dbService.description || ''
         };
 
-        // Create service object with minimal structure
-        const serviceObj = {
-          id: item.id,
-          title: item.title,
-          status: item.status,
-          location: item.location,
-          technician: tech,
-          creationDate: item.created_at,
-          team_id: item.team_id,
-          description: item.description || ''
-        };
-
-        result.push(serviceObj);
+        services.push(service);
       }
     }
     
-    // Cast only at the end
-    return result as Service[];
+    return services;
   } catch (error) {
     console.error('Error fetching services:', error);
     return [];
@@ -118,11 +126,13 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
 // Get a specific service by ID
 export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
-    const { data, error } = await supabase
+    const serviceResult = await supabase
       .from('services')
       .select('*')
       .eq('id', id)
-      .single() as { data: ServiceFromDB | null, error: any };
+      .single();
+    
+    const { data, error } = serviceResult;
     
     if (error) {
       console.error("Erro ao buscar detalhes do serviço:", error);
@@ -131,46 +141,54 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     if (!data) return null;
     
-    // Obter o técnico associado com tipagem explícita
-    const { data: technicianData, error: techError } = await supabase
+    // Cast to our known type
+    const dbService = data as ServiceFromDB;
+    
+    // Get technician with explicit query
+    const technicianResult = await supabase
       .from('service_technicians')
       .select(`
         technician_id,
         profiles!inner(id, name, avatar)
       `)
       .eq('service_id', id)
-      .maybeSingle() as { 
-        data: { technician_id: string, profiles: { name: string | null, avatar: string | null } } | null, 
-        error: any 
+      .maybeSingle();
+    
+    const { data: technicianData, error: techError } = technicianResult;
+    
+    // Create technician object
+    let assignedTechnician: TeamMember;
+    
+    if (technicianData) {
+      const techData = technicianData as { technician_id: string, profiles: { name: string | null, avatar: string | null } };
+      assignedTechnician = {
+        id: techData.technician_id,
+        name: techData.profiles.name || 'Sem nome',
+        avatar: techData.profiles.avatar || '',
+        role: 'tecnico' as UserRole
       };
-    
-    // Create technician object with minimal typing
-    const tech = technicianData ? {
-      id: technicianData.technician_id,
-      name: technicianData.profiles.name || 'Sem nome',
-      avatar: technicianData.profiles.avatar || '',
-      role: 'tecnico'
-    } : {
-      id: '0',
-      name: 'Não atribuído',
-      avatar: '',
-      role: 'tecnico'
-    };
+    } else {
+      assignedTechnician = {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico' as UserRole
+      };
+    }
 
-    // Build service object with minimal structure
-    const serviceObj = {
-      id: data.id,
-      title: data.title,
-      status: data.status,
-      location: data.location,
-      technician: tech,
-      creationDate: data.created_at,
-      description: data.description || '',
-      team_id: data.team_id
+    // Create service object
+    const service: Service = {
+      id: dbService.id,
+      title: dbService.title,
+      status: dbService.status as ServiceStatus,
+      location: dbService.location,
+      technician: assignedTechnician,
+      creationDate: dbService.created_at,
+      description: dbService.description || '',
+      team_id: dbService.team_id
     };
     
-    // Cast to Service only at return
-    return serviceObj as Service;
+    return service;
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
     return null;
