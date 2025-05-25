@@ -28,7 +28,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       location: service.location,
       status: service.status,
       number: serviceNumber,
-      team_id: service.team_id,
+      team_id: service.team_id || null,
       description: service.description || ''
     };
 
@@ -38,7 +38,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     const { data, error } = await supabase
       .from('services')
       .insert(serviceForDb)
-      .select()
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
       .single();
     
     if (error) {
@@ -89,7 +89,7 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
-      .select()
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
       .single();
     
     if (error) {

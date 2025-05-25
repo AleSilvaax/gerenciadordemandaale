@@ -2,18 +2,44 @@
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
+// Definir tipos simples para evitar inferência complexa
+interface BasicServiceRow {
+  id: string;
+  title: string;
+  status: string;
+  location: string;
+  created_at: string;
+  updated_at: string;
+  number: string;
+  team_id?: string;
+  description?: string;
+}
+
+interface TechnicianRow {
+  service_id: string;
+  technician_id: string;
+  profiles: {
+    id: string;
+    name: string;
+    avatar: string;
+  } | null;
+}
+
 // Buscar todos os serviços
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
     console.log('Fetching services from database...');
     
-    // Buscar serviços básicos
-    const servicesQuery = supabase.from('services').select('*');
+    // Buscar serviços com seleção explícita de colunas
+    let query = supabase
+      .from('services')
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description');
+    
     if (teamId) {
-      servicesQuery.eq('team_id', teamId);
+      query = query.eq('team_id', teamId);
     }
     
-    const { data: servicesData, error: servicesError } = await servicesQuery.order('created_at', { ascending: false });
+    const { data: servicesData, error: servicesError } = await query.order('created_at', { ascending: false });
     
     if (servicesError) {
       console.error("Erro ao buscar serviços:", servicesError);
@@ -41,7 +67,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     // Construir array de serviços
     const services: Service[] = [];
     
-    for (const serviceRow of servicesData) {
+    for (const serviceRow of servicesData as BasicServiceRow[]) {
       // Encontrar técnico para este serviço
       let assignedTechnician: TeamMember = {
         id: '0',
@@ -51,13 +77,12 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       };
       
       if (techniciansData) {
-        for (const techData of techniciansData) {
+        for (const techData of techniciansData as TechnicianRow[]) {
           if (techData.service_id === serviceRow.id && techData.profiles) {
-            const profile = techData.profiles as any;
             assignedTechnician = {
               id: techData.technician_id,
-              name: profile.name || 'Sem nome',
-              avatar: profile.avatar || '',
+              name: techData.profiles.name || 'Sem nome',
+              avatar: techData.profiles.avatar || '',
               role: 'tecnico' as UserRole
             };
             break;
@@ -73,7 +98,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         location: serviceRow.location,
         technician: assignedTechnician,
         creationDate: serviceRow.created_at,
-        team_id: serviceRow.team_id,
+        team_id: serviceRow.team_id || undefined,
         description: serviceRow.description || ''
       };
 
@@ -95,7 +120,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     
     const { data: serviceData, error: serviceError } = await supabase
       .from('services')
-      .select('*')
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
       .eq('id', id)
       .single();
     
@@ -142,15 +167,16 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     }
 
     // Criar objeto de serviço
+    const serviceRow = serviceData as BasicServiceRow;
     const service: Service = {
-      id: serviceData.id,
-      title: serviceData.title,
-      status: serviceData.status as ServiceStatus,
-      location: serviceData.location,
+      id: serviceRow.id,
+      title: serviceRow.title,
+      status: serviceRow.status as ServiceStatus,
+      location: serviceRow.location,
       technician: assignedTechnician,
-      creationDate: serviceData.created_at,
-      description: serviceData.description || '',
-      team_id: serviceData.team_id
+      creationDate: serviceRow.created_at,
+      description: serviceRow.description || '',
+      team_id: serviceRow.team_id || undefined
     };
     
     console.log('Service found:', service);
