@@ -2,8 +2,8 @@
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
-// Define a type that matches the structure of the services table in Supabase
-export type ServiceFromDB = {
+// Tipos simples para dados do banco
+type DatabaseService = {
   id: string;
   title: string;
   status: string;
@@ -15,8 +15,7 @@ export type ServiceFromDB = {
   description?: string;
 }
 
-// Define the technician data structure explicitly
-type TechnicianWithProfile = {
+type DatabaseTechnician = {
   service_id: string;
   technician_id: string;
   profiles: {
@@ -26,89 +25,68 @@ type TechnicianWithProfile = {
   };
 }
 
-// Get all services from the database
+// Buscar todos os serviços
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Build and execute query with explicit typing to avoid deep inference
-    const queryBuilder = supabase.from('services').select('*');
+    // Query simples para serviços
+    let query = supabase.from('services').select('*');
     
-    // Add team filter if provided
-    const finalQuery = teamId ? queryBuilder.eq('team_id', teamId) : queryBuilder;
+    if (teamId) {
+      query = query.eq('team_id', teamId);
+    }
     
-    // Execute with explicit result typing
-    const servicesResult = await finalQuery.order('created_at', { ascending: false }) as {
-      data: ServiceFromDB[] | null;
-      error: any;
-    };
+    const servicesResponse = await query.order('created_at', { ascending: false });
     
-    const { data: servicesData, error } = servicesResult;
-    
-    if (error) {
-      console.error("Erro ao buscar serviços:", error);
-      throw error;
+    if (servicesResponse.error) {
+      console.error("Erro ao buscar serviços:", servicesResponse.error);
+      throw servicesResponse.error;
     }
 
-    // Get technicians separately with explicit typing
-    const techniciansResult = await supabase
+    const servicesData = servicesResponse.data as DatabaseService[];
+    
+    // Query simples para técnicos
+    const techniciansResponse = await supabase
       .from('service_technicians')
       .select(`
         service_id,
         technician_id,
         profiles!inner(id, name, avatar)
-      `) as {
-      data: TechnicianWithProfile[] | null;
-      error: any;
-    };
+      `);
     
-    const { data: techniciansData, error: techError } = techniciansResult;
-    
-    if (techError) {
-      console.error("Erro ao buscar técnicos:", techError);
+    if (techniciansResponse.error) {
+      console.error("Erro ao buscar técnicos:", techniciansResponse.error);
     }
     
-    // Process services with explicit type handling
+    const techniciansData = techniciansResponse.data as DatabaseTechnician[];
+    
+    // Construir array de serviços manualmente
     const services: Service[] = [];
     
     if (servicesData) {
       for (const serviceRow of servicesData) {
-        // Find technician with explicit type handling
-        let assignedTechnician: TeamMember;
+        // Encontrar técnico para este serviço
+        let assignedTechnician: TeamMember = {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico' as UserRole
+        };
         
         if (techniciansData) {
-          // Find technician data manually to avoid type inference issues
-          let techData: TechnicianWithProfile | null = null;
-          for (const tech of techniciansData) {
-            if (tech.service_id === serviceRow.id) {
-              techData = tech;
+          for (const techData of techniciansData) {
+            if (techData.service_id === serviceRow.id && techData.profiles) {
+              assignedTechnician = {
+                id: techData.technician_id,
+                name: techData.profiles.name || 'Sem nome',
+                avatar: techData.profiles.avatar || '',
+                role: 'tecnico' as UserRole
+              };
               break;
             }
           }
-          
-          if (techData && techData.profiles) {
-            assignedTechnician = {
-              id: techData.technician_id,
-              name: techData.profiles.name || 'Sem nome',
-              avatar: techData.profiles.avatar || '',
-              role: 'tecnico' as UserRole
-            };
-          } else {
-            assignedTechnician = {
-              id: '0',
-              name: 'Não atribuído',
-              avatar: '',
-              role: 'tecnico' as UserRole
-            };
-          }
-        } else {
-          assignedTechnician = {
-            id: '0',
-            name: 'Não atribuído',
-            avatar: '',
-            role: 'tecnico' as UserRole
-          };
         }
 
-        // Create service object with explicit typing
+        // Criar objeto de serviço
         const service: Service = {
           id: serviceRow.id,
           title: serviceRow.title,
@@ -131,44 +109,43 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
   }
 };
 
-// Get a specific service by ID
+// Buscar serviço por ID
 export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
-    const serviceResult = await supabase
+    const serviceResponse = await supabase
       .from('services')
       .select('*')
       .eq('id', id)
-      .single() as {
-      data: ServiceFromDB | null;
-      error: any;
-    };
+      .single();
     
-    const { data, error } = serviceResult;
-    
-    if (error) {
-      console.error("Erro ao buscar detalhes do serviço:", error);
-      throw error;
+    if (serviceResponse.error) {
+      console.error("Erro ao buscar detalhes do serviço:", serviceResponse.error);
+      throw serviceResponse.error;
     }
 
-    if (!data) return null;
+    const serviceData = serviceResponse.data as DatabaseService;
     
-    // Get technician with explicit query
-    const technicianResult = await supabase
+    if (!serviceData) return null;
+    
+    // Buscar técnico
+    const technicianResponse = await supabase
       .from('service_technicians')
       .select(`
         technician_id,
         profiles!inner(id, name, avatar)
       `)
       .eq('service_id', id)
-      .maybeSingle() as {
-      data: TechnicianWithProfile | null;
-      error: any;
+      .maybeSingle();
+    
+    const technicianData = technicianResponse.data as DatabaseTechnician | null;
+    
+    // Criar objeto técnico
+    let assignedTechnician: TeamMember = {
+      id: '0',
+      name: 'Não atribuído',
+      avatar: '',
+      role: 'tecnico' as UserRole
     };
-    
-    const { data: technicianData, error: techError } = technicianResult;
-    
-    // Create technician object with explicit typing
-    let assignedTechnician: TeamMember;
     
     if (technicianData && technicianData.profiles) {
       assignedTechnician = {
@@ -177,25 +154,18 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
         avatar: technicianData.profiles.avatar || '',
         role: 'tecnico' as UserRole
       };
-    } else {
-      assignedTechnician = {
-        id: '0',
-        name: 'Não atribuído',
-        avatar: '',
-        role: 'tecnico' as UserRole
-      };
     }
 
-    // Create service object
+    // Criar objeto de serviço
     const service: Service = {
-      id: data.id,
-      title: data.title,
-      status: data.status as ServiceStatus,
-      location: data.location,
+      id: serviceData.id,
+      title: serviceData.title,
+      status: serviceData.status as ServiceStatus,
+      location: serviceData.location,
       technician: assignedTechnician,
-      creationDate: data.created_at,
-      description: data.description || '',
-      team_id: data.team_id
+      creationDate: serviceData.created_at,
+      description: serviceData.description || '',
+      team_id: serviceData.team_id
     };
     
     return service;
