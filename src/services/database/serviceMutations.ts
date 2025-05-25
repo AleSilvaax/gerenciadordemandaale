@@ -1,7 +1,7 @@
 
 import { supabase } from './baseService';
 import { Service } from '@/types/serviceTypes';
-import { ServiceFromDB, getServiceById } from './serviceQueries';
+import { getServiceById } from './serviceQueries';
 import { assignTechnician } from './technicianService';
 
 // Create a new service
@@ -27,7 +27,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       title: service.title,
       location: service.location,
       status: service.status,
-      number: serviceNumber,  // Use either generated or default number
+      number: serviceNumber,
       team_id: service.team_id,
       description: service.description || ''
     };
@@ -50,30 +50,21 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       throw new Error('No data returned after creating service');
     }
     
-    // Type assertion to match our expected structure
-    const serviceData = data as ServiceFromDB;
+    console.log('Service created with ID:', data.id);
     
     // If a technician is assigned, create the relationship
-    if (service.technician && service.technician.id && service.technician.id !== '0' && serviceData.id) {
+    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
       try {
-        await assignTechnician(serviceData.id, service.technician.id);
+        await assignTechnician(data.id, service.technician.id);
       } catch (techError) {
         console.error('Error assigning technician, but service was created:', techError);
         // Continue since the main service was created
       }
     }
     
-    // Construct and return a properly typed Service object
-    return {
-      id: serviceData.id,
-      title: serviceData.title,
-      status: serviceData.status as any,
-      location: serviceData.location,
-      technician: service.technician,
-      creationDate: serviceData.created_at,
-      team_id: serviceData.team_id,
-      description: serviceData.description || ''
-    };
+    // Get the complete service with technician data
+    const completeService = await getServiceById(data.id);
+    return completeService;
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
     throw error;
@@ -83,6 +74,8 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
 // Update an existing service
 export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
   try {
+    console.log('Updating service:', service.id);
+    
     // Extrair propriedades básicas para atualizar na tabela 'services'
     const { title, status, location, description, id } = service;
     
@@ -99,23 +92,25 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating service:', error);
+      throw error;
+    }
     
-    // Type assertion for the database result
-    const serviceData = data as ServiceFromDB;
+    console.log('Service updated in database');
     
     // Se um técnico foi fornecido e é diferente de 'Não atribuído', atualize a relação
     if (service.technician && service.technician.id && service.technician.id !== '0') {
-      await assignTechnician(id, service.technician.id);
+      try {
+        await assignTechnician(id, service.technician.id);
+      } catch (techError) {
+        console.error('Error updating technician assignment:', techError);
+      }
     }
     
     // Return the updated service
-    if (serviceData) {
-      const updatedService = await getServiceById(id);
-      return updatedService;
-    }
-    
-    return null;
+    const updatedService = await getServiceById(id);
+    return updatedService;
   } catch (error) {
     console.error('Error updating service:', error);
     throw error;
@@ -125,12 +120,19 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 // Delete a service
 export const deleteServiceFromDatabase = async (id: string): Promise<boolean> => {
   try {
+    console.log('Deleting service:', id);
+    
     const { error } = await supabase
       .from('services')
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting service:', error);
+      throw error;
+    }
+    
+    console.log('Service deleted successfully');
     return true;
   } catch (error) {
     console.error('Error deleting service:', error);

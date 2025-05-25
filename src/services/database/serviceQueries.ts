@@ -2,50 +2,31 @@
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
-// Tipos simples para dados do banco
-type DatabaseService = {
-  id: string;
-  title: string;
-  status: string;
-  location: string;
-  created_at: string;
-  updated_at: string;
-  number: string;
-  team_id?: string;
-  description?: string;
-}
-
-type DatabaseTechnician = {
-  service_id: string;
-  technician_id: string;
-  profiles: {
-    id: string;
-    name: string | null;
-    avatar: string | null;
-  };
-}
-
 // Buscar todos os serviços
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
-    // Query simples para serviços
-    let query = supabase.from('services').select('*');
+    console.log('Fetching services from database...');
     
+    // Buscar serviços básicos
+    const servicesQuery = supabase.from('services').select('*');
     if (teamId) {
-      query = query.eq('team_id', teamId);
+      servicesQuery.eq('team_id', teamId);
     }
     
-    const servicesResponse = await query.order('created_at', { ascending: false });
+    const { data: servicesData, error: servicesError } = await servicesQuery.order('created_at', { ascending: false });
     
-    if (servicesResponse.error) {
-      console.error("Erro ao buscar serviços:", servicesResponse.error);
-      throw servicesResponse.error;
+    if (servicesError) {
+      console.error("Erro ao buscar serviços:", servicesError);
+      return [];
     }
 
-    const servicesData = servicesResponse.data as DatabaseService[];
-    
-    // Query simples para técnicos
-    const techniciansResponse = await supabase
+    if (!servicesData || servicesData.length === 0) {
+      console.log('No services found');
+      return [];
+    }
+
+    // Buscar técnicos
+    const { data: techniciansData, error: techniciansError } = await supabase
       .from('service_technicians')
       .select(`
         service_id,
@@ -53,55 +34,53 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         profiles!inner(id, name, avatar)
       `);
     
-    if (techniciansResponse.error) {
-      console.error("Erro ao buscar técnicos:", techniciansResponse.error);
+    if (techniciansError) {
+      console.error("Erro ao buscar técnicos:", techniciansError);
     }
     
-    const techniciansData = techniciansResponse.data as DatabaseTechnician[];
-    
-    // Construir array de serviços manualmente
+    // Construir array de serviços
     const services: Service[] = [];
     
-    if (servicesData) {
-      for (const serviceRow of servicesData) {
-        // Encontrar técnico para este serviço
-        let assignedTechnician: TeamMember = {
-          id: '0',
-          name: 'Não atribuído',
-          avatar: '',
-          role: 'tecnico' as UserRole
-        };
-        
-        if (techniciansData) {
-          for (const techData of techniciansData) {
-            if (techData.service_id === serviceRow.id && techData.profiles) {
-              assignedTechnician = {
-                id: techData.technician_id,
-                name: techData.profiles.name || 'Sem nome',
-                avatar: techData.profiles.avatar || '',
-                role: 'tecnico' as UserRole
-              };
-              break;
-            }
+    for (const serviceRow of servicesData) {
+      // Encontrar técnico para este serviço
+      let assignedTechnician: TeamMember = {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico' as UserRole
+      };
+      
+      if (techniciansData) {
+        for (const techData of techniciansData) {
+          if (techData.service_id === serviceRow.id && techData.profiles) {
+            const profile = techData.profiles as any;
+            assignedTechnician = {
+              id: techData.technician_id,
+              name: profile.name || 'Sem nome',
+              avatar: profile.avatar || '',
+              role: 'tecnico' as UserRole
+            };
+            break;
           }
         }
-
-        // Criar objeto de serviço
-        const service: Service = {
-          id: serviceRow.id,
-          title: serviceRow.title,
-          status: serviceRow.status as ServiceStatus,
-          location: serviceRow.location,
-          technician: assignedTechnician,
-          creationDate: serviceRow.created_at,
-          team_id: serviceRow.team_id,
-          description: serviceRow.description || ''
-        };
-
-        services.push(service);
       }
+
+      // Criar objeto de serviço
+      const service: Service = {
+        id: serviceRow.id,
+        title: serviceRow.title,
+        status: serviceRow.status as ServiceStatus,
+        location: serviceRow.location,
+        technician: assignedTechnician,
+        creationDate: serviceRow.created_at,
+        team_id: serviceRow.team_id,
+        description: serviceRow.description || ''
+      };
+
+      services.push(service);
     }
     
+    console.log(`Returning ${services.length} services`);
     return services;
   } catch (error) {
     console.error('Error fetching services:', error);
@@ -112,23 +91,26 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
 // Buscar serviço por ID
 export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
-    const serviceResponse = await supabase
+    console.log('Fetching service by ID:', id);
+    
+    const { data: serviceData, error: serviceError } = await supabase
       .from('services')
       .select('*')
       .eq('id', id)
       .single();
     
-    if (serviceResponse.error) {
-      console.error("Erro ao buscar detalhes do serviço:", serviceResponse.error);
-      throw serviceResponse.error;
+    if (serviceError) {
+      console.error("Erro ao buscar detalhes do serviço:", serviceError);
+      return null;
     }
 
-    const serviceData = serviceResponse.data as DatabaseService;
-    
-    if (!serviceData) return null;
+    if (!serviceData) {
+      console.log('Service not found');
+      return null;
+    }
     
     // Buscar técnico
-    const technicianResponse = await supabase
+    const { data: technicianData, error: technicianError } = await supabase
       .from('service_technicians')
       .select(`
         technician_id,
@@ -137,7 +119,9 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       .eq('service_id', id)
       .maybeSingle();
     
-    const technicianData = technicianResponse.data as DatabaseTechnician | null;
+    if (technicianError) {
+      console.error("Erro ao buscar técnico:", technicianError);
+    }
     
     // Criar objeto técnico
     let assignedTechnician: TeamMember = {
@@ -148,10 +132,11 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     };
     
     if (technicianData && technicianData.profiles) {
+      const profile = technicianData.profiles as any;
       assignedTechnician = {
         id: technicianData.technician_id,
-        name: technicianData.profiles.name || 'Sem nome',
-        avatar: technicianData.profiles.avatar || '',
+        name: profile.name || 'Sem nome',
+        avatar: profile.avatar || '',
         role: 'tecnico' as UserRole
       };
     }
@@ -168,6 +153,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       team_id: serviceData.team_id
     };
     
+    console.log('Service found:', service);
     return service;
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
