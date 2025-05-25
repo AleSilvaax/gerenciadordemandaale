@@ -11,8 +11,8 @@ interface BasicServiceRow {
   created_at: string;
   updated_at: string;
   number: string;
-  team_id?: string;
-  description?: string;
+  team_id?: string | null;
+  description?: string | null;
 }
 
 interface TechnicianRow {
@@ -67,7 +67,10 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     // Construir array de serviços
     const services: Service[] = [];
     
-    for (const serviceRow of servicesData as BasicServiceRow[]) {
+    // Type cast to avoid deep inference issues
+    const serviceRows = servicesData as unknown as BasicServiceRow[];
+    
+    for (const serviceRow of serviceRows) {
       // Encontrar técnico para este serviço
       let assignedTechnician: TeamMember = {
         id: '0',
@@ -77,7 +80,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       };
       
       if (techniciansData) {
-        for (const techData of techniciansData as TechnicianRow[]) {
+        const techRows = techniciansData as unknown as TechnicianRow[];
+        for (const techData of techRows) {
           if (techData.service_id === serviceRow.id && techData.profiles) {
             assignedTechnician = {
               id: techData.technician_id,
@@ -167,7 +171,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     }
 
     // Criar objeto de serviço
-    const serviceRow = serviceData as BasicServiceRow;
+    const serviceRow = serviceData as unknown as BasicServiceRow;
     const service: Service = {
       id: serviceRow.id,
       title: serviceRow.title,
