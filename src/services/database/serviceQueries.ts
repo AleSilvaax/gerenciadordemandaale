@@ -30,25 +30,23 @@ type TechnicianWithProfile = {
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
     // Build query step by step with explicit typing
-    const baseQuery = supabase.from('services');
-    let query = baseQuery.select('*');
+    let query = supabase.from('services').select('*');
     
     // Add team filter if provided
     if (teamId) {
       query = query.eq('team_id', teamId);
     }
     
-    // Execute query with explicit type assertion to avoid deep inference
-    const servicesResult = await query.order('created_at', { ascending: false });
-    const { data: servicesData, error } = servicesResult;
+    // Execute query and cast result explicitly
+    const { data: servicesData, error } = await query.order('created_at', { ascending: false });
     
     if (error) {
       console.error("Erro ao buscar serviços:", error);
       throw error;
     }
 
-    // Get technicians with explicit query
-    const techniciansResult = await supabase
+    // Get technicians separately with explicit typing
+    const { data: techniciansData, error: techError } = await supabase
       .from('service_technicians')
       .select(`
         service_id,
@@ -56,27 +54,32 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         profiles!inner(id, name, avatar)
       `);
     
-    const { data: technicians, error: techError } = techniciansResult;
-    
     if (techError) {
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Process services with simple object creation
+    // Process services with explicit type handling
     const services: Service[] = [];
     
     if (servicesData) {
-      for (const serviceData of servicesData) {
-        // Cast to our known type
-        const dbService = serviceData as ServiceFromDB;
+      for (const serviceRow of servicesData) {
+        // Cast to our known type explicitly
+        const dbService = serviceRow as ServiceFromDB;
         
-        // Find technician with simple logic
+        // Find technician with explicit type handling
         let assignedTechnician: TeamMember;
         
-        if (technicians) {
-          const techData = technicians.find(t => t.service_id === dbService.id) as TechnicianWithProfile | undefined;
+        if (techniciansData) {
+          // Find technician data manually to avoid type inference issues
+          let techData: any = null;
+          for (const tech of techniciansData) {
+            if (tech.service_id === dbService.id) {
+              techData = tech;
+              break;
+            }
+          }
           
-          if (techData) {
+          if (techData && techData.profiles) {
             assignedTechnician = {
               id: techData.technician_id,
               name: techData.profiles.name || 'Sem nome',
@@ -100,7 +103,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
           };
         }
 
-        // Create service object
+        // Create service object with explicit typing
         const service: Service = {
           id: dbService.id,
           title: dbService.title,
@@ -126,13 +129,11 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
 // Get a specific service by ID
 export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
-    const serviceResult = await supabase
+    const { data, error } = await supabase
       .from('services')
       .select('*')
       .eq('id', id)
       .single();
-    
-    const { data, error } = serviceResult;
     
     if (error) {
       console.error("Erro ao buscar detalhes do serviço:", error);
@@ -145,7 +146,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     const dbService = data as ServiceFromDB;
     
     // Get technician with explicit query
-    const technicianResult = await supabase
+    const { data: technicianData, error: techError } = await supabase
       .from('service_technicians')
       .select(`
         technician_id,
@@ -154,17 +155,14 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       .eq('service_id', id)
       .maybeSingle();
     
-    const { data: technicianData, error: techError } = technicianResult;
-    
-    // Create technician object
+    // Create technician object with explicit typing
     let assignedTechnician: TeamMember;
     
-    if (technicianData) {
-      const techData = technicianData as { technician_id: string, profiles: { name: string | null, avatar: string | null } };
+    if (technicianData && technicianData.profiles) {
       assignedTechnician = {
-        id: techData.technician_id,
-        name: techData.profiles.name || 'Sem nome',
-        avatar: techData.profiles.avatar || '',
+        id: technicianData.technician_id,
+        name: technicianData.profiles.name || 'Sem nome',
+        avatar: technicianData.profiles.avatar || '',
         role: 'tecnico' as UserRole
       };
     } else {
