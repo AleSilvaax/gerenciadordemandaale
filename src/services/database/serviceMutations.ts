@@ -1,134 +1,151 @@
 
-import { supabase } from './baseService';
-import { Service } from '@/types/serviceTypes';
-import { getServiceById } from './serviceQueries';
-import { assignTechnician } from './technicianService';
+import { supabase, handleDatabaseError } from './baseService';
+import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
 // Create a new service
-export const createServiceInDatabase = async (service: Omit<Service, "id">): Promise<Service | null> => {
+export const createServiceInDatabase = async (serviceData: {
+  title: string;
+  location: string;
+  description?: string;
+  status?: ServiceStatus;
+  teamId?: string;
+}): Promise<Service | null> => {
   try {
-    console.log('Creating service in DB:', service);
+    console.log('Creating service in database:', serviceData);
     
-    // Gerar número de serviço
-    let serviceNumber = "SRV-00000"; // Valor padrão caso não consiga obter do banco
-    try {
-      const { data: numberData, error: numberErr } = await supabase
-        .rpc('nextval_for_service');
-        
-      if (!numberErr && numberData) {
-        serviceNumber = `SRV-${numberData.toString().padStart(5, '0')}`;
-      }
-    } catch (numberErr) {
-      console.error('Exception generating service number:', numberErr);
+    // Get next service number
+    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+    
+    if (numberError) {
+      console.error("Erro ao gerar número do serviço:", numberError);
+      throw numberError;
     }
     
-    // Create a simplified service object with only the required fields for the database
-    const serviceForDb = {
-      title: service.title,
-      location: service.location,
-      status: service.status,
-      number: serviceNumber,
-      team_id: service.team_id || null,
-      description: service.description || ''
-    };
-
-    console.log('Sending to database:', serviceForDb);
+    const serviceNumber = String(numberData).padStart(6, '0');
     
-    // Create service record
-    const { data, error } = await supabase
+    // Insert service
+    const { data: serviceResult, error: serviceError } = await supabase
       .from('services')
-      .insert(serviceForDb)
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
-      .single();
-    
-    if (error) {
-      console.error('Error creating service:', error);
-      throw error;
-    }
-    
-    if (!data) {
-      throw new Error('No data returned after creating service');
-    }
-    
-    console.log('Service created with ID:', data.id);
-    
-    // If a technician is assigned, create the relationship
-    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
-      try {
-        await assignTechnician(data.id, service.technician.id);
-      } catch (techError) {
-        console.error('Error assigning technician, but service was created:', techError);
-        // Continue since the main service was created
-      }
-    }
-    
-    // Get the complete service with technician data
-    const completeService = await getServiceById(data.id);
-    return completeService;
-  } catch (error) {
-    console.error('Error in createServiceInDatabase:', error);
-    throw error;
-  }
-};
-
-// Update an existing service
-export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
-  try {
-    console.log('Updating service:', service.id);
-    
-    // Extrair propriedades básicas para atualizar na tabela 'services'
-    const { title, status, location, description, id } = service;
-    
-    const { error, data } = await supabase
-      .from('services')
-      .update({
-        title,
-        status,
-        location,
-        description,
-        updated_at: new Date().toISOString()
+      .insert({
+        title: serviceData.title,
+        location: serviceData.location,
+        description: serviceData.description || '',
+        status: serviceData.status || 'pendente',
+        number: serviceNumber,
+        team_id: serviceData.teamId || null
       })
-      .eq('id', id)
       .select('id, title, status, location, created_at, updated_at, number, team_id, description')
       .single();
     
-    if (error) {
-      console.error('Error updating service:', error);
-      throw error;
+    if (serviceError) {
+      console.error("Erro ao criar serviço:", serviceError);
+      throw serviceError;
     }
-    
-    console.log('Service updated in database');
-    
-    // Se um técnico foi fornecido e é diferente de 'Não atribuído', atualize a relação
-    if (service.technician && service.technician.id && service.technician.id !== '0') {
-      try {
-        await assignTechnician(id, service.technician.id);
-      } catch (techError) {
-        console.error('Error updating technician assignment:', techError);
-      }
+
+    if (!serviceResult) {
+      console.error("Nenhum dado retornado após criar serviço");
+      return null;
     }
+
+    // Create service object
+    const service: Service = {
+      id: serviceResult.id,
+      title: serviceResult.title,
+      status: serviceResult.status as ServiceStatus,
+      location: serviceResult.location,
+      technician: {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico' as UserRole
+      },
+      creationDate: serviceResult.created_at,
+      description: serviceResult.description || '',
+      team_id: serviceResult.team_id || undefined
+    };
     
-    // Return the updated service
-    const updatedService = await getServiceById(id);
-    return updatedService;
+    console.log('Service created successfully:', service);
+    return service;
   } catch (error) {
-    console.error('Error updating service:', error);
-    throw error;
+    console.error('Error creating service:', error);
+    return null;
   }
 };
 
-// Delete a service
+// Update service status
+export const updateServiceStatus = async (id: string, status: ServiceStatus): Promise<boolean> => {
+  try {
+    console.log('Updating service status:', { id, status });
+    
+    const { error } = await supabase
+      .from('services')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    
+    if (error) {
+      console.error("Erro ao atualizar status do serviço:", error);
+      throw error;
+    }
+    
+    console.log('Service status updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating service status:', error);
+    return false;
+  }
+};
+
+// Assign technician to service
+export const assignTechnicianToService = async (serviceId: string, technicianId: string): Promise<boolean> => {
+  try {
+    console.log('Assigning technician to service:', { serviceId, technicianId });
+    
+    // Remove existing assignment if any
+    await supabase
+      .from('service_technicians')
+      .delete()
+      .eq('service_id', serviceId);
+    
+    // Add new assignment
+    const { error } = await supabase
+      .from('service_technicians')
+      .insert({
+        service_id: serviceId,
+        technician_id: technicianId
+      });
+    
+    if (error) {
+      console.error("Erro ao atribuir técnico ao serviço:", error);
+      throw error;
+    }
+    
+    console.log('Technician assigned successfully');
+    return true;
+  } catch (error) {
+    console.error('Error assigning technician to service:', error);
+    return false;
+  }
+};
+
+// Delete service
 export const deleteServiceFromDatabase = async (id: string): Promise<boolean> => {
   try {
-    console.log('Deleting service:', id);
+    console.log('Deleting service from database:', id);
     
+    // Delete related records first
+    await supabase.from('service_technicians').delete().eq('service_id', id);
+    await supabase.from('service_photos').delete().eq('service_id', id);
+    await supabase.from('service_messages').delete().eq('service_id', id);
+    await supabase.from('report_data').delete().eq('id', id);
+    
+    // Delete the service
     const { error } = await supabase
       .from('services')
       .delete()
       .eq('id', id);
     
     if (error) {
-      console.error('Error deleting service:', error);
+      console.error("Erro ao deletar serviço:", error);
       throw error;
     }
     
@@ -136,6 +153,39 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
     return true;
   } catch (error) {
     console.error('Error deleting service:', error);
+    return false;
+  }
+};
+
+// Update service
+export const updateServiceInDatabase = async (id: string, updates: Partial<Service>): Promise<boolean> => {
+  try {
+    console.log('Updating service in database:', { id, updates });
+    
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.location !== undefined) updateData.location = updates.location;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.team_id !== undefined) updateData.team_id = updates.team_id;
+    
+    const { error } = await supabase
+      .from('services')
+      .update(updateData)
+      .eq('id', id);
+    
+    if (error) {
+      console.error("Erro ao atualizar serviço:", error);
+      throw error;
+    }
+    
+    console.log('Service updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating service:', error);
     return false;
   }
 };
