@@ -59,43 +59,56 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Use any array to completely avoid type instantiation during build
-    const mappedServices: any[] = [];
+    // Create result array without any type annotation to avoid inference
+    const result = [];
     
-    for (const item of data || []) {
-      // Encontrar o técnico associado a este serviço
-      const technicianData = technicians?.find(t => t.service_id === item.id);
-      
-      // Criar um objeto technician padrão caso não encontremos
-      const technician = technicianData ? {
-        id: technicianData.technician_id,
-        name: technicianData.profiles.name || 'Sem nome',
-        avatar: technicianData.profiles.avatar || '',
-        role: 'tecnico' as const
-      } : {
-        id: '0',
-        name: 'Não atribuído',
-        avatar: '',
-        role: 'tecnico' as const
-      };
+    // Process each service individually to avoid complex type operations
+    if (data) {
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        
+        // Find technician manually to avoid .find() type inference
+        let foundTechnician = null;
+        if (technicians) {
+          for (let j = 0; j < technicians.length; j++) {
+            if (technicians[j].service_id === item.id) {
+              foundTechnician = technicians[j];
+              break;
+            }
+          }
+        }
+        
+        // Create technician object with minimal typing
+        const tech = foundTechnician ? {
+          id: foundTechnician.technician_id,
+          name: foundTechnician.profiles.name || 'Sem nome',
+          avatar: foundTechnician.profiles.avatar || '',
+          role: 'tecnico'
+        } : {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico'
+        };
 
-      // Create service object avoiding deep type checking
-      const serviceItem = {
-        id: item.id,
-        title: item.title,
-        status: item.status,
-        location: item.location,
-        technician: technician,
-        creationDate: item.created_at,
-        team_id: item.team_id,
-        description: item.description || ''
-      };
+        // Create service object with minimal structure
+        const serviceObj = {
+          id: item.id,
+          title: item.title,
+          status: item.status,
+          location: item.location,
+          technician: tech,
+          creationDate: item.created_at,
+          team_id: item.team_id,
+          description: item.description || ''
+        };
 
-      mappedServices.push(serviceItem);
+        result.push(serviceObj);
+      }
     }
     
-    // Only cast to Service[] at the very end
-    return mappedServices as Service[];
+    // Cast only at the end
+    return result as Service[];
   } catch (error) {
     console.error('Error fetching services:', error);
     return [];
@@ -131,33 +144,33 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
         error: any 
       };
     
-    // Criar objeto técnico com os dados encontrados ou valores padrão
-    const technician = technicianData ? {
+    // Create technician object with minimal typing
+    const tech = technicianData ? {
       id: technicianData.technician_id,
       name: technicianData.profiles.name || 'Sem nome',
       avatar: technicianData.profiles.avatar || '',
-      role: 'tecnico' as const
+      role: 'tecnico'
     } : {
       id: '0',
       name: 'Não atribuído',
       avatar: '',
-      role: 'tecnico' as const
+      role: 'tecnico'
     };
 
-    // Build service object with minimal typing
-    const service = {
+    // Build service object with minimal structure
+    const serviceObj = {
       id: data.id,
       title: data.title,
       status: data.status,
       location: data.location,
-      technician: technician,
+      technician: tech,
       creationDate: data.created_at,
       description: data.description || '',
       team_id: data.team_id
     };
     
     // Cast to Service only at return
-    return service as Service;
+    return serviceObj as Service;
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
     return null;
