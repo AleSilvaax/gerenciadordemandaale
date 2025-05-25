@@ -59,42 +59,43 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       console.error("Erro ao buscar técnicos:", techError);
     }
     
-    // Use type assertion to avoid deep type instantiation
-    const mappedServices = [] as Service[];
+    // Use any array to completely avoid type instantiation during build
+    const mappedServices: any[] = [];
     
     for (const item of data || []) {
       // Encontrar o técnico associado a este serviço
       const technicianData = technicians?.find(t => t.service_id === item.id);
       
       // Criar um objeto technician padrão caso não encontremos
-      const technician: TeamMember = technicianData ? {
+      const technician = technicianData ? {
         id: technicianData.technician_id,
         name: technicianData.profiles.name || 'Sem nome',
         avatar: technicianData.profiles.avatar || '',
-        role: 'tecnico' as UserRole
+        role: 'tecnico' as const
       } : {
         id: '0',
         name: 'Não atribuído',
         avatar: '',
-        role: 'tecnico' as UserRole
+        role: 'tecnico' as const
       };
 
-      // Create service object with explicit typing
+      // Create service object avoiding deep type checking
       const serviceItem = {
         id: item.id,
         title: item.title,
-        status: item.status as ServiceStatus,
+        status: item.status,
         location: item.location,
         technician: technician,
         creationDate: item.created_at,
         team_id: item.team_id,
         description: item.description || ''
-      } as Service;
+      };
 
       mappedServices.push(serviceItem);
     }
     
-    return mappedServices;
+    // Only cast to Service[] at the very end
+    return mappedServices as Service[];
   } catch (error) {
     console.error('Error fetching services:', error);
     return [];
@@ -131,31 +132,32 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       };
     
     // Criar objeto técnico com os dados encontrados ou valores padrão
-    const technician: TeamMember = technicianData ? {
+    const technician = technicianData ? {
       id: technicianData.technician_id,
       name: technicianData.profiles.name || 'Sem nome',
       avatar: technicianData.profiles.avatar || '',
-      role: 'tecnico' as UserRole
+      role: 'tecnico' as const
     } : {
       id: '0',
       name: 'Não atribuído',
       avatar: '',
-      role: 'tecnico' as UserRole
+      role: 'tecnico' as const
     };
 
-    // Construir e retornar o objeto Service com type assertion
+    // Build service object with minimal typing
     const service = {
       id: data.id,
       title: data.title,
-      status: data.status as ServiceStatus,
+      status: data.status,
       location: data.location,
       technician: technician,
       creationDate: data.created_at,
       description: data.description || '',
       team_id: data.team_id
-    } as Service;
+    };
     
-    return service;
+    // Cast to Service only at return
+    return service as Service;
   } catch (error) {
     console.error('Erro ao buscar detalhes do serviço:', error);
     return null;
