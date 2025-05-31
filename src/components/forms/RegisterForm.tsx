@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -12,8 +12,6 @@ import { EyeIcon, EyeOffIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types/serviceTypes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 // Schema para validação do formulário
@@ -29,20 +27,17 @@ const formSchema = z.object({
   }),
   confirmPassword: z.string(),
   role: z.enum(['tecnico', 'administrador', 'gestor']),
-  // Fix: change the literal type from true to boolean
   terms: z.boolean({
     required_error: "Você deve aceitar os termos."
   }).refine(val => val === true, {
     message: "Você deve aceitar os termos."
   }),
-  inviteCode: z.string().optional(),
 })
 .refine((data) => data.password === data.confirmPassword, {
   message: "Senhas não conferem.",
   path: ["confirmPassword"],
 });
 
-// Fix: Update the prop types for the RegisterForm component
 interface RegisterFormProps {
   setRegistrationInProgress?: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -50,7 +45,6 @@ interface RegisterFormProps {
 export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>('join');
   const { register } = useAuth();
 
   // Inicializar o formulário com Hook Form e validação Zod
@@ -63,7 +57,6 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
       confirmPassword: "",
       role: "tecnico",
       terms: false,
-      inviteCode: "",
     },
   });
 
@@ -76,17 +69,6 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
         setRegistrationInProgress(true);
       }
       
-      // Validação básica
-      if (activeTab === 'create' && !values.inviteCode?.trim()) {
-        toast.error("Nome da equipe é obrigatório");
-        return;
-      }
-      
-      if (activeTab === 'join' && !values.inviteCode?.trim()) {
-        toast.error("Código de convite é obrigatório");
-        return;
-      }
-      
       // Cria o objeto de registro com os dados necessários
       const registerData = {
         name: values.name,
@@ -94,9 +76,6 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
         password: values.password,
         confirmPassword: values.confirmPassword,
         role: values.role as UserRole,
-        inviteCode: activeTab === 'join' ? values.inviteCode : undefined,
-        createTeam: activeTab === 'create' ? true : false,
-        teamName: activeTab === 'create' ? values.inviteCode : undefined,
       };
       
       console.log("Dados de registro preparados:", registerData);
@@ -229,64 +208,6 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
               </FormItem>
             )}
           />
-          
-          <div className="bg-muted rounded-md p-4">
-            <h3 className="text-sm font-medium mb-2">Equipe</h3>
-            <Tabs defaultValue="join" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="join">Entrar em uma Equipe</TabsTrigger>
-                <TabsTrigger value="create">Criar nova Equipe</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="join">
-                <FormField
-                  control={form.control}
-                  name="inviteCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Código de Convite</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Ex: ABC123XZ"
-                          {...field}
-                          disabled={isLoading}
-                          className="font-mono text-center"
-                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Insira o código fornecido pela sua equipe para se juntar a ela
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-              
-              <TabsContent value="create">
-                <FormField
-                  control={form.control}
-                  name="inviteCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome da Nova Equipe</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Nome da sua equipe"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Uma nova equipe será criada e você será o administrador
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
           
           <FormField
             control={form.control}

@@ -1,17 +1,18 @@
 
-import { UserRole } from '@/types/serviceTypes';
+import { UserRole } from './serviceTypes';
 
-export type { UserRole };
-
-export interface RegisterFormData {
-  name: string;
+export interface AuthUser {
+  id: string;
   email: string;
-  password: string;
-  confirmPassword: string;
-  role: UserRole;
-  createTeam?: boolean;
-  teamName?: string;
-  inviteCode?: string;
+  name: string;
+  avatar?: string;
+  role?: UserRole;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 export interface LoginFormData {
@@ -19,26 +20,12 @@ export interface LoginFormData {
   password: string;
 }
 
-export interface AuthSuccessResponse {
-  success: boolean;
-  user?: any;
-  message?: string;
-}
-
-export interface AuthUser {
-  id: string;
-  email: string;
+export interface RegisterFormData {
   name: string;
-  avatar?: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
   role: UserRole;
-  phone?: string; // Add phone property
-  team_id?: string; // Add team_id property
-}
-
-export interface AuthState {
-  user: AuthUser | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
 }
 
 export interface AuthContextType extends AuthState {

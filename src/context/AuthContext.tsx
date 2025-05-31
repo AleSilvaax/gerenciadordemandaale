@@ -1,9 +1,9 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { updateUserProfile, fetchUserProfile } from '@/services/profileService';
 import { AuthContextType, AuthState, AuthUser, LoginFormData, RegisterFormData } from '@/types/auth';
-import { createTeam, joinTeamByCode } from '@/services/teamService';
 import { UserRole } from '@/types/serviceTypes';
 import { cleanupAuthState } from '@/utils/authCleanup';
 
@@ -216,8 +216,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const loginSuccess = await login(userData.email, userData.password);
           
           if (loginSuccess) {
-            // Se o login funcionou, ainda precisamos processar a equipe
-            await processTeamActions(userData);
             setState((prev) => ({ ...prev, isLoading: false }));
             return true;
           } else {
@@ -237,9 +235,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Aguardar um pouco para garantir que os triggers do banco executaram
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Processar ações de equipe
-        await processTeamActions(userData);
 
         // Fazer login após registro bem-sucedido
         const loginSuccess = await login(userData.email, userData.password);
@@ -258,39 +253,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       toast.error(error.message || 'Erro ao criar conta');
       setState({ ...state, isLoading: false });
       return false;
-    }
-  };
-
-  // Função auxiliar para processar ações de equipe
-  const processTeamActions = async (userData: RegisterFormData) => {
-    try {
-      // Se for criação de equipe
-      if (userData.createTeam && userData.teamName) {
-        console.log("Criando nova equipe:", userData.teamName);
-        const team = await createTeam(userData.teamName);
-        if (!team) {
-          console.error("Falha ao criar equipe");
-          toast.error('Erro ao criar equipe');
-        } else {
-          console.log("Equipe criada com sucesso:", team);
-          toast.success("Equipe criada com sucesso!");
-        }
-      } 
-      // Se for juntar-se a uma equipe existente
-      else if (userData.inviteCode) {
-        console.log("Tentando juntar-se à equipe com código:", userData.inviteCode);
-        const joined = await joinTeamByCode(userData.inviteCode);
-        if (!joined) {
-          console.error("Falha ao entrar na equipe");
-          toast.error('Código de equipe inválido');
-        } else {
-          console.log("Entrou na equipe com sucesso");
-          toast.success("Você entrou na equipe com sucesso!");
-        }
-      }
-    } catch (teamError) {
-      console.error("Erro ao processar equipe:", teamError);
-      toast.error("Erro ao processar equipe. Tente novamente após o login.");
     }
   };
 

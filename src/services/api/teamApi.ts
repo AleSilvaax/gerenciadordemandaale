@@ -1,15 +1,38 @@
 
 import { TeamMember } from '@/types/serviceTypes';
 import { toast } from "sonner";
-import { getTeamMembers as getTeamMembersFromTeamService } from '../teamService';
 import { supabase } from '@/integrations/supabase/client';
 
-// Get team members
+// Get all users as team members (since there are no teams anymore)
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
-    // Usar a nova função de teamService para obter os membros da equipe
-    const members = await getTeamMembersFromTeamService();
-    return members;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, avatar');
+    
+    if (error) throw error;
+    
+    if (!data) return [];
+    
+    // Obtemos o papel de cada membro
+    const membersWithRoles: TeamMember[] = await Promise.all(
+      data.map(async (profile) => {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', profile.id)
+          .single();
+        
+        return {
+          id: profile.id,
+          name: profile.name || 'Sem nome',
+          avatar: profile.avatar || '',
+          role: (roleData?.role || 'tecnico') as any,
+        };
+      })
+    );
+    
+    return membersWithRoles;
   } catch (error) {
     console.error("Error getting team members:", error);
     toast.error("Falha ao carregar membros da equipe");
@@ -39,10 +62,10 @@ export const updateTeamMember = async (id: string, data: Partial<TeamMember>): P
 
 // Add new team member - deprecated function
 export const addTeamMember = async (member: Omit<TeamMember, "id">): Promise<TeamMember> => {
-  throw new Error("Função substituída por teamService.addTeamMember");
+  throw new Error("Função não mais necessária - todos os usuários estão na mesma equipe");
 };
 
 // Remove team member - deprecated function
 export const deleteTeamMember = async (id: string): Promise<boolean> => {
-  throw new Error("Função substituída por teamService.deleteTeamMember");
+  throw new Error("Função não mais necessária - todos os usuários estão na mesma equipe");
 };
