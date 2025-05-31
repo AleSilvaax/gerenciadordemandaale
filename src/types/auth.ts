@@ -1,4 +1,3 @@
-
 import { UserRole } from './serviceTypes';
 
 export interface AuthUser {
@@ -7,6 +6,7 @@ export interface AuthUser {
   name: string;
   avatar?: string;
   role?: UserRole;
+  phone?: string;
 }
 
 export interface AuthState {
