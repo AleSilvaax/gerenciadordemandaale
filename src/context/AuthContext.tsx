@@ -103,16 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log("Tentando login com email:", email);
       
-      // Limpar estado anterior antes do login
-      cleanupAuthState();
-      
-      // Tentar fazer signOut global primeiro
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (signOutError) {
-        console.log("Erro no signOut (ignorado):", signOutError);
-      }
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -121,12 +111,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error("Erro de autenticação:", error.message);
         setState((prev) => ({ ...prev, isLoading: false }));
-        throw error;
+        toast.error(error.message || 'Erro ao fazer login');
+        return false;
       }
       
       if (!data || !data.user) {
         console.error("Login falhou: dados de usuário ausentes");
         setState((prev) => ({ ...prev, isLoading: false }));
+        toast.error("Erro ao fazer login");
         return false;
       }
       
@@ -146,6 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       updateUserInfo(userObject);
       console.log("Estado do usuário atualizado, login concluído");
       
+      toast.success('Login realizado com sucesso!');
       return true;
     } catch (error: any) {
       console.error('Erro no login:', error);
@@ -195,6 +188,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log("Iniciando registro com dados:", userData);
       
+      // Verificar se o usuário já existe antes de tentar registrar
+      const { data: existingUser } = await supabase.auth.getUser();
+      if (existingUser?.user?.email === userData.email) {
+        console.log("Usuário já está logado, fazendo logout primeiro");
+        await supabase.auth.signOut();
+      }
+      
       // Registrar usuário no Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
@@ -209,57 +209,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error("Erro no registro:", error);
-        throw error;
+        
+        // Se o usuário já existe, tentar fazer login
+        if (error.message?.includes('already') || error.message?.includes('registered')) {
+          console.log("Usuário já existe, tentando fazer login automaticamente");
+          const loginSuccess = await login(userData.email, userData.password);
+          
+          if (loginSuccess) {
+            // Se o login funcionou, ainda precisamos processar a equipe
+            await processTeamActions(userData);
+            setState((prev) => ({ ...prev, isLoading: false }));
+            return true;
+          } else {
+            toast.error('Usuário já existe. Por favor, faça login.');
+            setState((prev) => ({ ...prev, isLoading: false }));
+            return false;
+          }
+        }
+        
+        toast.error(error.message || 'Erro ao criar conta');
+        setState((prev) => ({ ...prev, isLoading: false }));
+        return false;
       }
       
       if (data && data.user) {
         console.log("Usuário criado com sucesso:", data.user.id);
         
-        // Após o registro, tentamos associar o usuário a uma equipe ou criar uma nova
-        try {
-          // Se for criação de equipe
-          if (userData.createTeam && userData.teamName) {
-            console.log("Criando nova equipe:", userData.teamName);
-            const team = await createTeam(userData.teamName);
-            if (!team) {
-              console.error("Falha ao criar equipe");
-              toast.error('Erro ao criar equipe');
-            } else {
-              console.log("Equipe criada com sucesso:", team);
-              toast.success("Equipe criada com sucesso!");
-            }
-          } 
-          // Se for juntar-se a uma equipe existente
-          else if (userData.inviteCode) {
-            console.log("Tentando juntar-se à equipe com código:", userData.inviteCode);
-            const joined = await joinTeamByCode(userData.inviteCode);
-            if (!joined) {
-              console.error("Falha ao entrar na equipe");
-              toast.error('Código de equipe inválido');
-            } else {
-              console.log("Entrou na equipe com sucesso");
-              toast.success("Você entrou na equipe com sucesso!");
-            }
-          }
-        } catch (teamError) {
-          console.error("Erro ao processar equipe:", teamError);
-          toast.error("Erro ao processar equipe. Por favor, tente novamente após o login.");
-        }
+        // Aguardar um pouco para garantir que os triggers do banco executaram
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Processar ações de equipe
+        await processTeamActions(userData);
 
-        // Atualizar perfil após registro bem-sucedido
-        const userObject: AuthUser = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: userData.name,
-          role: userData.role,
-        };
+        // Fazer login após registro bem-sucedido
+        const loginSuccess = await login(userData.email, userData.password);
         
-        await updateUserProfile(data.user.id, userObject);
-        
-        updateUserInfo(userObject);
-        
-        toast.success('Conta criada com sucesso!');
-        return true;
+        if (loginSuccess) {
+          toast.success('Conta criada com sucesso!');
+          setState((prev) => ({ ...prev, isLoading: false }));
+          return true;
+        }
       }
       
       setState((prev) => ({ ...prev, isLoading: false }));
@@ -269,6 +258,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       toast.error(error.message || 'Erro ao criar conta');
       setState({ ...state, isLoading: false });
       return false;
+    }
+  };
+
+  // Função auxiliar para processar ações de equipe
+  const processTeamActions = async (userData: RegisterFormData) => {
+    try {
+      // Se for criação de equipe
+      if (userData.createTeam && userData.teamName) {
+        console.log("Criando nova equipe:", userData.teamName);
+        const team = await createTeam(userData.teamName);
+        if (!team) {
+          console.error("Falha ao criar equipe");
+          toast.error('Erro ao criar equipe');
+        } else {
+          console.log("Equipe criada com sucesso:", team);
+          toast.success("Equipe criada com sucesso!");
+        }
+      } 
+      // Se for juntar-se a uma equipe existente
+      else if (userData.inviteCode) {
+        console.log("Tentando juntar-se à equipe com código:", userData.inviteCode);
+        const joined = await joinTeamByCode(userData.inviteCode);
+        if (!joined) {
+          console.error("Falha ao entrar na equipe");
+          toast.error('Código de equipe inválido');
+        } else {
+          console.log("Entrou na equipe com sucesso");
+          toast.success("Você entrou na equipe com sucesso!");
+        }
+      }
+    } catch (teamError) {
+      console.error("Erro ao processar equipe:", teamError);
+      toast.error("Erro ao processar equipe. Tente novamente após o login.");
     }
   };
 

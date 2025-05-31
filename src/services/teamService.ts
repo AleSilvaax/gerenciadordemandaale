@@ -1,7 +1,16 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { TeamMember, UserRole } from '@/types/serviceTypes';
+
+// Função para gerar código de convite
+const generateInviteCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 // Criar uma nova equipe
 export const createTeam = async (name: string): Promise<{ id: string, invite_code: string } | null> => {
@@ -14,15 +23,34 @@ export const createTeam = async (name: string): Promise<{ id: string, invite_cod
       throw new Error("Usuário não autenticado");
     }
     
-    console.log("Chamando RPC create_team com:", {name, creator_id: userData.user.id});
+    console.log("Chamando criação de equipe com:", {name, creator_id: userData.user.id});
     
-    // Criar a equipe usando SQL direto para evitar problemas com a função RPC
+    // Gerar código único
+    let inviteCode = generateInviteCode();
+    let codeExists = true;
+    
+    // Verificar se o código já existe
+    while (codeExists) {
+      const { data: existingTeam } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('invite_code', inviteCode)
+        .single();
+      
+      if (!existingTeam) {
+        codeExists = false;
+      } else {
+        inviteCode = generateInviteCode();
+      }
+    }
+    
+    // Criar a equipe
     const { data: teamData, error: teamError } = await supabase
       .from('teams')
       .insert({
         name: name,
         created_by: userData.user.id,
-        invite_code: generateInviteCode()
+        invite_code: inviteCode
       })
       .select('id, invite_code')
       .single();
@@ -46,22 +74,13 @@ export const createTeam = async (name: string): Promise<{ id: string, invite_cod
     }
     
     console.log("Perfil atualizado com sucesso");
+    toast.success("Equipe criada com sucesso!");
     return teamData;
   } catch (error: any) {
     console.error("Erro ao criar equipe:", error);
     toast.error("Falha ao criar a equipe: " + (error.message || "Erro desconhecido"));
     return null;
   }
-};
-
-// Função para gerar código de convite
-const generateInviteCode = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
 };
 
 // Associar um usuário a uma equipe usando o código de convite

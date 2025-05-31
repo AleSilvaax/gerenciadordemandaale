@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,6 +76,17 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
         setRegistrationInProgress(true);
       }
       
+      // Validação básica
+      if (activeTab === 'create' && !values.inviteCode?.trim()) {
+        toast.error("Nome da equipe é obrigatório");
+        return;
+      }
+      
+      if (activeTab === 'join' && !values.inviteCode?.trim()) {
+        toast.error("Código de convite é obrigatório");
+        return;
+      }
+      
       // Cria o objeto de registro com os dados necessários
       const registerData = {
         name: values.name,
@@ -84,7 +96,7 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
         role: values.role as UserRole,
         inviteCode: activeTab === 'join' ? values.inviteCode : undefined,
         createTeam: activeTab === 'create' ? true : false,
-        teamName: activeTab === 'create' ? values.inviteCode : undefined, // Reutilizando o campo inviteCode para teamName quando for criar equipe
+        teamName: activeTab === 'create' ? values.inviteCode : undefined,
       };
       
       console.log("Dados de registro preparados:", registerData);
@@ -93,16 +105,13 @@ export function RegisterForm({ setRegistrationInProgress }: RegisterFormProps) {
       const success = await register(registerData);
       
       if (!success) {
-        toast.error("Falha no registro. Verifique seus dados e tente novamente.");
-        throw new Error("Falha no registro");
-      } else {
-        toast.success("Registro concluído com sucesso!");
+        console.error("Falha no registro");
+        // O erro já foi mostrado no contexto
       }
       
     } catch (error) {
       console.error("Erro no registro:", error);
       toast.error("Erro ao criar conta. Por favor, tente novamente.");
-      // Erros já são tratados dentro da função register
     } finally {
       setIsLoading(false);
       if (setRegistrationInProgress) {
