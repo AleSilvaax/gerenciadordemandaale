@@ -22,18 +22,27 @@ const Login: React.FC = () => {
   useEffect(() => {
     // Limpar estado ao montar o componente
     cleanupAuthState();
-    
-    // Reset submission state when component unmounts
-    return () => {
-      if (isSubmitting) {
-        setIsSubmitting(false);
-      }
-    };
-  }, [isSubmitting]);
+  }, []);
 
-  // If user is already logged in, redirect to home
+  // Se o usuário já está logado, redirecionar para home
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log("Usuário autenticado, redirecionando para home");
+      navigate('/', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  // Mostrar loading durante verificação inicial de auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={40} className="animate-spin" />
+      </div>
+    );
+  }
+
+  // Se usuário já está logado, não mostrar formulário
   if (user) {
-    console.log("User already logged in, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
@@ -60,7 +69,7 @@ const Login: React.FC = () => {
       
       if (success) {
         toast.success("Login realizado com sucesso!");
-        // O AuthContext já fará o redirect automático
+        // O useEffect acima fará o redirect quando o user for atualizado
       } else {
         setErrorMsg("Email ou senha inválidos");
         toast.error("Erro no login", {
@@ -79,7 +88,7 @@ const Login: React.FC = () => {
   };
   
   const handleDemoLogin = async (role: string) => {
-    if (isSubmitting) return; // Prevent multiple submissions
+    if (isSubmitting) return;
     
     let demoEmail = '';
     let demoPassword = '123456';
@@ -101,7 +110,6 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
     setErrorMsg(null);
     
-    // Automatically submit after setting credentials
     try {
       console.log("Using demo login with role:", role, "email:", demoEmail);
       const success = await login(demoEmail, demoPassword);
@@ -109,7 +117,6 @@ const Login: React.FC = () => {
       
       if (success) {
         toast.success("Login realizado com sucesso!");
-        // O AuthContext já fará o redirect automático
       } else {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
         toast.error("Erro no login com demo", {

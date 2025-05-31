@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,7 +10,7 @@ import { cleanupAuthState } from '@/utils/authCleanup';
 // Valor inicial do contexto
 const initialState: AuthState = {
   user: null,
-  isLoading: false,
+  isLoading: true,
   isAuthenticated: false,
 };
 
@@ -39,12 +38,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Atualizar o estado do usuário
   const updateUserInfo = (user: AuthUser) => {
-    setState((prev) => ({
-      ...prev,
+    console.log("Atualizando informações do usuário:", user);
+    setState({
       user,
       isAuthenticated: true,
       isLoading: false,
-    }));
+    });
   };
 
   // Verificar se o usuário tem uma permissão específica
@@ -60,6 +59,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return ['administrador', 'gestor'].includes(state.user.role || '');
       default:
         return false;
+    }
+  };
+
+  // Função para carregar dados do usuário
+  const loadUserData = async (userId: string) => {
+    try {
+      console.log("Carregando dados do usuário:", userId);
+      
+      // Buscar perfil do usuário
+      const profile = await fetchUserProfile(userId);
+      console.log("Perfil encontrado:", profile);
+      
+      // Buscar a função do usuário
+      const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
+        user_id: userId
+      });
+      
+      if (roleError) {
+        console.error("Erro ao buscar função do usuário:", roleError);
+      }
+      
+      console.log("Role do usuário:", roleData);
+      const userRole = roleData as UserRole || 'tecnico';
+      
+      return {
+        profile,
+        role: userRole
+      };
+    } catch (error) {
+      console.error("Erro ao carregar dados do usuário:", error);
+      return {
+        profile: null,
+        role: 'tecnico' as UserRole
+      };
     }
   };
 
@@ -99,50 +132,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log("Login bem sucedido para:", data.user.email);
       
-      // Usar setTimeout para evitar deadlock com Supabase
-      setTimeout(async () => {
-        try {
-          // Buscar perfil do usuário
-          const profile = await fetchUserProfile(data.user.id);
-          console.log("Perfil encontrado:", profile);
-          
-          // Buscar a função do usuário
-          const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
-            user_id: data.user.id
-          });
-          
-          if (roleError) {
-            console.error("Erro ao buscar função do usuário:", roleError);
-          }
-          
-          console.log("Role do usuário:", roleData);
-          const userRole = roleData as UserRole || 'tecnico';
-          
-          updateUserInfo({
-            id: data.user.id,
-            email: data.user.email || '',
-            name: profile?.name || data.user.user_metadata?.name || '',
-            avatar: profile?.avatar || '',
-            role: userRole,
-          });
-          
-          // Forçar reload da página após login bem-sucedido
-          window.location.href = '/';
-        } catch (profileError) {
-          console.error("Erro ao obter perfil/role:", profileError);
-          // Ainda permitir login mesmo se falhar a obter perfil
-          updateUserInfo({
-            id: data.user.id,
-            email: data.user.email || '',
-            name: data.user.user_metadata?.name || '',
-            avatar: '',
-            role: 'tecnico',
-          });
-          
-          // Forçar reload da página
-          window.location.href = '/';
-        }
-      }, 0);
+      // Carregar dados do usuário
+      const { profile, role } = await loadUserData(data.user.id);
+      
+      const userObject: AuthUser = {
+        id: data.user.id,
+        email: data.user.email || '',
+        name: profile?.name || data.user.user_metadata?.name || '',
+        avatar: profile?.avatar || '',
+        role,
+      };
+      
+      updateUserInfo(userObject);
+      console.log("Estado do usuário atualizado, login concluído");
       
       return true;
     } catch (error: any) {
@@ -156,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Função para fazer logout
   const logout = async () => {
     try {
-      setState({ ...state, isLoading: true });
+      setState(prev => ({ ...prev, isLoading: true }));
       
       // Limpar estado primeiro
       cleanupAuthState();
@@ -176,11 +178,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       toast.success('Logout realizado com sucesso!');
       
-      // Forçar reload para página de login
-      window.location.href = '/login';
+      // Usar navigate ao invés de window.location
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     } catch (error) {
       console.error('Erro no logout:', error);
-      setState({ ...state, isLoading: false });
+      setState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -292,55 +296,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Verificar se o usuário está autenticado ao carregar a aplicação
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
       try {
-        console.log("Verificando autenticação...");
+        console.log("Verificando autenticação inicial...");
         setState(prev => ({ ...prev, isLoading: true }));
         
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
+        if (error) {
+          console.error("Erro ao obter sessão:", error);
+          setState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+          });
+          return;
+        }
+        
+        if (session?.user && mounted) {
           console.log("Sessão existente encontrada para:", session.user.email);
           
-          // Usar setTimeout para evitar deadlock
-          setTimeout(async () => {
-            try {
-              // Buscar perfil do usuário
-              const profile = await fetchUserProfile(session.user.id);
-              console.log("Perfil encontrado para sessão existente:", profile);
-              
-              // Buscar a função do usuário
-              const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', {
-                user_id: session.user.id
-              });
-              
-              if (roleError) {
-                console.error("Erro ao buscar função do usuário da sessão:", roleError);
-              }
-              
-              console.log("Role do usuário da sessão existente:", roleData);
-              const userRole = roleData as UserRole || 'tecnico';
-              
-              updateUserInfo({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: profile?.name || session.user.user_metadata?.name || '',
-                avatar: profile?.avatar || '',
-                role: userRole,
-              });
-            } catch (error) {
-              console.error("Erro ao obter perfil/role para sessão existente:", error);
-              // Ainda continuar mesmo com erro
-              updateUserInfo({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || '',
-                avatar: '',
-                role: 'tecnico',
-              });
-            }
-          }, 0);
-        } else {
+          // Carregar dados do usuário
+          const { profile, role } = await loadUserData(session.user.id);
+          
+          if (mounted) {
+            const userObject: AuthUser = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: profile?.name || session.user.user_metadata?.name || '',
+              avatar: profile?.avatar || '',
+              role,
+            };
+            
+            updateUserInfo(userObject);
+          }
+        } else if (mounted) {
           setState({
             user: null,
             isLoading: false,
@@ -349,11 +341,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Erro ao verificar sessão:', error);
-        setState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
-        });
+        if (mounted) {
+          setState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+          });
+        }
       }
     };
     
@@ -361,12 +355,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Configurar listener para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Evento de autenticação:", event);
+      console.log("Evento de autenticação:", event, "Usuário:", session?.user?.email);
       
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log("Usuário conectado:", session.user.email);
-        // Não fazer nada aqui - deixar o login handle isso
-      } else if (event === 'SIGNED_OUT') {
+      if (!mounted) return;
+      
+      if (event === 'SIGNED_OUT') {
         console.log("Usuário desconectado");
         setState({
           user: null,
@@ -377,6 +370,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return () => {
+      mounted = false;
       authListener?.subscription.unsubscribe();
     };
   }, []);

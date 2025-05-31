@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   requiredPermission?: string;
@@ -12,21 +13,30 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   children
 }) => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isLoading } = useAuth();
   const location = useLocation();
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={40} className="animate-spin" />
+      </div>
+    );
+  }
 
   // If user is not logged in, redirect to login
   if (!user) {
+    console.log("Usuário não autenticado, redirecionando para login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If route requires specific permission and user doesn't have it
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    // Redirect to unauthorized page or home
+    console.log("Usuário sem permissão:", requiredPermission);
     return <Navigate to="/" replace />;
   }
 
   // User is authenticated and has permission
-  // If children are provided, render them, otherwise use Outlet for nested routes
   return children ? <>{children}</> : <Outlet />;
 };
