@@ -10,11 +10,11 @@ import { TeamMember } from '@/types/serviceTypes';
 import { useAuth } from "@/context/AuthContext";
 
 const TeamManagement: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [teamName, setTeamName] = useState<string>("");
   const [inviteCode, setInviteCode] = useState<string>("");
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [currentTeam, setCurrentTeam] = useState<{ id: string, name: string, invite_code: string } | null>(null);
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -22,16 +22,17 @@ const TeamManagement: React.FC = () => {
   }, []);
 
   const fetchTeamInfo = async () => {
-    setLoading(true);
+    setInitialLoading(true);
     try {
       const teamData = await getCurrentTeam();
+      console.log("Dados da equipe carregados:", teamData);
       if (teamData) {
         setCurrentTeam(teamData);
       }
     } catch (error) {
       console.error("Erro ao buscar informações da equipe:", error);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -43,15 +44,22 @@ const TeamManagement: React.FC = () => {
     
     setLoading(true);
     try {
+      console.log("Iniciando criação da equipe:", teamName);
       const result = await createTeam(teamName);
+      console.log("Resultado da criação:", result);
+      
       if (result) {
         toast.success("Equipe criada com sucesso!");
         setCurrentTeam({ 
           id: result.id, 
-          name: teamName, // Adicionando o nome aqui
+          name: teamName,
           invite_code: result.invite_code 
         });
         setTeamName("");
+        // Recarregar as informações da equipe para garantir dados atualizados
+        await fetchTeamInfo();
+      } else {
+        toast.error("Falha ao criar a equipe");
       }
     } catch (error) {
       console.error("Erro ao criar equipe:", error);
@@ -72,7 +80,7 @@ const TeamManagement: React.FC = () => {
       const joined = await joinTeamByCode(inviteCode);
       if (joined) {
         toast.success("Você entrou na equipe com sucesso!");
-        fetchTeamInfo();
+        await fetchTeamInfo();
         setInviteCode("");
       }
     } catch (error) {
@@ -83,10 +91,11 @@ const TeamManagement: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 size={40} className="animate-spin" />
+        <span className="ml-2">Carregando informações da equipe...</span>
       </div>
     );
   }
@@ -144,7 +153,8 @@ const TeamManagement: React.FC = () => {
                   <Input 
                     value={teamName} 
                     onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="Ex: Assistência Técnica XYZ" 
+                    placeholder="Ex: Assistência Técnica XYZ"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -173,6 +183,7 @@ const TeamManagement: React.FC = () => {
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     placeholder="Ex: ABC12345"
                     className="font-mono text-center"
+                    disabled={loading}
                   />
                 </div>
               </div>

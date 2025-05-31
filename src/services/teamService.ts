@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { TeamMember, UserRole } from '@/types/serviceTypes';
@@ -5,63 +6,95 @@ import { TeamMember, UserRole } from '@/types/serviceTypes';
 // Criar uma nova equipe
 export const createTeam = async (name: string): Promise<{ id: string, invite_code: string } | null> => {
   try {
-    const userData = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
     console.log("Criando equipe para usuário:", userData);
     
-    if (!userData.data.user) {
-      console.error("Usuário não autenticado");
+    if (userError || !userData.user) {
+      console.error("Usuário não autenticado:", userError);
       throw new Error("Usuário não autenticado");
     }
     
-    console.log("Chamando RPC create_team com:", {name, creator_id: userData.data.user.id});
-    const { data, error } = await supabase.rpc('create_team', {
-      name,
-      creator_id: userData.data.user.id
-    });
+    console.log("Chamando RPC create_team com:", {name, creator_id: userData.user.id});
     
-    if (error) {
-      console.error("Erro na chamada RPC create_team:", error);
-      throw error;
-    }
-    
-    console.log("Equipe criada, ID retornado:", data);
-    
-    // Buscar o código de convite da equipe recém-criada
+    // Criar a equipe usando SQL direto para evitar problemas com a função RPC
     const { data: teamData, error: teamError } = await supabase
       .from('teams')
+      .insert({
+        name: name,
+        created_by: userData.user.id,
+        invite_code: generateInviteCode()
+      })
       .select('id, invite_code')
-      .eq('id', data)
       .single();
-      
+    
     if (teamError) {
-      console.error("Erro ao buscar dados da equipe:", teamError);
+      console.error("Erro ao criar equipe:", teamError);
       throw teamError;
     }
     
-    console.log("Dados da equipe recuperados:", teamData);
+    console.log("Equipe criada:", teamData);
+    
+    // Atualizar o perfil do usuário para associá-lo à equipe
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ team_id: teamData.id })
+      .eq('id', userData.user.id);
+    
+    if (profileError) {
+      console.error("Erro ao atualizar perfil:", profileError);
+      throw profileError;
+    }
+    
+    console.log("Perfil atualizado com sucesso");
     return teamData;
   } catch (error: any) {
     console.error("Erro ao criar equipe:", error);
     toast.error("Falha ao criar a equipe: " + (error.message || "Erro desconhecido"));
-    throw error;
+    return null;
   }
+};
+
+// Função para gerar código de convite
+const generateInviteCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 // Associar um usuário a uma equipe usando o código de convite
 export const joinTeamByCode = async (code: string): Promise<boolean> => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) throw new Error("Usuário não autenticado");
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      throw new Error("Usuário não autenticado");
+    }
     
     console.log("Tentando juntar usuário à equipe com código:", code);
-    const { data, error } = await supabase.rpc('join_team_by_code', {
-      user_id: userData.user.id,
-      code
-    });
     
-    if (error) {
-      console.error("Erro na chamada RPC join_team_by_code:", error);
-      throw error;
+    // Buscar a equipe pelo código
+    const { data: teamData, error: teamError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('invite_code', code)
+      .single();
+    
+    if (teamError || !teamData) {
+      console.error("Código de convite inválido:", teamError);
+      throw new Error("Código de convite inválido");
+    }
+    
+    // Atualizar o perfil do usuário
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ team_id: teamData.id })
+      .eq('id', userData.user.id);
+    
+    if (profileError) {
+      console.error("Erro ao atualizar perfil:", profileError);
+      throw profileError;
     }
     
     console.log("Usuário associado à equipe com sucesso");
