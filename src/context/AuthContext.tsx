@@ -133,6 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: profile?.name || data.user.user_metadata?.name || '',
         avatar: profile?.avatar || '',
         role,
+        phone: profile?.phone || '',
       };
       
       updateUserInfo(userObject);
@@ -233,8 +234,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data && data.user) {
         console.log("Usuário criado com sucesso:", data.user.id);
         
+        // Definir a função do usuário explicitamente após o registro
+        try {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: data.user.id,
+              role: userData.role
+            }, {
+              onConflict: 'user_id'
+            });
+          
+          if (roleError) {
+            console.error("Erro ao definir função do usuário:", roleError);
+          } else {
+            console.log("Função do usuário definida como:", userData.role);
+          }
+        } catch (roleSetError) {
+          console.error("Erro ao definir função:", roleSetError);
+        }
+        
         // Aguardar um pouco para garantir que os triggers do banco executaram
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Fazer login após registro bem-sucedido
         const loginSuccess = await login(userData.email, userData.password);
@@ -312,6 +333,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               name: profile?.name || session.user.user_metadata?.name || '',
               avatar: profile?.avatar || '',
               role,
+              phone: profile?.phone || '',
             };
             
             updateUserInfo(userObject);

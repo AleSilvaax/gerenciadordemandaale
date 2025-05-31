@@ -1,236 +1,260 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
-import { getServices, getTeamMembers } from "@/services/api";
-import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { Separator } from "@/components/ui/separator";
+
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/ui-custom/StatCard";
-import { Service } from "@/types/serviceTypes";
-import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { TeamMember } from "@/types/serviceTypes";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { ChartCircle } from "@/components/ui-custom/ChartCircle";
+import { ChartLine } from "@/components/ui-custom/ChartLine";
+import { Button } from "@/components/ui/button";
+import { 
+  Users, 
+  Wrench, 
+  CheckCircle, 
+  AlertCircle, 
+  TrendingUp,
+  Calendar,
+  MapPin,
+  Plus
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getServices } from "@/services/api/serviceApi";
+import { getTeamMembers } from "@/services/api/teamApi";
+import { getServiceStats } from "@/services/database/statsService";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { createSampleServices } from "@/data/sampleData";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index: React.FC = () => {
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
-  const [services, setServices] = useState<Service[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const isMobile = useIsMobile();
-  const { user } = useAuth();
-  
+  const [sampleDataCreated, setSampleDataCreated] = useState(false);
+
+  // Queries para carregar dados
+  const { data: services = [], isLoading: servicesLoading } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => getServices(),
+    enabled: !!user
+  });
+
+  const { data: teamMembers = [], isLoading: teamLoading } = useQuery({
+    queryKey: ['teamMembers'],
+    queryFn: getTeamMembers,
+    enabled: !!user
+  });
+
+  const { data: stats = { total: 0, completed: 0, pending: 0, cancelled: 0 } } = useQuery({
+    queryKey: ['serviceStats'],
+    queryFn: () => getServiceStats(),
+    enabled: !!user
+  });
+
+  // Criar dados de exemplo se necessário
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const servicesData = await getServices();
-        const teamData = await getTeamMembers();
-        setServices(servicesData);
-        setTeamMembers(teamData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Erro ao carregar dados");
-      } finally {
-        setIsLoading(false);
+    const createSampleDataIfNeeded = async () => {
+      if (!user || sampleDataCreated) return;
+      
+      // Verificar se já existem serviços
+      if (services.length === 0 && user.role === 'administrador') {
+        try {
+          // Verificar se já criamos dados antes
+          const hasCreated = localStorage.getItem('sampleDataCreated');
+          if (!hasCreated) {
+            console.log('Criando dados de exemplo para administrador...');
+            await createSampleServices(user.id);
+            localStorage.setItem('sampleDataCreated', 'true');
+            setSampleDataCreated(true);
+            
+            // Recarregar a página para mostrar os novos dados
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('Erro ao criar dados de exemplo:', error);
+        }
       }
     };
-    
-    fetchData();
-  }, []);
-  
-  // Calculate statistics
-  const pendingServices = services.filter(
-    (service) => service.status === "pendente"
-  ).length;
-  
-  const completedServices = services.filter(
-    (service) => service.status === "concluido"
-  ).length;
-  
-  const technicians = [...new Set(services.map((service) => service.technician.id))].length;
-  
-  // Get overdue services
-  const overdueServices = services.filter(service => {
-    if (service.status !== "pendente" || !service.dueDate) return false;
-    return new Date(service.dueDate) < new Date();
-  }).length;
-  
-  // Get 3 most recent services
-  const recentServices = [...services]
-    .sort((a, b) => {
-      const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
-      const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
-      return dateB - dateA;
-    })
-    .slice(0, 3);
 
-  // Get technician-specific services if user is a technician
-  const technicianServices = user && user.role === 'tecnico'
-    ? services.filter(service => service.technician.id === user.id)
-    : [];
+    createSampleDataIfNeeded();
+  }, [user, services.length, sampleDataCreated]);
+
+  // Calcular métricas
+  const recentServices = services.slice(0, 3);
+  const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
   
-  const upcomingDueServices = user && user.role === 'tecnico'
-    ? technicianServices
-        .filter(service => 
-          service.status === 'pendente' && 
-          service.dueDate && 
-          new Date(service.dueDate) >= new Date() &&
-          new Date(service.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Next 7 days
-        )
-        .sort((a, b) => {
-          const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
-          const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-          return dateA - dateB;
-        })
-    : [];
+  // Dados para o gráfico de linha (últimos 6 meses)
+  const monthlyData = [
+    { name: "Jul", value: 12 },
+    { name: "Ago", value: 19 },
+    { name: "Set", value: 15 },
+    { name: "Out", value: 27 },
+    { name: "Nov", value: 23 },
+    { name: "Dez", value: stats.total || 31 }
+  ];
 
-  // Handle report export (placeholder)
-  const handleExportReport = (format: 'pdf' | 'excel') => {
-    const message = format === 'pdf' ? 'Exportando relatório em PDF...' : 'Exportando relatório em Excel...';
-    toast(message);
-  };
-
-  return (
-    <div className="container py-4 space-y-6 pb-24">
-      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
-        <h1 className="text-3xl font-bold text-foreground">
-          {user ? `Olá, ${user.name.split(' ')[0]}!` : 'Dashboard'}
-        </h1>
-        
-        {(user?.role === 'administrador' || user?.role === 'gestor') && (
-          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
-        )}
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Demandas Pendentes"
-          value={pendingServices}
-          icon={<FileText className="h-5 w-5" />}
-          description="Total de demandas aguardando conclusão"
-          className="border-yellow-600/20 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20"
-        />
-        
-        <StatCard
-          title="Demandas Concluídas"
-          value={completedServices}
-          icon={<BarChart2 className="h-5 w-5" />}
-          description="Total de demandas finalizadas"
-          className="border-green-600/20 bg-gradient-to-br from-green-500/20 to-green-600/20"
-        />
-        
-        <StatCard
-          title="Técnicos"
-          value={technicians}
-          icon={<Users className="h-5 w-5" />}
-          description="Total de técnicos ativos"
-          className="border-blue-600/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20"
-        />
-        
-        <StatCard
-          title="Demandas Atrasadas"
-          value={overdueServices}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          description="Demandas com prazo vencido"
-          className="border-red-600/20 bg-gradient-to-br from-red-500/20 to-red-600/20"
-        />
-      </div>
-      
-      {(user?.role === 'administrador' || user?.role === 'gestor') && (
-        <>
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => handleExportReport('excel')}>
-                <Download className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleExportReport('pdf')}>
-                <Download className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-            </div>
-          </div>
-          
-          <Separator className="my-6" />
-        </>
-      )}
-      
-      {/* Technician upcoming deadlines section */}
-      {user?.role === 'tecnico' && upcomingDueServices.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold flex items-center">
-              <Calendar className="mr-2 h-5 w-5 text-primary" />
-              Prazos Próximos
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingDueServices.map((service) => (
-              <ServiceCard key={service.id} service={service} compact={true} />
+  if (servicesLoading || teamLoading) {
+    return (
+      <div className="container mx-auto p-4 pb-24">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
             ))}
           </div>
-          
-          <Separator className="my-6" />
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Equipe section */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Equipe</h2>
-          {(user?.role === 'administrador' || user?.role === 'gestor') && (
-            <Button variant="outline" onClick={() => navigate("/equipe")}>
-              Ver todos
-            </Button>
-          )}
+  return (
+    <div className="container mx-auto p-4 pb-24 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Bem-vindo de volta, {user?.name || 'Usuário'}
+          </p>
         </div>
-        
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {teamMembers.slice(0, 5).map((member) => (
-            <div 
-              key={member.id} 
-              className="flex flex-col items-center p-2 min-w-[100px] text-center"
-              onClick={() => navigate(`/equipe#${member.id}`)}
-            >
-              <TeamMemberAvatar 
-                src={member.avatar} 
-                name={member.name} 
-                size="lg"
-                className="mb-2 cursor-pointer hover:scale-105 transition-transform"
-              />
-              <span className="text-sm font-medium line-clamp-1">{member.name}</span>
-              <span className="text-xs text-muted-foreground line-clamp-1">{member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}</span>
+        <Button onClick={() => navigate('/nova-demanda')} className="flex items-center gap-2">
+          <Plus size={20} />
+          Nova Demanda
+        </Button>
+      </div>
+
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total de Demandas"
+          value={stats.total.toString()}
+          icon={<Wrench className="h-5 w-5" />}
+          trend={{ value: 12, isPositive: true }}
+        />
+        <StatCard
+          title="Concluídas"
+          value={stats.completed.toString()}
+          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          trend={{ value: 8, isPositive: true }}
+        />
+        <StatCard
+          title="Pendentes"
+          value={stats.pending.toString()}
+          icon={<AlertCircle className="h-5 w-5 text-orange-600" />}
+          trend={{ value: 3, isPositive: false }}
+        />
+        <StatCard
+          title="Equipe"
+          value={teamMembers.length.toString()}
+          icon={<Users className="h-5 w-5 text-blue-600" />}
+          trend={{ value: 2, isPositive: true }}
+        />
+      </div>
+
+      {/* Gráficos e Informações */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Gráfico de Conclusão */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="mr-2" size={20} />
+              Taxa de Conclusão
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <ChartCircle value={completionRate} />
+          </CardContent>
+        </Card>
+
+        {/* Atividade Mensal */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Calendar className="mr-2" size={20} />
+              Atividade Mensal
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartLine data={monthlyData} activeMonth="Dez" />
+          </CardContent>
+        </Card>
+
+        {/* Equipe Ativa */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="mr-2" size={20} />
+              Equipe Ativa
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {teamMembers.slice(0, 4).map((member) => (
+                <div key={member.id} className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-medium">
+                      {member.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
+                  </div>
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+              ))}
+              {teamMembers.length > 4 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{teamMembers.length - 4} outros membros
+                </p>
+              )}
             </div>
-          ))}
-        </div>
+          </CardContent>
+        </Card>
       </div>
-      
-      <Separator className="my-6" />
-      
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Demandas Recentes</h2>
-          <Button variant="outline" onClick={() => navigate("/demandas")}>
-            Ver todas
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-4">
-          {isLoading ? (
-            <p>Carregando demandas...</p>
-          ) : recentServices.length > 0 ? (
-            recentServices.map((service) => (
-              <ServiceCard key={service.id} service={service} />
-            ))
+
+      {/* Demandas Recentes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <MapPin className="mr-2" size={20} />
+            Demandas Recentes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentServices.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recentServices.map((service) => (
+                <ServiceCard 
+                  key={service.id} 
+                  service={service}
+                  onClick={() => navigate(`/demandas/${service.id}`)}
+                />
+              ))}
+            </div>
           ) : (
-            <p>Nenhuma demanda encontrada.</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Nenhuma demanda encontrada</p>
+              <Button onClick={() => navigate('/nova-demanda')}>
+                Criar primeira demanda
+              </Button>
+            </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Mensagem para administradores */}
+      {user?.role === 'administrador' && services.length === 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <p className="text-blue-800">
+              <strong>Bem-vindo, Administrador!</strong> Estamos criando algumas demandas de exemplo para você explorar o sistema. 
+              A página será recarregada automaticamente em alguns segundos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
