@@ -32,11 +32,59 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
     }
   };
 
-  const CardWrapper = onClick ? 'div' : Link;
-  const cardProps = onClick ? { onClick: handleClick, className: "block cursor-pointer" } : { to: `/demandas/${id}`, className: "block" };
+  // Se há onClick, renderiza um div clicável, senão um Link
+  if (onClick) {
+    return (
+      <div onClick={handleClick} className="block cursor-pointer">
+        <Card className={`transition-all duration-300 hover:border-primary/30 ${completed ? 'bg-muted/30' : ''} ${compact ? 'p-2' : ''}`}>
+          <CardContent className={`${compact ? 'pt-2 px-3' : 'pt-4'}`}>
+            <div className="flex justify-between items-start gap-2 mb-3">
+              <div>
+                <h3 className={`font-medium line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
+                <p className={`text-muted-foreground line-clamp-1 ${compact ? 'text-xs' : 'text-sm'}`}>{location}</p>
+              </div>
+              <StatusBadge status={status} small={compact} />
+            </div>
+            
+            <DeadlineManager 
+              dueDate={dueDate} 
+              creationDate={creationDate}
+              priority={priority}
+              completed={completed} 
+              compact={compact}
+            />
+          </CardContent>
+          
+          {!compact && (
+            <CardFooter className="border-t pt-3 pb-3">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <TeamMemberAvatar 
+                    src={technician?.avatar} 
+                    name={technician?.name}
+                    size="sm"
+                  />
+                  <span className="text-sm">{technician?.name}</span>
+                </div>
+                
+                {onDelete && (
+                  <button 
+                    onClick={handleDelete}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Excluir
+                  </button>
+                )}
+              </div>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <CardWrapper {...cardProps}>
+    <Link to={`/demandas/${id}`} className="block">
       <Card className={`transition-all duration-300 hover:border-primary/30 ${completed ? 'bg-muted/30' : ''} ${compact ? 'p-2' : ''}`}>
         <CardContent className={`${compact ? 'pt-2 px-3' : 'pt-4'}`}>
           <div className="flex justify-between items-start gap-2 mb-3">
@@ -80,6 +128,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
           </CardFooter>
         )}
       </Card>
-    </CardWrapper>
+    </Link>
   );
 };

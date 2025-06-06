@@ -1,4 +1,3 @@
-
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -8,7 +7,6 @@ export const createServiceInDatabase = async (serviceData: {
   location: string;
   description?: string;
   status?: ServiceStatus;
-  teamId?: string;
 }): Promise<Service | null> => {
   try {
     console.log('Creating service in database:', serviceData);
@@ -23,7 +21,7 @@ export const createServiceInDatabase = async (serviceData: {
     
     const serviceNumber = String(numberData).padStart(6, '0');
     
-    // Insert service
+    // Insert service without team_id dependency
     const { data: serviceResult, error: serviceError } = await supabase
       .from('services')
       .insert({
@@ -31,10 +29,9 @@ export const createServiceInDatabase = async (serviceData: {
         location: serviceData.location,
         description: serviceData.description || '',
         status: serviceData.status || 'pendente',
-        number: serviceNumber,
-        team_id: serviceData.teamId || null
+        number: serviceNumber
       })
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
+      .select('id, title, status, location, created_at, updated_at, number, description')
       .single();
     
     if (serviceError) {
@@ -60,8 +57,7 @@ export const createServiceInDatabase = async (serviceData: {
         role: 'tecnico' as UserRole
       },
       creationDate: serviceResult.created_at,
-      description: serviceResult.description || '',
-      team_id: serviceResult.team_id || undefined
+      description: serviceResult.description || ''
     };
     
     console.log('Service created successfully:', service);
