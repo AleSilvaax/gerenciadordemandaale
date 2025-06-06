@@ -7,7 +7,12 @@ import { StatusBadge } from './StatusBadge';
 import { ServiceCardProps } from '@/types/serviceTypes';
 import { DeadlineManager } from './DeadlineManager';
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, compact = false }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ 
+  service, 
+  onDelete, 
+  compact = false, 
+  onClick 
+}) => {
   const { id, title, status, location, technician, priority, dueDate, creationDate } = service;
 
   const completed = status === 'concluido';
@@ -20,8 +25,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
     }
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const CardWrapper = onClick ? 'div' : Link;
+  const cardProps = onClick ? { onClick: handleClick, className: "block cursor-pointer" } : { to: `/demandas/${id}`, className: "block" };
+
   return (
-    <Link to={`/demandas/${id}`} className="block">
+    <CardWrapper {...cardProps}>
       <Card className={`transition-all duration-300 hover:border-primary/30 ${completed ? 'bg-muted/30' : ''} ${compact ? 'p-2' : ''}`}>
         <CardContent className={`${compact ? 'pt-2 px-3' : 'pt-4'}`}>
           <div className="flex justify-between items-start gap-2 mb-3">
@@ -65,6 +80,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
           </CardFooter>
         )}
       </Card>
-    </Link>
+    </CardWrapper>
   );
 };

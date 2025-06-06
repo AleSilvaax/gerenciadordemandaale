@@ -1,4 +1,3 @@
-
 export type ServiceStatus = "concluido" | "pendente" | "cancelado" | "em_andamento";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
@@ -70,6 +69,7 @@ export interface ServiceCardProps {
   service: Service;
   onDelete?: (id: string) => Promise<void>;
   compact?: boolean;
+  onClick?: () => void;
 }
 
 export interface ReportData {
