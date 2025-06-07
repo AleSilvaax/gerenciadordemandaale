@@ -2,6 +2,14 @@ export type ServiceStatus = "concluido" | "pendente" | "cancelado" | "em_andamen
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 
+export interface ServiceType {
+  id: string;
+  name: string;
+  description?: string;
+  estimatedHours?: number;
+  defaultPriority?: ServicePriority;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -56,7 +64,7 @@ export interface Service {
   address?: string;
   city?: string;
   notes?: string;
-  serviceType?: "inspection" | "installation" | "maintenance";
+  serviceType?: ServiceType | string;
   estimatedHours?: number;
   photoTitles?: string[];
   messages?: ServiceMessage[];
@@ -70,6 +78,16 @@ export interface ServiceCardProps {
   onDelete?: (id: string) => Promise<void>;
   compact?: boolean;
   onClick?: () => void;
+}
+
+export interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactElement;
+  trend?: {
+    value: number;
+    isPositive: boolean;
+  };
 }
 
 export interface ReportData {

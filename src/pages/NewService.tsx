@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import { Loader2 } from 'lucide-react';
 import { CustomFieldManager } from '@/components/ui-custom/CustomFieldManager';
 import { DeadlineManager } from '@/components/ui-custom/DeadlineManager';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CustomField, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
+import { CustomField, TeamMember, ServicePriority, ServiceStatus, ServiceType } from '@/types/serviceTypes';
 import { useAuth } from '@/context/AuthContext';
 import { createService } from '@/services/api';
+import { getServiceTypes } from '@/services/serviceTypesService';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -25,10 +26,47 @@ const NewService: React.FC = () => {
   const [location, setLocation] = useState('');
   const [priority, setPriority] = useState<ServicePriority>('media');
   const [status, setStatus] = useState<ServiceStatus>('pendente');
+  const [serviceType, setServiceType] = useState<string>('');
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [loadingServiceTypes, setLoadingServiceTypes] = useState(true);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
+  const [estimatedHours, setEstimatedHours] = useState<number>(0);
   const isMobile = useIsMobile();
+
+  // Carregar tipos de serviço ao montar o componente
+  useEffect(() => {
+    const loadServiceTypes = async () => {
+      try {
+        setLoadingServiceTypes(true);
+        const types = await getServiceTypes();
+        setServiceTypes(types);
+        console.log('Tipos de serviço carregados:', types);
+      } catch (error) {
+        console.error('Erro ao carregar tipos de serviço:', error);
+        toast.error('Erro ao carregar tipos de serviço');
+      } finally {
+        setLoadingServiceTypes(false);
+      }
+    };
+
+    loadServiceTypes();
+  }, []);
+
+  // Atualizar campos quando o tipo de serviço for selecionado
+  useEffect(() => {
+    if (serviceType) {
+      const selectedType = serviceTypes.find(type => type.id === serviceType);
+      if (selectedType) {
+        console.log('Tipo de serviço selecionado:', selectedType);
+        setEstimatedHours(selectedType.estimatedHours || 0);
+        if (selectedType.defaultPriority) {
+          setPriority(selectedType.defaultPriority);
+        }
+      }
+    }
+  }, [serviceType, serviceTypes]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +86,9 @@ const NewService: React.FC = () => {
         role: user?.role || 'tecnico',
       };
       
-      console.log('Preparing to create service...');
+      console.log('Preparando para criar serviço...');
+      
+      const selectedServiceType = serviceTypes.find(type => type.id === serviceType);
       
       const newService = {
         title,
@@ -60,10 +100,12 @@ const NewService: React.FC = () => {
         customFields,
         photos,
         dueDate: deadline ? deadline.toISOString() : undefined,
-        messages: []
+        messages: [],
+        serviceType: selectedServiceType || serviceType,
+        estimatedHours
       };
       
-      console.log('Submitting service:', newService);
+      console.log('Submetendo serviço:', newService);
       
       const result = await createService(newService);
       if (result) {
@@ -115,6 +157,34 @@ const NewService: React.FC = () => {
                 required
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="serviceType">Tipo de Serviço</Label>
+              {loadingServiceTypes ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Carregando tipos de serviço...</span>
+                </div>
+              ) : (
+                <Select value={serviceType} onValueChange={setServiceType}>
+                  <SelectTrigger id="serviceType">
+                    <SelectValue placeholder="Selecione o tipo de serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {serviceType && (
+                <div className="text-sm text-muted-foreground">
+                  {serviceTypes.find(t => t.id === serviceType)?.description}
+                </div>
+              )}
+            </div>
             
             <div className="grid gap-2">
               <Label htmlFor="location">Localização</Label>
@@ -138,7 +208,7 @@ const NewService: React.FC = () => {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="priority">Prioridade</Label>
                 <Select value={priority} onValueChange={(value: ServicePriority) => setPriority(value)}>
@@ -167,6 +237,19 @@ const NewService: React.FC = () => {
                     <SelectItem value="cancelado">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="estimatedHours">Horas Estimadas</Label>
+                <Input
+                  id="estimatedHours"
+                  type="number"
+                  value={estimatedHours}
+                  onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                  placeholder="0"
+                  min="0"
+                  step="0.5"
+                />
               </div>
             </div>
           </CardContent>

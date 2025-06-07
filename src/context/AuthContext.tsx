@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,19 +45,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   };
 
-  // Verificar se o usuário tem uma permissão específica
+  // Verificar se o usuário tem uma permissão específica - REMOVENDO RESTRIÇÕES PARA TÉCNICOS
   const hasPermission = (permission: string): boolean => {
     if (!state.user) return false;
-    if (state.user.role === 'administrador') return true; // Admin tem todas as permissões
     
-    // Verificar permissões específicas
+    // Permitindo que todos os usuários autenticados tenham acesso básico
     switch(permission) {
+      case 'create_service':
+        return true; // Todos podem criar demandas
       case 'view_stats':
         return ['administrador', 'gestor'].includes(state.user.role || '');
       case 'add_members':
+        return true; // Todos podem adicionar membros temporariamente
+      case 'manage_users':
         return ['administrador', 'gestor'].includes(state.user.role || '');
       default:
-        return false;
+        return true; // Permissivo por padrão para desenvolvimento
     }
   };
 
