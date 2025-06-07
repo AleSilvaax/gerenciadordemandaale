@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Service, TeamMember } from '@/types/serviceTypes';
@@ -26,25 +25,46 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
   // Service type statistics
   const typeData = React.useMemo(() => {
     const types = services.reduce((acc, service) => {
-      const type = service.serviceType || 'outros';
-      acc[type] = (acc[type] || 0) + 1;
+      // Handle both ServiceType object and string cases
+      const serviceTypeKey = typeof service.serviceType === 'object' && service.serviceType 
+        ? service.serviceType.id 
+        : (service.serviceType as string) || 'outros';
+      
+      acc[serviceTypeKey] = (acc[serviceTypeKey] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
     const typeColors = {
+      '1': '#8b5cf6', // Manutenção Preventiva
+      '2': '#ec4899', // Manutenção Corretiva
+      '3': '#6366f1', // Instalação
+      '4': '#14b8a6', // Inspeção
+      '5': '#f97316', // Emergência
       inspection: '#8b5cf6',
       installation: '#ec4899',
       maintenance: '#6366f1',
       outros: '#64748b'
     };
     
-    return Object.entries(types).map(([type, count]) => ({
-      name: type === 'inspection' ? 'Vistoria' : 
-            type === 'installation' ? 'Instalação' :
-            type === 'maintenance' ? 'Manutenção' : 'Outros',
-      value: count,
-      color: typeColors[type as keyof typeof typeColors] || '#64748b'
-    }));
+    return Object.entries(types).map(([type, count]) => {
+      let displayName = 'Outros';
+      
+      // Map service type IDs to display names
+      if (type === '1') displayName = 'Manutenção Preventiva';
+      else if (type === '2') displayName = 'Manutenção Corretiva';
+      else if (type === '3') displayName = 'Instalação';
+      else if (type === '4') displayName = 'Inspeção';
+      else if (type === '5') displayName = 'Emergência';
+      else if (type === 'inspection') displayName = 'Vistoria';
+      else if (type === 'installation') displayName = 'Instalação';
+      else if (type === 'maintenance') displayName = 'Manutenção';
+      
+      return {
+        name: displayName,
+        value: count,
+        color: typeColors[type as keyof typeof typeColors] || '#64748b'
+      };
+    });
   }, [services]);
   
   // Service priority statistics

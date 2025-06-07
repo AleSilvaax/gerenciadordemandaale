@@ -18,7 +18,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
         id: userId,
         name,
         avatar,
-        phone,
+        // Note: phone is not in the profiles table schema, so we skip it for now
         updated_at: new Date().toISOString()
       }, { 
         onConflict: 'id',
@@ -82,7 +82,7 @@ export const fetchUserProfile = async (userId: string): Promise<Partial<AuthUser
       id: data.id,
       name: data.name || '',
       avatar: data.avatar || '',
-      phone: data.phone || '',
+      phone: '', // Phone is not stored in profiles table currently
       email: '', // Email vem do auth, não do profile
     };
   } catch (error) {
@@ -96,7 +96,7 @@ export const createUserProfile = async (userId: string, userData: Partial<AuthUs
   try {
     console.log('Creating initial profile for user:', userId, 'with data:', userData);
     
-    const { name, avatar, phone } = userData;
+    const { name, avatar } = userData;
     
     const { error } = await supabase
       .from('profiles')
@@ -104,7 +104,7 @@ export const createUserProfile = async (userId: string, userData: Partial<AuthUs
         id: userId,
         name: name || 'Usuário',
         avatar: avatar || '',
-        phone: phone || '',
+        // Note: phone is not in the profiles table schema
       });
     
     if (error) {
