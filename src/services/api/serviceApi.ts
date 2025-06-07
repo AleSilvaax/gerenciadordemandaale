@@ -54,13 +54,32 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
   console.log("Creating new service:", service);
   
   try {
-    // Simplify the service data for database insertion
+    // Get current user's team if available
+    const { data: userData } = await supabase.auth.getUser();
+    let teamId = undefined;
+    
+    if (userData.user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('team_id')
+        .eq('id', userData.user.id)
+        .single();
+      
+      if (profileData?.team_id) {
+        teamId = profileData.team_id;
+      }
+    }
+    
+    // Prepare service data for database insertion
     const serviceData = {
       title: service.title,
       location: service.location,
       description: service.description || '',
-      status: service.status || 'pendente'
+      status: service.status || 'pendente',
+      team_id: teamId
     };
+    
+    console.log('Service data prepared for creation:', serviceData);
     
     // Create in database
     const newDbService = await createServiceInDatabase(serviceData);
@@ -74,7 +93,9 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
     }
   } catch (error) {
     console.error("Error creating service:", error);
-    toast.error("Erro ao criar demanda. Por favor, tente novamente.");
+    toast.error("Erro ao criar demanda", {
+      description: error instanceof Error ? error.message : "Erro desconhecido"
+    });
     throw error;
   }
 };

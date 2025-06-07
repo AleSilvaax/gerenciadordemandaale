@@ -14,24 +14,24 @@ import {
   TrendingUp,
   Calendar,
   MapPin,
-  Plus
+  Plus,
+  Database
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getServices } from "@/services/api/serviceApi";
 import { getTeamMembers } from "@/services/api/teamApi";
 import { getServiceStats } from "@/services/database/statsService";
+import { createSampleData } from "@/services/sampleDataService";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { createSampleServices } from "@/data/sampleData";
-import { supabase } from "@/integrations/supabase/client";
 
 const Index: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
-  const [sampleDataCreated, setSampleDataCreated] = useState(false);
+  const [creatingData, setCreatingData] = useState(false);
 
   // Queries para carregar dados
-  const { data: services = [], isLoading: servicesLoading } = useQuery({
+  const { data: services = [], isLoading: servicesLoading, refetch: refetchServices } = useQuery({
     queryKey: ['services'],
     queryFn: () => getServices(),
     enabled: !!user
@@ -49,36 +49,6 @@ const Index: React.FC = () => {
     enabled: !!user
   });
 
-  // Criar dados de exemplo se necessário
-  useEffect(() => {
-    const createSampleDataIfNeeded = async () => {
-      if (!user || sampleDataCreated) return;
-      
-      // Verificar se já existem serviços
-      if (services.length === 0 && user.role === 'administrador') {
-        try {
-          // Verificar se já criamos dados antes
-          const hasCreated = localStorage.getItem('sampleDataCreated');
-          if (!hasCreated) {
-            console.log('Criando dados de exemplo para administrador...');
-            await createSampleServices(user.id);
-            localStorage.setItem('sampleDataCreated', 'true');
-            setSampleDataCreated(true);
-            
-            // Recarregar a página para mostrar os novos dados
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          }
-        } catch (error) {
-          console.error('Erro ao criar dados de exemplo:', error);
-        }
-      }
-    };
-
-    createSampleDataIfNeeded();
-  }, [user, services.length, sampleDataCreated]);
-
   // Calcular métricas
   const recentServices = services.slice(0, 3);
   const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
@@ -92,6 +62,22 @@ const Index: React.FC = () => {
     { name: "Nov", value: 23 },
     { name: "Dez", value: stats.total || 31 }
   ];
+
+  // Função para criar dados de exemplo
+  const handleCreateSampleData = async () => {
+    setCreatingData(true);
+    try {
+      const success = await createSampleData();
+      if (success) {
+        // Recarregar os dados
+        refetchServices();
+      }
+    } catch (error) {
+      console.error('Erro ao criar dados de exemplo:', error);
+    } finally {
+      setCreatingData(false);
+    }
+  };
 
   if (servicesLoading || teamLoading) {
     return (
@@ -118,10 +104,23 @@ const Index: React.FC = () => {
             Bem-vindo de volta, {user?.name || 'Usuário'}
           </p>
         </div>
-        <Button onClick={() => navigate('/nova-demanda')} className="flex items-center gap-2">
-          <Plus size={20} />
-          Nova Demanda
-        </Button>
+        <div className="flex gap-2">
+          {services.length === 0 && (
+            <Button 
+              onClick={handleCreateSampleData} 
+              variant="outline"
+              disabled={creatingData}
+              className="flex items-center gap-2"
+            >
+              <Database size={20} />
+              {creatingData ? 'Criando...' : 'Criar Dados de Exemplo'}
+            </Button>
+          )}
+          <Button onClick={() => navigate('/nova-demanda')} className="flex items-center gap-2">
+            <Plus size={20} />
+            Nova Demanda
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Estatísticas */}
@@ -190,24 +189,32 @@ const Index: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {teamMembers.slice(0, 4).map((member) => (
-                <div key={member.id} className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xs font-medium">
-                      {member.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
-                  </div>
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              {teamMembers.length > 0 ? (
+                <>
+                  {teamMembers.slice(0, 4).map((member) => (
+                    <div key={member.id} className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-medium">
+                          {member.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    </div>
+                  ))}
+                  {teamMembers.length > 4 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      +{teamMembers.length - 4} outros membros
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">Nenhum membro de equipe encontrado</p>
                 </div>
-              ))}
-              {teamMembers.length > 4 && (
-                <p className="text-xs text-muted-foreground text-center">
-                  +{teamMembers.length - 4} outros membros
-                </p>
               )}
             </div>
           </CardContent>
@@ -236,25 +243,18 @@ const Index: React.FC = () => {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">Nenhuma demanda encontrada</p>
-              <Button onClick={() => navigate('/nova-demanda')}>
-                Criar primeira demanda
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => navigate('/nova-demanda')}>
+                  Criar primeira demanda
+                </Button>
+                <Button onClick={handleCreateSampleData} variant="outline" disabled={creatingData}>
+                  {creatingData ? 'Criando...' : 'Dados de exemplo'}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Mensagem para administradores */}
-      {user?.role === 'administrador' && services.length === 0 && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <p className="text-blue-800">
-              <strong>Bem-vindo, Administrador!</strong> Estamos criando algumas demandas de exemplo para você explorar o sistema. 
-              A página será recarregada automaticamente em alguns segundos.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

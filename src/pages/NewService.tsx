@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { CustomField, TeamMember, ServicePriority, ServiceStatus, ServiceType } 
 import { useAuth } from '@/context/AuthContext';
 import { createService } from '@/services/api';
 import { getServiceTypes } from '@/services/serviceTypesService';
+import { getCurrentTeam } from '@/services/teamService';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +34,29 @@ const NewService: React.FC = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<number>(0);
+  const [currentTeam, setCurrentTeam] = useState<any>(null);
+  const [loadingTeam, setLoadingTeam] = useState(true);
   const isMobile = useIsMobile();
+
+  // Carregar equipe atual do usuário
+  useEffect(() => {
+    const loadCurrentTeam = async () => {
+      try {
+        setLoadingTeam(true);
+        const team = await getCurrentTeam();
+        setCurrentTeam(team);
+        console.log('Equipe atual do usuário:', team);
+      } catch (error) {
+        console.error('Erro ao carregar equipe atual:', error);
+      } finally {
+        setLoadingTeam(false);
+      }
+    };
+
+    if (user) {
+      loadCurrentTeam();
+    }
+  }, [user]);
 
   // Carregar tipos de serviço ao montar o componente
   useEffect(() => {
@@ -77,9 +101,10 @@ const NewService: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      console.log('Preparando para criar serviço...');
+      console.log('Preparando para criar demanda...');
+      console.log('Equipe atual:', currentTeam);
       
-      // Simplify the service creation - just send the basic required data
+      // Criar demanda com dados simplificados
       const newService = {
         title,
         description: description || '',
@@ -97,10 +122,11 @@ const NewService: React.FC = () => {
         dueDate: deadline ? deadline.toISOString() : undefined,
         messages: [],
         serviceType: serviceType || undefined,
-        estimatedHours: estimatedHours || 0
+        estimatedHours: estimatedHours || 0,
+        creationDate: new Date().toISOString()
       };
       
-      console.log('Submetendo serviço:', newService);
+      console.log('Submetendo demanda:', newService);
       
       const result = await createService(newService);
       if (result) {
@@ -117,7 +143,7 @@ const NewService: React.FC = () => {
     }
   };
 
-  // Função para lidar com erros no formulário e fornecer feedback ao usuário
+  // Função para validar o formulário
   const validateForm = (): boolean => {
     if (!title.trim()) {
       toast.error('Por favor, insira um título para a demanda.');
@@ -135,6 +161,24 @@ const NewService: React.FC = () => {
   return (
     <div className="container mx-auto p-4 pb-32">
       <h1 className="text-2xl font-bold mb-6">Nova Demanda</h1>
+      
+      {/* Exibir informação sobre a equipe */}
+      {!loadingTeam && (
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            {currentTeam ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>✅ Conectado à equipe:</span>
+                <span className="font-medium text-foreground">{currentTeam.name}</span>
+              </div>
+            ) : (
+              <div className="text-sm text-amber-600">
+                ⚠️ Você não está vinculado a nenhuma equipe. A demanda será criada sem vinculação de equipe.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>

@@ -1,3 +1,4 @@
+
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -7,25 +8,34 @@ export const createServiceInDatabase = async (serviceData: {
   location: string;
   description?: string;
   status?: ServiceStatus;
+  team_id?: string;
 }): Promise<Service | null> => {
   try {
     console.log('Creating service in database:', serviceData);
     
     // Generate a simple service number using timestamp
     const now = new Date();
-    const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     
-    // Insert service without team_id dependency
+    // Prepare service data
+    const insertData: any = {
+      title: serviceData.title,
+      location: serviceData.location,
+      description: serviceData.description || '',
+      status: serviceData.status || 'pendente',
+      number: serviceNumber
+    };
+
+    // Only add team_id if it exists
+    if (serviceData.team_id) {
+      insertData.team_id = serviceData.team_id;
+    }
+    
+    // Insert service
     const { data: serviceResult, error: serviceError } = await supabase
       .from('services')
-      .insert({
-        title: serviceData.title,
-        location: serviceData.location,
-        description: serviceData.description || '',
-        status: serviceData.status || 'pendente',
-        number: serviceNumber
-      })
-      .select('id, title, status, location, created_at, updated_at, number, description')
+      .insert(insertData)
+      .select('*')
       .single();
     
     if (serviceError) {
@@ -51,7 +61,8 @@ export const createServiceInDatabase = async (serviceData: {
         role: 'tecnico' as UserRole
       },
       creationDate: serviceResult.created_at,
-      description: serviceResult.description || ''
+      description: serviceResult.description || '',
+      team_id: serviceResult.team_id || undefined
     };
     
     console.log('Service created successfully:', service);
