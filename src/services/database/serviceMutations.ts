@@ -11,15 +11,9 @@ export const createServiceInDatabase = async (serviceData: {
   try {
     console.log('Creating service in database:', serviceData);
     
-    // Get next service number
-    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
-    
-    if (numberError) {
-      console.error("Erro ao gerar número do serviço:", numberError);
-      throw numberError;
-    }
-    
-    const serviceNumber = String(numberData).padStart(6, '0');
+    // Generate a simple service number using timestamp
+    const now = new Date();
+    const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     
     // Insert service without team_id dependency
     const { data: serviceResult, error: serviceError } = await supabase

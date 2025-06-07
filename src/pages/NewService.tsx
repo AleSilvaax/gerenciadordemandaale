@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -78,31 +77,27 @@ const NewService: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      // Create default technician object since it's required by the type
-      const defaultTechnician: TeamMember = {
-        id: user?.id || '0',
-        name: user?.name || 'Não atribuído',
-        avatar: user?.avatar || '',
-        role: user?.role || 'tecnico',
-      };
-      
       console.log('Preparando para criar serviço...');
       
-      const selectedServiceType = serviceTypes.find(type => type.id === serviceType);
-      
+      // Simplify the service creation - just send the basic required data
       const newService = {
         title,
-        description,
+        description: description || '',
         location,
         priority,
         status,
-        technician: defaultTechnician,
-        customFields,
-        photos,
+        technician: {
+          id: user?.id || '0',
+          name: user?.name || 'Não atribuído',
+          avatar: user?.avatar || '',
+          role: user?.role || 'tecnico',
+        } as TeamMember,
+        customFields: customFields || [],
+        photos: photos || [],
         dueDate: deadline ? deadline.toISOString() : undefined,
         messages: [],
-        serviceType: selectedServiceType || serviceType,
-        estimatedHours
+        serviceType: serviceType || undefined,
+        estimatedHours: estimatedHours || 0
       };
       
       console.log('Submetendo serviço:', newService);

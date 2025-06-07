@@ -1,4 +1,3 @@
-
 import { Service } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { 
@@ -55,19 +54,27 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
   console.log("Creating new service:", service);
   
   try {
+    // Simplify the service data for database insertion
+    const serviceData = {
+      title: service.title,
+      location: service.location,
+      description: service.description || '',
+      status: service.status || 'pendente'
+    };
+    
     // Create in database
-    const newDbService = await createServiceInDatabase(service);
+    const newDbService = await createServiceInDatabase(serviceData);
     
     if (newDbService) {
       console.log("Service created in database:", newDbService);
-      toast.success("Serviço criado com sucesso!");
+      toast.success("Demanda criada com sucesso!");
       return newDbService;
     } else {
       throw new Error("Failed to create service in database");
     }
   } catch (error) {
     console.error("Error creating service:", error);
-    toast.error("Falha ao criar serviço no servidor");
+    toast.error("Erro ao criar demanda. Por favor, tente novamente.");
     throw error;
   }
 };
@@ -82,7 +89,7 @@ export const updateService = async (service: Partial<Service> & { id: string }):
     
     if (updateSuccess) {
       console.log("Service updated in database");
-      toast.success("Serviço atualizado com sucesso!");
+      toast.success("Demanda atualizada com sucesso!");
       
       // Get the updated service to return
       const updatedService = await getServiceById(service.id);
@@ -95,7 +102,7 @@ export const updateService = async (service: Partial<Service> & { id: string }):
     }
   } catch (error) {
     console.error("Error updating service:", error);
-    toast.error("Falha ao atualizar serviço no servidor");
+    toast.error("Falha ao atualizar demanda no servidor");
     throw error;
   }
 };
@@ -110,14 +117,14 @@ export const deleteService = async (id: string): Promise<boolean> => {
     
     if (dbDeleteResult) {
       console.log("Service deleted from database");
-      toast.success("Serviço excluído com sucesso!");
+      toast.success("Demanda excluída com sucesso!");
       return true;
     } else {
       throw new Error(`Failed to delete service with id ${id}`);
     }
   } catch (error) {
     console.error("Error deleting service:", error);
-    toast.error("Falha ao excluir serviço do servidor");
+    toast.error("Falha ao excluir demanda do servidor");
     throw error;
   }
 };
