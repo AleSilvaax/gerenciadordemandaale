@@ -10,7 +10,7 @@ export const getServiceTypes = async (): Promise<ServiceType[]> => {
     // First try to create default service types if they don't exist
     await createDefaultServiceTypes();
     
-    // Then get all service types
+    // Then get all service types using direct database query
     const serviceTypes = await getServiceTypesFromApi();
     
     if (serviceTypes.length === 0) {
