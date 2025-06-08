@@ -1,5 +1,6 @@
 import { Service } from '@/types/serviceTypes';
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 import { 
   getServicesFromDatabase, 
   getServiceById, 
