@@ -8,24 +8,15 @@ export const getServiceTypes = async (): Promise<ServiceType[]> => {
   try {
     console.log('Fetching service types from database...');
     
-    // Use raw query to bypass TypeScript type checking for service_types table
-    const { data, error } = await supabase
-      .rpc('get_service_types_data');
+    // Use any type to bypass TypeScript checking for service_types table
+    const { data, error } = await (supabase as any)
+      .from('service_types')
+      .select('*')
+      .order('name');
     
     if (error) {
       console.error('Error fetching service types:', error);
-      // Fallback: try direct query with any type
-      const fallbackResult = await (supabase as any)
-        .from('service_types')
-        .select('*')
-        .order('name');
-      
-      if (fallbackResult.error) {
-        console.error('Fallback query also failed:', fallbackResult.error);
-        return [];
-      }
-      
-      return mapServiceTypesData(fallbackResult.data || []);
+      return [];
     }
     
     if (!data || data.length === 0) {

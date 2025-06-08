@@ -37,8 +37,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
   try {
     console.log('Fetching services from database...');
     
-    // Buscar serviços com seleção explícita de colunas incluindo service_type_id
-    let query = supabase
+    // Buscar serviços com seleção explícita de colunas
+    let query = (supabase as any)
       .from('services')
       .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id');
     
@@ -72,7 +72,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     }
 
     // Buscar tipos de serviço
-    const { data: serviceTypesData, error: serviceTypesError } = await supabase
+    const { data: serviceTypesData, error: serviceTypesError } = await (supabase as any)
       .from('service_types')
       .select('id, name, description');
     
@@ -153,7 +153,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
   try {
     console.log('Fetching service by ID:', id);
     
-    const { data: serviceData, error: serviceError } = await supabase
+    const { data: serviceData, error: serviceError } = await (supabase as any)
       .from('services')
       .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id')
       .eq('id', id)
@@ -186,7 +186,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     // Buscar tipo de serviço
     let serviceType = undefined;
     if (serviceData.service_type_id) {
-      const { data: serviceTypeData, error: serviceTypeError } = await supabase
+      const { data: serviceTypeData, error: serviceTypeError } = await (supabase as any)
         .from('service_types')
         .select('id, name, description')
         .eq('id', serviceData.service_type_id)
