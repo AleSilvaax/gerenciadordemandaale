@@ -22,6 +22,7 @@ import { getServices } from "@/services/api/serviceApi";
 import { getTeamMembers } from "@/services/api/teamApi";
 import { getServiceStats } from "@/services/database/statsService";
 import { createSampleData } from "@/services/sampleDataService";
+import { createDefaultServiceTypes } from "@/services/api/serviceTypesApi";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -29,6 +30,13 @@ const Index: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [creatingData, setCreatingData] = useState(false);
+
+  // Initialize service types on load
+  useEffect(() => {
+    if (user) {
+      createDefaultServiceTypes().catch(console.error);
+    }
+  }, [user]);
 
   // Queries para carregar dados
   const { data: services = [], isLoading: servicesLoading, refetch: refetchServices } = useQuery({

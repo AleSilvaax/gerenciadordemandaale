@@ -13,6 +13,7 @@ interface BasicServiceRow {
   number: string;
   team_id?: string | null;
   description?: string | null;
+  service_type_id?: string | null;
 }
 
 interface TechnicianRow {
@@ -25,15 +26,21 @@ interface TechnicianRow {
   } | null;
 }
 
+interface ServiceTypeRow {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 // Buscar todos os serviços
 export const getServicesFromDatabase = async (teamId?: string): Promise<Service[]> => {
   try {
     console.log('Fetching services from database...');
     
-    // Buscar serviços com seleção explícita de colunas
+    // Buscar serviços com seleção explícita de colunas incluindo service_type_id
     let query = supabase
       .from('services')
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description');
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id');
     
     if (teamId) {
       query = query.eq('team_id', teamId);
@@ -62,6 +69,15 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
     
     if (techniciansError) {
       console.error("Erro ao buscar técnicos:", techniciansError);
+    }
+
+    // Buscar tipos de serviço
+    const { data: serviceTypesData, error: serviceTypesError } = await supabase
+      .from('service_types')
+      .select('id, name, description');
+    
+    if (serviceTypesError) {
+      console.error("Erro ao buscar tipos de serviço:", serviceTypesError);
     }
     
     // Construir array de serviços
@@ -94,6 +110,20 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         }
       }
 
+      // Encontrar tipo de serviço
+      let serviceType = undefined;
+      if (serviceRow.service_type_id && serviceTypesData) {
+        const typeRows = serviceTypesData as unknown as ServiceTypeRow[];
+        const foundType = typeRows.find(type => type.id === serviceRow.service_type_id);
+        if (foundType) {
+          serviceType = {
+            id: foundType.id,
+            name: foundType.name,
+            description: foundType.description || ''
+          };
+        }
+      }
+
       // Criar objeto de serviço
       const service: Service = {
         id: serviceRow.id,
@@ -103,7 +133,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         technician: assignedTechnician,
         creationDate: serviceRow.created_at,
         team_id: serviceRow.team_id || undefined,
-        description: serviceRow.description || ''
+        description: serviceRow.description || '',
+        serviceType: serviceType
       };
 
       services.push(service);
@@ -124,7 +155,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     
     const { data: serviceData, error: serviceError } = await supabase
       .from('services')
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id')
       .eq('id', id)
       .single();
     
@@ -150,6 +181,24 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     
     if (technicianError) {
       console.error("Erro ao buscar técnico:", technicianError);
+    }
+
+    // Buscar tipo de serviço
+    let serviceType = undefined;
+    if (serviceData.service_type_id) {
+      const { data: serviceTypeData, error: serviceTypeError } = await supabase
+        .from('service_types')
+        .select('id, name, description')
+        .eq('id', serviceData.service_type_id)
+        .single();
+      
+      if (!serviceTypeError && serviceTypeData) {
+        serviceType = {
+          id: serviceTypeData.id,
+          name: serviceTypeData.name,
+          description: serviceTypeData.description || ''
+        };
+      }
     }
     
     // Criar objeto técnico
@@ -180,7 +229,8 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       technician: assignedTechnician,
       creationDate: serviceRow.created_at,
       description: serviceRow.description || '',
-      team_id: serviceRow.team_id || undefined
+      team_id: serviceRow.team_id || undefined,
+      serviceType: serviceType
     };
     
     console.log('Service found:', service);

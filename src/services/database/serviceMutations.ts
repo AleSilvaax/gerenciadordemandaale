@@ -9,6 +9,7 @@ export const createServiceInDatabase = async (serviceData: {
   description?: string;
   status?: ServiceStatus;
   team_id?: string;
+  service_type_id?: string;
 }): Promise<Service | null> => {
   try {
     console.log('Creating service in database:', serviceData);
@@ -30,6 +31,11 @@ export const createServiceInDatabase = async (serviceData: {
     if (serviceData.team_id) {
       insertData.team_id = serviceData.team_id;
     }
+
+    // Only add service_type_id if it exists
+    if (serviceData.service_type_id) {
+      insertData.service_type_id = serviceData.service_type_id;
+    }
     
     // Insert service
     const { data: serviceResult, error: serviceError } = await supabase
@@ -48,6 +54,24 @@ export const createServiceInDatabase = async (serviceData: {
       return null;
     }
 
+    // Buscar tipo de serviço se existe
+    let serviceType = undefined;
+    if (serviceResult.service_type_id) {
+      const { data: serviceTypeData } = await supabase
+        .from('service_types')
+        .select('id, name, description')
+        .eq('id', serviceResult.service_type_id)
+        .single();
+      
+      if (serviceTypeData) {
+        serviceType = {
+          id: serviceTypeData.id,
+          name: serviceTypeData.name,
+          description: serviceTypeData.description || ''
+        };
+      }
+    }
+
     // Create service object
     const service: Service = {
       id: serviceResult.id,
@@ -62,7 +86,8 @@ export const createServiceInDatabase = async (serviceData: {
       },
       creationDate: serviceResult.created_at,
       description: serviceResult.description || '',
-      team_id: serviceResult.team_id || undefined
+      team_id: serviceResult.team_id || undefined,
+      serviceType: serviceType
     };
     
     console.log('Service created successfully:', service);
@@ -172,6 +197,15 @@ export const updateServiceInDatabase = async (id: string, updates: Partial<Servi
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.team_id !== undefined) updateData.team_id = updates.team_id;
+    
+    // Handle service type updates
+    if (updates.serviceType !== undefined) {
+      if (typeof updates.serviceType === 'string') {
+        updateData.service_type_id = updates.serviceType;
+      } else if (updates.serviceType && typeof updates.serviceType === 'object') {
+        updateData.service_type_id = updates.serviceType.id;
+      }
+    }
     
     const { error } = await supabase
       .from('services')

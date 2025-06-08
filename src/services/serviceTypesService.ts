@@ -1,54 +1,35 @@
 
 import { ServiceType } from '@/types/serviceTypes';
+import { getServiceTypes as getServiceTypesFromApi, createDefaultServiceTypes } from './api/serviceTypesApi';
 
-// Mock data para tipos de serviço - em produção viria do banco
-const mockServiceTypes: ServiceType[] = [
-  {
-    id: '1',
-    name: 'Manutenção Preventiva',
-    description: 'Serviços de manutenção preventiva em equipamentos',
-    estimatedHours: 2,
-    defaultPriority: 'media'
-  },
-  {
-    id: '2',
-    name: 'Manutenção Corretiva',
-    description: 'Reparos e correções em equipamentos com defeito',
-    estimatedHours: 4,
-    defaultPriority: 'alta'
-  },
-  {
-    id: '3',
-    name: 'Instalação',
-    description: 'Instalação de novos equipamentos ou sistemas',
-    estimatedHours: 6,
-    defaultPriority: 'media'
-  },
-  {
-    id: '4',
-    name: 'Inspeção',
-    description: 'Inspeção técnica e avaliação de equipamentos',
-    estimatedHours: 1,
-    defaultPriority: 'baixa'
-  },
-  {
-    id: '5',
-    name: 'Emergência',
-    description: 'Atendimento de emergência para problemas críticos',
-    estimatedHours: 8,
-    defaultPriority: 'urgente'
-  }
-];
-
+// Get all service types
 export const getServiceTypes = async (): Promise<ServiceType[]> => {
-  // Simular delay de API
-  await new Promise(resolve => setTimeout(resolve, 300));
+  console.log('Loading service types from database...');
   
-  console.log('Carregando tipos de serviço:', mockServiceTypes);
-  return mockServiceTypes;
+  try {
+    // First try to create default service types if they don't exist
+    await createDefaultServiceTypes();
+    
+    // Then get all service types
+    const serviceTypes = await getServiceTypesFromApi();
+    
+    if (serviceTypes.length === 0) {
+      console.log('No service types found, returning empty array');
+    }
+    
+    return serviceTypes;
+  } catch (error) {
+    console.error('Error in getServiceTypes:', error);
+    return [];
+  }
 };
 
 export const getServiceTypeById = async (id: string): Promise<ServiceType | null> => {
-  const serviceType = mockServiceTypes.find(type => type.id === id);
-  return serviceType || null;
+  try {
+    const serviceTypes = await getServiceTypes();
+    return serviceTypes.find(type => type.id === id) || null;
+  } catch (error) {
+    console.error('Error in getServiceTypeById:', error);
+    return null;
+  }
 };

@@ -1,3 +1,4 @@
+
 import { Service } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -71,13 +72,24 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
       }
     }
     
+    // Determine service type ID
+    let serviceTypeId = undefined;
+    if (service.serviceType) {
+      if (typeof service.serviceType === 'string') {
+        serviceTypeId = service.serviceType;
+      } else if (typeof service.serviceType === 'object' && service.serviceType.id) {
+        serviceTypeId = service.serviceType.id;
+      }
+    }
+    
     // Prepare service data for database insertion
     const serviceData = {
       title: service.title,
       location: service.location,
       description: service.description || '',
       status: service.status || 'pendente',
-      team_id: teamId
+      team_id: teamId,
+      service_type_id: serviceTypeId
     };
     
     console.log('Service data prepared for creation:', serviceData);
