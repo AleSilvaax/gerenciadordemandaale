@@ -101,10 +101,11 @@ const NewService: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      console.log('Preparando para criar demanda...');
+      console.log('Criando demanda sem restrições de permissão...');
+      console.log('Usuário atual:', user);
       console.log('Equipe atual:', currentTeam);
       
-      // Criar demanda com dados simplificados
+      // Criar demanda - FUNCIONA PARA QUALQUER USUÁRIO AUTENTICADO
       const newService = {
         title,
         description: description || '',
@@ -113,7 +114,7 @@ const NewService: React.FC = () => {
         status,
         technician: {
           id: user?.id || '0',
-          name: user?.name || 'Não atribuído',
+          name: user?.name || 'Usuário',
           avatar: user?.avatar || '',
           role: user?.role || 'tecnico',
         } as TeamMember,
@@ -126,18 +127,22 @@ const NewService: React.FC = () => {
         creationDate: new Date().toISOString()
       };
       
-      console.log('Submetendo demanda:', newService);
+      console.log('Dados da demanda a ser criada:', newService);
       
       const result = await createService(newService);
       if (result) {
-        toast.success('Demanda criada com sucesso!');
+        toast.success('✅ Demanda criada com sucesso!', {
+          description: `A demanda "${title}" foi criada e está disponível para toda a equipe.`
+        });
         navigate('/demandas');
       } else {
-        throw new Error('Falha ao criar demanda - nenhum dado retornado do servidor');
+        throw new Error('Falha ao criar demanda - resposta vazia do servidor');
       }
     } catch (error) {
       console.error('Erro ao criar demanda:', error);
-      toast.error('Erro ao criar demanda. Por favor, tente novamente.');
+      toast.error('❌ Erro ao criar demanda', {
+        description: 'Por favor, verifique os dados e tente novamente. Se o problema persistir, entre em contato com o suporte.'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -162,18 +167,30 @@ const NewService: React.FC = () => {
     <div className="container mx-auto p-4 pb-32">
       <h1 className="text-2xl font-bold mb-6">Nova Demanda</h1>
       
-      {/* Exibir informação sobre a equipe */}
+      {/* Status da conectividade */}
       {!loadingTeam && (
         <Card className="mb-6">
           <CardContent className="p-4">
-            {currentTeam ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>✅ Conectado à equipe:</span>
-                <span className="font-medium text-foreground">{currentTeam.name}</span>
+            {user ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <span>✅ Usuário autenticado:</span>
+                  <span className="font-medium">{user.name || user.email}</span>
+                </div>
+                {currentTeam ? (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <span>✅ Conectado à equipe:</span>
+                    <span className="font-medium">{currentTeam.name}</span>
+                  </div>
+                ) : (
+                  <div className="text-sm text-blue-600">
+                    ℹ️ Sem equipe vinculada - a demanda será criada individualmente.
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="text-sm text-amber-600">
-                ⚠️ Você não está vinculado a nenhuma equipe. A demanda será criada sem vinculação de equipe.
+              <div className="text-sm text-red-600">
+                ❌ Usuário não autenticado
               </div>
             )}
           </CardContent>
@@ -187,7 +204,7 @@ const NewService: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Título</Label>
+              <Label htmlFor="title">Título *</Label>
               <Input
                 id="title"
                 value={title}
@@ -226,7 +243,7 @@ const NewService: React.FC = () => {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="location">Localização</Label>
+              <Label htmlFor="location">Localização *</Label>
               <Input
                 id="location"
                 value={location}
@@ -324,6 +341,7 @@ const NewService: React.FC = () => {
           <Button 
             type="submit" 
             disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700"
           >
             {isSubmitting ? (
               <>
@@ -331,7 +349,7 @@ const NewService: React.FC = () => {
                 Salvando...
               </>
             ) : (
-              'Salvar Demanda'
+              '✅ Salvar Demanda'
             )}
           </Button>
         </div>

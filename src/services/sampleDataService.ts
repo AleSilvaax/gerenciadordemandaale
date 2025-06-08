@@ -15,7 +15,7 @@ export const createSampleData = async (): Promise<boolean> => {
     }
 
     // Check if service types exist, if not create them
-    const { data: existingTypes } = await (supabase as any)
+    const { data: existingTypes } = await supabase
       .from('service_types')
       .select('id')
       .limit(1);
@@ -56,7 +56,7 @@ export const createSampleData = async (): Promise<boolean> => {
         }
       ];
       
-      const { error: typesError } = await (supabase as any)
+      const { error: typesError } = await supabase
         .from('service_types')
         .insert(defaultTypes);
       

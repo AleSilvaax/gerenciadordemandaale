@@ -1,3 +1,4 @@
+
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -36,8 +37,8 @@ export const createServiceInDatabase = async (serviceData: {
       insertData.service_type_id = serviceData.service_type_id;
     }
     
-    // Insert service using any type to bypass TypeScript issues
-    const { data: serviceResult, error: serviceError } = await (supabase as any)
+    // Insert service
+    const { data: serviceResult, error: serviceError } = await supabase
       .from('services')
       .insert(insertData)
       .select('*')
@@ -56,7 +57,7 @@ export const createServiceInDatabase = async (serviceData: {
     // Buscar tipo de serviço se existe
     let serviceType = undefined;
     if (serviceResult.service_type_id) {
-      const { data: serviceTypeData } = await (supabase as any)
+      const { data: serviceTypeData } = await supabase
         .from('service_types')
         .select('id, name, description')
         .eq('id', serviceResult.service_type_id)

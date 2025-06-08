@@ -8,8 +8,7 @@ export const getServiceTypes = async (): Promise<ServiceType[]> => {
   try {
     console.log('Fetching service types from database...');
     
-    // Use any type to bypass TypeScript checking for service_types table
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('service_types')
       .select('*')
       .order('name');
@@ -46,8 +45,7 @@ const mapServiceTypesData = (data: any[]): ServiceType[] => {
 // Get service type by ID
 export const getServiceTypeById = async (id: string): Promise<ServiceType | null> => {
   try {
-    // Use any type to bypass TypeScript checking
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('service_types')
       .select('*')
       .eq('id', id)
@@ -79,7 +77,7 @@ export const createDefaultServiceTypes = async (): Promise<boolean> => {
     console.log('Checking for existing service types...');
     
     // Check if service types already exist
-    const { data: existing } = await (supabase as any)
+    const { data: existing } = await supabase
       .from('service_types')
       .select('id')
       .limit(1);
@@ -124,7 +122,7 @@ export const createDefaultServiceTypes = async (): Promise<boolean> => {
       }
     ];
     
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('service_types')
       .insert(defaultTypes);
     
