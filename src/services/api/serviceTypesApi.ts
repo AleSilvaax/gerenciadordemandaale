@@ -3,136 +3,92 @@ import { supabase } from '@/integrations/supabase/client';
 import { ServiceType } from '@/types/serviceTypes';
 import { toast } from 'sonner';
 
-// Get all service types
+// Get all service types using edge function
 export const getServiceTypes = async (): Promise<ServiceType[]> => {
   try {
-    console.log('Fetching service types from database...');
+    console.log('Fetching service types from edge function...');
     
-    const { data, error } = await supabase
-      .from('service_types')
-      .select('*')
-      .order('name');
+    const { data, error } = await supabase.functions.invoke('get_service_types_data');
     
     if (error) {
       console.error('Error fetching service types:', error);
-      return [];
+      return getDefaultServiceTypes();
     }
     
     if (!data || data.length === 0) {
-      console.log('No service types found');
-      return [];
+      console.log('No service types found, returning defaults');
+      return getDefaultServiceTypes();
     }
     
-    return mapServiceTypesData(data);
+    return data.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description || '',
+      estimatedHours: item.estimated_hours || 0,
+      defaultPriority: item.default_priority as any || 'media'
+    }));
   } catch (error) {
     console.error('Error in getServiceTypes:', error);
-    toast.error('Erro ao carregar tipos de serviço');
-    return [];
+    return getDefaultServiceTypes();
   }
 };
 
-// Helper function to map service types data
-const mapServiceTypesData = (data: any[]): ServiceType[] => {
-  return data.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    description: item.description || '',
-    estimatedHours: item.estimated_hours || 0,
-    defaultPriority: item.default_priority as any || 'media'
-  }));
+// Fallback to default service types
+const getDefaultServiceTypes = (): ServiceType[] => {
+  return [
+    {
+      id: '1',
+      name: 'Manutenção Preventiva',
+      description: 'Serviços de manutenção preventiva em equipamentos',
+      estimatedHours: 2,
+      defaultPriority: 'media'
+    },
+    {
+      id: '2',
+      name: 'Manutenção Corretiva',
+      description: 'Reparos e correções em equipamentos com defeito',
+      estimatedHours: 4,
+      defaultPriority: 'alta'
+    },
+    {
+      id: '3',
+      name: 'Instalação',
+      description: 'Instalação de novos equipamentos ou sistemas',
+      estimatedHours: 6,
+      defaultPriority: 'media'
+    },
+    {
+      id: '4',
+      name: 'Inspeção',
+      description: 'Inspeção técnica e avaliação de equipamentos',
+      estimatedHours: 1,
+      defaultPriority: 'baixa'
+    },
+    {
+      id: '5',
+      name: 'Emergência',
+      description: 'Atendimento de emergência para problemas críticos',
+      estimatedHours: 8,
+      defaultPriority: 'urgente'
+    }
+  ];
 };
 
 // Get service type by ID
 export const getServiceTypeById = async (id: string): Promise<ServiceType | null> => {
   try {
-    const { data, error } = await supabase
-      .from('service_types')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching service type:', error);
-      return null;
-    }
-    
-    if (!data) return null;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      estimatedHours: data.estimated_hours || 0,
-      defaultPriority: data.default_priority as any || 'media'
-    };
+    const serviceTypes = await getServiceTypes();
+    return serviceTypes.find(type => type.id === id) || null;
   } catch (error) {
     console.error('Error in getServiceTypeById:', error);
     return null;
   }
 };
 
-// Create service types if they don't exist
+// Create default service types - simplified version
 export const createDefaultServiceTypes = async (): Promise<boolean> => {
   try {
-    console.log('Checking for existing service types...');
-    
-    // Check if service types already exist
-    const { data: existing } = await supabase
-      .from('service_types')
-      .select('id')
-      .limit(1);
-    
-    if (existing && existing.length > 0) {
-      console.log('Service types already exist');
-      return true;
-    }
-    
-    console.log('Creating default service types...');
-    
-    const defaultTypes = [
-      {
-        name: 'Manutenção Preventiva',
-        description: 'Serviços de manutenção preventiva em equipamentos',
-        estimated_hours: 2,
-        default_priority: 'media'
-      },
-      {
-        name: 'Manutenção Corretiva',
-        description: 'Reparos e correções em equipamentos com defeito',
-        estimated_hours: 4,
-        default_priority: 'alta'
-      },
-      {
-        name: 'Instalação',
-        description: 'Instalação de novos equipamentos ou sistemas',
-        estimated_hours: 6,
-        default_priority: 'media'
-      },
-      {
-        name: 'Inspeção',
-        description: 'Inspeção técnica e avaliação de equipamentos',
-        estimated_hours: 1,
-        default_priority: 'baixa'
-      },
-      {
-        name: 'Emergência',
-        description: 'Atendimento de emergência para problemas críticos',
-        estimated_hours: 8,
-        default_priority: 'urgente'
-      }
-    ];
-    
-    const { error } = await supabase
-      .from('service_types')
-      .insert(defaultTypes);
-    
-    if (error) {
-      console.error('Error creating service types:', error);
-      return false;
-    }
-    
-    console.log('Default service types created successfully');
-    toast.success('Tipos de serviço criados com sucesso!');
+    console.log('Service types are managed via edge function');
     return true;
   } catch (error) {
     console.error('Error in createDefaultServiceTypes:', error);

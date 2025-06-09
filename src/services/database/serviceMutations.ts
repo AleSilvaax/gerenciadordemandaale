@@ -1,4 +1,3 @@
-
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -54,21 +53,23 @@ export const createServiceInDatabase = async (serviceData: {
       return null;
     }
 
-    // Buscar tipo de serviço se existe
+    // Try to get service type if exists - using edge function
     let serviceType = undefined;
-    if (serviceResult.service_type_id) {
-      const { data: serviceTypeData } = await supabase
-        .from('service_types')
-        .select('id, name, description')
-        .eq('id', serviceResult.service_type_id)
-        .single();
-      
-      if (serviceTypeData) {
-        serviceType = {
-          id: serviceTypeData.id,
-          name: serviceTypeData.name,
-          description: serviceTypeData.description || ''
-        };
+    if (serviceData.service_type_id) {
+      try {
+        const { data: serviceTypesData } = await supabase.functions.invoke('get_service_types_data');
+        if (serviceTypesData && Array.isArray(serviceTypesData)) {
+          const foundType = serviceTypesData.find((type: any) => type.id === serviceData.service_type_id);
+          if (foundType) {
+            serviceType = {
+              id: foundType.id,
+              name: foundType.name,
+              description: foundType.description || ''
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching service type:', error);
       }
     }
 

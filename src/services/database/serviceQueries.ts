@@ -1,4 +1,3 @@
-
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -24,12 +23,6 @@ interface TechnicianRow {
     name: string;
     avatar: string;
   } | null;
-}
-
-interface ServiceTypeRow {
-  id: string;
-  name: string;
-  description?: string;
 }
 
 // Buscar todos os serviços
@@ -71,13 +64,15 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
       console.error("Erro ao buscar técnicos:", techniciansError);
     }
 
-    // Buscar tipos de serviço
-    const { data: serviceTypesData, error: serviceTypesError } = await supabase
-      .from('service_types')
-      .select('id, name, description');
-    
-    if (serviceTypesError) {
-      console.error("Erro ao buscar tipos de serviço:", serviceTypesError);
+    // Buscar tipos de serviço via edge function
+    let serviceTypesData: any[] = [];
+    try {
+      const { data: typesData } = await supabase.functions.invoke('get_service_types_data');
+      if (typesData && Array.isArray(typesData)) {
+        serviceTypesData = typesData;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar tipos de serviço:", error);
     }
     
     // Construir array de serviços
@@ -112,9 +107,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
 
       // Encontrar tipo de serviço
       let serviceType = undefined;
-      if (serviceRow.service_type_id && serviceTypesData) {
-        const typeRows = serviceTypesData as unknown as ServiceTypeRow[];
-        const foundType = typeRows.find(type => type.id === serviceRow.service_type_id);
+      if (serviceRow.service_type_id && serviceTypesData.length > 0) {
+        const foundType = serviceTypesData.find((type: any) => type.id === serviceRow.service_type_id);
         if (foundType) {
           serviceType = {
             id: foundType.id,
@@ -183,21 +177,23 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       console.error("Erro ao buscar técnico:", technicianError);
     }
 
-    // Buscar tipo de serviço
+    // Buscar tipo de serviço via edge function
     let serviceType = undefined;
     if (serviceData.service_type_id) {
-      const { data: serviceTypeData, error: serviceTypeError } = await supabase
-        .from('service_types')
-        .select('id, name, description')
-        .eq('id', serviceData.service_type_id)
-        .single();
-      
-      if (!serviceTypeError && serviceTypeData) {
-        serviceType = {
-          id: serviceTypeData.id,
-          name: serviceTypeData.name,
-          description: serviceTypeData.description || ''
-        };
+      try {
+        const { data: serviceTypesData } = await supabase.functions.invoke('get_service_types_data');
+        if (serviceTypesData && Array.isArray(serviceTypesData)) {
+          const foundType = serviceTypesData.find((type: any) => type.id === serviceData.service_type_id);
+          if (foundType) {
+            serviceType = {
+              id: foundType.id,
+              name: foundType.name,
+              description: foundType.description || ''
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching service types:', error);
       }
     }
     
