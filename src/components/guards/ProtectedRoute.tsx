@@ -13,7 +13,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   children
 }) => {
-  const { user, hasPermission, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
   // Show loading while checking authentication
@@ -31,13 +31,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Se há permissão requerida, verificar - mas sendo mais permissivo
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    console.log("Usuário sem permissão:", requiredPermission, "- Permitindo acesso temporário para desenvolvimento");
-    // Em desenvolvimento, permitir acesso mesmo sem permissão específica
-    // return <Navigate to="/" replace />;
-  }
+  // Remove permission checks - all authenticated users have access
+  console.log("Usuário autenticado, permitindo acesso");
 
-  // User is authenticated and has permission (or we're being permissive)
+  // User is authenticated
   return children ? <>{children}</> : <Outlet />;
 };

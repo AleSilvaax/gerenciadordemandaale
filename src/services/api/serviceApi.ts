@@ -11,13 +11,13 @@ import {
   addServiceMessageToDatabase
 } from '../database';
 
-// Get all services
+// Get all services - simplified without team restrictions
 export const getServices = async (teamId?: string): Promise<Service[]> => {
-  console.log("Getting all services...", teamId ? `for team: ${teamId}` : "for all teams");
+  console.log("Getting all services...");
   
   try {
-    // Get services from Supabase database
-    const dbServices = await getServicesFromDatabase(teamId);
+    // Get all services without team filtering by default
+    const dbServices = await getServicesFromDatabase();
     console.log("Returning services from database:", dbServices.length);
     return dbServices;
   } catch (error) {
@@ -34,7 +34,6 @@ export const getService = async (id: string): Promise<Service | undefined> => {
   console.log("Getting service by ID:", id);
   
   try {
-    // Buscar serviço diretamente pelo ID
     const service = await getServiceById(id);
     
     if (!service) {
@@ -51,16 +50,21 @@ export const getService = async (id: string): Promise<Service | undefined> => {
   }
 };
 
-// Create a new service
+// Create a new service - simplified without permission checks
 export const createService = async (service: Omit<Service, "id">): Promise<Service> => {
   console.log("Creating new service:", service);
   
   try {
-    // Get current user's team if available
+    // Get current user
     const { data: userData } = await supabase.auth.getUser();
-    let teamId = undefined;
     
-    if (userData.user) {
+    if (!userData.user) {
+      throw new Error('Usuário não autenticado');
+    }
+    
+    // Try to get user's team, but don't require it
+    let teamId = undefined;
+    try {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('team_id')
@@ -70,6 +74,8 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
       if (profileData?.team_id) {
         teamId = profileData.team_id;
       }
+    } catch (error) {
+      console.log('No team found for user, proceeding without team');
     }
     
     // Determine service type ID

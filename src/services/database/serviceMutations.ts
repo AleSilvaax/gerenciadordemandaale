@@ -18,7 +18,7 @@ export const createServiceInDatabase = async (serviceData: {
     const now = new Date();
     const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     
-    // Prepare service data
+    // Prepare service data - simplified without hierarchy checks
     const insertData: any = {
       title: serviceData.title,
       location: serviceData.location,
@@ -49,7 +49,7 @@ export const createServiceInDatabase = async (serviceData: {
       return null;
     }
 
-    // Create service object
+    // Create service object without mandatory technician assignment
     const service: Service = {
       id: serviceResult.id,
       title: serviceResult.title,

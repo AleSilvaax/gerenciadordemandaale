@@ -16,7 +16,6 @@ import { CustomField, TeamMember, ServicePriority, ServiceStatus, ServiceType } 
 import { useAuth } from '@/context/AuthContext';
 import { createService } from '@/services/api';
 import { getServiceTypes } from '@/services/serviceTypesService';
-import { getCurrentTeam } from '@/services/teamService';
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -34,31 +33,9 @@ const NewService: React.FC = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<number>(0);
-  const [currentTeam, setCurrentTeam] = useState<any>(null);
-  const [loadingTeam, setLoadingTeam] = useState(true);
   const isMobile = useIsMobile();
 
-  // Carregar equipe atual do usuário
-  useEffect(() => {
-    const loadCurrentTeam = async () => {
-      try {
-        setLoadingTeam(true);
-        const team = await getCurrentTeam();
-        setCurrentTeam(team);
-        console.log('Equipe atual do usuário:', team);
-      } catch (error) {
-        console.error('Erro ao carregar equipe atual:', error);
-      } finally {
-        setLoadingTeam(false);
-      }
-    };
-
-    if (user) {
-      loadCurrentTeam();
-    }
-  }, [user]);
-
-  // Carregar tipos de serviço ao montar o componente
+  // Load service types on component mount
   useEffect(() => {
     const loadServiceTypes = async () => {
       try {
@@ -77,7 +54,7 @@ const NewService: React.FC = () => {
     loadServiceTypes();
   }, []);
 
-  // Atualizar campos quando o tipo de serviço for selecionado
+  // Update fields when service type is selected
   useEffect(() => {
     if (serviceType) {
       const selectedType = serviceTypes.find(type => type.id === serviceType);
@@ -101,11 +78,10 @@ const NewService: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      console.log('Criando demanda sem restrições de permissão...');
+      console.log('Criando demanda para usuário autenticado...');
       console.log('Usuário atual:', user);
-      console.log('Equipe atual:', currentTeam);
       
-      // Criar demanda - FUNCIONA PARA QUALQUER USUÁRIO AUTENTICADO
+      // Create demand - simplified without hierarchy checks
       const newService = {
         title,
         description: description || '',
@@ -113,10 +89,10 @@ const NewService: React.FC = () => {
         priority,
         status,
         technician: {
-          id: user?.id || '0',
-          name: user?.name || 'Usuário',
-          avatar: user?.avatar || '',
-          role: user?.role || 'tecnico',
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico',
         } as TeamMember,
         customFields: customFields || [],
         photos: photos || [],
@@ -148,7 +124,7 @@ const NewService: React.FC = () => {
     }
   };
 
-  // Função para validar o formulário
+  // Form validation function
   const validateForm = (): boolean => {
     if (!title.trim()) {
       toast.error('Por favor, insira um título para a demanda.');
@@ -167,35 +143,26 @@ const NewService: React.FC = () => {
     <div className="container mx-auto p-4 pb-32">
       <h1 className="text-2xl font-bold mb-6">Nova Demanda</h1>
       
-      {/* Status da conectividade */}
-      {!loadingTeam && (
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            {user ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <span>✅ Usuário autenticado:</span>
-                  <span className="font-medium">{user.name || user.email}</span>
-                </div>
-                {currentTeam ? (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <span>✅ Conectado à equipe:</span>
-                    <span className="font-medium">{currentTeam.name}</span>
-                  </div>
-                ) : (
-                  <div className="text-sm text-blue-600">
-                    ℹ️ Sem equipe vinculada - a demanda será criada individualmente.
-                  </div>
-                )}
+      {/* User status */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          {user ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <span>✅ Usuário autenticado:</span>
+                <span className="font-medium">{user.name || user.email}</span>
               </div>
-            ) : (
-              <div className="text-sm text-red-600">
-                ❌ Usuário não autenticado
+              <div className="text-sm text-blue-600">
+                ℹ️ Todos os usuários podem criar demandas sem restrições de hierarquia.
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          ) : (
+            <div className="text-sm text-red-600">
+              ❌ Usuário não autenticado
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
