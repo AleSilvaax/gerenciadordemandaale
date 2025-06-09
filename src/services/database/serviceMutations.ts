@@ -1,3 +1,4 @@
+
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -17,7 +18,7 @@ export const createServiceInDatabase = async (serviceData: {
     const now = new Date();
     const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     
-    // Prepare service data
+    // Prepare service data (removing service_type_id for now)
     const insertData: any = {
       title: serviceData.title,
       location: serviceData.location,
@@ -29,11 +30,6 @@ export const createServiceInDatabase = async (serviceData: {
     // Only add team_id if it exists
     if (serviceData.team_id) {
       insertData.team_id = serviceData.team_id;
-    }
-
-    // Only add service_type_id if it exists
-    if (serviceData.service_type_id) {
-      insertData.service_type_id = serviceData.service_type_id;
     }
     
     // Insert service
@@ -53,26 +49,6 @@ export const createServiceInDatabase = async (serviceData: {
       return null;
     }
 
-    // Try to get service type if exists - using edge function
-    let serviceType = undefined;
-    if (serviceData.service_type_id) {
-      try {
-        const { data: serviceTypesData } = await supabase.functions.invoke('get_service_types_data');
-        if (serviceTypesData && Array.isArray(serviceTypesData)) {
-          const foundType = serviceTypesData.find((type: any) => type.id === serviceData.service_type_id);
-          if (foundType) {
-            serviceType = {
-              id: foundType.id,
-              name: foundType.name,
-              description: foundType.description || ''
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching service type:', error);
-      }
-    }
-
     // Create service object
     const service: Service = {
       id: serviceResult.id,
@@ -88,7 +64,7 @@ export const createServiceInDatabase = async (serviceData: {
       creationDate: serviceResult.created_at,
       description: serviceResult.description || '',
       team_id: serviceResult.team_id || undefined,
-      serviceType: serviceType
+      serviceType: undefined // Will be handled separately
     };
     
     console.log('Service created successfully:', service);
@@ -199,14 +175,7 @@ export const updateServiceInDatabase = async (id: string, updates: Partial<Servi
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.team_id !== undefined) updateData.team_id = updates.team_id;
     
-    // Handle service type updates
-    if (updates.serviceType !== undefined) {
-      if (typeof updates.serviceType === 'string') {
-        updateData.service_type_id = updates.serviceType;
-      } else if (updates.serviceType && typeof updates.serviceType === 'object') {
-        updateData.service_type_id = updates.serviceType.id;
-      }
-    }
+    // Note: service_type_id handling removed for now since column doesn't exist
     
     const { error } = await supabase
       .from('services')

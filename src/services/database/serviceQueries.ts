@@ -1,3 +1,4 @@
+
 import { supabase, handleDatabaseError } from './baseService';
 import { Service, ServiceStatus, TeamMember, UserRole } from '@/types/serviceTypes';
 
@@ -12,7 +13,6 @@ interface BasicServiceRow {
   number: string;
   team_id?: string | null;
   description?: string | null;
-  service_type_id?: string | null;
 }
 
 interface TechnicianRow {
@@ -30,10 +30,10 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
   try {
     console.log('Fetching services from database...');
     
-    // Buscar serviços com seleção explícita de colunas
+    // Buscar serviços com seleção explícita de colunas (removendo service_type_id)
     let query = supabase
       .from('services')
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id');
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description');
     
     if (teamId) {
       query = query.eq('team_id', teamId);
@@ -105,18 +105,8 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
         }
       }
 
-      // Encontrar tipo de serviço
+      // Para manter compatibilidade, não definir serviceType por enquanto
       let serviceType = undefined;
-      if (serviceRow.service_type_id && serviceTypesData.length > 0) {
-        const foundType = serviceTypesData.find((type: any) => type.id === serviceRow.service_type_id);
-        if (foundType) {
-          serviceType = {
-            id: foundType.id,
-            name: foundType.name,
-            description: foundType.description || ''
-          };
-        }
-      }
 
       // Criar objeto de serviço
       const service: Service = {
@@ -149,7 +139,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     
     const { data: serviceData, error: serviceError } = await supabase
       .from('services')
-      .select('id, title, status, location, created_at, updated_at, number, team_id, description, service_type_id')
+      .select('id, title, status, location, created_at, updated_at, number, team_id, description')
       .eq('id', id)
       .single();
     
@@ -177,25 +167,8 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
       console.error("Erro ao buscar técnico:", technicianError);
     }
 
-    // Buscar tipo de serviço via edge function
+    // Para manter compatibilidade, não definir serviceType por enquanto
     let serviceType = undefined;
-    if (serviceData.service_type_id) {
-      try {
-        const { data: serviceTypesData } = await supabase.functions.invoke('get_service_types_data');
-        if (serviceTypesData && Array.isArray(serviceTypesData)) {
-          const foundType = serviceTypesData.find((type: any) => type.id === serviceData.service_type_id);
-          if (foundType) {
-            serviceType = {
-              id: foundType.id,
-              name: foundType.name,
-              description: foundType.description || ''
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching service types:', error);
-      }
-    }
     
     // Criar objeto técnico
     let assignedTechnician: TeamMember = {
