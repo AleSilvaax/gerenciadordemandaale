@@ -230,6 +230,36 @@ export type Database = {
           },
         ]
       }
+      service_types: {
+        Row: {
+          created_at: string
+          default_priority: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_priority?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_priority?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string

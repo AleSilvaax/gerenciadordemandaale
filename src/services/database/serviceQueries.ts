@@ -30,7 +30,7 @@ export const getServicesFromDatabase = async (teamId?: string): Promise<Service[
   try {
     console.log('Fetching services from database...');
     
-    // Buscar serviços com seleção explícita de colunas (removendo service_type_id)
+    // Buscar serviços com seleção explícita de colunas
     let query = supabase
       .from('services')
       .select('id, title, status, location, created_at, updated_at, number, team_id, description');

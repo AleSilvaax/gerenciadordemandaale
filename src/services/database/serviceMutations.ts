@@ -18,7 +18,7 @@ export const createServiceInDatabase = async (serviceData: {
     const now = new Date();
     const serviceNumber = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     
-    // Prepare service data (removing service_type_id for now)
+    // Prepare service data
     const insertData: any = {
       title: serviceData.title,
       location: serviceData.location,
@@ -64,7 +64,7 @@ export const createServiceInDatabase = async (serviceData: {
       creationDate: serviceResult.created_at,
       description: serviceResult.description || '',
       team_id: serviceResult.team_id || undefined,
-      serviceType: undefined // Will be handled separately
+      serviceType: serviceData.service_type_id || undefined
     };
     
     console.log('Service created successfully:', service);
