@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, BarChart2, Users, Settings, LogOut, UsersRound } from "lucide-react";
+import { Home, FileText, BarChart2, Users, Settings, LogOut } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/context/AuthContext";
@@ -46,14 +46,6 @@ export const Navbar: React.FC = () => {
                 <span className="text-xs">Demandas</span>
               </Link>
               
-              <Link 
-                to="/gerenciar-equipe" 
-                className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/gerenciar-equipe") ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <UsersRound size={18} />
-                <span className="text-xs">Equipe</span>
-              </Link>
-              
               {hasPermission('view_stats') && (
                 <Link 
                   to="/estatisticas" 
@@ -70,7 +62,7 @@ export const Navbar: React.FC = () => {
                   className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/equipe") ? "text-primary" : "text-muted-foreground"}`}
                 >
                   <Users size={18} />
-                  <span className="text-xs">Membros</span>
+                  <span className="text-xs">Equipe</span>
                 </Link>
               )}
             </div>
@@ -126,14 +118,6 @@ export const Navbar: React.FC = () => {
               <span className="text-sm">Demandas</span>
             </Link>
             
-            <Link 
-              to="/gerenciar-equipe" 
-              className={`flex items-center space-x-1 transition-all duration-300 ${isActive("/gerenciar-equipe") ? "text-primary" : "text-muted-foreground"}`}
-            >
-              <UsersRound size={20} />
-              <span className="text-sm">Equipe</span>
-            </Link>
-            
             {hasPermission('view_stats') && (
               <Link 
                 to="/estatisticas" 
@@ -150,7 +134,7 @@ export const Navbar: React.FC = () => {
                 className={`flex items-center space-x-1 transition-all duration-300 ${isActive("/equipe") ? "text-primary" : "text-muted-foreground"}`}
               >
                 <Users size={20} />
-                <span className="text-sm">Membros</span>
+                <span className="text-sm">Equipe</span>
               </Link>
             )}
           </div>

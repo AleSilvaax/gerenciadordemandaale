@@ -1,12 +1,27 @@
-import { UserRole } from './serviceTypes';
+
+import { UserRole } from '@/types/serviceTypes';
 
 export interface AuthUser {
   id: string;
-  email: string;
-  name: string;
-  avatar?: string;
+  email?: string;
   role?: UserRole;
+  name?: string;
+  avatar?: string;
   phone?: string;
+  permissions?: string[];
+}
+
+export interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword?: string;
+  role: UserRole;
+}
+
+export interface LoginFormData {
+  email: string;
+  password: string;
 }
 
 export interface AuthState {
@@ -15,24 +30,11 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
-export interface LoginFormData {
-  email: string;
-  password: string;
-}
-
-export interface RegisterFormData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  role: UserRole;
-}
-
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   register: (userData: RegisterFormData) => Promise<boolean>;
   updateUser: (userData: Partial<AuthUser>) => Promise<boolean>;
-  updateUserInfo: (user: AuthUser) => void;
+  updateUserInfo: (userData: AuthUser) => void;
   hasPermission: (permission: string) => boolean;
 }

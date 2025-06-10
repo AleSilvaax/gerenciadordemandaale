@@ -1,328 +1,368 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import { CustomFieldManager } from '@/components/ui-custom/CustomFieldManager';
-import { DeadlineManager } from '@/components/ui-custom/DeadlineManager';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { CustomField, TeamMember, ServicePriority, ServiceStatus, ServiceType } from '@/types/serviceTypes';
-import { useAuth } from '@/context/AuthContext';
-import { createService } from '@/services/api';
-import { getServiceTypes } from '@/services/serviceTypesService';
+import React from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Save, CalendarIcon, Clock, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormDescription,
+} from "@/components/ui/form";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useForm } from "react-hook-form";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { getTeamMembers } from "@/services/api";
+import { createService } from "@/services/api";
+import { useState, useEffect } from "react";
+import { TeamMember } from "@/types/serviceTypes";
 
-const NewService: React.FC = () => {
+const NewService = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [priority, setPriority] = useState<ServicePriority>('media');
-  const [status, setStatus] = useState<ServiceStatus>('pendente');
-  const [serviceType, setServiceType] = useState<string>('');
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
-  const [loadingServiceTypes, setLoadingServiceTypes] = useState(true);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [deadline, setDeadline] = useState<Date | null>(null);
-  const [estimatedHours, setEstimatedHours] = useState<number>(0);
-  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Use react-hook-form for form handling
+  const form = useForm({
+    defaultValues: {
+      title: "",
+      description: "",
+      location: "",
+      technician: "",
+      serviceType: "inspection",
+      priority: "media",
+      dueDate: undefined as Date | undefined,
+      estimatedHours: 2,
+    }
+  });
 
-  // Load service types on component mount
   useEffect(() => {
-    const loadServiceTypes = async () => {
+    const fetchTeamMembers = async () => {
       try {
-        setLoadingServiceTypes(true);
-        const types = await getServiceTypes();
-        setServiceTypes(types);
-        console.log('Tipos de serviço carregados:', types);
+        const data = await getTeamMembers();
+        setTeamMembers(data);
       } catch (error) {
-        console.error('Erro ao carregar tipos de serviço:', error);
-        toast.error('Erro ao carregar tipos de serviço');
-      } finally {
-        setLoadingServiceTypes(false);
+        console.error("Error fetching team members:", error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar a equipe. Por favor, tente novamente.",
+          variant: "destructive",
+        });
       }
     };
-
-    loadServiceTypes();
-  }, []);
-
-  // Update fields when service type is selected
-  useEffect(() => {
-    if (serviceType) {
-      const selectedType = serviceTypes.find(type => type.id === serviceType);
-      if (selectedType) {
-        console.log('Tipo de serviço selecionado:', selectedType);
-        setEstimatedHours(selectedType.estimatedHours || 0);
-        if (selectedType.defaultPriority) {
-          setPriority(selectedType.defaultPriority);
-        }
-      }
-    }
-  }, [serviceType, serviceTypes]);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
-    
+    fetchTeamMembers();
+  }, [toast]);
+
+  // Handle form submission
+  const onSubmit = async (data: any) => {
     try {
-      setIsSubmitting(true);
+      setIsLoading(true);
+      const technician = teamMembers.find(member => member.id === data.technician);
       
-      console.log('Criando demanda para usuário autenticado...');
-      console.log('Usuário atual:', user);
-      
-      // Create demand - simplified without hierarchy checks
-      const newService = {
-        title,
-        description: description || '',
-        location,
-        priority,
-        status,
-        technician: {
-          id: '0',
-          name: 'Não atribuído',
-          avatar: '',
-          role: 'tecnico',
-        } as TeamMember,
-        customFields: customFields || [],
-        photos: photos || [],
-        dueDate: deadline ? deadline.toISOString() : undefined,
-        messages: [],
-        serviceType: serviceType || undefined,
-        estimatedHours: estimatedHours || 0,
-        creationDate: new Date().toISOString()
-      };
-      
-      console.log('Dados da demanda a ser criada:', newService);
-      
-      const result = await createService(newService);
-      if (result) {
-        toast.success('✅ Demanda criada com sucesso!', {
-          description: `A demanda "${title}" foi criada e está disponível para toda a equipe.`
-        });
-        navigate('/demandas');
-      } else {
-        throw new Error('Falha ao criar demanda - resposta vazia do servidor');
+      if (!technician) {
+        throw new Error("Técnico não encontrado");
       }
+      
+      const newService = await createService({
+        title: data.title,
+        description: data.description,
+        location: data.location,
+        technician: technician,
+        status: "pendente",
+        serviceType: data.serviceType,
+        priority: data.priority,
+        dueDate: data.dueDate ? data.dueDate.toISOString() : undefined,
+        date: new Date().toISOString(),
+        estimatedHours: data.estimatedHours,
+      });
+      
+      toast({
+        title: "Demanda criada",
+        description: `A demanda #${newService.id} foi criada com sucesso.`,
+      });
+      
+      // Navigate back to demands list
+      navigate('/demandas');
     } catch (error) {
-      console.error('Erro ao criar demanda:', error);
-      toast.error('❌ Erro ao criar demanda', {
-        description: 'Por favor, verifique os dados e tente novamente. Se o problema persistir, entre em contato com o suporte.'
+      console.error("Erro ao criar demanda:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a demanda. Tente novamente.",
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
-  };
-
-  // Form validation function
-  const validateForm = (): boolean => {
-    if (!title.trim()) {
-      toast.error('Por favor, insira um título para a demanda.');
-      return false;
-    }
-    
-    if (!location.trim()) {
-      toast.error('Por favor, insira uma localização para a demanda.');
-      return false;
-    }
-    
-    return true;
   };
 
   return (
-    <div className="container mx-auto p-4 pb-32">
-      <h1 className="text-2xl font-bold mb-6">Nova Demanda</h1>
-      
-      {/* User status */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          {user ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-green-600">
-                <span>✅ Usuário autenticado:</span>
-                <span className="font-medium">{user.name || user.email}</span>
-              </div>
-              <div className="text-sm text-blue-600">
-                ℹ️ Todos os usuários podem criar demandas sem restrições de hierarquia.
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-red-600">
-              ❌ Usuário não autenticado
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações Básicas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Título *</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Manutenção do ar-condicionado"
-                required
-              />
-            </div>
+    <div className="min-h-screen p-4 pb-20 page-transition">
+      <div className="flex items-center mb-6">
+        <Link to="/demandas" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
+          <ArrowLeft size={18} />
+        </Link>
+        <h1 className="text-xl font-bold">Nova Demanda</h1>
+      </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="serviceType">Tipo de Serviço</Label>
-              {loadingServiceTypes ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Carregando tipos de serviço...</span>
-                </div>
-              ) : (
-                <Select value={serviceType} onValueChange={setServiceType}>
-                  <SelectTrigger id="serviceType">
-                    <SelectValue placeholder="Selecione o tipo de serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {serviceType && (
-                <div className="text-sm text-muted-foreground">
-                  {serviceTypes.find(t => t.id === serviceType)?.description}
-                </div>
-              )}
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="location">Localização *</Label>
-              <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Ex: Sede Principal - 3º Andar"
-                required
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva o problema ou serviço necessário..."
-                className="min-h-[100px]"
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="priority">Prioridade</Label>
-                <Select value={priority} onValueChange={(value: ServicePriority) => setPriority(value)}>
-                  <SelectTrigger id="priority">
-                    <SelectValue placeholder="Selecione a prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                    <SelectItem value="media">Média</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="urgente">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={(value: ServiceStatus) => setStatus(value)}>
-                  <SelectTrigger id="status">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="estimatedHours">Horas Estimadas</Label>
-                <Input
-                  id="estimatedHours"
-                  type="number"
-                  value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                  placeholder="0"
-                  min="0"
-                  step="0.5"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <DeadlineManager value={deadline} onChange={setDeadline} />
-        
-        <CustomFieldManager 
-          fields={customFields} 
-          onChange={setCustomFields}
-        />
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Fotos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center p-4 text-muted-foreground">
-              Adicione fotos à sua demanda na página de detalhes após criar.
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className={`fixed ${isMobile ? 'bottom-24' : 'bottom-16'} left-0 right-0 pt-4 pb-4 bg-background flex justify-end gap-2 z-30 px-4 md:px-8 border-t shadow-md`}>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => navigate('/demandas')}
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              '✅ Salvar Demanda'
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Título</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ex: Vistoria João Silva" />
+                </FormControl>
+              </FormItem>
             )}
-          </Button>
-        </div>
-      </form>
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    {...field} 
+                    placeholder="Descreva os detalhes da demanda"
+                    rows={3}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Local</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ex: Av. Paulista, 1000" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="serviceType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Serviço</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="inspection">Vistoria</SelectItem>
+                      <SelectItem value="installation">Instalação</SelectItem>
+                      <SelectItem value="maintenance">Manutenção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prioridade</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a prioridade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="baixa">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
+                          Baixa
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="media">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
+                          Média
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="alta">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-orange-500 mr-2"></div>
+                          Alta
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="urgente">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                          Urgente
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data de Vencimento</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: ptBR })
+                          ) : (
+                            <span>Selecionar data</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Data limite para conclusão da demanda
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="estimatedHours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tempo Estimado (horas)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      onChange={e => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Estimativa de tempo para a execução
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="technician"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Técnico Responsável</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o técnico" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {teamMembers
+                      .filter(member => member.role === "tecnico")
+                      .map(technician => (
+                        <SelectItem 
+                          key={technician.id} 
+                          value={technician.id}
+                          className="flex items-center"
+                        >
+                          <div className="flex items-center">
+                            <TeamMemberAvatar
+                              src={technician.avatar}
+                              name={technician.name}
+                              size="sm"
+                              className="mr-2"
+                            />
+                            {technician.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+
+          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
+            <div className="flex justify-between items-center max-w-md mx-auto">
+              <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                <Save size={16} className="mr-2" />
+                {isLoading ? "Criando..." : "Criar Demanda"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };
 
 export default NewService;
+
+function cn(...classes: any[]): string {
+  return classes.filter(Boolean).join(' ');
+}

@@ -15,7 +15,6 @@ export type Database = {
           created_at: string | null
           id: string
           name: string | null
-          team_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -23,7 +22,6 @@ export type Database = {
           created_at?: string | null
           id: string
           name?: string | null
-          team_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -31,18 +29,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string | null
-          team_id?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       report_data: {
         Row: {
@@ -230,101 +219,33 @@ export type Database = {
           },
         ]
       }
-      service_types: {
-        Row: {
-          created_at: string
-          default_priority: string | null
-          description: string | null
-          estimated_hours: number | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          default_priority?: string | null
-          description?: string | null
-          estimated_hours?: number | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          default_priority?: string | null
-          description?: string | null
-          estimated_hours?: number | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       services: {
         Row: {
           created_at: string
-          description: string | null
           id: string
           location: string
           number: string
           status: string
-          team_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
           created_at?: string
-          description?: string | null
           id?: string
           location: string
           number: string
           status?: string
-          team_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           created_at?: string
-          description?: string | null
           id?: string
           location?: string
           number?: string
           status?: string
-          team_id?: string | null
           title?: string
           updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_services_team_id"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teams: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          invite_code: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          invite_code: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          invite_code?: string
-          name?: string
         }
         Relationships: []
       }
@@ -358,14 +279,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      create_team: {
-        Args: { name: string; creator_id: string }
-        Returns: string
-      }
-      generate_random_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       get_service_messages: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -385,10 +298,6 @@ export type Database = {
       has_permission: {
         Args: { user_id: string; required_role: string }
         Returns: boolean
-      }
-      join_team_by_code: {
-        Args: { user_id: string; code: string }
-        Returns: string
       }
       nextval_for_service: {
         Args: Record<PropertyKey, never>

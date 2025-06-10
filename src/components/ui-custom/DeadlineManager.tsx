@@ -5,11 +5,6 @@ import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow, parseISO, differenceInDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ServicePriority } from '@/types/serviceTypes';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface DeadlineManagerProps {
   dueDate?: string | null;
@@ -17,8 +12,6 @@ interface DeadlineManagerProps {
   priority?: ServicePriority;
   completed?: boolean;
   compact?: boolean;
-  value?: Date | null;
-  onChange?: (date: Date | null) => void;
 }
 
 export const DeadlineManager: React.FC<DeadlineManagerProps> = ({ 
@@ -26,55 +19,9 @@ export const DeadlineManager: React.FC<DeadlineManagerProps> = ({
   creationDate, 
   priority = 'media',
   completed = false,
-  compact = false,
-  value,
-  onChange
+  compact = false
 }) => {
-  // Se onChange estiver presente, considere que esse é o modo de edição
-  const isEditMode = !!onChange;
-  
-  // Se estiver no modo de edição, renderize o seletor de data
-  if (isEditMode) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Prazo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2">
-            <Label>Data de Vencimento</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left">
-                  {value ? format(value, "dd/MM/yyyy") : "Selecionar data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={value || undefined}
-                  onSelect={onChange}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            
-            {value && (
-              <Button 
-                variant="ghost" 
-                className="mt-2" 
-                onClick={() => onChange && onChange(null)}
-              >
-                Remover prazo
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  // Se não houver due date ou se estiver completo, mostre um status simples
+  // If there's no due date or it's completed, show a simple status
   if (!dueDate || completed) {
     return (
       <div className={`flex items-center mt-2 text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>
@@ -86,7 +33,6 @@ export const DeadlineManager: React.FC<DeadlineManagerProps> = ({
     );
   }
 
-  // Resto do código existente para mostrar o status de prazo
   try {
     const dueDateTime = parseISO(dueDate);
     const today = new Date();

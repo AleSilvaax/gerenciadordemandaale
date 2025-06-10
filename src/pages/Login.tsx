@@ -1,15 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, UserPlus, Info, AlertCircle } from 'lucide-react';
+import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
-import { cleanupAuthState } from '@/utils/authCleanup';
+import { toast } from '@/hooks/use-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,32 +16,19 @@ const Login: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { login, user, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
   
   useEffect(() => {
-    // Limpar estado ao montar o componente
-    cleanupAuthState();
+    // Reset submission state when component unmounts
+    return () => {
+      if (isSubmitting) {
+        setIsSubmitting(false);
+      }
+    };
   }, []);
 
-  // Se o usuário já está logado, redirecionar para home
-  useEffect(() => {
-    if (user && !authLoading) {
-      console.log("Usuário autenticado, redirecionando para home");
-      navigate('/', { replace: true });
-    }
-  }, [user, authLoading, navigate]);
-
-  // Mostrar loading durante verificação inicial de auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 size={40} className="animate-spin" />
-      </div>
-    );
-  }
-
-  // Se usuário já está logado, não mostrar formulário
+  // If user is already logged in, redirect to home
   if (user) {
+    console.log("User already logged in, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
@@ -67,28 +53,29 @@ const Login: React.FC = () => {
       const success = await login(email, password);
       console.log("Login result:", success);
       
-      if (success) {
-        toast.success("Login realizado com sucesso!");
-        // O useEffect acima fará o redirect quando o user for atualizado
-      } else {
+      if (!success) {
         setErrorMsg("Email ou senha inválidos");
-        toast.error("Erro no login", {
+        toast({
+          title: "Erro no login",
           description: "Verifique suas credenciais e tente novamente",
+          variant: "destructive",
         });
+        setIsSubmitting(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      setErrorMsg(error.message || "Erro ao fazer login. Verifique suas credenciais e tente novamente.");
-      toast.error("Erro no login", {
-        description: error.message || "Ocorreu um problema ao processar seu login",
+      setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
+      toast({
+        title: "Erro no login",
+        description: "Ocorreu um problema ao processar seu login",
+        variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleDemoLogin = async (role: string) => {
-    if (isSubmitting) return;
+    if (isSubmitting) return; // Prevent multiple submissions
     
     let demoEmail = '';
     let demoPassword = '123456';
@@ -110,26 +97,29 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
     setErrorMsg(null);
     
+    // Automatically submit after setting credentials
     try {
       console.log("Using demo login with role:", role, "email:", demoEmail);
       const success = await login(demoEmail, demoPassword);
       console.log("Demo login result:", success);
       
-      if (success) {
-        toast.success("Login realizado com sucesso!");
-      } else {
+      if (!success) {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
-        toast.error("Erro no login com demo", {
+        toast({
+          title: "Erro no login com demo",
           description: "Não foi possível acessar com as credenciais de demonstração",
+          variant: "destructive",
         });
+        setIsSubmitting(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Demo login error:", error);
-      setErrorMsg(error.message || "Erro ao fazer login com credenciais de demonstração");
-      toast.error("Erro no login com demo", {
-        description: error.message || "Não foi possível acessar com as credenciais de demonstração",
+      setErrorMsg("Erro ao fazer login com credenciais de demonstração");
+      toast({
+        title: "Erro no login com demo",
+        description: "Não foi possível acessar com as credenciais de demonstração",
+        variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -152,7 +142,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('tecnico')}
-                disabled={isSubmitting || authLoading}
+                disabled={isSubmitting}
               >
                 Técnico
               </Button>
@@ -161,7 +151,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('administrador')}
-                disabled={isSubmitting || authLoading}
+                disabled={isSubmitting}
               >
                 Administrador
               </Button>
@@ -170,7 +160,7 @@ const Login: React.FC = () => {
                 size="sm" 
                 className="text-xs hover-scale"
                 onClick={() => handleDemoLogin('gestor')}
-                disabled={isSubmitting || authLoading}
+                disabled={isSubmitting}
               >
                 Gestor
               </Button>
@@ -193,7 +183,6 @@ const Login: React.FC = () => {
             <CardContent className="space-y-4">
               {errorMsg && (
                 <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4 mr-2" />
                   <AlertDescription>{errorMsg}</AlertDescription>
                 </Alert>
               )}
@@ -208,7 +197,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="transition-medium"
-                  disabled={isSubmitting || authLoading}
+                  disabled={isSubmitting}
                 />
               </div>
               
@@ -222,7 +211,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="transition-medium"
-                  disabled={isSubmitting || authLoading}
+                  disabled={isSubmitting}
                 />
               </div>
             </CardContent>
@@ -231,9 +220,9 @@ const Login: React.FC = () => {
               <Button 
                 type="submit" 
                 className="w-full transition-medium hover-scale" 
-                disabled={isSubmitting || authLoading}
+                disabled={isSubmitting}
               >
-                {isSubmitting || authLoading ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
                     Entrando...
