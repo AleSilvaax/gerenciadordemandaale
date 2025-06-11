@@ -1217,5 +1217,3 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 };
 
 export default ServiceDetail;
-
-}
