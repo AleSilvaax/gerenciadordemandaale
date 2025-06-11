@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,7 +63,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', authUser.id)
         .single();
 
-      const userRole = roleData?.role || 'tecnico';
+      // Cast the role to UserRole type with a fallback
+      const userRole = (roleData?.role === 'administrador' || 
+                       roleData?.role === 'gestor' || 
+                       roleData?.role === 'tecnico') 
+                       ? roleData.role as any 
+                       : 'tecnico' as any;
 
       const authUserData: AuthUser = {
         id: authUser.id,

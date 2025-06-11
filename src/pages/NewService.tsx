@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createService, getTeamMembers, getServiceTypes } from "@/services/api";
-import { TeamMember } from "@/types/serviceTypes";
+import { TeamMember, ServiceType } from "@/types/serviceTypes";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -30,7 +29,7 @@ const NewService: React.FC = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTechnician, setSelectedTechnician] = useState<TeamMember | null>(null);
-  const [selectedServiceType, setSelectedServiceType] = useState("");
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>("Vistoria");
   const [priority, setPriority] = useState("media");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
@@ -75,10 +74,11 @@ const NewService: React.FC = () => {
         },
         creationDate: new Date().toISOString(),
         messages: [],
-        serviceType: selectedServiceType || 'Vistoria',
+        serviceType: selectedServiceType,
         priority: priority as any,
         dueDate: dueDate?.toISOString(),
         description,
+        createdBy: user?.id,
       };
 
       console.log("Creating service with data:", serviceData);
@@ -136,31 +136,19 @@ const NewService: React.FC = () => {
 
             <div className="space-y-2">
               <Label htmlFor="serviceType">Tipo de Serviço</Label>
-              <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
+              <Select value={selectedServiceType} onValueChange={(value: ServiceType) => setSelectedServiceType(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo de serviço" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Vistoria">Vistoria</SelectItem>
+                  <SelectItem value="Instalação">Instalação</SelectItem>
+                  <SelectItem value="Manutenção">Manutenção</SelectItem>
                   {serviceTypes.map((type) => (
                     <SelectItem key={type.id} value={type.name}>
                       {type.name} - {type.description}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="priority">Prioridade</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

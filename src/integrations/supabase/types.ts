@@ -263,10 +263,14 @@ export type Database = {
       services: {
         Row: {
           created_at: string
+          created_by: string | null
           description: string | null
+          due_date: string | null
           id: string
           location: string
           number: string
+          priority: string | null
+          service_type: string | null
           status: string
           team_id: string | null
           title: string
@@ -274,10 +278,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           location: string
           number: string
+          priority?: string | null
+          service_type?: string | null
           status?: string
           team_id?: string | null
           title: string
@@ -285,10 +293,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           location?: string
           number?: string
+          priority?: string | null
+          service_type?: string | null
           status?: string
           team_id?: string | null
           title?: string

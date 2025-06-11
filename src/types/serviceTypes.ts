@@ -1,6 +1,8 @@
+
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
+export type ServiceType = "Vistoria" | "Instalação" | "Manutenção";
 
 export interface TeamMember {
   id: string;
@@ -43,6 +45,8 @@ export interface Service {
   priority?: ServicePriority;
   dueDate?: string;
   creationDate?: string;
+  createdBy?: string;
+  serviceType?: ServiceType;
   reportData?: ReportData;
   photos?: string[];
   signatures?: {
@@ -56,7 +60,6 @@ export interface Service {
   address?: string;
   city?: string;
   notes?: string;
-  serviceType?: "inspection" | "installation" | "maintenance";
   estimatedHours?: number;
   photoTitles?: string[];
   messages?: ServiceMessage[];

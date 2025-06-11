@@ -1,4 +1,3 @@
-
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -57,10 +56,10 @@ export const getServices = async (): Promise<Service[]> => {
         technician: technician,
         creationDate: service.created_at,
         messages: messages,
-        dueDate: service.due_date,
-        priority: service.priority,
-        serviceType: service.service_type,
-        createdBy: service.created_by,
+        dueDate: service.due_date || undefined,
+        priority: service.priority || undefined,
+        serviceType: service.service_type || undefined,
+        createdBy: service.created_by || undefined,
       };
     });
     
@@ -160,10 +159,10 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
         role: 'tecnico',
       },
       creationDate: data.created_at,
-      dueDate: data.due_date,
-      priority: data.priority,
-      serviceType: data.service_type,
-      createdBy: data.created_by,
+      dueDate: data.due_date || undefined,
+      priority: data.priority || undefined,
+      serviceType: data.service_type || undefined,
+      createdBy: data.created_by || undefined,
       messages: [],
     };
 
@@ -359,7 +358,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
       id: profile.id,
       name: profile.name || 'Sem nome',
       avatar: profile.avatar || '',
-      role: profile.user_roles?.[0]?.role || 'tecnico',
+      role: (profile.user_roles?.[0]?.role || 'tecnico') as any,
     }));
     
     console.log('Team members fetched:', teamMembers);
