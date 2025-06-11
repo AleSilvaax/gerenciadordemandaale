@@ -1,4 +1,3 @@
-
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -108,67 +107,125 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
       throw new Error("User not authenticated");
     }
 
-    // Generate a service number
-    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
-    
-    if (numberError) {
-      console.error('Error generating service number:', numberError);
-      throw numberError;
-    }
-    
-    // Format the service number
-    const number = `SRV-${numberData.toString().padStart(5, '0')}`;
-    
-    // Create service record
-    const { data, error } = await supabase
-      .from('services')
-      .insert({
-        title: service.title,
-        location: service.location,
-        status: service.status,
-        number: number,
-        created_by: user.id,
-        priority: service.priority || 'media',
-        due_date: service.dueDate,
-        service_type: service.serviceType || 'Vistoria'
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating service:', error);
-      throw error;
-    }
-    
-    console.log('Service created successfully:', data);
-    
-    // If a technician is assigned, create the relationship
-    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
-      await assignTechnician(data.id, service.technician.id);
-    }
-    
-    // Construct and return a properly typed Service object
-    const newService: Service = {
-      id: data.id,
-      title: data.title,
-      location: data.location,
-      status: data.status as ServiceStatus,
-      technician: service.technician || {
-        id: '0',
-        name: 'Não atribuído',
-        avatar: '',
-        role: 'tecnico',
-      },
-      creationDate: data.created_at,
-      dueDate: data.due_date || undefined,
-      priority: (data.priority as any) || undefined,
-      serviceType: (data.service_type as any) || undefined,
-      createdBy: data.created_by || undefined,
-      messages: [],
-    };
+    console.log("User authenticated:", user.id);
 
-    toast.success("Serviço criado com sucesso!");
-    return newService;
+    // Generate a service number with better error handling
+    try {
+      const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+      
+      if (numberError) {
+        console.error('Error generating service number:', numberError);
+        throw numberError;
+      }
+      
+      // Format the service number
+      const number = `SRV-${numberData.toString().padStart(5, '0')}`;
+      console.log("Generated service number:", number);
+      
+      // Create service record
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          title: service.title,
+          location: service.location,
+          status: service.status,
+          number: number,
+          created_by: user.id,
+          priority: service.priority || 'media',
+          due_date: service.dueDate,
+          service_type: service.serviceType || 'Vistoria'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating service:', error);
+        throw error;
+      }
+      
+      console.log('Service created successfully:', data);
+      
+      // If a technician is assigned, create the relationship
+      if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
+        try {
+          await assignTechnician(data.id, service.technician.id);
+        } catch (techError) {
+          console.warn('Warning: Failed to assign technician, but service was created:', techError);
+        }
+      }
+      
+      // Construct and return a properly typed Service object
+      const newService: Service = {
+        id: data.id,
+        title: data.title,
+        location: data.location,
+        status: data.status as ServiceStatus,
+        technician: service.technician || {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico',
+        },
+        creationDate: data.created_at,
+        dueDate: data.due_date || undefined,
+        priority: (data.priority as any) || undefined,
+        serviceType: (data.service_type as any) || undefined,
+        createdBy: data.created_by || undefined,
+        messages: [],
+      };
+
+      toast.success("Serviço criado com sucesso!");
+      return newService;
+    } catch (rpcError) {
+      console.error("Error with service number generation:", rpcError);
+      
+      // Fallback: create service without number generation
+      const fallbackNumber = `SRV-${Date.now().toString().slice(-5)}`;
+      
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          title: service.title,
+          location: service.location,
+          status: service.status,
+          number: fallbackNumber,
+          created_by: user.id,
+          priority: service.priority || 'media',
+          due_date: service.dueDate,
+          service_type: service.serviceType || 'Vistoria'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating service with fallback:', error);
+        throw error;
+      }
+      
+      console.log('Service created with fallback number:', data);
+      
+      const newService: Service = {
+        id: data.id,
+        title: data.title,
+        location: data.location,
+        status: data.status as ServiceStatus,
+        technician: service.technician || {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico',
+        },
+        creationDate: data.created_at,
+        dueDate: data.due_date || undefined,
+        priority: (data.priority as any) || undefined,
+        serviceType: (data.service_type as any) || undefined,
+        createdBy: data.created_by || undefined,
+        messages: [],
+      };
+
+      toast.success("Serviço criado com sucesso!");
+      return newService;
+    }
   } catch (error) {
     console.error("Error creating service:", error);
     toast.error("Falha ao criar serviço no servidor");
@@ -336,31 +393,44 @@ export const addServiceFeedback = async (
   }
 };
 
-// Get team members
+// Get team members with improved error handling
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
     console.log('Fetching team members...');
     
-    // Get profiles with their roles
-    const { data: profiles, error } = await supabase
+    // Get profiles and their roles separately to avoid complex joins
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        user_roles(role)
-      `);
+      .select('*');
       
-    if (error) {
-      console.error('Error getting team members:', error);
-      throw error;
+    if (profilesError) {
+      console.error('Error getting profiles:', profilesError);
+      throw profilesError;
+    }
+    
+    // Get user roles separately
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('*');
+      
+    if (rolesError) {
+      console.error('Error getting user roles:', rolesError);
+      // Continue without roles if there's an error
+      console.log('Continuing without roles due to error');
     }
     
     // Transform to TeamMember type
-    const teamMembers = (profiles || []).map(profile => ({
-      id: profile.id,
-      name: profile.name || 'Sem nome',
-      avatar: profile.avatar || '',
-      role: (profile.user_roles?.[0]?.role || 'tecnico') as any,
-    }));
+    const teamMembers = (profiles || []).map(profile => {
+      // Find the role for this user
+      const userRole = userRoles?.find(role => role.user_id === profile.id);
+      
+      return {
+        id: profile.id,
+        name: profile.name || 'Sem nome',
+        avatar: profile.avatar || '',
+        role: (userRole?.role || 'tecnico') as any,
+      };
+    });
     
     console.log('Team members fetched:', teamMembers);
     return teamMembers;

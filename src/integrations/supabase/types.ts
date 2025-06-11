@@ -378,6 +378,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_service_messages: {
         Args: Record<PropertyKey, never>
         Returns: {
