@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { Service } from "@/types/serviceTypes";
@@ -95,8 +94,8 @@ export const exportStatisticsToPDF = (services: Service[]): void => {
   const completedServices = services.filter(s => s.status === "concluido").length;
   const canceledServices = services.filter(s => s.status === "cancelado").length;
   
-  const inspectionServices = services.filter(s => s.serviceType === "inspection").length;
-  const installationServices = services.filter(s => s.serviceType === "installation").length;
+  const inspectionServices = services.filter(s => s.serviceType === "Vistoria").length;
+  const installationServices = services.filter(s => s.serviceType === "Instalação").length;
   
   // Group by month
   const monthlyData = Array(12).fill(0);

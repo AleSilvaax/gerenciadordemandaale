@@ -49,9 +49,9 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         setService(data);
         
         // Set active tab based on service status
-        if (data.status === "concluido") {
+        if (data?.status === "concluido") {
           setActiveTab("feedback");
-        } else if (data.status === "pendente" && data.serviceType === "installation") {
+        } else if (data?.status === "pendente" && data?.serviceType === "Instalação") {
           setActiveTab("report");
         }
       } catch (error) {
@@ -100,7 +100,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
-  const updateServiceStatus = async (newStatus: 'pendente' | 'concluido' | 'cancelado', serviceType?: 'inspection' | 'installation') => {
+  const updateServiceStatus = async (newStatus: 'pendente' | 'concluido' | 'cancelado', serviceType?: 'Vistoria' | 'Instalação') => {
     if (!service || !id) return;
     
     setStatusUpdating(true);
@@ -117,7 +117,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       toast.success(`Status da demanda atualizado para ${newStatus}`);
       
       // If transitioning from inspection to installation
-      if (service.serviceType === 'inspection' && serviceType === 'installation') {
+      if (service.serviceType === 'Vistoria' && serviceType === 'Instalação') {
         toast.info('Demanda convertida de Vistoria para Instalação');
         setActiveTab('report');
       }
@@ -371,7 +371,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              {service.serviceType === 'installation' ? 'Instalação' : 'Vistoria'}: {service.title}
+              {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}: {service.title}
             </h1>
             <div className="flex items-center mt-1 text-sm text-muted-foreground">
               <Badge 
@@ -630,14 +630,14 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Tipo de serviço: <span className="font-semibold">
-                      {service.serviceType === 'installation' ? 'Instalação' : 'Vistoria'}
+                      {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}
                     </span>
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {service.serviceType === 'inspection' && service.status === 'pendente' && (
+                  {service.serviceType === 'Vistoria' && service.status === 'pendente' && (
                     <Button 
-                      onClick={() => updateServiceStatus('pendente', 'installation')}
+                      onClick={() => updateServiceStatus('pendente', 'Instalação')}
                       disabled={statusUpdating}
                       variant="outline"
                     >
@@ -680,12 +680,12 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">
-                Dados para o Relatório de {service.serviceType === 'installation' ? 'Instalação' : 'Vistoria'}
+                Dados para o Relatório de {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}
               </h3>
               
               <Form {...reportForm}>
                 <form className="space-y-6" onSubmit={reportForm.handleSubmit(handleSaveReportData)}>
-                  {service.serviceType === 'inspection' ? (
+                  {service.serviceType === 'Vistoria' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={reportForm.control}
@@ -1217,3 +1217,5 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 };
 
 export default ServiceDetail;
+
+}

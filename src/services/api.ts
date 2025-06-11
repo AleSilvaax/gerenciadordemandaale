@@ -1,3 +1,4 @@
+
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -57,8 +58,8 @@ export const getServices = async (): Promise<Service[]> => {
         creationDate: service.created_at,
         messages: messages,
         dueDate: service.due_date || undefined,
-        priority: service.priority || undefined,
-        serviceType: service.service_type || undefined,
+        priority: (service.priority as any) || undefined,
+        serviceType: (service.service_type as any) || undefined,
         createdBy: service.created_by || undefined,
       };
     });
@@ -160,8 +161,8 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
       },
       creationDate: data.created_at,
       dueDate: data.due_date || undefined,
-      priority: data.priority || undefined,
-      serviceType: data.service_type || undefined,
+      priority: (data.priority as any) || undefined,
+      serviceType: (data.service_type as any) || undefined,
       createdBy: data.created_by || undefined,
       messages: [],
     };
