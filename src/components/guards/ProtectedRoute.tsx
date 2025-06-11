@@ -9,24 +9,26 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  requiredPermission,
   children
 }) => {
-  const { user, hasPermission } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
+
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // If user is not logged in, redirect to login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If route requires specific permission and user doesn't have it
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    // Redirect to unauthorized page or home
-    return <Navigate to="/" replace />;
-  }
-
-  // User is authenticated and has permission
+  // User is authenticated - no permission checks for now
   // If children are provided, render them, otherwise use Outlet for nested routes
   return children ? <>{children}</> : <Outlet />;
 };

@@ -1,368 +1,253 @@
 
-import React from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Save, CalendarIcon, Clock, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormDescription,
-} from "@/components/ui/form";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createService, getTeamMembers, getServiceTypes } from "@/services/api";
+import { TeamMember } from "@/types/serviceTypes";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useForm } from "react-hook-form";
-import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { getTeamMembers } from "@/services/api";
-import { createService } from "@/services/api";
-import { useState, useEffect } from "react";
-import { TeamMember } from "@/types/serviceTypes";
 
-const NewService = () => {
+const NewService: React.FC = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
   
-  // Use react-hook-form for form handling
-  const form = useForm({
-    defaultValues: {
-      title: "",
-      description: "",
-      location: "",
-      technician: "",
-      serviceType: "inspection",
-      priority: "media",
-      dueDate: undefined as Date | undefined,
-      estimatedHours: 2,
-    }
-  });
+  // Form state
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedTechnician, setSelectedTechnician] = useState<TeamMember | null>(null);
+  const [selectedServiceType, setSelectedServiceType] = useState("");
+  const [priority, setPriority] = useState("media");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
-    const fetchTeamMembers = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getTeamMembers();
-        setTeamMembers(data);
+        const [members, types] = await Promise.all([
+          getTeamMembers(),
+          getServiceTypes()
+        ]);
+        setTeamMembers(members);
+        setServiceTypes(types);
       } catch (error) {
-        console.error("Error fetching team members:", error);
-        toast({
-          title: "Erro",
-          description: "Falha ao carregar a equipe. Por favor, tente novamente.",
-          variant: "destructive",
-        });
+        console.error("Error fetching data:", error);
+        toast.error("Erro ao carregar dados");
       }
     };
     
-    fetchTeamMembers();
-  }, [toast]);
+    fetchData();
+  }, []);
 
-  // Handle form submission
-  const onSubmit = async (data: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !location.trim()) {
+      toast.error("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-      const technician = teamMembers.find(member => member.id === data.technician);
+      const serviceData = {
+        title: title.trim(),
+        location: location.trim(),
+        status: "pendente" as const,
+        technician: selectedTechnician || {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico' as const,
+        },
+        creationDate: new Date().toISOString(),
+        messages: [],
+        serviceType: selectedServiceType || 'Vistoria',
+        priority: priority as any,
+        dueDate: dueDate?.toISOString(),
+        description,
+      };
+
+      console.log("Creating service with data:", serviceData);
       
-      if (!technician) {
-        throw new Error("Técnico não encontrado");
-      }
+      await createService(serviceData);
       
-      const newService = await createService({
-        title: data.title,
-        description: data.description,
-        location: data.location,
-        technician: technician,
-        status: "pendente",
-        serviceType: data.serviceType,
-        priority: data.priority,
-        dueDate: data.dueDate ? data.dueDate.toISOString() : undefined,
-        date: new Date().toISOString(),
-        estimatedHours: data.estimatedHours,
-      });
-      
-      toast({
-        title: "Demanda criada",
-        description: `A demanda #${newService.id} foi criada com sucesso.`,
-      });
-      
-      // Navigate back to demands list
-      navigate('/demandas');
+      toast.success("Demanda criada com sucesso!");
+      navigate("/demandas");
     } catch (error) {
-      console.error("Erro ao criar demanda:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a demanda. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error("Error creating service:", error);
+      toast.error("Erro ao criar demanda. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleTechnicianSelect = (technicianId: string) => {
+    if (technicianId === "none") {
+      setSelectedTechnician(null);
+    } else {
+      const technician = teamMembers.find(t => t.id === technicianId);
+      setSelectedTechnician(technician || null);
+    }
+  };
+
   return (
-    <div className="min-h-screen p-4 pb-20 page-transition">
-      <div className="flex items-center mb-6">
-        <Link to="/demandas" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
-          <ArrowLeft size={18} />
-        </Link>
-        <h1 className="text-xl font-bold">Nova Demanda</h1>
-      </div>
+    <div className="container py-4 max-w-2xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Nova Demanda</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título da Demanda *</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Digite o título da demanda"
+                required
+              />
+            </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Título</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ex: Vistoria João Silva" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+            <div className="space-y-2">
+              <Label htmlFor="location">Local *</Label>
+              <Input
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Digite o local do serviço"
+                required
+              />
+            </div>
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Descrição</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    {...field} 
-                    placeholder="Descreva os detalhes da demanda"
-                    rows={3}
+            <div className="space-y-2">
+              <Label htmlFor="serviceType">Tipo de Serviço</Label>
+              <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      {type.name} - {type.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="priority">Prioridade</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data de Vencimento</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
                   />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                </PopoverContent>
+              </Popover>
+            </div>
 
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Local</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ex: Av. Paulista, 1000" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+            <div className="space-y-2">
+              <Label>Técnico Responsável</Label>
+              <Select 
+                value={selectedTechnician?.id || "none"} 
+                onValueChange={handleTechnicianSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um técnico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não atribuído</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center space-x-2">
+                        <TeamMemberAvatar 
+                          src={member.avatar} 
+                          name={member.name} 
+                          size="sm" 
+                        />
+                        <span>{member.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="serviceType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Serviço</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="inspection">Vistoria</SelectItem>
-                      <SelectItem value="installation">Instalação</SelectItem>
-                      <SelectItem value="maintenance">Manutenção</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descreva os detalhes da demanda"
+                rows={3}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prioridade</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a prioridade" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="baixa">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
-                          Baixa
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="media">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
-                          Média
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="alta">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 rounded-full bg-orange-500 mr-2"></div>
-                          Alta
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="urgente">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                          Urgente
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data de Vencimento</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: ptBR })
-                          ) : (
-                            <span>Selecionar data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormDescription>
-                    Data limite para conclusão da demanda
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="estimatedHours"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tempo Estimado (horas)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Estimativa de tempo para a execução
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="technician"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Técnico Responsável</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o técnico" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {teamMembers
-                      .filter(member => member.role === "tecnico")
-                      .map(technician => (
-                        <SelectItem 
-                          key={technician.id} 
-                          value={technician.id}
-                          className="flex items-center"
-                        >
-                          <div className="flex items-center">
-                            <TeamMemberAvatar
-                              src={technician.avatar}
-                              name={technician.name}
-                              size="sm"
-                              className="mr-2"
-                            />
-                            {technician.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-
-          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-white/10 p-4 z-10">
-            <div className="flex justify-between items-center max-w-md mx-auto">
-              <Button type="button" variant="outline" onClick={() => navigate('/demandas')}>
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/demandas")}
+                className="flex-1"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                <Save size={16} className="mr-2" />
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="flex-1"
+              >
                 {isLoading ? "Criando..." : "Criar Demanda"}
               </Button>
             </div>
-          </div>
-        </form>
-      </Form>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default NewService;
-
-function cn(...classes: any[]): string {
-  return classes.filter(Boolean).join(' ');
-}

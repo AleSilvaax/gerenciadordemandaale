@@ -1,7 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
 import { getServices, getTeamMembers } from "@/services/api";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
@@ -25,8 +25,12 @@ const Index: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const servicesData = await getServices();
-        const teamData = await getTeamMembers();
+        console.log('Fetching dashboard data...');
+        const [servicesData, teamData] = await Promise.all([
+          getServices(),
+          getTeamMembers()
+        ]);
+        console.log('Dashboard data loaded:', { services: servicesData.length, team: teamData.length });
         setServices(servicesData);
         setTeamMembers(teamData);
       } catch (error) {
@@ -37,8 +41,10 @@ const Index: React.FC = () => {
       }
     };
     
-    fetchData();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
   
   // Calculate statistics
   const pendingServices = services.filter(
@@ -92,16 +98,26 @@ const Index: React.FC = () => {
     toast(message);
   };
 
+  if (!user) {
+    return (
+      <div className="container py-4 space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">Sistema de Gestão de Demandas</h1>
+          <p className="text-muted-foreground mb-6">Faça login para acessar o sistema</p>
+          <Button onClick={() => navigate("/login")}>Fazer Login</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-4 space-y-6 pb-24">
       <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
         <h1 className="text-3xl font-bold text-foreground">
-          {user ? `Olá, ${user.name.split(' ')[0]}!` : 'Dashboard'}
+          Olá, {user.name.split(' ')[0]}!
         </h1>
         
-        {(user?.role === 'administrador' || user?.role === 'gestor') && (
-          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
-        )}
+        <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -203,7 +219,9 @@ const Index: React.FC = () => {
                 className="mb-2 cursor-pointer hover:scale-105 transition-transform"
               />
               <span className="text-sm font-medium line-clamp-1">{member.name}</span>
-              <span className="text-xs text-muted-foreground line-clamp-1">{member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">
+                {member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}
+              </span>
             </div>
           ))}
         </div>

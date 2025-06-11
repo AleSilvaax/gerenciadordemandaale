@@ -1,242 +1,130 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from '@/hooks/use-toast';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
-import { UserRole } from '@/types/serviceTypes';
-import { updateUserProfile, fetchUserProfile } from '@/services/profileService';
+import { fetchUserProfile, updateUserProfile } from '@/services/profileService';
+import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo users for testing when not using Supabase
-const demoUsers: AuthUser[] = [
-  {
-    id: "user-1",
-    name: "João Silva",
-    avatar: "/avatars/user-1.png",
-    role: "tecnico",
-    email: "joao@exemplo.com",
-    phone: "(11) 98765-4321",
-    permissions: ['view_services', 'update_services']
-  },
-  {
-    id: "user-2",
-    name: "Maria Oliveira",
-    avatar: "/avatars/user-2.png",
-    role: "administrador",
-    email: "maria@exemplo.com",
-    phone: "(11) 91234-5678",
-    permissions: ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats']
-  },
-  {
-    id: "user-3",
-    name: "Carlos Santos",
-    avatar: "/avatars/user-3.png",
-    role: "gestor",
-    email: "carlos@exemplo.com",
-    phone: "(11) 99876-5432",
-    permissions: ['view_services', 'update_services', 'view_stats']
-  }
-];
-
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Check for saved session on mount
+
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        console.log("Checking auth session...");
-        setIsLoading(true);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
         
-        // Check for demo user in localStorage first for faster loading
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          try {
-            const parsedUser = JSON.parse(savedUser);
-            console.log('Found user in localStorage:', parsedUser.email);
-            setUser(parsedUser);
-            setIsLoading(false);
-            return;
-          } catch (error) {
-            console.error('Failed to parse saved user', error);
-            localStorage.removeItem('user');
-          }
+        if (session?.user) {
+          // Defer profile loading to prevent deadlocks
+          setTimeout(async () => {
+            await loadUserProfile(session.user);
+          }, 0);
+        } else {
+          setUser(null);
         }
         
-        // Get current session (without using the problematic onAuthStateChange)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Error getting session:', sessionError);
-          setIsLoading(false);
-          return;
-        }
-        
-        if (!session) {
-          console.log('No existing session');
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Existing session found:', session.user.email);
-        
-        try {
-          // Try to fetch the user profile from Supabase first
-          const profileData = await fetchUserProfile(session.user.id);
-          
-          // Create a user object combining session and profile data
-          const authUser: AuthUser = {
-            id: session.user.id,
-            email: session.user.email,
-            name: profileData?.name || session.user.user_metadata?.name || 'Usuário',
-            avatar: profileData?.avatar || session.user.user_metadata?.avatar || '/placeholder.svg',
-            role: (profileData?.role || session.user.user_metadata?.role) as UserRole || 'tecnico',
-            phone: profileData?.phone || session.user.user_metadata?.phone,
-            permissions: getPermissionsByRole((profileData?.role || session.user.user_metadata?.role) as UserRole || 'tecnico')
-          };
-          
-          setUser(authUser);
-          // Also save to localStorage for faster loading next time
-          localStorage.setItem('user', JSON.stringify(authUser));
-        } catch (error) {
-          console.error('Error processing session:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
         setIsLoading(false);
       }
-    };
-    
-    checkSession();
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
+      setSession(session);
+      
+      if (session?.user) {
+        setTimeout(async () => {
+          await loadUserProfile(session.user);
+        }, 0);
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
-  
-  // Helper function to get permissions based on role
-  const getPermissionsByRole = (role: UserRole): string[] => {
-    switch (role) {
-      case 'administrador':
-        return ['view_services', 'update_services', 'delete_services', 'add_members', 'view_stats'];
-      case 'gestor':
-        return ['view_services', 'update_services', 'view_stats'];
-      default:
-        return ['view_services', 'update_services'];
+
+  const loadUserProfile = async (authUser: User) => {
+    try {
+      console.log('Loading user profile for:', authUser.id);
+      
+      // Fetch profile data
+      const profile = await fetchUserProfile(authUser.id);
+      
+      // Get user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authUser.id)
+        .single();
+
+      const userRole = roleData?.role || 'tecnico';
+
+      const authUserData: AuthUser = {
+        id: authUser.id,
+        email: authUser.email,
+        name: profile?.name || authUser.user_metadata?.name || 'Usuário',
+        avatar: profile?.avatar || '',
+        phone: profile?.phone || '',
+        role: userRole,
+        permissions: [] // Can be extended based on role
+      };
+
+      console.log('User profile loaded:', authUserData);
+      setUser(authUserData);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      // Set basic user data even if profile fetch fails
+      const authUserData: AuthUser = {
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.user_metadata?.name || 'Usuário',
+        avatar: '',
+        role: 'tecnico',
+        permissions: []
+      };
+      setUser(authUserData);
     }
   };
-  
-  // Login function - simplified to avoid Supabase recursion issues
+
   const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('Attempting login with:', email);
-    setIsLoading(true);
-    
     try {
-      // First try demo mode login for reliability
-      const demoUser = demoUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      setIsLoading(true);
       
-      if (demoUser && password.length >= 6) {
-        console.log('Demo user found:', demoUser.name);
-        setUser(demoUser);
-        localStorage.setItem('user', JSON.stringify(demoUser));
-        toast({
-          title: "Login realizado com sucesso",
-          description: `Bem-vindo, ${demoUser.name}!`,
-          variant: "success",
-        });
-        setIsLoading(false);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        toast.success("Login realizado com sucesso!");
         return true;
       }
       
-      // Try Supabase login
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        console.error('Supabase login error:', error);
-        setIsLoading(false);
-        return false;
-      }
-      
-      console.log('Supabase login successful, user:', data.user?.email);
-      
-      if (data.user) {
-        try {
-          // Try to fetch the user profile from Supabase first
-          const profileData = await fetchUserProfile(data.user.id);
-          
-          // Create a user object combining session and profile data
-          const authUser: AuthUser = {
-            id: data.user.id,
-            email: data.user.email,
-            name: profileData?.name || data.user.user_metadata?.name || 'Usuário',
-            avatar: profileData?.avatar || data.user.user_metadata?.avatar || '/placeholder.svg',
-            role: (profileData?.role || data.user.user_metadata?.role) as UserRole || 'tecnico',
-            phone: profileData?.phone || data.user.user_metadata?.phone,
-            permissions: getPermissionsByRole((profileData?.role || data.user.user_metadata?.role) as UserRole || 'tecnico')
-          };
-          
-          setUser(authUser);
-          localStorage.setItem('user', JSON.stringify(authUser));
-          toast({
-            title: "Login realizado com sucesso",
-            description: `Bem-vindo, ${authUser.name}!`,
-            variant: "success",
-          });
-          setIsLoading(false);
-          return true;
-        } catch (error) {
-          console.error('Error processing login:', error);
-        }
-      }
-      
-      setIsLoading(false);
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      setIsLoading(false);
-      return false;
-    }
-  };
-  
-  // Logout function - simplified
-  const logout = async () => {
-    try {
-      setIsLoading(true);
-      await supabase.auth.signOut();
-      setUser(null);
-      localStorage.removeItem('user');
-      toast({
-        title: "Sessão encerrada",
-        description: "Você saiu do sistema com sucesso",
-        variant: "success",
+      toast.error("Erro no login", {
+        description: error.message || "Verifique suas credenciais e tente novamente."
       });
-    } catch (error) {
-      console.error('Logout error:', error);
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Register function - simplified to avoid recursion issues
+
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    console.log('Registering new user:', userData.email);
-    setIsLoading(true);
-    
     try {
-      // Check if email already used in demo users
-      if (userData.email && demoUsers.some(u => u.email?.toLowerCase() === userData.email?.toLowerCase())) {
-        toast({
-          title: "Erro no cadastro",
-          description: "Este email já está em uso",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return false;
-      }
+      setIsLoading(true);
       
-      // Try Supabase registration first
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -244,135 +132,93 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           data: {
             name: userData.name,
             role: userData.role
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
-      
-      if (error) {
-        console.log('Supabase registration error:', error);
-        
-        // Create new demo user if Supabase fails
-        const newUser: AuthUser = {
-          id: `user-${Date.now()}`,
-          name: userData.name || 'Usuário',
-          avatar: '/placeholder.svg',
-          role: userData.role || 'tecnico',
-          email: userData.email,
-          permissions: getPermissionsByRole(userData.role || 'tecnico')
-        };
-        
-        // Add to demo users and log in
-        demoUsers.push(newUser);
-        setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        
-        toast({
-          title: "Registro concluído",
-          description: "Sua conta foi criada com sucesso!",
-          variant: "success",
-        });
-        
-        setIsLoading(false);
-        return true;
-      }
-      
-      console.log('Supabase registration successful, user data:', data);
-      
+
+      if (error) throw error;
+
       if (data.user) {
-        // Auto-login after registration
-        const authUser: AuthUser = {
-          id: data.user.id,
-          email: data.user.email,
-          name: userData.name,
-          avatar: '/placeholder.svg',
-          role: userData.role,
-          permissions: getPermissionsByRole(userData.role)
-        };
-        
-        setUser(authUser);
-        localStorage.setItem('user', JSON.stringify(authUser));
-        
-        toast({
-          title: "Registro concluído",
-          description: "Sua conta foi criada com sucesso!",
-          variant: "success",
-        });
-        
-        setIsLoading(false);
+        toast.success("Cadastro realizado com sucesso!");
         return true;
       }
       
-      setIsLoading(false);
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Register error:', error);
-      setIsLoading(false);
+      toast.error("Erro no cadastro", {
+        description: error.message || "Falha ao criar conta. Tente novamente."
+      });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  // Update user data - enhanced for persistence
+
+  const logout = async (): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      setUser(null);
+      setSession(null);
+      toast.success("Logout realizado com sucesso!");
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast.error("Erro no logout");
+    }
+  };
+
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
     
     try {
-      // Update the local user object
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
-      // Update in demo users array (for demo mode)
-      const index = demoUsers.findIndex(u => u.id === user.id);
-      if (index !== -1) {
-        demoUsers[index] = updatedUser;
+      const success = await updateUserProfile(user.id, userData);
+      if (success) {
+        setUser(prev => prev ? { ...prev, ...userData } : null);
       }
-      
-      // Save to Supabase profiles table for persistence
-      await updateUserProfile(user.id, updatedUser);
-      
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso",
-        variant: "success",
-      });
-      
-      return true;
+      return success;
     } catch (error) {
-      console.error('Update user error:', error);
+      console.error('Error updating user:', error);
       return false;
     }
   };
 
-  // Direct user info update (without API call)
-  const updateUserInfo = (userData: AuthUser) => {
+  const updateUserInfo = (userData: AuthUser): void => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    // Also persist to Supabase profiles
-    updateUserProfile(userData.id, userData).catch(err => {
-      console.error("Failed to persist user info to Supabase:", err);
-    });
   };
-  
-  // Check if user has specific permission
+
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    if (user.role === 'administrador') return true;
-    return user.permissions?.includes(permission) || false;
+    
+    // Simple role-based permissions
+    switch (user.role) {
+      case 'administrador':
+        return true; // Admin has all permissions
+      case 'gestor':
+        return ['view_services', 'create_services', 'manage_team'].includes(permission);
+      case 'tecnico':
+        return ['view_services', 'update_services'].includes(permission);
+      default:
+        return false;
+    }
   };
-  
+
+  const value: AuthContextType = {
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+    login,
+    logout,
+    register,
+    updateUser,
+    updateUserInfo,
+    hasPermission,
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      isAuthenticated: !!user,
-      login,
-      logout,
-      register,
-      updateUser,
-      updateUserInfo,
-      hasPermission
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

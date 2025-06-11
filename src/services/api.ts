@@ -1,23 +1,71 @@
 
 import { Service, TeamMember, ServiceStatus, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
-import { 
-  getServicesFromDatabase, 
-  createServiceInDatabase, 
-  updateServiceInDatabase, 
-  deleteServiceFromDatabase,
-  addServiceMessageToDatabase
-} from './servicesDataService';
+import { supabase } from '@/integrations/supabase/client';
 
 // Get all services
 export const getServices = async (): Promise<Service[]> => {
   console.log("Getting all services...");
   
   try {
-    // Get services from Supabase database
-    const dbServices = await getServicesFromDatabase();
-    console.log("Returning services from database:", dbServices.length);
-    return dbServices;
+    // Get services from Supabase with all related data
+    const { data: servicesData, error: servicesError } = await supabase
+      .from('services')
+      .select(`
+        *,
+        service_technicians(
+          technician:profiles(*)
+        ),
+        service_messages(*)
+      `);
+    
+    if (servicesError) {
+      console.error('Error fetching services:', servicesError);
+      throw servicesError;
+    }
+
+    // Transform the data to match our Service type
+    const services: Service[] = (servicesData || []).map(service => {
+      // Get technician from relationship
+      const techRelation = service.service_technicians?.[0];
+      const technician: TeamMember = techRelation?.technician ? {
+        id: techRelation.technician.id,
+        name: techRelation.technician.name || 'Desconhecido',
+        avatar: techRelation.technician.avatar || '',
+        role: 'tecnico',
+      } : {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      };
+
+      // Transform messages
+      const messages = (service.service_messages || []).map(msg => ({
+        senderId: msg.sender_id,
+        senderName: msg.sender_name,
+        senderRole: msg.sender_role,
+        message: msg.message,
+        timestamp: msg.timestamp
+      }));
+
+      return {
+        id: service.id,
+        title: service.title,
+        status: service.status as ServiceStatus,
+        location: service.location,
+        technician: technician,
+        creationDate: service.created_at,
+        messages: messages,
+        dueDate: service.due_date,
+        priority: service.priority,
+        serviceType: service.service_type,
+        createdBy: service.created_by,
+      };
+    });
+    
+    console.log('Services fetched successfully:', services);
+    return services;
   } catch (error) {
     console.error("Error getting services:", error);
     toast.error("Erro ao carregar demandas", {
@@ -32,7 +80,6 @@ export const getService = async (id: string): Promise<Service | undefined> => {
   console.log("Getting service by ID:", id);
   
   try {
-    // Get all services and find the one with matching ID
     const allServices = await getServices();
     const service = allServices.find(service => service.id === id);
     
@@ -55,16 +102,73 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
   console.log("Creating new service:", service);
   
   try {
-    // Create in database
-    const newDbService = await createServiceInDatabase(service);
-    
-    if (newDbService) {
-      console.log("Service created in database:", newDbService);
-      toast.success("Serviço criado com sucesso!");
-      return newDbService;
-    } else {
-      throw new Error("Failed to create service in database");
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
     }
+
+    // Generate a service number
+    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
+    
+    if (numberError) {
+      console.error('Error generating service number:', numberError);
+      throw numberError;
+    }
+    
+    // Format the service number
+    const number = `SRV-${numberData.toString().padStart(5, '0')}`;
+    
+    // Create service record
+    const { data, error } = await supabase
+      .from('services')
+      .insert({
+        title: service.title,
+        location: service.location,
+        status: service.status,
+        number: number,
+        created_by: user.id,
+        priority: service.priority || 'media',
+        due_date: service.dueDate,
+        service_type: service.serviceType || 'Vistoria'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating service:', error);
+      throw error;
+    }
+    
+    console.log('Service created successfully:', data);
+    
+    // If a technician is assigned, create the relationship
+    if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
+      await assignTechnician(data.id, service.technician.id);
+    }
+    
+    // Construct and return a properly typed Service object
+    const newService: Service = {
+      id: data.id,
+      title: data.title,
+      location: data.location,
+      status: data.status as ServiceStatus,
+      technician: service.technician || {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico',
+      },
+      creationDate: data.created_at,
+      dueDate: data.due_date,
+      priority: data.priority,
+      serviceType: data.service_type,
+      createdBy: data.created_by,
+      messages: [],
+    };
+
+    toast.success("Serviço criado com sucesso!");
+    return newService;
   } catch (error) {
     console.error("Error creating service:", error);
     toast.error("Falha ao criar serviço no servidor");
@@ -72,21 +176,73 @@ export const createService = async (service: Omit<Service, "id">): Promise<Servi
   }
 };
 
+// Helper function to assign a technician to a service
+async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
+  try {
+    // First, remove existing technician assignments
+    const { error: deleteError } = await supabase
+      .from('service_technicians')
+      .delete()
+      .eq('service_id', serviceId);
+    
+    if (deleteError) throw deleteError;
+    
+    // Then add the new assignment
+    const { error } = await supabase
+      .from('service_technicians')
+      .insert({
+        service_id: serviceId,
+        technician_id: technicianId
+      });
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error assigning technician:', error);
+    throw error;
+  }
+}
+
 // Update a service
 export const updateService = async (service: Partial<Service> & { id: string }): Promise<Service> => {
   console.log("Updating service:", service.id, service);
   
   try {
-    // Update in database
-    const updatedDbService = await updateServiceInDatabase(service);
+    // Update the main service record
+    const { data, error } = await supabase
+      .from('services')
+      .update({
+        title: service.title,
+        location: service.location,
+        status: service.status,
+        priority: service.priority,
+        due_date: service.dueDate,
+        service_type: service.serviceType,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', service.id)
+      .select()
+      .single();
     
-    if (updatedDbService) {
-      console.log("Service updated in database:", updatedDbService);
-      toast.success("Serviço atualizado com sucesso!");
-      return updatedDbService;
-    } else {
-      throw new Error(`Failed to update service with id ${service.id}`);
+    if (error) {
+      console.error('Error updating service:', error);
+      throw error;
     }
+    
+    console.log('Service updated successfully:', data);
+    
+    // Update technician if provided
+    if (service.technician && service.technician.id && service.technician.id !== '0') {
+      await assignTechnician(service.id, service.technician.id);
+    }
+    
+    // Get the updated service
+    const updatedService = await getService(service.id);
+    if (!updatedService) {
+      throw new Error(`Service with id ${service.id} not found after update`);
+    }
+
+    toast.success("Serviço atualizado com sucesso!");
+    return updatedService;
   } catch (error) {
     console.error("Error updating service:", error);
     toast.error("Falha ao atualizar serviço no servidor");
@@ -99,20 +255,23 @@ export const deleteService = async (id: string): Promise<boolean> => {
   console.log("Deleting service:", id);
   
   try {
-    // Delete from database
-    const dbDeleteResult = await deleteServiceFromDatabase(id);
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', id);
     
-    if (dbDeleteResult) {
-      console.log("Service deleted from database");
-      toast.success("Serviço excluído com sucesso!");
-      return true;
-    } else {
-      throw new Error(`Failed to delete service with id ${id}`);
+    if (error) {
+      console.error('Error deleting service:', error);
+      throw error;
     }
+    
+    console.log('Service deleted successfully');
+    toast.success("Serviço excluído com sucesso!");
+    return true;
   } catch (error) {
     console.error("Error deleting service:", error);
     toast.error("Falha ao excluir serviço do servidor");
-    throw error;
+    return false;
   }
 };
 
@@ -124,24 +283,27 @@ export const addServiceMessage = async (
   console.log("Adding message to service:", serviceId, message);
   
   try {
-    // Add message to database
-    const added = await addServiceMessageToDatabase(serviceId, {
-      text: message.message,
-      type: message.senderRole,
-      author: message.senderId,
-      author_name: message.senderName
-    });
+    const { error } = await supabase
+      .from('service_messages')
+      .insert({
+        service_id: serviceId,
+        sender_id: message.senderId,
+        sender_name: message.senderName,
+        sender_role: message.senderRole,
+        message: message.message
+      });
     
-    if (added) {
-      // Get the updated service
-      const updatedService = await getService(serviceId);
-      if (!updatedService) {
-        throw new Error(`Service with id ${serviceId} not found`);
-      }
-      return updatedService;
-    } else {
-      throw new Error(`Failed to add message to service with id ${serviceId}`);
+    if (error) {
+      console.error('Error adding message:', error);
+      throw error;
     }
+    
+    // Get the updated service
+    const updatedService = await getService(serviceId);
+    if (!updatedService) {
+      throw new Error(`Service with id ${serviceId} not found`);
+    }
+    return updatedService;
   } catch (error) {
     console.error("Error adding message to service:", error);
     toast.error("Falha ao adicionar mensagem ao serviço");
@@ -155,8 +317,6 @@ export const addServiceFeedback = async (
   feedback: ServiceFeedback
 ): Promise<Service> => {
   try {
-    // We need to implement this with Supabase
-    // For now, we'll update the service with the feedback
     const service = await getService(serviceId);
     if (!service) {
       throw new Error(`Service with id ${serviceId} not found`);
@@ -176,23 +336,34 @@ export const addServiceFeedback = async (
   }
 };
 
-// Get team members - This should be implemented with Supabase
+// Get team members
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
-    // Get team members from Supabase
+    console.log('Fetching team members...');
+    
+    // Get profiles with their roles
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('*');
+      .select(`
+        *,
+        user_roles(role)
+      `);
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error getting team members:', error);
+      throw error;
+    }
     
     // Transform to TeamMember type
-    return profiles.map(profile => ({
+    const teamMembers = (profiles || []).map(profile => ({
       id: profile.id,
       name: profile.name || 'Sem nome',
       avatar: profile.avatar || '',
-      role: 'tecnico', // Default role, should be fetched from user_roles
+      role: profile.user_roles?.[0]?.role || 'tecnico',
     }));
+    
+    console.log('Team members fetched:', teamMembers);
+    return teamMembers;
   } catch (error) {
     console.error("Error getting team members:", error);
     toast.error("Falha ao carregar membros da equipe");
@@ -200,7 +371,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
   }
 };
 
-// Placeholder for updating team member
+// Update team member
 export const updateTeamMember = async (id: string, data: Partial<TeamMember>): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -212,6 +383,17 @@ export const updateTeamMember = async (id: string, data: Partial<TeamMember>): P
       .eq('id', id);
       
     if (error) throw error;
+    
+    // Update role if provided
+    if (data.role) {
+      await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: id,
+          role: data.role
+        });
+    }
+    
     return true;
   } catch (error) {
     console.error("Error updating team member:", error);
@@ -220,19 +402,35 @@ export const updateTeamMember = async (id: string, data: Partial<TeamMember>): P
   }
 };
 
-// Placeholder for adding new team member
+// Add new team member (placeholder)
 export const addTeamMember = async (member: Omit<TeamMember, "id">): Promise<TeamMember> => {
-  // This would require creating a new auth user and profile
-  // For now, this is a stub that should be implemented properly
   throw new Error("Not implemented: Adding team members requires proper Auth integration");
 };
 
-// Placeholder for deleting team member
+// Delete team member (placeholder)
 export const deleteTeamMember = async (id: string): Promise<boolean> => {
-  // This would require deleting the user from auth and profile
-  // For now, this is a stub that should be implemented properly
   throw new Error("Not implemented: Deleting team members requires proper Auth integration");
 };
 
-// Import supabase client for the new functions
-import { supabase } from '@/integrations/supabase/client';
+// Get service types
+export const getServiceTypes = async () => {
+  try {
+    console.log('Fetching service types...');
+    
+    const { data, error } = await supabase
+      .from('service_types')
+      .select('*');
+      
+    if (error) {
+      console.error('Error getting service types:', error);
+      throw error;
+    }
+    
+    console.log('Service types fetched:', data);
+    return data || [];
+  } catch (error) {
+    console.error("Error getting service types:", error);
+    toast.error("Falha ao carregar tipos de serviço");
+    return [];
+  }
+};
