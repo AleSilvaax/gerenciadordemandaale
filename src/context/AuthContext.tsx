@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Loading user profile for:', authUser.id);
       console.log('User metadata:', authUser.user_metadata);
-      console.log('Raw user metadata:', authUser.raw_user_meta_data);
       
       // Fetch profile data
       const profile = await fetchUserProfile(authUser.id);
@@ -158,7 +156,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data.user) {
         console.log('User registered successfully with metadata:', data.user.user_metadata);
-        console.log('Raw user metadata:', data.user.raw_user_meta_data);
         
         // Wait a moment for the trigger to execute
         await new Promise(resolve => setTimeout(resolve, 1000));
