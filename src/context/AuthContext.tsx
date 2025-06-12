@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,16 +53,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserProfile = async (authUser: User) => {
     try {
       console.log('Loading user profile for:', authUser.id);
+      console.log('User metadata:', authUser.user_metadata);
+      console.log('Raw user metadata:', authUser.raw_user_meta_data);
       
       // Fetch profile data
       const profile = await fetchUserProfile(authUser.id);
       
-      // Get user role
-      const { data: roleData } = await supabase
+      // Get user role with detailed logging
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', authUser.id)
         .single();
+
+      console.log('Role query result:', { roleData, roleError });
 
       // Cast the role to UserRole type with a fallback
       const userRole = (roleData?.role === 'administrador' || 
@@ -69,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                        roleData?.role === 'tecnico') 
                        ? roleData.role as any 
                        : 'tecnico' as any;
+
+      console.log('Final user role:', userRole);
 
       const authUserData: AuthUser = {
         id: authUser.id,
@@ -129,7 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      console.log('Registering user with role:', userData.role);
+      console.log('Starting registration with role:', userData.role);
+      console.log('Full user data:', userData);
       
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
@@ -143,10 +151,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Registration error:', error);
+        throw error;
+      }
 
       if (data.user) {
         console.log('User registered successfully with metadata:', data.user.user_metadata);
+        console.log('Raw user metadata:', data.user.raw_user_meta_data);
+        
+        // Wait a moment for the trigger to execute
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if the role was inserted correctly
+        const { data: roleCheck, error: roleCheckError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .single();
+        
+        console.log('Role check after registration:', { roleCheck, roleCheckError });
+        
         toast.success("Cadastro realizado com sucesso!");
         return true;
       }

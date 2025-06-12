@@ -82,6 +82,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         confirmPassword
       };
       
+      console.log("Sending userData to register function:", userData);
+      
       const success = await register(userData);
       console.log("Registration result:", success);
       
@@ -89,7 +91,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         toast({
           title: "Conta criada com sucesso!",
           description: `Usuário registrado como ${role}. Você será redirecionado para a página inicial.`,
-          variant: "success",
+          variant: "default",
         });
         
         // Navigate to home if registration was successful and auto-login occurred
@@ -213,6 +215,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
                 <SelectItem value="administrador">Administrador</SelectItem>
               </SelectContent>
             </Select>
+            <div className="text-sm text-muted-foreground">
+              Papel selecionado: <strong>{role}</strong>
+            </div>
           </div>
         </CardContent>
         
