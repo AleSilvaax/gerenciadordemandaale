@@ -129,13 +129,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
+      console.log('Registering user with role:', userData.role);
+      
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
           data: {
             name: userData.name,
-            role: userData.role
+            role: userData.role // This is critical - the role must be included in metadata
           },
           emailRedirectTo: `${window.location.origin}/`
         }
@@ -144,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (data.user) {
+        console.log('User registered successfully with metadata:', data.user.user_metadata);
         toast.success("Cadastro realizado com sucesso!");
         return true;
       }

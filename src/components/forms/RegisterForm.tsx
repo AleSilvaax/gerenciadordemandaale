@@ -71,13 +71,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
       setRegistrationInProgress(true);
     }
     
-    console.log("Submitting registration form for:", email);
+    console.log("Submitting registration form for:", email, "with role:", role);
     
     try {
       const userData: RegisterFormData = {
         name,
         email,
-        role,
+        role, // This role will be included in the user metadata
         password,
         confirmPassword
       };
@@ -88,7 +88,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
       if (success) {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Você será redirecionado para a página inicial.",
+          description: `Usuário registrado como ${role}. Você será redirecionado para a página inicial.`,
           variant: "success",
         });
         
@@ -123,6 +123,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
 
   // Handle role change with proper type casting
   const handleRoleChange = (value: string) => {
+    console.log("Role changed to:", value);
     setRole(value as UserRole);
   };
 
@@ -208,8 +209,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tecnico">Técnico</SelectItem>
-                <SelectItem value="administrador">Administrador</SelectItem>
                 <SelectItem value="gestor">Gestor</SelectItem>
+                <SelectItem value="administrador">Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>
