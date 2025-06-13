@@ -137,13 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Starting registration with role:', userData.role);
       console.log('Full user data:', userData);
       
+      // CRITICAL: The role must be passed in the data field, not options.data
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
           data: {
             name: userData.name,
-            role: userData.role // This is critical - the role must be included in metadata
+            role: userData.role // This ensures the role is in raw_user_meta_data
           },
           emailRedirectTo: `${window.location.origin}/`
         }
@@ -156,9 +157,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data.user) {
         console.log('User registered successfully with metadata:', data.user.user_metadata);
+        console.log('Role sent to Supabase:', userData.role);
         
         // Wait a moment for the trigger to execute
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Check if the role was inserted correctly
         const { data: roleCheck, error: roleCheckError } = await supabase
@@ -169,7 +171,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('Role check after registration:', { roleCheck, roleCheckError });
         
-        toast.success("Cadastro realizado com sucesso!");
+        if (roleCheck?.role) {
+          console.log('Role successfully saved as:', roleCheck.role);
+        } else {
+          console.error('Role was not saved correctly');
+        }
+        
+        toast.success("Cadastro realizado com sucesso!", {
+          description: `Usuário registrado como ${userData.role}`
+        });
         return true;
       }
       

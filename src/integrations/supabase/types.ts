@@ -398,6 +398,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      get_user_role_safe: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
       has_permission: {
         Args: { user_id: string; required_role: string }
         Returns: boolean

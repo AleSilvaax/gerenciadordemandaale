@@ -71,18 +71,20 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
       setRegistrationInProgress(true);
     }
     
-    console.log("Submitting registration form for:", email, "with role:", role);
+    console.log("=== REGISTRATION DEBUG ===");
+    console.log("Selected role:", role);
+    console.log("Form data being sent:", { name, email, role });
     
     try {
       const userData: RegisterFormData = {
         name,
         email,
-        role, // This role will be included in the user metadata
+        role, // This role will be passed to the Supabase metadata
         password,
         confirmPassword
       };
       
-      console.log("Sending userData to register function:", userData);
+      console.log("Final userData object:", userData);
       
       const success = await register(userData);
       console.log("Registration result:", success);
@@ -95,7 +97,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         });
         
         // Navigate to home if registration was successful and auto-login occurred
-        setTimeout(() => navigate('/'), 1000);
+        setTimeout(() => navigate('/'), 1500);
       } else {
         setError('Ocorreu um erro durante o registro. Verifique se o email já está em uso.');
         toast({
@@ -103,10 +105,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
           description: "Verifique se o email já está em uso ou tente novamente mais tarde.",
           variant: "destructive",
         });
-        setIsSubmitting(false);
-        if (setRegistrationInProgress) {
-          setRegistrationInProgress(false);
-        }
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -116,6 +114,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         description: "Ocorreu um problema ao processar seu cadastro. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
       if (setRegistrationInProgress) {
         setRegistrationInProgress(false);
@@ -216,7 +215,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
               </SelectContent>
             </Select>
             <div className="text-sm text-muted-foreground">
-              Papel selecionado: <strong>{role}</strong>
+              <strong>Papel selecionado: {role}</strong>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Este papel será usado para definir suas permissões no sistema
             </div>
           </div>
         </CardContent>
@@ -226,12 +228,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
             {isSubmitting ? (
               <>
                 <Loader2 size={16} className="mr-2 animate-spin" />
-                Registrando...
+                Registrando como {role}...
               </>
             ) : (
               <>
                 <UserPlus size={16} className="mr-2" />
-                Criar conta
+                Criar conta como {role}
               </>
             )}
           </Button>
