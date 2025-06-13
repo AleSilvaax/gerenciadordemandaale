@@ -6,9 +6,11 @@ import { TeamMemberAvatar } from './TeamMemberAvatar';
 import { StatusBadge } from './StatusBadge';
 import { ServiceCardProps } from '@/types/serviceTypes';
 import { DeadlineManager } from './DeadlineManager';
+import { useAuth } from '@/context/AuthContext';
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, compact = false }) => {
   const { id, title, status, location, technician, priority, dueDate, creationDate } = service;
+  const { hasPermission } = useAuth();
 
   const completed = status === 'concluido';
   
@@ -19,6 +21,8 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
       await onDelete(id);
     }
   };
+
+  const canDelete = hasPermission('delete_services');
 
   return (
     <Link to={`/demandas/${id}`} className="block">
@@ -53,7 +57,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
                 <span className="text-sm">{technician?.name}</span>
               </div>
               
-              {onDelete && (
+              {onDelete && canDelete && (
                 <button 
                   onClick={handleDelete}
                   className="text-xs text-destructive hover:underline"

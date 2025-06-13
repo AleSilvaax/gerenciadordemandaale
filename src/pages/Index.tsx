@@ -20,7 +20,7 @@ const Index: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, hasPermission, canAccessRoute } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -117,7 +117,9 @@ const Index: React.FC = () => {
           Olá, {user.name.split(' ')[0]}!
         </h1>
         
-        <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        {canAccessRoute && canAccessRoute('/nova-demanda') && (
+          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        )}
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -154,7 +156,7 @@ const Index: React.FC = () => {
         />
       </div>
       
-      {(user?.role === 'administrador' || user?.role === 'gestor') && (
+      {hasPermission('view_stats') && (
         <>
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
@@ -198,7 +200,7 @@ const Index: React.FC = () => {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Equipe</h2>
-          {(user?.role === 'administrador' || user?.role === 'gestor') && (
+          {hasPermission('manage_team') && (
             <Button variant="outline" onClick={() => navigate("/equipe")}>
               Ver todos
             </Button>
@@ -210,13 +212,13 @@ const Index: React.FC = () => {
             <div 
               key={member.id} 
               className="flex flex-col items-center p-2 min-w-[100px] text-center"
-              onClick={() => navigate(`/equipe#${member.id}`)}
+              onClick={() => hasPermission('manage_team') && navigate(`/equipe#${member.id}`)}
             >
               <TeamMemberAvatar 
                 src={member.avatar} 
                 name={member.name} 
                 size="lg"
-                className="mb-2 cursor-pointer hover:scale-105 transition-transform"
+                className={`mb-2 ${hasPermission('manage_team') ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
               />
               <span className="text-sm font-medium line-clamp-1">{member.name}</span>
               <span className="text-xs text-muted-foreground line-clamp-1">

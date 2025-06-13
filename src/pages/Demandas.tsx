@@ -12,10 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { FileText, Search as SearchIcon, Filter, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/AuthContext";
 
 const Demandas: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { hasPermission, canAccessRoute } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
@@ -41,6 +43,10 @@ const Demandas: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
+    if (!hasPermission('delete_services')) {
+      toast.error("Você não tem permissão para excluir demandas");
+      return;
+    }
     setServiceToDelete(id);
   };
 
@@ -94,7 +100,9 @@ const Demandas: React.FC = () => {
     <div className="container py-4 space-y-6 pb-24 md:pb-20">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-primary">Gerenciar Demandas</h1>
-        <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        {canAccessRoute && canAccessRoute('/nova-demanda') && (
+          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">

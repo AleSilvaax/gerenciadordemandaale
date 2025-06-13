@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -231,16 +232,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     
-    // Simple role-based permissions
+    // Enhanced role-based permissions
     switch (user.role) {
       case 'administrador':
         return true; // Admin has all permissions
       case 'gestor':
-        return ['view_services', 'create_services', 'manage_team'].includes(permission);
+        return [
+          'view_services', 
+          'create_services', 
+          'edit_services',
+          'delete_services',
+          'manage_team', 
+          'view_stats', 
+          'add_members',
+          'view_team_services'
+        ].includes(permission);
       case 'tecnico':
-        return ['view_services', 'update_services'].includes(permission);
+        return [
+          'view_services', 
+          'update_services',
+          'view_assigned_services'
+        ].includes(permission);
       default:
         return false;
+    }
+  };
+
+  const canAccessRoute = (route: string): boolean => {
+    if (!user) return false;
+    
+    switch (route) {
+      case '/nova-demanda':
+        return user.role === 'administrador' || user.role === 'gestor';
+      case '/estatisticas':
+        return user.role === 'administrador' || user.role === 'gestor';
+      case '/equipe':
+        return user.role === 'administrador' || user.role === 'gestor';
+      default:
+        return true;
     }
   };
 
@@ -254,6 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser,
     updateUserInfo,
     hasPermission,
+    canAccessRoute,
   };
 
   return (

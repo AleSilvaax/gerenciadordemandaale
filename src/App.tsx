@@ -45,13 +45,13 @@ function App() {
                   <Route path="demandas" element={<Demandas />} />
                   <Route path="demandas/:id" element={<ServiceDetail />} />
                   <Route path="demandas/:id/edit" element={<ServiceDetail editMode={true} />} />
-                  <Route path="nova-demanda" element={<NewService />} />
                   <Route path="buscar" element={<Search />} />
                   <Route path="settings" element={<Settings />} />
                   
-                  {/* Routes with specific permissions */}
-                  <Route path="estatisticas" element={<ProtectedRoute requiredPermission="view_stats"><Estatisticas /></ProtectedRoute>} />
-                  <Route path="equipe" element={<ProtectedRoute requiredPermission="add_members"><Equipe /></ProtectedRoute>} />
+                  {/* Routes with role-based access */}
+                  <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><NewService /></ProtectedRoute>} />
+                  <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><Estatisticas /></ProtectedRoute>} />
+                  <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><Equipe /></ProtectedRoute>} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Route>
