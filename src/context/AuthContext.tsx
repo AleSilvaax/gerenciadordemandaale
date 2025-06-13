@@ -1,296 +1,135 @@
+// src/context/AuthContext.tsx
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
-import { fetchUserProfile, updateUserProfile } from '@/services/profileService';
 import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Função otimizada para carregar perfil e papel de uma só vez
+  const loadUserProfile = async (authUser: User) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles ( role )
+        `)
+        .eq('id', authUser.id)
+        .single();
+
+      // Se o perfil não for encontrado de imediato, pode ser a race condition.
+      // Tentamos novamente após um pequeno intervalo.
+      if (error && error.code === 'PGRST116') {
+        console.warn("Profile not found, retrying in 1.5 seconds...");
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return loadUserProfile(authUser);
+      }
+      
+      if (error) throw error;
+
+      // Garante que existe um papel, ou assume 'tecnico' como fallback
+      const role = data?.user_roles?.[0]?.role || 'tecnico';
+
+      const authUserData: AuthUser = {
+        id: data.id,
+        email: authUser.email,
+        name: data.name || 'Usuário',
+        avatar: data.avatar || '',
+        team_id: data.team_id,
+        role: role as any,
+        permissions: []
+      };
+      
+      setUser(authUserData);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setUser(null);
+    }
+  };
+
+  // useEffect simplificado para gerenciar o estado de autenticação
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
-        
+        setIsLoading(true);
         if (session?.user) {
-          // Defer profile loading to prevent deadlocks
-          setTimeout(async () => {
-            await loadUserProfile(session.user);
-          }, 0);
+          await loadUserProfile(session.user);
         } else {
           setUser(null);
         }
-        
         setIsLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.id);
-      setSession(session);
-      
-      if (session?.user) {
-        setTimeout(async () => {
-          await loadUserProfile(session.user);
-        }, 0);
-      }
-      
-      setIsLoading(false);
-    });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserProfile = async (authUser: User) => {
-    try {
-      console.log('Loading user profile for:', authUser.id);
-      console.log('User metadata:', authUser.user_metadata);
-      
-      // Fetch profile data
-      const profile = await fetchUserProfile(authUser.id);
-      
-      // Get user role with detailed logging
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', authUser.id)
-        .single();
-
-      console.log('Role query result:', { roleData, roleError });
-
-      // Cast the role to UserRole type with a fallback
-      const userRole = (roleData?.role === 'administrador' || 
-                       roleData?.role === 'gestor' || 
-                       roleData?.role === 'tecnico') 
-                       ? roleData.role as any 
-                       : 'tecnico' as any;
-
-      console.log('Final user role:', userRole);
-
-      const authUserData: AuthUser = {
-        id: authUser.id,
-        email: authUser.email,
-        name: profile?.name || authUser.user_metadata?.name || 'Usuário',
-        avatar: profile?.avatar || '',
-        phone: profile?.phone || '',
-        role: userRole,
-        permissions: [] // Can be extended based on role
-      };
-
-      console.log('User profile loaded:', authUserData);
-      setUser(authUserData);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-      // Set basic user data even if profile fetch fails
-      const authUserData: AuthUser = {
-        id: authUser.id,
-        email: authUser.email,
-        name: authUser.user_metadata?.name || 'Usuário',
-        avatar: '',
-        role: 'tecnico',
-        permissions: []
-      };
-      setUser(authUserData);
-    }
-  };
-
   const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        toast.success("Login realizado com sucesso!");
-        return true;
-      }
-      
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error("Erro no login", { description: error.message });
       return false;
-    } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error("Erro no login", {
-        description: error.message || "Verifique suas credenciais e tente novamente."
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
     }
+    toast.success("Login realizado com sucesso!");
+    return true;
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      
-      console.log('Starting registration with role:', userData.role);
-      console.log('Full user data:', userData);
-      
-      // CRITICAL: The role must be passed in the data field, not options.data
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            role: userData.role // This ensures the role is in raw_user_meta_data
-          },
-          emailRedirectTo: `${window.location.origin}/`
+    const { data: { user }, error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          name: userData.name,
+          role: userData.role,
+          team_id: userData.team_id
         }
-      });
-
-      if (error) {
-        console.error('Registration error:', error);
-        throw error;
       }
+    });
 
-      if (data.user) {
-        console.log('User registered successfully with metadata:', data.user.user_metadata);
-        console.log('Role sent to Supabase:', userData.role);
-        
-        // Wait a moment for the trigger to execute
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Check if the role was inserted correctly
-        const { data: roleCheck, error: roleCheckError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
-          .single();
-        
-        console.log('Role check after registration:', { roleCheck, roleCheckError });
-        
-        if (roleCheck?.role) {
-          console.log('Role successfully saved as:', roleCheck.role);
-        } else {
-          console.error('Role was not saved correctly');
-        }
-        
-        toast.success("Cadastro realizado com sucesso!", {
-          description: `Usuário registrado como ${userData.role}`
-        });
-        return true;
-      }
-      
+    if (error) {
+      toast.error("Erro no cadastro", { description: error.message });
       return false;
-    } catch (error: any) {
-      console.error('Register error:', error);
-      toast.error("Erro no cadastro", {
-        description: error.message || "Falha ao criar conta. Tente novamente."
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
     }
+    if (!user) {
+        toast.error("Erro no cadastro", { description: "Não foi possível criar o usuário." });
+        return false;
+    }
+
+    toast.success("Cadastro realizado!", { description: "Verifique seu email para confirmar a conta." });
+    return true;
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      setUser(null);
-      setSession(null);
-      toast.success("Logout realizado com sucesso!");
-    } catch (error: any) {
-      console.error('Logout error:', error);
-      toast.error("Erro no logout");
-    }
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      const success = await updateUserProfile(user.id, userData);
-      if (success) {
-        setUser(prev => prev ? { ...prev, ...userData } : null);
-      }
-      return success;
-    } catch (error) {
-      console.error('Error updating user:', error);
-      return false;
-    }
-  };
-
-  const updateUserInfo = (userData: AuthUser): void => {
-    setUser(userData);
+     if (!user) return false;
+    const { error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id);
+    if (error) return false;
+    setUser(prev => prev ? { ...prev, ...userData } : null);
+    return true;
   };
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    
-    // Enhanced role-based permissions
-    switch (user.role) {
-      case 'administrador':
-        return true; // Admin has all permissions
-      case 'gestor':
-        return [
-          'view_services', 
-          'create_services', 
-          'edit_services',
-          'delete_services',
-          'manage_team', 
-          'view_stats', 
-          'add_members',
-          'view_team_services'
-        ].includes(permission);
-      case 'tecnico':
-        return [
-          'view_services', 
-          'update_services',
-          'view_assigned_services'
-        ].includes(permission);
-      default:
-        return false;
-    }
+    if (user.role === 'administrador') return true;
+    if (user.role === 'gestor' && ['view_stats', 'add_members'].includes(permission)) return true;
+    return false;
   };
 
-  const canAccessRoute = (route: string): boolean => {
-    if (!user) return false;
-    
-    switch (route) {
-      case '/nova-demanda':
-        return user.role === 'administrador' || user.role === 'gestor';
-      case '/estatisticas':
-        return user.role === 'administrador' || user.role === 'gestor';
-      case '/equipe':
-        return user.role === 'administrador' || user.role === 'gestor';
-      default:
-        return true;
-    }
-  };
+  const value = { user, isLoading, isAuthenticated: !!user, login, logout, register, updateUser, updateUserInfo: setUser, hasPermission };
 
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    login,
-    logout,
-    register,
-    updateUser,
-    updateUserInfo,
-    hasPermission,
-    canAccessRoute,
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
