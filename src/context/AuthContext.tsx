@@ -20,7 +20,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', authUser.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Se o perfil não for encontrado, não é um erro fatal aqui,
+        // a função de trigger pode ainda estar processando.
+        // O importante é não travar em "loading".
+        if (error.code === 'PGRST116') {
+          console.warn("Perfil não encontrado imediatamente após o login. O trigger pode estar em execução.");
+          return; // Sai da função, o onAuthStateChange pode ser acionado novamente.
+        }
+        throw error;
+      }
 
       const role = data?.user_roles?.[0]?.role || 'tecnico';
       const authUserData: AuthUser = {
@@ -35,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(authUserData);
     } catch (error) {
       console.error('Error loading user profile:', error);
-      setUser(null); // Se não conseguir carregar o perfil, desloga o usuário
+      setUser(null);
     }
   }, []);
 
@@ -49,13 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setIsLoading(false);
     };
-    
-    // Pega a sessão inicial
+
     supabase.auth.getSession().then(({ data: { session }}) => {
-      handleAuthStateChange("INITIAL_SESSION", session);
+        handleAuthStateChange("INITIAL_SESSION", session);
     });
 
-    // Escuta por futuras mudanças
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
@@ -63,14 +70,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [loadUserProfile]);
 
-  // Função de login simplificada: ela apenas tenta o login. O useEffect cuidará do resto.
   const login = async (email: string, password: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Erro no login", { description: error.message });
+      setIsLoading(false); // Garante que o loading pare em caso de erro
       return false;
     }
-    // Não precisa mais do toast de sucesso aqui, pois o usuário ainda não está "pronto".
+    // Não defina sucesso ou loading aqui, deixe o onAuthStateChange cuidar disso.
     return true;
   };
 
@@ -78,13 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
-      options: {
-        data: {
-          name: userData.name,
-          role: userData.role,
-          team_id: userData.team_id
-        }
-      }
+      options: { data: { name: userData.name, role: userData.role, team_id: userData.team_id } }
     });
 
     if (error) {
@@ -100,8 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
   };
-  
-  // As outras funções permanecem iguais...
+
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
     const { error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id);
