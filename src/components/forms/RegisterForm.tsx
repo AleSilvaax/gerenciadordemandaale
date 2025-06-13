@@ -40,15 +40,24 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   // Busca as equipes disponíveis quando o componente carrega
   useEffect(() => {
     const fetchTeams = async () => {
-      const { data, error } = await supabase.from('teams').select('id, name');
-      if (error) {
-        toast({ title: 'Erro ao carregar equipes', variant: 'destructive' });
-      } else if (data) {
-        setTeams(data);
-      }
-    };
-    fetchTeams();
-  }, []);
+    // Log 1: Avisa que a busca começou
+    console.log("Buscando equipes do Supabase..."); 
+
+    const { data, error } = await supabase.from('teams').select('id, name');
+
+    // Log 2: Mostra o resultado completo que o Supabase retornou
+    console.log("Resultado da busca por equipes:", { data, error });
+
+    if (error) {
+      toast({ title: 'Erro ao carregar equipes', description: error.message, variant: 'destructive' });
+    } else if (data) {
+      // Log 3: Mostra quantas equipes foram encontradas
+      console.log(`Encontradas ${data.length} equipes.`); 
+      setTeams(data);
+    }
+  };
+  fetchTeams();
+}, []);
 
   const validateForm = () => {
     setError(null);
