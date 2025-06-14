@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -50,7 +49,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats 
 
 const cardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 80, damping: 15 } }
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 80, damping: 15 } }
 };
 
 const CountUpCard: React.FC<Stat> = ({ label, value, color, icon, description }) => {
