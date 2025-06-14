@@ -217,7 +217,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
   const handleSaveServiceDetails = async (data: any) => {
     if (!service || !id) return;
 
-    setSaving(true);
+    setDetailsSaving(true);
     try {
       // Mescla dados editados com existentes para não sobrescrever campos não exibidos
       const updatedService = await updateService({
@@ -231,7 +231,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       console.error('Erro ao salvar detalhes:', error);
       toast.error('Erro ao salvar detalhes da demanda');
     } finally {
-      setSaving(false);
+      setDetailsSaving(false);
     }
   };
 
@@ -529,7 +529,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
             <CardContent className="pt-6">
               <DetailsFormSection
                 service={service}
-                saving={saving}
+                saving={detailsSaving}
                 statusUpdating={statusUpdating}
                 onSubmit={handleSaveServiceDetails}
               />
