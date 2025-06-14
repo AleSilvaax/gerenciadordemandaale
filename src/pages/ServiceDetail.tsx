@@ -11,7 +11,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  getService,
+  getServices,
   updateService,
   addServiceMessage,
   addServiceFeedback,
@@ -32,10 +32,6 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 
-interface Params {
-  id: string;
-}
-
 interface ServiceDetailProps {
   editMode?: boolean;
 }
@@ -45,7 +41,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
-  const { id } = useParams<Params>();
+  const { id } = useParams<{ id?: string }>();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
 
@@ -55,11 +51,12 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   }, [id]);
 
-  const fetchService = async (id: string) => {
+  const fetchService = async (serviceId: string) => {
     setIsLoading(true);
     try {
-      const serviceData = await getService(id);
-      setService(serviceData);
+      const allServices = await getServices();
+      const found = allServices.find(s => s.id === serviceId);
+      setService(found || null);
     } catch (error) {
       console.error("Erro ao carregar serviço:", error);
       toast.error("Erro ao carregar detalhes do serviço");
