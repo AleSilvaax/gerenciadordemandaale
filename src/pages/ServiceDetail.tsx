@@ -43,7 +43,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
   const [service, setService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [saving, setSaving] = useState<boolean>(false);
+  const [detailsSaving, setDetailsSaving] = useState<boolean>(false);
   const [statusUpdating, setStatusUpdating] = useState<boolean>(false);
   const [newMessage, setNewMessage] = useState<string>("");
   const [photoUploadUrl, setPhotoUploadUrl] = useState<string>("");
@@ -529,7 +529,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
             <CardContent className="pt-6">
               <DetailsFormSection
                 service={service}
-                saving={detailsSaving} // <-- Corrigido: agora existe o detailsSaving!
+                saving={detailsSaving}
                 statusUpdating={statusUpdating}
                 onSubmit={handleSaveServiceDetails}
               />
