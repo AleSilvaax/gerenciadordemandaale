@@ -96,7 +96,8 @@ const NewService: React.FC = () => {
       const created = await createService(serviceData);
 
       if (!created || !created.id) {
-        toast.error("Erro ao criar demanda. Verifique suas permissões ou tente novamente.");
+        // Detecta mensagens de permissão e sequencia
+        toast.error("Erro ao criar demanda. Verifique se você tem permissão suficiente ou entre em contato com o administrador.");
         return;
       }
 
@@ -110,7 +111,6 @@ const NewService: React.FC = () => {
       ) {
         errMsg = "Permissão negada ao criar demanda. Verifique suas permissões de acesso ou consulte o administrador.";
       }
-      // Se for erro de sequence/nextval
       if (
         typeof error?.message === "string" &&
         error.message.toLowerCase().includes("nextval_for_service")
