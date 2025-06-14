@@ -107,9 +107,14 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       toast.error("Serviço não encontrado.");
       return;
     }
+
+    const getServicePhase = (type: string | undefined): "inspection" | "installation" => {
+      return type === "Vistoria" ? "inspection" : "installation";
+    };
+
     // Forçar campos obrigatórios para evitar undefined
     // Força todas as listas e booleans essenciais
-    const safeService = {
+    const safeService: Service = {
       ...service,
       client: service.client || service.reportData?.client || "Não informado",
       reportData: {
@@ -127,10 +132,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         validWarranty: typeof service.reportData?.validWarranty === "boolean"
           ? service.reportData.validWarranty
           : String(service.reportData?.validWarranty).toLowerCase() === "sim",
-        servicePhase:
-          service.serviceType === "Vistoria"
-            ? "inspection"
-            : "installation",
+        servicePhase: getServicePhase(service.serviceType), // fix: assign as literal union
         client: service.reportData?.client || service.client || "Não informado",
         address: service.reportData?.address || service.address || "Não informado",
         city: service.reportData?.city || service.city || "Não informado",
@@ -908,7 +910,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                 feedbackForm={feedbackForm}
                 statusUpdating={statusUpdating}
                 onFinalize={() => updateServiceStatus('concluido')}
-                onSubmit={handleSubmitFeedback}
+                onSubmit={feedbackForm.handleSubmit(handleSubmitFeedback)}
               />
             </CardContent>
           </Card>
