@@ -637,27 +637,29 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
           let options: string[] | undefined = undefined;
           if (f.options) {
             if (Array.isArray(f.options)) {
-              // Already an array
-              options = f.options;
+              // Safely map to strings
+              const strArray = f.options.map(opt => String(opt));
+              if (strArray.every(x => typeof x === "string")) {
+                options = strArray;
+              }
             } else if (typeof f.options === "string") {
-              // Try to parse stringified array
               try {
                 const parsed = JSON.parse(f.options);
-                if (Array.isArray(parsed)) {
+                if (Array.isArray(parsed) && parsed.every(x => typeof x === "string")) {
                   options = parsed;
                 }
               } catch {
                 options = undefined;
               }
             } else if (typeof f.options === "object" && f.options !== null) {
-              // Might be a plain object: check if EVERY value is a string and keys are numeric
-              const obj = f.options as unknown;
-              // Try: Object.values(obj). If keys are 0,1,2..., it might be from Postgres JSON array
-              const asArray = Object.values(obj);
+              // Convert values to string array if possible
+              const asArray = Object.values(f.options);
               if (Array.isArray(asArray) && asArray.every(x => typeof x === "string")) {
                 options = asArray as string[];
+              } else if (Array.isArray(asArray) && asArray.every(x => typeof x === "number" || typeof x === "boolean")) {
+                options = asArray.map(x => String(x));
               }
-              // else, leave options undefined
+              // If not all strings (after conversion), leave options undefined
             }
           }
 
