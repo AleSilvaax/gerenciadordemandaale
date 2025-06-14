@@ -40,8 +40,7 @@ const Estatisticas: React.FC = () => {
           getServices(),
           getTeamMembers()
         ]);
-        // Adicionar logs para depuração
-        console.log("Serviços recebidos:", servicesData);
+        console.log("Serviços recebidos (Estatisticas):", servicesData);
         console.log("Membros da equipe recebidos:", teamData);
         setServices(servicesData ?? []);
         setTeamMembers(teamData ?? []);
@@ -59,27 +58,24 @@ const Estatisticas: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    // Apply filters
+    // Filtro extra para debug (log após filtrar)
     let result = [...services];
-    
-    // Filter by time period
     if (timeFilter !== "all") {
       const cutoffDate = getDateFromFilter(timeFilter);
       result = result.filter(service => {
         return service.date && new Date(service.date) >= cutoffDate;
       });
     }
-    
-    // Filter by technician
     if (selectedTechnician !== "all") {
-      result = result.filter(service => service.technician.id === selectedTechnician);
+      result = result.filter(service => service.technician && service.technician.id === selectedTechnician);
     }
-    
-    // Filter by service type
     if (selectedServiceType !== "all") {
-      result = result.filter(service => service.serviceType === selectedServiceType);
+      result = result.filter(service => {
+        // Aceita tanto serviceType quanto service_type só para garantir, debug:
+        return (service.serviceType ?? service.service_type) === selectedServiceType;
+      });
     }
-    
+    console.log("Demanda pós-filtro (Estatisticas):", result);
     setFilteredServices(result);
   }, [services, timeFilter, selectedTechnician, selectedServiceType]);
   

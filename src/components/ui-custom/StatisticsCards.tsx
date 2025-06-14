@@ -10,17 +10,21 @@ interface StatisticsCardsProps {
 }
 
 export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, teamMembers, className }) => {
-  // Log para depuração, garantir que sempre vemos quantos dados chegam
   React.useEffect(() => {
-    console.log('[StatisticsCards] Dados recebidos - services:', services?.length, 'teamMembers:', teamMembers?.length);
+    console.log('[StatisticsCards] Dados recebidos - services:', services?.length, services);
+    console.log('[StatisticsCards] teamMembers:', teamMembers?.length, teamMembers);
   }, [services, teamMembers]);
+
+  // Corrige serviço para usar fallback caso venha service_type do backend
+  const safeServiceType = (s: any) => s.serviceType ?? s.service_type ?? 'outros';
+  const safePriority = (s: any) => s.priority ?? s.prioridade ?? 'media';
+  const safeStatus = (s: any) => s.status ?? 'pendente';
 
   // Service status statistics
   const statusData = React.useMemo(() => {
-    // Garantir sempre array válido
-    const pendente = services?.filter(s => s.status === 'pendente').length || 0;
-    const concluido = services?.filter(s => s.status === 'concluido').length || 0;
-    const cancelado = services?.filter(s => s.status === 'cancelado').length || 0;
+    const pendente = services?.filter(s => safeStatus(s) === 'pendente').length || 0;
+    const concluido = services?.filter(s => safeStatus(s) === 'concluido').length || 0;
+    const cancelado = services?.filter(s => safeStatus(s) === 'cancelado').length || 0;
     return [
       { name: 'Pendentes', value: pendente, color: '#f59e0b' },
       { name: 'Concluídos', value: concluido, color: '#10b981' },
@@ -32,8 +36,7 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
   const typeData = React.useMemo(() => {
     if (!Array.isArray(services)) return [];
     const types = services.reduce((acc, service) => {
-      // usa apenas serviceType (certo em nosso model)
-      const type = service.serviceType ?? 'outros';
+      const type = safeServiceType(service);
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -54,7 +57,7 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
   const priorityData = React.useMemo(() => {
     if (!Array.isArray(services)) return [];
     const priorities = services.reduce((acc, service) => {
-      const priority = service.priority || 'media';
+      const priority = safePriority(service);
       acc[priority] = (acc[priority] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -78,7 +81,6 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
   const technicianData = React.useMemo(() => {
     if (!Array.isArray(services)) return [];
     const technicianCounts = services.reduce((acc, service) => {
-      // Defensive: se não houver technician ou id, ignora
       const techId = service.technician?.id;
       if (!techId) return acc;
       acc[techId] = (acc[techId] || 0) + 1;
@@ -232,4 +234,3 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
     </div>
   );
 };
-
