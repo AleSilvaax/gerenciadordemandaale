@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Service, TeamMember } from '@/types/serviceTypes';
@@ -26,22 +25,18 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
   // Service type statistics
   const typeData = React.useMemo(() => {
     const types = services.reduce((acc, service) => {
-      const type = service.serviceType || 'outros';
+      const type = service.serviceType || service.service_type || 'outros';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
     const typeColors = {
-      inspection: '#8b5cf6',
-      installation: '#ec4899',
-      maintenance: '#6366f1',
+      Vistoria: '#8b5cf6',
+      Instalação: '#ec4899',
+      Manutenção: '#6366f1',
       outros: '#64748b'
     };
-    
     return Object.entries(types).map(([type, count]) => ({
-      name: type === 'inspection' ? 'Vistoria' : 
-            type === 'installation' ? 'Instalação' :
-            type === 'maintenance' ? 'Manutenção' : 'Outros',
+      name: type,
       value: count,
       color: typeColors[type as keyof typeof typeColors] || '#64748b'
     }));

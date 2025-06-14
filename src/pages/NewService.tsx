@@ -41,13 +41,12 @@ const NewService: React.FC = () => {
           getServiceTypes()
         ]);
         setTeamMembers(members);
-        setServiceTypes(types);
+        setServiceTypes(types.filter((t) => !!t.name)); // pega só tipos válidos
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Erro ao carregar dados");
       }
     };
-    
     fetchData();
   }, []);
 
@@ -141,13 +140,13 @@ const NewService: React.FC = () => {
                   <SelectValue placeholder="Selecione o tipo de serviço" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Vistoria">Vistoria</SelectItem>
-                  <SelectItem value="Instalação">Instalação</SelectItem>
-                  <SelectItem value="Manutenção">Manutenção</SelectItem>
-                  {serviceTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.name}>
-                      {type.name} - {type.description}
-                    </SelectItem>
+                  {/* Lista todos tipos cadastrados dinamicamente */}
+                  {serviceTypes
+                    .filter((type) => type && type.name)
+                    .map((type) => (
+                      <SelectItem key={type.id} value={type.name}>
+                        {type.name} {!!type.description && `- ${type.description}`}
+                      </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

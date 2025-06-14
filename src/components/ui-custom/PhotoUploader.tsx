@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,16 +33,12 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
     const file = e.target.files[0];
-    
     if (!file.type.startsWith('image/')) {
       alert("Por favor, selecione um arquivo de imagem válido");
       return;
     }
-    
     setIsUploading(true);
-    
     try {
       await onAddPhoto(file, photoTitle || `Foto ${photos.length + 1}`);
       setPhotoTitle("");

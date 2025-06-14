@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -59,28 +58,7 @@ export const VisualPreferencesTab = () => {
     );
   };
 
-  // Salvando as preferências quando elas mudam
-  React.useEffect(() => {
-    const preferences = {
-      colorScheme,
-      layout,
-      animationLevel,
-      animations: animations.reduce((acc, curr) => ({ ...acc, [curr.id]: curr.enabled }), {})
-    };
-    localStorage.setItem('visualPreferences', JSON.stringify(preferences));
-    
-    // Aplicando o tema de cores
-    document.documentElement.setAttribute('data-color-scheme', colorScheme);
-    
-    // Aplicando o nível de layout
-    document.documentElement.setAttribute('data-layout', layout);
-    
-    // Aplicando o nível de animação
-    document.documentElement.style.setProperty('--animation-speed-factor', `${animationLevel / 50}`);
-    
-  }, [colorScheme, layout, animationLevel, animations]);
-
-  // Carregando as preferências salvas
+  // Carrega preferências salvas ao abrir
   React.useEffect(() => {
     const savedPrefs = localStorage.getItem('visualPreferences');
     if (savedPrefs) {
@@ -89,9 +67,8 @@ export const VisualPreferencesTab = () => {
         setColorScheme(prefs.colorScheme || "default");
         setLayout(prefs.layout || "balanced");
         setAnimationLevel(prefs.animationLevel || 50);
-        
         if (prefs.animations) {
-          setAnimations(prev => 
+          setAnimations(prev =>
             prev.map(anim => ({
               ...anim,
               enabled: prefs.animations[anim.id] !== undefined ? prefs.animations[anim.id] : anim.enabled
@@ -103,6 +80,18 @@ export const VisualPreferencesTab = () => {
       }
     }
   }, []);
+
+  // Salva preferências ao alterar qualquer coisa
+  React.useEffect(() => {
+    const preferences = {
+      colorScheme, layout, animationLevel,
+      animations: animations.reduce((acc, curr) => ({ ...acc, [curr.id]: curr.enabled }), {})
+    };
+    localStorage.setItem('visualPreferences', JSON.stringify(preferences));
+    document.documentElement.setAttribute('data-color-scheme', colorScheme);
+    document.documentElement.setAttribute('data-layout', layout);
+    document.documentElement.style.setProperty('--animation-speed-factor', `${animationLevel / 50}`);
+  }, [colorScheme, layout, animationLevel, animations]);
 
   const resetToDefaults = () => {
     setColorScheme("default");
