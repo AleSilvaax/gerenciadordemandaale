@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember, UserRole, ServiceTypeConfig } from '@/types/serviceTypes';
+import { Service, TeamMember, UserRole, ServiceTypeConfig, ServicePriority, ServiceType, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { CustomField } from '@/types/serviceTypes';
 import { TechnicalField } from "@/types/serviceTypes";
