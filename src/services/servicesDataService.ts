@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember, UserRole } from '@/types/serviceTypes';
+import { Service, TeamMember, UserRole, ServiceTypeConfig } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { CustomField } from '@/types/serviceTypes';
 
@@ -616,10 +616,62 @@ export const createService = createServiceInDatabase;
 export const updateService = updateServiceInDatabase;
 export const deleteService = deleteServiceFromDatabase;
 
-// Service Types (stub, adapt as needed)
-export const getServiceTypes = async () => {
-  // Placeholder for fetching service types
-  return [];
+// Service Types
+const defaultServiceTypes: ServiceTypeConfig[] = [
+  {
+    id: "maintenance",
+    name: "Manutenção",
+    description: "Serviços de manutenção preventiva e corretiva",
+    fields: [
+      { id: "equipment", name: "Equipamento", type: "text", required: true },
+      { id: "model", name: "Modelo", type: "text", required: true },
+      { id: "serialNumber", name: "Número de Série", type: "text", required: false },
+      { id: "issueDescription", name: "Descrição do Problema", type: "textarea", required: true },
+      { 
+        id: "maintenanceType", 
+        name: "Tipo de Manutenção", 
+        type: "select", 
+        required: true,
+        options: ["Preventiva", "Corretiva", "Preditiva"]
+      }
+    ]
+  },
+  {
+    id: "installation",
+    name: "Instalação",
+    description: "Serviços de instalação de equipamentos",
+    fields: [
+      { id: "equipment", name: "Equipamento", type: "text", required: true },
+      { id: "location", name: "Local da Instalação", type: "text", required: true },
+      { id: "requiresTraining", name: "Requer Treinamento", type: "boolean", required: false },
+      { id: "additionalComments", name: "Observações Adicionais", type: "textarea", required: false }
+    ]
+  },
+  {
+    id: "inspection",
+    name: "Vistoria",
+    description: "Serviços de vistoria técnica",
+    fields: [
+      { id: "inspectionArea", name: "Área de Vistoria", type: "text", required: true },
+      { id: "checklist", name: "Checklist", type: "textarea", required: true }
+    ]
+  }
+];
+
+export const getServiceTypes = async (): Promise<ServiceTypeConfig[]> => {
+  try {
+    const savedTypes = localStorage.getItem('serviceTypes');
+    if (savedTypes) {
+      const parsedTypes = JSON.parse(savedTypes);
+      if (Array.isArray(parsedTypes)) {
+        return parsedTypes;
+      }
+    }
+    return defaultServiceTypes;
+  } catch (error) {
+    console.error("Erro ao carregar tipos de serviço do localStorage:", error);
+    return defaultServiceTypes;
+  }
 };
 
 // Service messaging - placeholder stubs, adapt as needed

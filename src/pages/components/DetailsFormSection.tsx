@@ -1,11 +1,12 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
+import { getServiceTypes } from "@/services/servicesDataService";
+import { ServiceTypeConfig } from "@/types/serviceTypes";
 
 interface DetailsFormSectionProps {
   service: any;
@@ -33,6 +34,16 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
       notes: service.notes || ""
     }
   });
+
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      const types = await getServiceTypes();
+      setServiceTypes(types);
+    };
+    fetchTypes();
+  }, []);
 
   return (
     <Form {...form}>
@@ -91,8 +102,11 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="inspection">Vistoria</SelectItem>
-                    <SelectItem value="installation">Instalação</SelectItem>
+                    {serviceTypes.map(type => (
+                       <SelectItem key={type.id} value={type.name}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>

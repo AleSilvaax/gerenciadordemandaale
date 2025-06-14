@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { ServiceTypeConfig, TechnicalField } from "@/types/serviceTypes";
 
 interface TechnicalField {
   id: string;
@@ -37,7 +37,7 @@ interface ServiceType {
 }
 
 // Dados iniciais para demonstração
-const defaultServiceTypes: ServiceType[] = [
+const defaultServiceTypes: ServiceTypeConfig[] = [
   {
     id: "maintenance",
     name: "Manutenção",
@@ -66,12 +66,21 @@ const defaultServiceTypes: ServiceType[] = [
       { id: "requiresTraining", name: "Requer Treinamento", type: "boolean", required: false },
       { id: "additionalComments", name: "Observações Adicionais", type: "textarea", required: false }
     ]
+  },
+  {
+    id: "inspection",
+    name: "Vistoria",
+    description: "Serviços de vistoria técnica",
+    fields: [
+      { id: "inspectionArea", name: "Área de Vistoria", type: "text", required: true },
+      { id: "checklist", name: "Checklist", type: "textarea", required: true }
+    ]
   }
 ];
 
 export const TechnicalSettingsTab = () => {
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
-  const [selectedType, setSelectedType] = useState<ServiceType | null>(null);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
+  const [selectedType, setSelectedType] = useState<ServiceTypeConfig | null>(null);
   const [editingField, setEditingField] = useState<TechnicalField | null>(null);
   const [isNewField, setIsNewField] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -99,13 +108,13 @@ export const TechnicalSettingsTab = () => {
     }
   }, [serviceTypes]);
 
-  const handleSelectType = (type: ServiceType) => {
+  const handleSelectType = (type: ServiceTypeConfig) => {
     setSelectedType(type);
     setEditingField(null);
   };
 
   const handleCreateNewType = () => {
-    const newType: ServiceType = {
+    const newType: ServiceTypeConfig = {
       id: `type-${Date.now()}`,
       name: "Novo Tipo de Serviço",
       description: "Descrição do novo tipo de serviço",
@@ -211,7 +220,7 @@ export const TechnicalSettingsTab = () => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const importedTypes = JSON.parse(content) as ServiceType[];
+        const importedTypes = JSON.parse(content) as ServiceTypeConfig[];
         
         setIsSaving(true);
         setTimeout(() => {

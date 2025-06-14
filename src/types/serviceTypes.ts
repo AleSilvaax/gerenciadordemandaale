@@ -171,3 +171,19 @@ export interface ChartData {
   name: string;
   value: number;
 }
+
+export interface TechnicalField {
+  id: string;
+  name:string;
+  type: "text" | "number" | "select" | "boolean" | "date" | "textarea";
+  required: boolean;
+  options?: string[];
+  description?: string;
+}
+
+export interface ServiceTypeConfig {
+  id: string;
+  name: string;
+  fields: TechnicalField[];
+  description: string;
+}

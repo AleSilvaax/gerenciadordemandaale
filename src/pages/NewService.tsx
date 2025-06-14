@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createService, getTeamMembers, getServiceTypes } from "@/services/servicesDataService";
-import { TeamMember, ServiceType } from "@/types/serviceTypes";
+import { TeamMember, ServiceType, ServiceTypeConfig } from "@/types/serviceTypes";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +22,7 @@ const NewService: React.FC = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   
   // Form state
   const [title, setTitle] = useState("");
