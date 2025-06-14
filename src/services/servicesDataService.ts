@@ -20,44 +20,61 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
     console.log('Fetching services from database');
     
-    // First get all services
+    // Get all services with all relevant fields
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
-      .select('*');
-    
+      .select(`
+        *,
+        service_type,
+        service_type_id,
+        priority,
+        status,
+        due_date,
+        number,
+        description,
+        client,
+        address,
+        city,
+        notes,
+        estimated_hours,
+        photo_titles,
+        photos,
+        created_by
+      `);
+
     if (servicesError) {
       console.error('Error fetching services from Supabase:', servicesError);
       throw servicesError;
     }
-    
-    // Then get all service_technicians relationships
+
+    // Get all service_technicians relationships
     const { data: technicianData, error: technicianError } = await supabase
       .from('service_technicians')
       .select('*, profiles:technician_id(*)');
-    
+
     if (technicianError) {
       console.error('Error fetching service technicians from Supabase:', technicianError);
       throw technicianError;
     }
-    
+
     // Get all service messages - Using a raw query approach to work around TypeScript limitations
     const { data: messagesData, error: messagesError } = await supabase
       .rpc('get_service_messages') as unknown as { 
         data: ServiceMessageRow[] | null, 
         error: any 
       };
-      
+
     if (messagesError) {
       console.error('Error fetching service messages from Supabase:', messagesError);
       // Continue without messages if there's an error
       console.log('Continuing without messages due to error');
     }
-    
+
     // Transform the data to match our Service type
     const services: Service[] = servicesData.map(service => {
       // Find technician for this service
       const techRelation = technicianData?.find(t => t.service_id === service.id);
-      
+
       // Get technician details or use a default
       const technician: TeamMember = techRelation?.profiles ? {
         id: techRelation.profiles.id,
@@ -70,7 +87,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         avatar: '',
         role: 'tecnico',
       };
-      
+
       // Get messages for this service from our function result
       const serviceMessages = Array.isArray(messagesData)
         ? messagesData
@@ -83,22 +100,61 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
               timestamp: m.timestamp
             }))
         : [];
-      
-      // Return a properly formatted Service object
+        
+      // Parse possible JSON fields
+      let customFieldsParsed: any = undefined;
+      if (service.custom_fields) {
+        try {
+          const parsed = typeof service.custom_fields === "string" ? JSON.parse(service.custom_fields) : service.custom_fields;
+          customFieldsParsed = Array.isArray(parsed) ? parsed : undefined;
+        } catch { customFieldsParsed = undefined; }
+      }
+      let signaturesParsed: any = undefined;
+      if (service.signatures) {
+        try {
+          signaturesParsed = typeof service.signatures === "string" ? JSON.parse(service.signatures) : service.signatures;
+        } catch { signaturesParsed = undefined; }
+      }
+
+      // Arrays seguros
+      const safePhotoTitles =
+        Array.isArray(service.photo_titles)
+          ? service.photo_titles.filter((x: any) => typeof x === 'string')
+          : undefined;
+
+      const safePhotos =
+        Array.isArray(service.photos)
+          ? service.photos.filter((x: any) => typeof x === 'string')
+          : undefined;
+
+      // Return all relevant fields
       return {
         id: service.id,
         title: service.title,
-        status: service.status as any,
         location: service.location,
+        status: service.status as ServiceStatus,
         technician: technician,
         creationDate: service.created_at,
+        dueDate: service.due_date ?? undefined,
+        priority: service.priority ?? undefined,
+        serviceType: service.service_type ?? undefined,
+        number: service.number ?? undefined,
+        description: service.description ?? undefined,
+        createdBy: service.created_by ?? undefined,
+        client: service.client ?? undefined,
+        address: service.address ?? undefined,
+        city: service.city ?? undefined,
+        notes: service.notes ?? undefined,
+        estimatedHours: service.estimated_hours ?? undefined,
+        customFields: customFieldsParsed,
+        signatures: signaturesParsed,
         messages: serviceMessages,
-        // Provide defaults/placeholders for required properties
-        dueDate: undefined,
-        priority: undefined,
+        photos: safePhotos,
+        photoTitles: safePhotoTitles,
+        date: service.date ?? undefined,
       };
     });
-    
+
     console.log('Services fetched successfully:', services);
     return services;
   } catch (error) {
