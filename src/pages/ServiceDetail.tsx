@@ -407,7 +407,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
   }));
 
-  // HANDLER para assinatura (recebe só 1 argumento)
+  // HANDLERS para assinatura - aceitar apenas 1 argumento
   const handleClientSignature = (signature: string) => {
     handleSaveSignature('client', signature);
   };
