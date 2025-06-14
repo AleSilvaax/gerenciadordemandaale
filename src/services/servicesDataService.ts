@@ -431,12 +431,6 @@ export const createService = createServiceInDatabase;
 export const updateService = updateServiceInDatabase;
 export const deleteService = deleteServiceFromDatabase;
 
-// Team member management
-export const getTeamMembers = getTeamMembers;
-export const addTeamMember = addTeamMember;
-export const updateTeamMember = updateTeamMember;
-export const deleteTeamMember = deleteTeamMember;
-
 // Service Types (stub, adapt as needed)
 export const getServiceTypes = async () => {
   // Placeholder for fetching service types
