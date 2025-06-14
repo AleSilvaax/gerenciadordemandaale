@@ -22,6 +22,11 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { MotionContainer } from "@/components/dashboard/MotionContainer";
+import { DashboardStatsCards } from "@/components/dashboard/DashboardStatsCards";
+import { AnimatedBarChart } from "@/components/dashboard/AnimatedBarChart";
+import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Estatisticas: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState("30days");
@@ -207,9 +212,16 @@ const Estatisticas: React.FC = () => {
     );
   }
   
+  // Reorganizamos o layout
   return (
     <div className="min-h-screen p-4 pb-20 page-transition">
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <motion.div
+        className="flex items-center justify-between mb-6"
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <Link to="/" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
           <ArrowLeft size={18} />
         </Link>
@@ -217,32 +229,15 @@ const Estatisticas: React.FC = () => {
         <button className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10">
           <BellDot size={18} />
         </button>
-      </div>
-      
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg">Visualização de dados</h2>
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleExportReport('excel')}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleExportReport('pdf')}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-        </div>
-      </div>
-      
-      {/* Filter section */}
-      <div className="mb-6 bg-card rounded-lg border border-white/10 p-4">
+      </motion.div>
+
+      {/* Filtros */}
+      <motion.div
+        className="mb-6 bg-card rounded-lg border border-white/10 p-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.6 }}
+      >
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium flex items-center">
             <Filter className="h-4 w-4 mr-2" />
@@ -308,137 +303,72 @@ const Estatisticas: React.FC = () => {
             </Select>
           </div>
         </div>
-      </div>
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.totalServices}</div>
-            <p className="text-xs text-muted-foreground">Total de Demandas</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">{stats.completedServices}</div>
-            <p className="text-xs text-muted-foreground">Concluídas</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-yellow-500">{stats.pendingServices}</div>
-            <p className="text-xs text-muted-foreground">Pendentes</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
-            <p className="text-xs text-muted-foreground">Atrasadas</p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Charts */}
-      <StatisticsCards 
-        services={filteredServices} 
-        teamMembers={teamMembers}
-        className="mb-6" 
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Completion Rate */}
-        <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm">
-          <h3 className="text-lg font-medium mb-4">Taxa de Conclusão</h3>
-          <div className="flex flex-col items-center">
-            <ChartCircle 
-              value={stats.completionRate} 
-              size={160} 
+      </motion.div>
+
+      {/* Cards de estatísticas principais com efeito count-up */}
+      <MotionContainer className="">
+        <DashboardStatsCards
+          stats={[
+            { label: "Total de Demandas", value: stats.totalServices, color: "text-white" },
+            { label: "Concluídas", value: stats.completedServices, color: "text-green-500" },
+            { label: "Pendentes", value: stats.pendingServices, color: "text-yellow-500" },
+            { label: "Atrasadas", value: stats.overdue, color: "text-red-500" }
+          ]}
+        />
+      </MotionContainer>
+
+      {/* Gráficos principais animados */}
+      <MotionContainer className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <motion.div>
+          <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm mb-4">
+            <h3 className="text-lg font-medium mb-4">Status das Demandas</h3>
+            <AnimatedPieChart
+              data={[
+                { name: "Pendentes", value: stats.pendingServices, color: "#f59e0b" },
+                { name: "Concluídas", value: stats.completedServices, color: "#10b981" },
+                { name: "Canceladas", value: stats.cancelledServices, color: "#ef4444" }
+              ]}
             />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">Tempo médio de conclusão</p>
-              <div className="text-2xl font-bold">{stats.avgCompletionTime} dias</div>
-            </div>
           </div>
-        </div>
-        
-        {/* Priority Distribution */}
-        <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm">
-          <h3 className="text-lg font-medium mb-4">Distribuição por Prioridade</h3>
-          <div className="space-y-4">
-            {/* Baixa priority */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="flex items-center">
-                  <span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                  Baixa
-                </span>
-                <span>{stats.priorities.baixa}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-blue-500 h-2 rounded-full" 
-                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.baixa / stats.totalServices * 100) : 0}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            {/* Media priority */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="flex items-center">
-                  <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
-                  Média
-                </span>
-                <span>{stats.priorities.media}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-yellow-500 h-2 rounded-full" 
-                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.media / stats.totalServices * 100) : 0}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            {/* Alta priority */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="flex items-center">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>
-                  Alta
-                </span>
-                <span>{stats.priorities.alta}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-orange-500 h-2 rounded-full" 
-                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.alta / stats.totalServices * 100) : 0}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            {/* Urgente priority */}
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="flex items-center">
-                  <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                  Urgente
-                </span>
-                <span>{stats.priorities.urgente}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-red-500 h-2 rounded-full" 
-                  style={{ width: `${stats.totalServices > 0 ? (stats.priorities.urgente / stats.totalServices * 100) : 0}%` }}
-                ></div>
-              </div>
-            </div>
+        </motion.div>
+        <motion.div>
+          <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm mb-4">
+            <h3 className="text-lg font-medium mb-4">Distribuição por Prioridade</h3>
+            <AnimatedBarChart
+              data={[
+                { name: "Baixa", value: stats.priorities.baixa, color: "#3b82f6" },
+                { name: "Média", value: stats.priorities.media, color: "#f59e0b" },
+                { name: "Alta", value: stats.priorities.alta, color: "#f97316" },
+                { name: "Urgente", value: stats.priorities.urgente, color: "#ef4444" },
+              ]}
+            />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </MotionContainer>
+
+      {/* Outro gráfico exemplo: por tipo de serviço */}
+      <MotionContainer className="mb-8">
+        <motion.div>
+          <div className="bg-card rounded-xl border border-white/10 p-4 shadow-sm mb-4">
+            <h3 className="text-lg font-medium mb-4">Tipos de Serviço</h3>
+            <AnimatedBarChart
+              data={
+                Object.entries(filteredServices.reduce((acc, cur) => {
+                  const type = cur.serviceType || (cur as any).service_type || "outro";
+                  acc[type] = (acc[type] || 0) + 1;
+                  return acc;
+                }, {} as Record<string, number>)).map(([type, count]) => ({
+                  name: type.charAt(0).toUpperCase() + type.slice(1),
+                  value: count,
+                  color: type === "inspection" ? "#8b5cf6" : type === "installation" ? "#ec4899" : "#64748b"
+                }))
+              }
+            />
+          </div>
+        </motion.div>
+      </MotionContainer>
       
+      {/* Desempenho por técnico (original poderia ser live/expandido em outro gráfico) */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg">Desempenho da Equipe</h2>
