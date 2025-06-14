@@ -104,81 +104,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
-  const handleGenerateDetailedReport = () => {
-    if (!service) {
-      toast.error("Serviço não encontrado.");
-      return;
-    }
-
-    const getServicePhase = (type: string | undefined): "inspection" | "installation" => {
-      return type === "Vistoria" ? "inspection" : "installation";
-    };
-
-    // Forçar campos obrigatórios para evitar undefined
-    // Força todas as listas e booleans essenciais
-    const safeService: Service = {
-      ...service,
-      client: service.client || service.reportData?.client || "Não informado",
-      reportData: {
-        ...service.reportData,
-        // Garantia de tipo booleano para os campos obrigatórios do relatório de instalação
-        compliesWithNBR17019: typeof service.reportData?.compliesWithNBR17019 === "boolean"
-          ? service.reportData.compliesWithNBR17019
-          : String(service.reportData?.compliesWithNBR17019).toLowerCase() === "sim",
-        homologatedInstallation: typeof service.reportData?.homologatedInstallation === "boolean"
-          ? service.reportData.homologatedInstallation
-          : String(service.reportData?.homologatedInstallation).toLowerCase() === "sim",
-        requiredAdjustment: typeof service.reportData?.requiredAdjustment === "boolean"
-          ? service.reportData.requiredAdjustment
-          : String(service.reportData?.requiredAdjustment).toLowerCase() === "sim",
-        validWarranty: typeof service.reportData?.validWarranty === "boolean"
-          ? service.reportData.validWarranty
-          : String(service.reportData?.validWarranty).toLowerCase() === "sim",
-        servicePhase: getServicePhase(service.serviceType), // fix: assign as literal union
-        client: service.reportData?.client || service.client || "Não informado",
-        address: service.reportData?.address || service.address || "Não informado",
-        city: service.reportData?.city || service.city || "Não informado",
-        // Fallback para assinatura
-        clientSignature: service.reportData?.clientSignature || "",
-      },
-      technician: service.technician || {
-        id: "0",
-        name: "Não atribuído",
-        avatar: "",
-        role: "tecnico",
-        signature: "",
-        email: "",
-        phone: "",
-      },
-      photos: Array.isArray(service.photos) ? service.photos : [],
-      photoTitles: Array.isArray(service.photoTitles)
-        ? service.photoTitles
-        : [],
-    };
-
-    try {
-      console.log("Dados enviados para generatePDF:", safeService);
-      const ok = generatePDF(safeService);
-      if (!ok) {
-        toast.error(
-          "Erro ao gerar o relatório detalhado. Verifique se todos os campos obrigatórios estão preenchidos."
-        );
-      } else {
-        toast.success("Relatório detalhado gerado com sucesso");
-      }
-    } catch (error) {
-      // Adiciona log detalhado para debug
-      console.error(
-        "Erro inesperado ao gerar relatório detalhado:",
-        error,
-        safeService
-      );
-      toast.error(
-        "Erro inesperado ao gerar o relatório. Verifique as informações preenchidas e tente novamente."
-      );
-    }
-  };
-
   const updateServiceStatus = async (newStatus: 'pendente' | 'concluido' | 'cancelado', serviceType?: 'Vistoria' | 'Instalação') => {
     if (!service || !id) return;
     
@@ -243,28 +168,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 
   // Usa hook para lidar com saving e submit do relatório.
   const { saving, handleSaveReportData } = useReportData(service, id, updateLocalReportData);
-
-  const handleAddMessage = async () => {
-    if (!service || !id || !newMessage.trim()) return;
-    
-    try {
-      // Just a mock user for now - in a real app this would come from authentication
-      const newMessageData = {
-        senderId: "user-1",
-        senderName: "Usuário Atual",
-        senderRole: "administrador",
-        message: newMessage
-      };
-      
-      const updatedService = await addServiceMessage(id, newMessageData);
-      setService(updatedService);
-      setNewMessage("");
-      toast.success('Mensagem enviada');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Erro ao enviar mensagem');
-    }
-  };
 
   const handleAddPhoto = async (file: File, title: string): Promise<string> => {
     if (!service || !id) {
@@ -344,40 +247,98 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
+  // --- Salvamento de assinaturas atualizado ---
   const handleSaveSignature = async (role: 'client' | 'technician', signatureData: string) => {
     if (!service || !id) return;
-    
+
     try {
       if (role === 'client') {
+        // Salva assinatura no report_data (e no state local)
+        // Grava também clientName, se disponível
         const updatedReportData = {
           ...service.reportData,
-          clientSignature: signatureData
+          clientSignature: signatureData,
+          clientName: service.reportData?.clientName || service.client || "",
         };
-        
+        // Atualiza backend (se usar tabela report_data, adapte seu service/api para salvar assinaturas em report_data)
         const updatedService = await updateService({
           id,
-          reportData: updatedReportData
+          reportData: updatedReportData,
         });
-        
         setService(updatedService);
+        toast.success("Assinatura do cliente salva com sucesso!");
       } else {
-        // In a real app, updating the technician signature would be done differently
-        // For now, we'll just add it to the service
+        // Salva assinatura do técnico no profile do técnico no objeto technician do service
+        const updatedTechnician = {
+          ...service.technician,
+          signature: signatureData,
+        };
         const updatedService = await updateService({
           id,
-          technician: {
-            ...service.technician,
-            signature: signatureData
-          }
+          technician: updatedTechnician,
         });
-        
         setService(updatedService);
+        toast.success("Assinatura do técnico salva com sucesso!");
       }
-      
-      toast.success(`Assinatura ${role === 'client' ? 'do cliente' : 'do técnico'} salva com sucesso`);
     } catch (error) {
-      console.error('Error saving signature:', error);
-      toast.error(`Erro ao salvar assinatura ${role === 'client' ? 'do cliente' : 'do técnico'}`);
+      toast.error("Erro ao salvar assinatura.");
+      console.error(error);
+    }
+  };
+
+  // --- Correção do fluxo do chat ---
+  const handleAddMessage = async () => {
+    if (!service || !id || !newMessage.trim()) return;
+
+    try {
+      // Usuário mockado, você pode conectar com o user autenticado se existir!
+      const message: ServiceMessage = {
+        senderId: "user-1",
+        senderName: "Usuário Atual",
+        senderRole: "administrador",
+        message: newMessage,
+        timestamp: new Date().toISOString(),
+      };
+      const updatedService = await addServiceMessage(id, message);
+      setService(updatedService);
+      setNewMessage("");
+      toast.success("Mensagem enviada!");
+    } catch (error) {
+      toast.error("Erro ao enviar mensagem");
+      console.error(error);
+    }
+  };
+
+  // --- Ao gerar PDF, garantir assinaturas e nomes presentes ---
+  const handleGenerateDetailedReport = () => {
+    if (!service) {
+      toast.error("Serviço não encontrado.");
+      return;
+    }
+
+    // Assegura que reportData está atualizado com assinaturas e nomes
+    const reportData = {
+      ...service.reportData,
+      clientSignature: service.reportData?.clientSignature || "",
+      clientName: service.reportData?.clientName || service.client || "",
+    };
+
+    const safeService = {
+      ...service,
+      reportData,
+      technician: {
+        ...service.technician,
+        signature: service.technician.signature || "",
+      },
+    };
+
+    try {
+      const ok = generatePDF(safeService as Service);
+      if (!ok) toast.error("Erro ao gerar relatório detalhado.");
+      else toast.success("Relatório detalhado gerado com sucesso");
+    } catch (error) {
+      toast.error("Erro inesperado ao gerar relatório.");
+      console.error(error, safeService);
     }
   };
 
@@ -854,7 +815,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                   {/* --- ASSINATURAS AGORA ESTÃO NO COMPONENTE DEDICADO --- */}
                   <ServiceSignatureSection
                     clientSignature={service.reportData?.clientSignature}
-                    technicianSignature={safeTechnician.signature || ""}
+                    technicianSignature={service.technician.signature || ""}
                     clientName={service.reportData?.clientName || service.client || ""}
                     technicianName={safeTechnician.name}
                     onClientSignature={handleClientSignature}

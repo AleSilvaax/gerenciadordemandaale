@@ -419,6 +419,77 @@ export const deleteTeamMember = async (memberId: string): Promise<boolean> => {
   return true;
 };
 
+// Service messaging - persistente no banco
+import { ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
+
+// Adicionar mensagem ao serviço e retornar as mensagens atualizadas do serviço
+export const addServiceMessage = async (serviceId: string, message: ServiceMessage): Promise<Service> => {
+  try {
+    // Salva a mensagem na tabela service_messages
+    const { error } = await supabase
+      .from('service_messages')
+      .insert({
+        service_id: serviceId,
+        sender_id: message.senderId,
+        sender_name: message.senderName,
+        sender_role: message.senderRole,
+        message: message.message,
+      });
+    if (error) throw error;
+
+    // Busca o serviço atualizado, incluindo todas as mensagens deste serviço
+    const { data: service } = await supabase
+      .from('services')
+      .select('*')
+      .eq('id', serviceId)
+      .single();
+
+    const { data: messagesData } = await supabase
+      .from('service_messages')
+      .select('*')
+      .eq('service_id', serviceId)
+      .order('timestamp', { ascending: true });
+
+    const messages: ServiceMessage[] = Array.isArray(messagesData)
+      ? messagesData.map((m) => ({
+          senderId: m.sender_id,
+          senderName: m.sender_name,
+          senderRole: m.sender_role,
+          message: m.message,
+          timestamp: m.timestamp,
+        }))
+      : [];
+
+    // Retorna o serviço atualizado, incluindo as mensagens
+    return {
+      ...service,
+      messages,
+    } as Service;
+  } catch (error) {
+    console.error('Erro ao adicionar mensagem ao serviço:', error);
+    throw error;
+  }
+};
+
+// Salva feedback no serviço (simplificado)
+export const addServiceFeedback = async (serviceId: string, feedback: ServiceFeedback): Promise<Service> => {
+  try {
+    // Atualiza serviço com feedback (você pode criar uma coluna feedback/json em services para persistir o feedback se desejar)
+    const { data, error } = await supabase
+      .from('services')
+      .update({ feedback })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Service;
+  } catch (error) {
+    console.error('Erro ao salvar feedback:', error);
+    throw error;
+  }
+};
+
 // Unified exports for codebase compatibility
 
 // Data retrieval
@@ -436,9 +507,9 @@ export const getServiceTypes = async () => {
 };
 
 // Service messaging - placeholder stubs, adapt as needed
-export const addServiceMessage = () => {
-  throw new Error("addServiceMessage implementation missing");
-};
-export const addServiceFeedback = () => {
-  throw new Error("addServiceFeedback implementation missing");
-};
+// export const addServiceMessage = () => {
+//   throw new Error("addServiceMessage implementation missing");
+// };
+// export const addServiceFeedback = () => {
+//   throw new Error("addServiceFeedback implementation missing");
+// };
