@@ -24,17 +24,7 @@ export async function updateService(data: any): Promise<any> {
 export async function getService(id: string): Promise<any> {
   const { data, error } = await supabase
     .from('services')
-    .select(`
-      *,
-      technician:technicians (
-        id,
-        name,
-        email,
-        phone,
-        avatar,
-        signature
-      )
-    `)
+    .select(`*`)
     .eq('id', id)
     .maybeSingle();
 
@@ -47,7 +37,20 @@ export async function getService(id: string): Promise<any> {
     return null;
   }
 
-  return data;
+  // Adaptar technician para simular estrutura antiga (mock), usando profiles (placeholder)
+  // No banco real, não há join direto. Se precisar buscar technician, faça fetch extra depois. Aqui, apenas retorna vazio.
+  return {
+    ...data,
+    technician: data.technician ?? {
+      id: "0",
+      name: "Não atribuído",
+      avatar: "",
+      role: "tecnico",
+      signature: "",
+      email: "",
+      phone: ""
+    }
+  };
 }
 
 // The rest of the functions reference old "messages" and "feedback" fields that don't appear in your schema

@@ -1018,13 +1018,13 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                       <div>
                         <h5 className="text-sm font-medium mb-2">Assinatura do Técnico</h5>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                          Técnico: {service.technician.name}
+                          Técnico: {safeTechnician.name}
                         </p>
                         
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                           {/* Corrigir para apenas um argumento */}
                           <SignatureCapture
-                            initialSignature={service.technician.signature}
+                            initialSignature={safeTechnician.signature || ""}
                             onChange={handleTechnicianSignature}
                             label="Assinatura do Técnico"
                           />
