@@ -342,19 +342,25 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
 export const addTeamMember = async (member: {
   name: string;
   role: UserRole;
-  email?: string;
-  phone?: string;
+  // Do NOT insert email, phone, or signature, as they're not in the profiles DB schema
   avatar?: string;
+  id?: string; // Only needed if explicitly setting, otherwise leave for Supabase
 }): Promise<TeamMember> => {
-  // Create in 'profiles'
+  // Prepare safe insert object
+  const insertData: any = {
+    name: member.name,
+    avatar: member.avatar || null
+  };
+  if (member.id) {
+    insertData.id = member.id;
+  }
+  // Insert profile (id is only set if provided)
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .insert({
-      name: member.name,
-      avatar: member.avatar || ""
-    })
+    .insert(insertData)
     .select()
     .single();
+
   if (profileError) throw profileError;
 
   // Add user_role for this member
