@@ -253,14 +253,18 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 
     try {
       if (role === 'client') {
-        // Salva assinatura no report_data (e no state local)
-        // Grava também clientName, se disponível
+        // Salva assinatura no report_data
         const updatedReportData = {
           ...service.reportData,
           clientSignature: signatureData,
           clientName: service.reportData?.clientName || service.client || "",
         };
-        // Atualiza backend (se usar tabela report_data, adapte seu service/api para salvar assinaturas em report_data)
+        // Atualiza no backend (report_data)
+        await supabase
+          .from('report_data')
+          .update({ client_signature: signatureData, client_name: updatedReportData.clientName })
+          .eq('id', id);
+        // Atualiza serviço principal para refletir no front local
         const updatedService = await updateService({
           id,
           reportData: updatedReportData,
@@ -268,7 +272,16 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         setService(updatedService);
         toast.success("Assinatura do cliente salva com sucesso!");
       } else {
-        // Salva assinatura do técnico no profile do técnico no objeto technician do service
+        // Salva assinatura do técnico no perfil (profile/signature)
+        if (!service.technician?.id || service.technician.id === "0") {
+          toast.error("Técnico não atribuído.");
+          return;
+        }
+        await supabase
+          .from('profiles')
+          .update({ signature: signatureData })
+          .eq('id', service.technician.id);
+        // Atualiza local também para refletir imediatamente na UI
         const updatedTechnician = {
           ...service.technician,
           signature: signatureData,
@@ -316,7 +329,8 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       return;
     }
 
-    // Preenche todos os campos obrigatórios do reportData (fallbacks)
+    // Força sempre um serviceType válido
+    const safeServiceType = service.serviceType || "Vistoria";
     const reportData = {
       ...service.reportData,
       clientSignature: service.reportData?.clientSignature || "",
@@ -328,16 +342,18 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       modelNumber: service.reportData?.modelNumber || "",
       serialNumberNew: service.reportData?.serialNumberNew || "",
       supplyType: service.reportData?.supplyType || "",
-      voltage: service.reportData?.voltage || ""
+      voltage: service.reportData?.voltage || "",
+      servicePhase: ["Instalação", "installation"].includes(safeServiceType) ? "installation" : "inspection"
     };
 
     const safeService = {
       ...service,
       reportData,
+      serviceType: safeServiceType,
       technician: {
         ...service.technician,
-        signature: service.technician.signature || "",
-        name: service.technician.name || "Não atribuído"
+        signature: service.technician?.signature || "",
+        name: service.technician?.name || "Não atribuído"
       },
       client: service.client || reportData.client || "",
       address: service.address || reportData.address || "",
