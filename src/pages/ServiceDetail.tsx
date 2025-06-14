@@ -253,13 +253,13 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 
     try {
       if (role === 'client') {
-        // Atualiza no Supabase usando snake_case, MAS não passa para updateService (que espera camelCase/reportData)
+        // Atualiza no Supabase usando snake_case, ignorando tipos TS com "as any"
         await supabase
           .from('report_data')
           .update({
             client_signature: signatureData,
             client_name: service.reportData?.clientName || service.client || "",
-          })
+          } as any)
           .eq('id', id);
 
         // Atualiza local/TypeScript-friendly
@@ -276,14 +276,14 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         setService(updatedService);
         toast.success("Assinatura do cliente salva com sucesso!");
       } else {
-        // Técnico: Supabase update só do perfil
+        // Técnico: Supabase update só do perfil, ignorando tipos TS com "as any"
         if (!service.technician?.id || service.technician.id === "0") {
           toast.error("Técnico não atribuído.");
           return;
         }
         await supabase
           .from('profiles')
-          .update({ signature: signatureData })
+          .update({ signature: signatureData } as any)
           .eq('id', service.technician.id);
 
         // Atualiza local na estrutura TeamMember (TeamMember aceita a prop signature)
