@@ -107,26 +107,21 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
   }
 };
 
-// Create a new service in Supabase, accepting and saving service_type_id
+// Create a new service in Supabase, generating the service number client-side (no supabase.rpc)
 export const createServiceInDatabase = async (service: Omit<Service, "id"> & { serviceTypeId?: string }): Promise<Service | null> => {
   try {
     console.log('Criando service no banco (Supabase):', service);
 
-    // ALERTA: garantir que createdBy existe
     if (!service.createdBy) {
       throw new Error("Usuário não autenticado ou campo createdBy não preenchido.");
     }
 
-    // Generate a service number
-    const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
-
-    if (numberError) {
-      console.error('Erro ao gerar número do serviço:', numberError);
-      throw numberError;
-    }
-
-    // Format the service number
-    const number = `SRV-${numberData.toString().padStart(5, '0')}`;
+    // Geração do número único do serviço (client-side)
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0");
+    const timestamp = Date.now();
+    const number = `SRV-${timestamp}-${random}`;
 
     // Prepare all fields
     const insertData: any = {
@@ -166,18 +161,12 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
 
     if (error) {
       console.error('Erro ao criar service (Supabase):', error);
-      // Refinar mensagem: permission denied ou erro da função de sequence
+      // Retira tratamento de funções específicas (nextval_for_service)
       if (
         typeof error?.message === "string" &&
         error.message.toLowerCase().includes("permission denied")
       ) {
         throw new Error("PERMISSION_DENIED");
-      }
-      if (
-        typeof error?.message === "string" &&
-        error.message.toLowerCase().includes("nextval_for_service")
-      ) {
-        throw new Error("NEXTVAL_FOR_SERVICE_NOT_ALLOWED");
       }
       throw error;
     }
@@ -254,14 +243,10 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       date: data.date ?? service.date
     };
   } catch (error) {
-    // Mostra erro de permissão específico
+    // Exibe erro de permissão genérico
     if (typeof error?.message === "string" && error.message === "PERMISSION_DENIED") {
       toast.error("Permissão negada ao criar demanda. Consulte o administrador.");
     }
-    if (typeof error?.message === "string" && error.message === "NEXTVAL_FOR_SERVICE_NOT_ALLOWED") {
-      toast.error("Falha ao gerar número da demanda. Função protegida/confirma permissões no banco.");
-    }
-
     console.error('Erro geral em createServiceInDatabase:', error);
     toast.error("Falha ao criar serviço no servidor");
     return null;
