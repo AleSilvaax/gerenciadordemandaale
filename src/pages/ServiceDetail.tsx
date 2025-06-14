@@ -407,7 +407,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
   }));
 
-  // HANDLER AJUSTADOS: Recebem um único argumento
+  // HANDLER para assinatura (recebe só 1 argumento)
   const handleClientSignature = (signature: string) => {
     handleSaveSignature('client', signature);
   };
@@ -1021,51 +1021,16 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                     />
                   </div>
                   
-                  <div className="pt-4">
-                    <h4 className="font-medium mb-4">Assinaturas</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h5 className="text-sm font-medium mb-2">Assinatura do Cliente</h5>
-                        <FormField
-                          control={reportForm.control}
-                          name="clientName"
-                          defaultValue={service.reportData?.clientName || service.client || ""}
-                          render={({ field }) => (
-                            <FormItem className="mb-4">
-                              <FormLabel>Nome do Cliente</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-                          <SignatureCapture
-                            initialSignature={service.reportData?.clientSignature}
-                            onChange={handleClientSignature}
-                            label="Assinatura do Cliente"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h5 className="text-sm font-medium mb-2">Assinatura do Técnico</h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                          Técnico: {safeTechnician.name}
-                        </p>
-                        
-                        <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-                          <SignatureCapture
-                            initialSignature={safeTechnician.signature || ""}
-                            onChange={handleTechnicianSignature}
-                            label="Assinatura do Técnico"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* --- ASSINATURAS AGORA ESTÃO NO COMPONENTE DEDICADO --- */}
+                  <ServiceSignatureSection
+                    clientSignature={service.reportData?.clientSignature}
+                    technicianSignature={safeTechnician.signature || ""}
+                    clientName={service.reportData?.clientName || service.client || ""}
+                    technicianName={safeTechnician.name}
+                    onClientSignature={handleClientSignature}
+                    onTechnicianSignature={handleTechnicianSignature}
+                  />
+                  {/* ----------------------------------------------- */}
                   
                   <div className="flex justify-end gap-2">
                     <Button type="submit" disabled={saving}>
