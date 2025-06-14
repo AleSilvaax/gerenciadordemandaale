@@ -101,10 +101,31 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     if (!service) return;
     
     try {
-      generatePDF(service);
+      // Debug: logar dados antes de gerar PDF
+      console.log("Dados enviados para generatePDF:", service);
+
+      // Forçar campos obrigatórios para evitar undefined
+      const safeService = {
+        ...service,
+        client: service.client || "Não informado",
+        reportData: service.reportData || {},
+        technician: service.technician || {
+          id: "0",
+          name: "Não atribuído",
+          avatar: "",
+          role: "tecnico",
+          signature: "",
+          email: "",
+          phone: ""
+        },
+        photos: service.photos || [],
+        photoTitles: service.photoTitles || []
+      };
+
+      generatePDF(safeService);
       toast.success('Relatório detalhado gerado com sucesso');
     } catch (error) {
-      console.error('Error generating detailed report:', error);
+      console.error('Error generating detailed report:', error, service);
       toast.error('Erro ao gerar relatório detalhado');
     }
   };
@@ -386,9 +407,13 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
   }));
 
-  // Handler refinados para assinatura (garantem só 1 argumento!)
-  const handleClientSignature = (signature: string) => handleSaveSignature('client', signature);
-  const handleTechnicianSignature = (signature: string) => handleSaveSignature('technician', signature);
+  // HANDLER AJUSTADOS para assinatura (um argumento só)
+  const handleClientSignature = (signature: string) => {
+    handleSaveSignature('client', signature);
+  };
+  const handleTechnicianSignature = (signature: string) => {
+    handleSaveSignature('technician', signature);
+  };
 
   return (
     <div className="container mx-auto p-4 space-y-6">
