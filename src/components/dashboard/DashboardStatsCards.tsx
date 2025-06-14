@@ -1,12 +1,22 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+// Novo: mapa de cor de fundo clássico de dashboard que segue padrão para cada label de insight.
+// Você pode adicionar mais labels/cores facilmente!
+const cardBgColors: Record<string, string> = {
+  "Total de Demandas": "bg-blue-500",
+  "Concluídas": "bg-green-500",
+  "Pendentes": "bg-yellow-500",
+  "Atrasadas": "bg-red-500",
+};
+
 interface Stat {
   label: string;
   value: number;
-  color?: string;
+  color?: string; // Cor do texto, não mais usada, fundo definirá estilo
   icon?: React.ReactNode;
   description?: string;
 }
@@ -16,12 +26,12 @@ interface DashboardStatsCardsProps {
 }
 
 export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats }) => {
-  // Staggered motion variants
+  // Animação de container: staggered (bem visível).
   const container = {
     hidden: {},
     show: {
       transition: {
-        staggerChildren: 0.12,
+        staggerChildren: 0.13,
       },
     },
   };
@@ -38,9 +48,9 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats 
           key={stat.label}
           label={stat.label}
           value={stat.value}
-          color={stat.color}
           icon={stat.icon}
           description={stat.description}
+          index={i}
         />
       ))}
     </motion.div>
@@ -49,18 +59,27 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats 
 
 const cardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.95 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 80, damping: 15 } }
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring' as const, stiffness: 80, damping: 15 }
+  }
 };
 
-const CountUpCard: React.FC<Stat> = ({ label, value, color, icon, description }) => {
+interface CountUpCardProps extends Stat {
+  index?: number;
+}
+
+const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, description, index }) => {
   const [displayValue, setDisplayValue] = React.useState(0);
 
   React.useEffect(() => {
-    // Animate value up using a basic timestamp loop
+    // Animação "count up"
     let raf: number;
     let start: number = 0;
     let lastFrameValue = 0;
-    const duration = 1.1; // seconds
+    const duration = 1.15; // seconds
     const frame = (timestamp: number) => {
       if (!start) start = timestamp;
       const progress = Math.min((timestamp - start) / (duration * 1000), 1);
@@ -76,38 +95,53 @@ const CountUpCard: React.FC<Stat> = ({ label, value, color, icon, description })
     return () => cancelAnimationFrame(raf);
   }, [value]);
 
+  // Definindo cor de fundo baseada no label. Default fallback: azul.
+  const bgClass = cardBgColors[label] || "bg-blue-500";
+  const textClass = "text-white"; // texto branco para contraste
+
+  // Micro efeito de "pulse" na borda quando hover, para mais visibilidade.
   return (
     <motion.div
-      className="z-0"
       variants={cardVariants}
       whileHover={{
-        scale: 1.045,
-        boxShadow: "0 8px 28px 0 rgba(57,123,255,0.14)", // sombra azulada sutil
+        scale: 1.05,
+        boxShadow: "0 8px 32px 0 rgba(0,0,0,0.18)",
+        filter: "brightness(1.08)",
         transition: { type: "spring", stiffness: 130, damping: 18 }
       }}
     >
       <Card
         className={cn(
-          "overflow-hidden border-2 border-white/10 bg-gradient-to-t from-card to-background/90 shadow-xl transition-all duration-300",
-          "hover:border-primary/60 hover:bg-card/90",
-          "rounded-xl"
+          // Visual colorido estilo dashboard clássico (fundo colorido, texto branco, sombra forte).
+          "overflow-hidden border-0 shadow-lg rounded-xl px-0 py-0 transition-all duration-300",
+          bgClass,
+          "relative"
         )}
       >
-        <CardContent className="py-6 px-6">
+        <CardContent className={cn(
+          "py-7 px-7 flex flex-col h-full min-h-[124px] justify-between",
+        )}>
           <div className="flex items-center gap-3 justify-between mb-1">
             <div>
               <div className={cn(
-                "text-[2.15rem] font-bold leading-tight transition-colors duration-200",
-                color || "text-primary"
+                "text-[2.65rem] font-extrabold tracking-tight leading-tight drop-shadow-sm transition-colors duration-200 mb-1",
+                textClass
               )}>
                 {displayValue}
               </div>
-              <p className="text-xs text-muted-foreground font-medium">{label}</p>
+              <p className={cn(
+                "text-xs font-semibold uppercase tracking-wide",
+                textClass,
+                "opacity-90"
+              )}>{label}</p>
             </div>
             {icon && (
               <motion.div
-                whileHover={{ scale: 1.09 }}
-                className="p-3 rounded-xl bg-white/10 shadow-inner mix-blend-luminosity"
+                whileHover={{ scale: 1.1 }}
+                className={cn(
+                  "w-12 h-12 flex items-center justify-center rounded-full shadow-inner border-white/20 border-2 bg-white/20 mix-blend-luminosity",
+                  "transition-all duration-200"
+                )}
               >
                 {icon}
               </motion.div>
@@ -115,7 +149,7 @@ const CountUpCard: React.FC<Stat> = ({ label, value, color, icon, description })
           </div>
           {!!description && (
             <div className="pt-2">
-              <span className="text-xs text-muted-foreground">{description}</span>
+              <span className={cn("text-xs opacity-90", textClass)}>{description}</span>
             </div>
           )}
         </CardContent>
