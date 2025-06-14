@@ -1,8 +1,7 @@
-
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
-export type ServiceType = "Vistoria" | "Instalação" | "Manutenção";
+export type ServiceType = string;
 
 export interface TeamMember {
   id: string;
