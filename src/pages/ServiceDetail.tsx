@@ -103,35 +103,75 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
   };
 
   const handleGenerateDetailedReport = () => {
-    if (!service) return;
-    
+    if (!service) {
+      toast.error("Serviço não encontrado.");
+      return;
+    }
+    // Forçar campos obrigatórios para evitar undefined
+    // Força todas as listas e booleans essenciais
+    const safeService = {
+      ...service,
+      client: service.client || service.reportData?.client || "Não informado",
+      reportData: {
+        ...service.reportData,
+        // Garantia de tipo booleano para os campos obrigatórios do relatório de instalação
+        compliesWithNBR17019: typeof service.reportData?.compliesWithNBR17019 === "boolean"
+          ? service.reportData.compliesWithNBR17019
+          : String(service.reportData?.compliesWithNBR17019).toLowerCase() === "sim",
+        homologatedInstallation: typeof service.reportData?.homologatedInstallation === "boolean"
+          ? service.reportData.homologatedInstallation
+          : String(service.reportData?.homologatedInstallation).toLowerCase() === "sim",
+        requiredAdjustment: typeof service.reportData?.requiredAdjustment === "boolean"
+          ? service.reportData.requiredAdjustment
+          : String(service.reportData?.requiredAdjustment).toLowerCase() === "sim",
+        validWarranty: typeof service.reportData?.validWarranty === "boolean"
+          ? service.reportData.validWarranty
+          : String(service.reportData?.validWarranty).toLowerCase() === "sim",
+        servicePhase:
+          service.serviceType === "Vistoria"
+            ? "inspection"
+            : "installation",
+        client: service.reportData?.client || service.client || "Não informado",
+        address: service.reportData?.address || service.address || "Não informado",
+        city: service.reportData?.city || service.city || "Não informado",
+        // Fallback para assinatura
+        clientSignature: service.reportData?.clientSignature || "",
+      },
+      technician: service.technician || {
+        id: "0",
+        name: "Não atribuído",
+        avatar: "",
+        role: "tecnico",
+        signature: "",
+        email: "",
+        phone: "",
+      },
+      photos: Array.isArray(service.photos) ? service.photos : [],
+      photoTitles: Array.isArray(service.photoTitles)
+        ? service.photoTitles
+        : [],
+    };
+
     try {
-      // Debug: logar dados antes de gerar PDF
-      console.log("Dados enviados para generatePDF:", service);
-
-      // Forçar campos obrigatórios para evitar undefined
-      const safeService = {
-        ...service,
-        client: service.client || "Não informado",
-        reportData: service.reportData || {},
-        technician: service.technician || {
-          id: "0",
-          name: "Não atribuído",
-          avatar: "",
-          role: "tecnico",
-          signature: "",
-          email: "",
-          phone: ""
-        },
-        photos: service.photos || [],
-        photoTitles: service.photoTitles || []
-      };
-
-      generatePDF(safeService);
-      toast.success('Relatório detalhado gerado com sucesso');
+      console.log("Dados enviados para generatePDF:", safeService);
+      const ok = generatePDF(safeService);
+      if (!ok) {
+        toast.error(
+          "Erro ao gerar o relatório detalhado. Verifique se todos os campos obrigatórios estão preenchidos."
+        );
+      } else {
+        toast.success("Relatório detalhado gerado com sucesso");
+      }
     } catch (error) {
-      console.error('Error generating detailed report:', error, service);
-      toast.error('Erro ao gerar relatório detalhado');
+      // Adiciona log detalhado para debug
+      console.error(
+        "Erro inesperado ao gerar relatório detalhado:",
+        error,
+        safeService
+      );
+      toast.error(
+        "Erro inesperado ao gerar o relatório. Verifique as informações preenchidas e tente novamente."
+      );
     }
   };
 
@@ -756,7 +796,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                       <FormField
                         control={reportForm.control}
                         name="compliesWithNBR17019"
-                        defaultValue={service.reportData?.compliesWithNBR17019 ? "sim" : "nao"}
+                        defaultValue={service.reportData?.compliesWithNBR17019 || ""}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Instalação atende NBR17019</FormLabel>
@@ -781,7 +821,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                       <FormField
                         control={reportForm.control}
                         name="homologatedInstallation"
-                        defaultValue={service.reportData?.homologatedInstallation ? "sim" : "nao"}
+                        defaultValue={service.reportData?.homologatedInstallation || ""}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Instalação Homologada</FormLabel>
