@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, FileSpreadsheet, FilePenLine, Camera, MessageSquare, Star, CheckCircle2, ClipboardCheck, Download, Send, Plus } from "lucide-react";
-import { getService, updateService, addServiceMessage, addServiceFeedback } from '@/services/api';
+import { 
+  getService, 
+  updateService 
+} from '@/services/api';
+import { 
+  addServiceMessage,
+  addServiceFeedback
+} from '@/services/servicesDataService';
 import { Service, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { exportServicesToExcel, exportServicesToPDF } from '@/utils/reportExport';
