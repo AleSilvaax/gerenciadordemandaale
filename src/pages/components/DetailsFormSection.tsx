@@ -57,20 +57,35 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit((data) => {
-        // Map technician
-        let selectedTech = null;
-        if (hasPermission("gestor") && data.technicianId && data.technicianId !== "none") {
-          const foundTech = teamMembers.find(t => t.id === data.technicianId);
-          if (foundTech) {
-            selectedTech = foundTech;
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit((data) => {
+          // Garantia da passagem correta do técnico
+          let selectedTech = null;
+          if (
+            hasPermission("gestor") &&
+            data.technicianId &&
+            data.technicianId !== "none"
+          ) {
+            const foundTech = teamMembers.find((t) => t.id === data.technicianId);
+            if (foundTech) {
+              selectedTech = {
+                id: foundTech.id,
+                name: foundTech.name,
+                avatar: foundTech.avatar,
+                role: foundTech.role,
+                email: foundTech.email,
+                phone: foundTech.phone,
+                signature: foundTech.signature
+              };
+            }
           }
-        }
-        onSubmit({
-          ...data,
-          technician: selectedTech,
-        });
-      })}>
+          onSubmit({
+            ...data,
+            technician: selectedTech, // sempre enviar objeto completo ou null
+          });
+        })}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -193,6 +208,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
                   <FormLabel>Técnico Responsável</FormLabel>
                   <Select
                     onValueChange={field.onChange}
+                    value={field.value}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -202,7 +218,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Não atribuído</SelectItem>
-                      {teamMembers.map(tech => (
+                      {teamMembers.map((tech) => (
                         <SelectItem key={tech.id} value={tech.id}>
                           {tech.name}
                         </SelectItem>
@@ -253,4 +269,3 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 };
 
 export default DetailsFormSection;
-
