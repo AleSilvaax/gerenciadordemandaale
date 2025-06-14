@@ -827,8 +827,8 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                     technicianSignature={safeTechnician.signature || ""}
                     clientName={service.reportData?.clientName || service.client || ""}
                     technicianName={safeTechnician.name}
-                    onClientSignature={(signature: string) => handleClientSignature(signature)}
-                    onTechnicianSignature={(signature: string) => handleTechnicianSignature(signature)}
+                    onClientSignature={handleClientSignature}
+                    onTechnicianSignature={handleTechnicianSignature}
                   />
                   {/* ----------------------------------------------- */}
                   
