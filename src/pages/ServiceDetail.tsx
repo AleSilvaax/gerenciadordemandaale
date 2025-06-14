@@ -413,6 +413,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
   }));
 
   // HANDLERS para assinatura - aceitar apenas 1 argumento
+  // (garante que são passados corretamente para filhos que esperam só 1 argumento)
   const handleClientSignature = (signature: string) => {
     handleSaveSignature('client', signature);
   };
