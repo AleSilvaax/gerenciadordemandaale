@@ -29,6 +29,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import ServiceSignatureSection from "./components/ServiceSignatureSection";
 import ServicePhotosSection from "./components/ServicePhotosSection";
+import DetailsFormSection from "./components/DetailsFormSection";
+import ServiceFlowSection from "./components/ServiceFlowSection";
+import PhotosSection from "./components/PhotosSection";
+import ChatSection from "./components/ChatSection";
+import FeedbackSection from "./components/FeedbackSection";
 
 const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) => {
   const { id } = useParams<{ id: string }>();
@@ -492,233 +497,27 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         <TabsContent value="details" className="mt-4 space-y-6">
           <Card>
             <CardContent className="pt-6">
-              <Form {...detailsForm}>
-                <form className="space-y-4" onSubmit={detailsForm.handleSubmit(handleSaveServiceDetails)}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={detailsForm.control}
-                      name="title"
-                      defaultValue={service.title}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Título</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={detailsForm.control}
-                      name="status"
-                      defaultValue={service.status}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                            disabled={statusUpdating}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="pendente">Pendente</SelectItem>
-                              <SelectItem value="concluido">Concluído</SelectItem>
-                              <SelectItem value="cancelado">Cancelado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={detailsForm.control}
-                      name="serviceType"
-                      defaultValue={service.serviceType || "inspection"}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Serviço</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="inspection">Vistoria</SelectItem>
-                              <SelectItem value="installation">Instalação</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={detailsForm.control}
-                      name="client"
-                      defaultValue={service.client || ""}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cliente</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={detailsForm.control}
-                      name="location"
-                      defaultValue={service.location}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Localidade</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={detailsForm.control}
-                      name="address"
-                      defaultValue={service.address || ""}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={detailsForm.control}
-                      name="city"
-                      defaultValue={service.city || ""}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="col-span-1 md:col-span-2">
-                      <FormField
-                        control={detailsForm.control}
-                        name="description"
-                        defaultValue={service.description || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Descrição</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                {...field}
-                                rows={3}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="col-span-1 md:col-span-2">
-                      <FormField
-                        control={detailsForm.control}
-                        name="notes"
-                        defaultValue={service.notes || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notas Adicionais</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                {...field} 
-                                rows={3} 
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 mt-6">
-                    <Button type="submit" disabled={saving}>
-                      {saving ? "Salvando..." : "Salvar Alterações"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+              <DetailsFormSection
+                service={service}
+                saving={saving}
+                statusUpdating={statusUpdating}
+                onSubmit={handleSaveServiceDetails}
+              />
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Fluxo da Demanda</h3>
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 md:space-x-4">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Status atual: <span className="font-semibold">
-                      {service.status === 'concluido' 
-                        ? 'Concluído' 
-                        : service.status === 'cancelado' 
-                        ? 'Cancelado' 
-                        : 'Pendente'}
-                    </span>
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Tipo de serviço: <span className="font-semibold">
-                      {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {service.serviceType === 'Vistoria' && service.status === 'pendente' && (
-                    <Button 
-                      onClick={() => updateServiceStatus('pendente', 'Instalação')}
-                      disabled={statusUpdating}
-                      variant="outline"
-                    >
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Converter para Instalação
-                    </Button>
-                  )}
-                  
-                  {service.status === 'pendente' && (
-                    <Button 
-                      onClick={() => updateServiceStatus('concluido')}
-                      disabled={statusUpdating}
-                      variant="default"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Finalizar Demanda
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <ServiceFlowSection
+                service={service}
+                statusUpdating={statusUpdating}
+                onConvertToInstallation={() => updateServiceStatus('pendente', 'Instalação')}
+                onFinalize={() => updateServiceStatus('concluido')}
+              />
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Anexos e Fotos</h3>
-              
-              <ServicePhotosSection
+              <PhotosSection
                 photos={photosWithTitles}
                 onAddPhoto={handleAddPhoto}
                 onRemovePhoto={handleRemovePhoto}
@@ -1046,54 +845,12 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         <TabsContent value="chat" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Chat da Demanda</h3>
-              
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-4 h-96 overflow-y-auto mb-4">
-                {service.messages && service.messages.length > 0 ? (
-                  <div className="space-y-4">
-                    {service.messages.map((msg, index) => (
-                      <div key={index} className={`flex ${msg.senderId === 'user-1' ? 'justify-end' : 'justify-start'}`}>
-                        <div 
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            msg.senderId === 'user-1'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'
-                          }`}
-                        >
-                          <div className="flex items-center mb-1">
-                            <span className="font-medium text-sm">{msg.senderName}</span>
-                            <span className="text-xs ml-2 opacity-75">
-                              {msg.timestamp && format(new Date(msg.timestamp), 'dd/MM/yyyy HH:mm')}
-                            </span>
-                          </div>
-                          <p className="text-sm">{msg.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={messageEndRef} />
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500">
-                    <MessageSquare className="h-12 w-12 mb-3 opacity-20" />
-                    <p>Nenhuma mensagem ainda...</p>
-                    <p className="text-sm">Inicie a conversa abaixo!</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1"
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddMessage()}
-                />
-                <Button onClick={handleAddMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar
-                </Button>
-              </div>
+              <ChatSection
+                messages={service.messages}
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                onSend={handleAddMessage}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1101,130 +858,13 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         <TabsContent value="feedback" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">Feedback e Avaliação</h3>
-              
-              {service.status !== 'concluido' ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    O feedback estará disponível quando a demanda for concluída.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => updateServiceStatus('concluido')}
-                    className="mt-4"
-                    disabled={statusUpdating}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Finalizar Demanda
-                  </Button>
-                </div>
-              ) : service.feedback ? (
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium mb-3">Avaliação do Cliente</h4>
-                    <div className="flex items-center mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-6 w-6 ${
-                            star <= (service.feedback?.clientRating || 0)
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                      <span className="ml-2 font-medium">
-                        {service.feedback.clientRating}/5
-                      </span>
-                    </div>
-                    {service.feedback.clientComment && (
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-2">
-                        <p className="text-sm">{service.feedback.clientComment}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {service.feedback.technicianFeedback && (
-                    <div>
-                      <h4 className="font-medium mb-3">Feedback do Técnico</h4>
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                        <p className="text-sm">{service.feedback.technicianFeedback}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Form {...feedbackForm}>
-                  <form className="space-y-4" onSubmit={feedbackForm.handleSubmit(handleSubmitFeedback)}>
-                    <FormField
-                      control={feedbackForm.control}
-                      name="clientRating"
-                      defaultValue="5"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Avaliação do Cliente (1-5 estrelas)</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione uma nota" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1">★ - Muito Insatisfeito</SelectItem>
-                              <SelectItem value="2">★★ - Insatisfeito</SelectItem>
-                              <SelectItem value="3">★★★ - Neutro</SelectItem>
-                              <SelectItem value="4">★★★★ - Satisfeito</SelectItem>
-                              <SelectItem value="5">★★★★★ - Muito Satisfeito</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={feedbackForm.control}
-                      name="clientComment"
-                      defaultValue=""
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Comentário do Cliente</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} rows={3} placeholder="Comentários sobre o serviço..." />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={feedbackForm.control}
-                      name="technicianFeedback"
-                      defaultValue=""
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Feedback do Técnico</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              {...field} 
-                              rows={3} 
-                              placeholder="Observações do técnico sobre o serviço..."
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Informações técnicas, dificuldades encontradas ou sugestões de melhoria.
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex justify-end">
-                      <Button type="submit">Salvar Feedback</Button>
-                    </div>
-                  </form>
-                </Form>
-              )}
+              <FeedbackSection
+                service={service}
+                feedbackForm={feedbackForm}
+                statusUpdating={statusUpdating}
+                onFinalize={() => updateServiceStatus('concluido')}
+                onSubmit={handleSubmitFeedback}
+              />
             </CardContent>
           </Card>
         </TabsContent>
