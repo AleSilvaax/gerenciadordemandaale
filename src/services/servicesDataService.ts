@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember } from '@/types/serviceTypes';
+import { Service, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
 // Interface para a tabela de mensagens de serviço
@@ -310,6 +310,117 @@ export const addServiceMessageToDatabase = async (
   }
 };
 
+// Fetch all team members (profiles + role)
+export const getTeamMembers = async (): Promise<TeamMember[]> => {
+  // Get all profiles
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('*');
+  if (profileError) throw profileError;
+  if (!profiles || !Array.isArray(profiles)) return [];
+
+  // Get all user_roles
+  const { data: roles, error: roleError } = await supabase
+    .from('user_roles')
+    .select('user_id, role');
+  if (roleError) throw roleError;
+
+  // Merge profiles with their roles
+  const members: TeamMember[] = profiles.map(profile => {
+    const role = roles?.find(r => r.user_id === profile.id)?.role as UserRole || "tecnico";
+    return {
+      id: profile.id,
+      name: profile.name || "Sem Nome",
+      avatar: profile.avatar || "",
+      role,
+      email: profile.email || "",
+      phone: profile.phone || "",
+      signature: profile.signature || ""
+    };
+  });
+  return members;
+};
+
+// Add a new team member (profile + user_role)
+export const addTeamMember = async (member: {
+  name: string;
+  role: UserRole;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+}): Promise<TeamMember> => {
+  // Create in 'profiles'
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .insert({
+      name: member.name,
+      avatar: member.avatar || "",
+      email: member.email || "",
+      phone: member.phone || ""
+    })
+    .select()
+    .single();
+  if (profileError) throw profileError;
+
+  // Add user_role for this member
+  const { error: roleError } = await supabase
+    .from('user_roles')
+    .insert({
+      user_id: profile.id,
+      role: member.role
+    });
+  if (roleError) throw roleError;
+
+  // Return new member with role
+  return {
+    id: profile.id,
+    name: profile.name || "",
+    avatar: profile.avatar || "",
+    role: member.role,
+    email: profile.email || "",
+    phone: profile.phone || "",
+    signature: profile.signature || ""
+  };
+};
+
+// Update a team member
+export const updateTeamMember = async (memberId: string, data: Partial<TeamMember>): Promise<boolean> => {
+  // Update the profile
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      name: data.name,
+      avatar: data.avatar,
+      email: data.email,
+      phone: data.phone,
+      signature: data.signature
+    })
+    .eq('id', memberId);
+
+  if (error) throw error;
+
+  // If changing role, update user_roles
+  if (data.role) {
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .update({ role: data.role })
+      .eq('user_id', memberId);
+    if (roleError) throw roleError;
+  }
+  return true;
+};
+
+// Delete a team member
+export const deleteTeamMember = async (memberId: string): Promise<boolean> => {
+  // Delete profile (this should cascade via FK to user_roles)
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', memberId);
+  if (error) throw error;
+  return true;
+};
+
 // Unified exports for codebase compatibility
 
 // Data retrieval
@@ -321,26 +432,10 @@ export const updateService = updateServiceInDatabase;
 export const deleteService = deleteServiceFromDatabase;
 
 // Team member management
-export const getTeamMembers = async () => {
-  // Placeholder or implementation
-  if (typeof window === "undefined") throw new Error("getTeamMembers not implemented for server");
-  // Example: fetch all profiles with role
-  // You should replace this with the actual implementation as needed.
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*');
-  if (error) throw error;
-  return data;
-};
-export const addTeamMember = () => {
-  throw new Error("addTeamMember implementation missing");
-};
-export const updateTeamMember = () => {
-  throw new Error("updateTeamMember implementation missing");
-};
-export const deleteTeamMember = () => {
-  throw new Error("deleteTeamMember implementation missing");
-};
+export const getTeamMembers = getTeamMembers;
+export const addTeamMember = addTeamMember;
+export const updateTeamMember = updateTeamMember;
+export const deleteTeamMember = deleteTeamMember;
 
 // Service Types (stub, adapt as needed)
 export const getServiceTypes = async () => {
