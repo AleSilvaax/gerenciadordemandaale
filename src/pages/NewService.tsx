@@ -82,13 +82,25 @@ const NewService: React.FC = () => {
 
       console.log("Creating service with data:", serviceData);
       
-      await createService(serviceData);
-      
+      const created = await createService(serviceData);
+
+      if (!created || !created.id) {
+        toast.error("Erro ao criar demanda. Verifique as permissões ou tente novamente.");
+        return;
+      }
+
       toast.success("Demanda criada com sucesso!");
       navigate("/demandas");
-    } catch (error) {
+    } catch (error: any) {
+      let errMsg = "Erro ao criar demanda. Tente novamente.";
+      if (
+        typeof error?.message === "string" &&
+        error.message.toLowerCase().includes("permission denied")
+      ) {
+        errMsg = "Permissão negada ao criar demanda. Verifique suas permissões de acesso ou consulte o administrador.";
+      }
       console.error("Error creating service:", error);
-      toast.error("Erro ao criar demanda. Tente novamente.");
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
