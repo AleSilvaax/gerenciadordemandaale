@@ -4,9 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// Novo: mapa de cor de fundo clássico de dashboard que segue padrão para cada label de insight.
-// Você pode adicionar mais labels/cores facilmente!
-const cardBgColors: Record<string, string> = {
+const cardAccentColors: Record<string, string> = {
   "Total de Demandas": "bg-blue-500",
   "Concluídas": "bg-green-500",
   "Pendentes": "bg-yellow-500",
@@ -16,7 +14,7 @@ const cardBgColors: Record<string, string> = {
 interface Stat {
   label: string;
   value: number;
-  color?: string; // Cor do texto, não mais usada, fundo definirá estilo
+  color?: string; // Legacy, não usado aqui
   icon?: React.ReactNode;
   description?: string;
 }
@@ -26,7 +24,7 @@ interface DashboardStatsCardsProps {
 }
 
 export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats }) => {
-  // Animação de container: staggered (bem visível).
+  // Animação de container: stagger.
   const container = {
     hidden: {},
     show: {
@@ -95,61 +93,53 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
     return () => cancelAnimationFrame(raf);
   }, [value]);
 
-  // Definindo cor de fundo baseada no label. Default fallback: azul.
-  const bgClass = cardBgColors[label] || "bg-blue-500";
-  const textClass = "text-white"; // texto branco para contraste
+  // Definindo cor de detalhe baseada no label
+  const accentClass = cardAccentColors[label] || "bg-blue-500";
+  const iconColor = cardAccentColors[label]?.replace("bg-", "text-") || "text-blue-500";
 
-  // Micro efeito de "pulse" na borda quando hover, para mais visibilidade.
   return (
     <motion.div
       variants={cardVariants}
       whileHover={{
-        scale: 1.05,
-        boxShadow: "0 8px 32px 0 rgba(0,0,0,0.18)",
-        filter: "brightness(1.08)",
-        transition: { type: "spring", stiffness: 130, damping: 18 }
+        scale: 1.03,
+        boxShadow: "0 8px 32px 0 rgba(0,0,0,0.14)"
       }}
     >
-      <Card
-        className={cn(
-          // Visual colorido estilo dashboard clássico (fundo colorido, texto branco, sombra forte).
-          "overflow-hidden border-0 shadow-lg rounded-xl px-0 py-0 transition-all duration-300",
-          bgClass,
-          "relative"
-        )}
-      >
+      <Card className={cn(
+        "overflow-hidden border border-border shadow-sm rounded-xl px-0 py-0 transition-all duration-300 bg-card relative"
+      )}>
+        {/* Barra lateral colorida */}
+        <div className={cn(
+          "absolute left-0 top-0 h-full w-1 rounded-s-xl",
+          accentClass
+        )} />
         <CardContent className={cn(
-          "py-7 px-7 flex flex-col h-full min-h-[124px] justify-between",
+          "py-7 px-7 flex flex-col h-full min-h-[104px] justify-between"
         )}>
-          <div className="flex items-center gap-3 justify-between mb-1">
+          <div className="flex items-center gap-3 justify-between mb-0">
             <div>
               <div className={cn(
-                "text-[2.65rem] font-extrabold tracking-tight leading-tight drop-shadow-sm transition-colors duration-200 mb-1",
-                textClass
+                "text-3xl md:text-4xl font-extrabold tracking-tight leading-none transition-colors duration-200 text-foreground"
               )}>
                 {displayValue}
               </div>
               <p className={cn(
-                "text-xs font-semibold uppercase tracking-wide",
-                textClass,
-                "opacity-90"
+                "text-xs font-semibold uppercase tracking-wide mt-1 text-muted-foreground"
               )}>{label}</p>
             </div>
-            {icon && (
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                className={cn(
-                  "w-12 h-12 flex items-center justify-center rounded-full shadow-inner border-white/20 border-2 bg-white/20 mix-blend-luminosity",
-                  "transition-all duration-200"
-                )}
-              >
+            {/* Opcional: pode usar o ícone colorido, atualmente não utilizado */}
+            {/* {icon && (
+              <div className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-full bg-muted/40",
+                iconColor
+              )}>
                 {icon}
-              </motion.div>
-            )}
+              </div>
+            )} */}
           </div>
           {!!description && (
             <div className="pt-2">
-              <span className={cn("text-xs opacity-90", textClass)}>{description}</span>
+              <span className="text-xs text-muted-foreground">{description}</span>
             </div>
           )}
         </CardContent>
@@ -157,3 +147,4 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
     </motion.div>
   );
 };
+
