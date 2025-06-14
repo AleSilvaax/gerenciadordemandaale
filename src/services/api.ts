@@ -36,11 +36,15 @@ export async function getService(id: string): Promise<any> {
       )
     `)
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching service:", error);
     throw error;
+  }
+  if (!data) {
+    // Retorne null explicitamente se não encontrado
+    return null;
   }
 
   return data;

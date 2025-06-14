@@ -1003,7 +1003,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                           <SignatureCapture
                             initialSignature={service.reportData?.clientSignature}
-                            onChange={data => handleSaveSignature('client', data)}
+                            onChange={(data) => handleSaveSignature('client', data)}
                             label="Assinatura do Cliente"
                           />
                         </div>
@@ -1018,7 +1018,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                           <SignatureCapture
                             initialSignature={service.technician.signature}
-                            onChange={data => handleSaveSignature('technician', data)}
+                            onChange={(data) => handleSaveSignature('technician', data)}
                             label="Assinatura do Técnico"
                           />
                         </div>
