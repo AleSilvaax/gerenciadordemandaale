@@ -20,22 +20,6 @@ import {
 } from "@/components/ui/table";
 import { ServiceTypeConfig, TechnicalField } from "@/types/serviceTypes";
 
-interface TechnicalField {
-  id: string;
-  name: string;
-  type: "text" | "number" | "select" | "boolean" | "date" | "textarea";
-  required: boolean;
-  options?: string[];
-  description?: string;
-}
-
-interface ServiceType {
-  id: string;
-  name: string;
-  fields: TechnicalField[];
-  description: string;
-}
-
 // Dados iniciais para demonstração
 const defaultServiceTypes: ServiceTypeConfig[] = [
   {
