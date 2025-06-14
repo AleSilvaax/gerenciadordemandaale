@@ -24,7 +24,6 @@ import { SignatureCapture } from "@/components/ui-custom/SignatureCapture";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useForm } from "react-hook-form";
-import { generatePDF } from "@/utils/pdfGenerator";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import ServiceSignatureSection from "./components/ServiceSignatureSection";
@@ -327,53 +326,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
-  // --- Ao gerar PDF, garantir assinaturas e nomes presentes ---
-  const handleGenerateDetailedReport = () => {
-    if (!service) {
-      toast.error("Serviço não encontrado.");
-      return;
-    }
-
-    // Força sempre um serviceType válido
-    const safeServiceType = service.serviceType || "Vistoria";
-    const reportData = {
-      ...service.reportData,
-      clientSignature: service.reportData?.clientSignature || "",
-      clientName: service.reportData?.clientName || service.client || "",
-      client: service.reportData?.client || service.client || "",
-      address: service.reportData?.address || service.address || "",
-      installationDate: service.reportData?.installationDate || "",
-      inspectionDate: service.reportData?.inspectionDate || "",
-      modelNumber: service.reportData?.modelNumber || "",
-      serialNumberNew: service.reportData?.serialNumberNew || "",
-      supplyType: service.reportData?.supplyType || "",
-      voltage: service.reportData?.voltage || "",
-      servicePhase: ["Instalação", "installation"].includes(safeServiceType) ? "installation" : "inspection"
-    };
-
-    const safeService = {
-      ...service,
-      reportData,
-      serviceType: safeServiceType,
-      technician: {
-        ...service.technician,
-        signature: service.technician?.signature || "",
-        name: service.technician?.name || "Não atribuído"
-      },
-      client: service.client || reportData.client || "",
-      address: service.address || reportData.address || "",
-    };
-
-    try {
-      const ok = generatePDF(safeService as Service);
-      if (!ok) toast.error("Erro ao gerar relatório detalhado.");
-      else toast.success("Relatório detalhado gerado com sucesso");
-    } catch (error) {
-      toast.error("Erro inesperado ao gerar relatório.");
-      console.error(error, safeService);
-    }
-  };
-
   // Função que salva feedback (estrutura semelhante)
   const handleSubmitFeedback = async (data: any) => {
     if (!service || !id) return;
@@ -496,15 +448,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           >
             <FilePenLine className="h-4 w-4 mr-2" />
             PDF
-          </Button>
-
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={handleGenerateDetailedReport}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Relatório Detalhado
           </Button>
         </div>
       </div>
