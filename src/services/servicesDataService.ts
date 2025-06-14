@@ -127,6 +127,16 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
           ? service.photos.filter((x: any) => typeof x === 'string')
           : undefined;
 
+      // Helpers - type correction for priority and serviceType
+      const safePriority = typeof service.priority === 'string' &&
+        ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+        ? service.priority as ServicePriority
+        : undefined;
+
+      const safeServiceType = typeof service.service_type === 'string'
+        ? service.service_type as ServiceType
+        : undefined;
+
       // Return all relevant fields
       return {
         id: service.id,
@@ -136,8 +146,8 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         technician: technician,
         creationDate: service.created_at,
         dueDate: service.due_date ?? undefined,
-        priority: service.priority ?? undefined,
-        serviceType: service.service_type ?? undefined,
+        priority: safePriority,
+        serviceType: safeServiceType,
         number: service.number ?? undefined,
         description: service.description ?? undefined,
         createdBy: service.created_by ?? undefined,

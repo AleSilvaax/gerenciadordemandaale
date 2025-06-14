@@ -46,6 +46,7 @@ export interface Service {
   creationDate?: string;
   createdBy?: string;
   serviceType?: ServiceType;
+  number?: string; // <-- Adicionado para corrigir erro!
   reportData?: ReportData;
   photos?: string[];
   signatures?: {
