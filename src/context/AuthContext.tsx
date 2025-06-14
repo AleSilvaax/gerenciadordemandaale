@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -146,7 +145,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const value = { user, isLoading, isAuthenticated: !!user, login, logout, register, updateUser, updateUserInfo: setUser, hasPermission };
+  const canAccessRoute = useCallback((route: string): boolean => {
+    if (!user) return false;
+    if (user.role === "administrador") return true;
+    if (user.role === "gestor") {
+      // Pode acessar rotas de gestão, mas não as de admin.
+      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
+    }
+    if (user.role === "tecnico") {
+      // Técnico só pode acessar as rotas básicas
+      return ["/", "/demandas", "/demandas/:id", "/buscar", "/settings"].some((r) => route.startsWith(r));
+    }
+    return false;
+  }, [user]);
+
+  const value = { 
+    user, 
+    isLoading, 
+    isAuthenticated: !!user, 
+    login, 
+    logout, 
+    register, 
+    updateUser, 
+    updateUserInfo: setUser, 
+    hasPermission, 
+    canAccessRoute, 
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
