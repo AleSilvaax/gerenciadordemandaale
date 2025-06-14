@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, UserRole } from '@/types/serviceTypes';
 import { toast } from "sonner";
+import { CustomField } from '@/types/serviceTypes';
 
 // Interface para a tabela de mensagens de serviço
 interface ServiceMessageRow {
