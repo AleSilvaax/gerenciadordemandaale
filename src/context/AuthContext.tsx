@@ -20,56 +20,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // "No rows found"
-          console.warn(`Profile not found for user ${authUser.id}. Signing out.`);
-          await supabase.auth.signOut();
+        if (error.code === 'PGRST116') { // Profile not found, can happen right after signup
+          console.warn(`Profile for ${authUser.id} not found, retrying once...`);
+          // Retry once after a short delay to allow the DB trigger to run
+          await new Promise(res => setTimeout(res, 1500));
+          const { data: retryData, error: retryError } = await supabase
+            .from('profiles')
+            .select(`*, user_roles (role)`)
+            .eq('id', authUser.id)
+            .single();
+
+          if (retryError) throw retryError;
+          return retryData;
         }
         throw error;
       }
-
-      if (data) {
-        const role = data.user_roles && Array.isArray(data.user_roles) && data.user_roles.length > 0
-          ? data.user_roles[0].role
-          : 'tecnico';
-          
-        const authUserData: AuthUser = {
-          id: data.id,
-          email: authUser.email,
-          name: data.name || 'Usuário',
-          avatar: data.avatar || '',
-          team_id: data.team_id,
-          role: role as any,
-          permissions: [],
-        };
-        setUser(authUserData);
-      } else {
-        setUser(null);
-      }
+      return data;
     } catch (error) {
       console.error('Error loading user profile:', error);
-      setUser(null);
+      toast.error("Erro ao carregar perfil", { description: "Não foi possível carregar os dados do seu usuário." });
+      await supabase.auth.signOut();
+      return null;
     }
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'INITIAL_SESSION') {
-          if (session?.user) {
-            await loadUserProfile(session.user);
-          }
-          setIsLoading(false);
-        } else if (event === 'SIGNED_IN') {
-          setIsLoading(true);
-          if (session?.user) {
-            await loadUserProfile(session.user);
-          }
-          setIsLoading(false);
-        } else if (event === 'SIGNED_OUT') {
+    const handleAuthChange = async (event: string, session: any) => {
+      console.log(`Auth event: ${event}`, session);
+      setIsLoading(true);
+      
+      if (session?.user) {
+        const profileData = await loadUserProfile(session.user);
+
+        if (profileData) {
+          const roleData = profileData.user_roles;
+          const role = Array.isArray(roleData) && roleData.length > 0 ? roleData[0].role : 'tecnico';
+          
+          const authUserData: AuthUser = {
+            id: profileData.id,
+            email: session.user.email,
+            name: profileData.name || 'Usuário',
+            avatar: profileData.avatar || '',
+            team_id: profileData.team_id,
+            role: role as any,
+            permissions: [],
+          };
+          setUser(authUserData);
+        } else {
+          // loadUserProfile failed, user is signed out
           setUser(null);
         }
+      } else {
+        setUser(null);
       }
-    );
+      
+      setIsLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      handleAuthChange(event, session);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -79,9 +89,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast.error("Erro no login", { description: error.message });
+      toast.error("Erro no login", { description: "Email ou senha inválidos." });
       return false;
     }
+    // onAuthStateChange will handle the rest
     return true;
   };
 
@@ -94,7 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: userData.name, 
           role: userData.role, 
           team_id: userData.team_id 
-        } 
+        },
+        emailRedirectTo: `${window.location.origin}/login`
       }
     });
     if (error) {
@@ -106,15 +118,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
-    await supabase.auth.signOut();
-    setUser(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        toast.error("Erro ao sair", { description: error.message });
+    }
+    // onAuthStateChange will set user to null
   };
   
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
-    const { error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id);
-    if (error) return false;
+    const { data, error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id).select().single();
+    if (error) {
+      toast.error("Erro ao atualizar perfil.", { description: error.message });
+      return false;
+    }
     setUser(prev => prev ? { ...prev, ...userData } : null);
+    toast.success("Perfil atualizado com sucesso!");
     return true;
   };
 
