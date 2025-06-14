@@ -34,6 +34,7 @@ const NewService: React.FC = () => {
   const [priority, setPriority] = useState("media");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [tipoDemandaId, setTipoDemandaId] = useState<number | undefined>(undefined);
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +44,11 @@ const NewService: React.FC = () => {
           getServiceTypes()
         ]);
         setTeamMembers(members);
-        setServiceTypes(types.filter((t) => !!t.name)); // pega só tipos válidos
+        setServiceTypes(types.filter((t) => !!t.name));
+        // Se houver tipos no banco, seleciona o primeiro por padrão
+        if (types && types.length > 0) {
+          setSelectedServiceTypeId(types[0].id);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Erro ao carregar dados");
@@ -55,7 +60,7 @@ const NewService: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !location.trim()) {
+    if (!title.trim() || !location.trim() || !selectedServiceTypeId) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
@@ -80,7 +85,8 @@ const NewService: React.FC = () => {
         },
         creationDate: new Date().toISOString(),
         messages: [],
-        serviceType: selectedServiceType,
+        serviceType: serviceTypes.find((t) => t.id === selectedServiceTypeId)?.name ?? "",
+        serviceTypeId: selectedServiceTypeId, // Passa o id para o backend!
         priority: priority as any,
         dueDate: dueDate?.toISOString(),
         description,
@@ -153,16 +159,19 @@ const NewService: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="serviceType">Tipo de Serviço</Label>
-              <Select value={selectedServiceType} onValueChange={(value: ServiceType) => setSelectedServiceType(value)}>
+              <Label htmlFor="serviceType">Tipo de Serviço *</Label>
+              <Select
+                value={selectedServiceTypeId ?? ""}
+                onValueChange={(value: string) => setSelectedServiceTypeId(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo de serviço" />
                 </SelectTrigger>
                 <SelectContent>
                   {serviceTypes
-                    .filter((type) => type && type.name)
+                    .filter((type) => type && type.id && type.name)
                     .map((type) => (
-                      <SelectItem key={type.id} value={type.name}>
+                      <SelectItem key={type.id} value={type.id}>
                         {type.name} {!!type.description && `- ${type.description}`}
                       </SelectItem>
                   ))}

@@ -290,6 +290,7 @@ export type Database = {
           photos: string[] | null
           priority: string | null
           service_type: string | null
+          service_type_id: string | null
           signatures: Json | null
           status: string
           team_id: string | null
@@ -315,6 +316,7 @@ export type Database = {
           photos?: string[] | null
           priority?: string | null
           service_type?: string | null
+          service_type_id?: string | null
           signatures?: Json | null
           status?: string
           team_id?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           photos?: string[] | null
           priority?: string | null
           service_type?: string | null
+          service_type_id?: string | null
           signatures?: Json | null
           status?: string
           team_id?: string | null
@@ -352,6 +355,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
             referencedColumns: ["id"]
           },
         ]

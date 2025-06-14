@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, UserRole, ServiceTypeConfig, ServicePriority, ServiceType, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -108,8 +107,8 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
   }
 };
 
-// Create a new service in Supabase
-export const createServiceInDatabase = async (service: Omit<Service, "id">): Promise<Service | null> => {
+// Create a new service in Supabase, accepting and saving service_type_id
+export const createServiceInDatabase = async (service: Omit<Service, "id"> & { serviceTypeId?: string }): Promise<Service | null> => {
   try {
     console.log('Creating new service in database:', service);
     
@@ -133,6 +132,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       due_date: service.dueDate ?? null,
       priority: service.priority ?? 'media',
       service_type: service.serviceType ?? 'Vistoria',
+      service_type_id: service.serviceTypeId ?? null, // <-- armazena fk
       description: service.description ?? null,
       created_by: service.createdBy ?? null,
       client: service.client ?? null,
