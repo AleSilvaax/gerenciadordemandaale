@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
-import { getServiceTypes } from "@/services/servicesDataService";
+import { getServiceTypesFromDatabase } from "@/services/servicesDataService";
 import { ServiceTypeConfig } from "@/types/serviceTypes";
 
 interface DetailsFormSectionProps {
@@ -39,7 +39,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 
   useEffect(() => {
     const fetchTypes = async () => {
-      const types = await getServiceTypes();
+      const types = await getServiceTypesFromDatabase();
       setServiceTypes(types);
     };
     fetchTypes();

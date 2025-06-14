@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createService, getTeamMembers, getServiceTypes } from "@/services/servicesDataService";
+import { createService, getTeamMembers, getServiceTypesFromDatabase } from "@/services/servicesDataService";
 import { TeamMember, ServiceType, ServiceTypeConfig } from "@/types/serviceTypes";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ const NewService: React.FC = () => {
       try {
         const [members, types] = await Promise.all([
           getTeamMembers(),
-          getServiceTypes()
+          getServiceTypesFromDatabase()   // Usar banco
         ]);
         setTeamMembers(members);
         setServiceTypes(types.filter((t) => !!t.name));
