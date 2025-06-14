@@ -487,10 +487,10 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
       if (typeof serviceRow.custom_fields === 'string') {
         try {
           const parsed = JSON.parse(serviceRow.custom_fields);
-          if (Array.isArray(parsed)) safeCustomFields = parsed;
+          if (Array.isArray(parsed)) safeCustomFields = parsed as unknown as CustomField[];
         } catch { /* deixa undefined */ }
       } else if (Array.isArray(serviceRow.custom_fields)) {
-        safeCustomFields = serviceRow.custom_fields as CustomField[];
+        safeCustomFields = serviceRow.custom_fields as unknown as CustomField[];
       }
     }
 
@@ -564,10 +564,10 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
       if (typeof serviceRow.custom_fields === 'string') {
         try {
           const parsed = JSON.parse(serviceRow.custom_fields);
-          if (Array.isArray(parsed)) feedbackSafeCustomFields = parsed;
+          if (Array.isArray(parsed)) feedbackSafeCustomFields = parsed as unknown as CustomField[];
         } catch { /* deixa undefined */ }
       } else if (Array.isArray(serviceRow.custom_fields)) {
-        feedbackSafeCustomFields = serviceRow.custom_fields as CustomField[];
+        feedbackSafeCustomFields = serviceRow.custom_fields as unknown as CustomField[];
       }
     }
 
