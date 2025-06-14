@@ -102,8 +102,13 @@ export const TechnicalSettingsTab = () => {
       await refreshTypes();
       setSelectedType(null);
       toast.success("Tipo excluído.");
-    } catch {
-      toast.error("Erro ao excluir tipo.");
+    } catch (err: any) {
+      console.error("Erro ao excluir tipo:", err);
+      if (err && err.message) {
+        toast.error(`Erro ao excluir tipo: ${err.message}`);
+      } else {
+        toast.error("Erro ao excluir tipo.");
+      }
     }
     setIsSaving(false);
   };
