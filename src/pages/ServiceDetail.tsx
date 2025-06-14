@@ -173,12 +173,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               <TechnicianAssigner
                 currentTechnicianId={service.technician?.id}
                 onAssign={async (technician) => {
-                  // updateService já existente no backend
                   await updateService({ id: service.id, technician });
-                  // Forçar reload ou atualizar localmente se necessário
                   toast.success("Técnico atualizado!");
-                  // se preferir, pode disparar um refetch dos dados ou recarregar a página
-                  window.location.reload();
+                  fetchService(service.id); // Recarrega o serviço, sem reload
                 }}
               />
             )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -5,8 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
-import { getServiceTypesFromDatabase } from "@/services/servicesDataService";
-import { ServiceTypeConfig } from "@/types/serviceTypes";
+import { getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
+import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
+import { useAuth } from "@/context/AuthContext";
+import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 
 interface DetailsFormSectionProps {
   service: any;
@@ -31,11 +34,14 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
       address: service.address || "",
       city: service.city || "",
       description: service.description || "",
-      notes: service.notes || ""
+      notes: service.notes || "",
+      technicianId: service.technician?.id ?? "none",
     }
   });
 
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -43,11 +49,28 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
       setServiceTypes(types);
     };
     fetchTypes();
+    if (hasPermission("gestor")) {
+      getTeamMembers().then(setTeamMembers);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form className="space-y-4" onSubmit={form.handleSubmit((data) => {
+        // Map technician
+        let selectedTech = null;
+        if (hasPermission("gestor") && data.technicianId && data.technicianId !== "none") {
+          const foundTech = teamMembers.find(t => t.id === data.technicianId);
+          if (foundTech) {
+            selectedTech = foundTech;
+          }
+        }
+        onSubmit({
+          ...data,
+          technician: selectedTech,
+        });
+      })}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -160,6 +183,36 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
               </FormItem>
             )}
           />
+          {/* Campo de técnico para gestores */}
+          {hasPermission("gestor") && (
+            <FormField
+              control={form.control}
+              name="technicianId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Técnico Responsável</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar técnico" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Não atribuído</SelectItem>
+                      {teamMembers.map(tech => (
+                        <SelectItem key={tech.id} value={tech.id}>
+                          {tech.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          )}
           <div className="col-span-1 md:col-span-2">
             <FormField
               control={form.control}
@@ -200,3 +253,4 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 };
 
 export default DetailsFormSection;
+
