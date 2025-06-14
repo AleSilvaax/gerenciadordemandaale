@@ -65,6 +65,7 @@ export type Database = {
           required_adjustment: boolean | null
           serial_number_new: string | null
           serial_number_old: string | null
+          service_id: string | null
           technical_comments: string | null
           updated_at: string
           valid_warranty: boolean | null
@@ -89,6 +90,7 @@ export type Database = {
           required_adjustment?: boolean | null
           serial_number_new?: string | null
           serial_number_old?: string | null
+          service_id?: string | null
           technical_comments?: string | null
           updated_at?: string
           valid_warranty?: boolean | null
@@ -113,6 +115,7 @@ export type Database = {
           required_adjustment?: boolean | null
           serial_number_new?: string | null
           serial_number_old?: string | null
+          service_id?: string | null
           technical_comments?: string | null
           updated_at?: string
           valid_warranty?: boolean | null
@@ -122,6 +125,13 @@ export type Database = {
             foreignKeyName: "report_data_id_fkey"
             columns: ["id"]
             isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_data_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
@@ -262,45 +272,75 @@ export type Database = {
       }
       services: {
         Row: {
+          address: string | null
+          city: string | null
+          client: string | null
           created_at: string
           created_by: string | null
+          custom_fields: Json | null
+          date: string | null
           description: string | null
           due_date: string | null
+          estimated_hours: number | null
           id: string
           location: string
+          notes: string | null
           number: string
+          photo_titles: string[] | null
+          photos: string[] | null
           priority: string | null
           service_type: string | null
+          signatures: Json | null
           status: string
           team_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          city?: string | null
+          client?: string | null
           created_at?: string
           created_by?: string | null
+          custom_fields?: Json | null
+          date?: string | null
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number | null
           id?: string
           location: string
+          notes?: string | null
           number: string
+          photo_titles?: string[] | null
+          photos?: string[] | null
           priority?: string | null
           service_type?: string | null
+          signatures?: Json | null
           status?: string
           team_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          city?: string | null
+          client?: string | null
           created_at?: string
           created_by?: string | null
+          custom_fields?: Json | null
+          date?: string | null
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number | null
           id?: string
           location?: string
+          notes?: string | null
           number?: string
+          photo_titles?: string[] | null
+          photos?: string[] | null
           priority?: string | null
           service_type?: string | null
+          signatures?: Json | null
           status?: string
           team_id?: string | null
           title?: string

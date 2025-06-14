@@ -470,33 +470,32 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
 
     if (!serviceRow) throw new Error('Serviço não encontrado.');
 
-    // Retorna o serviço atualizado, "completa" os campos obrigatórios
+    // Retorna o serviço atualizado, "completa" os campos obrigatórios (uso de cast manual)
     const updatedService: Service = {
       id: serviceRow.id,
       title: serviceRow.title,
-      status: serviceRow.status as any,
+      status: serviceRow.status as Service['status'],
       location: serviceRow.location,
-      technician, // (ajuste se possível buscar da relação correta)
+      technician,
       creationDate: serviceRow.created_at,
-      dueDate: serviceRow.due_date || undefined,
-      priority: serviceRow.priority || undefined,
+      dueDate: serviceRow.due_date ?? undefined,
+      priority: serviceRow.priority as Service['priority'],
       messages,
-      // Campos opcionais - preencha com o que tiver
-      serviceType: serviceRow.service_type,
-      reportData: serviceRow.report_data,
-      photos: serviceRow.photos,
-      photoTitles: serviceRow.photo_titles,
-      signatures: serviceRow.signatures,
-      date: serviceRow.date,
-      description: serviceRow.description,
-      client: serviceRow.client,
-      address: serviceRow.address,
-      city: serviceRow.city,
-      notes: serviceRow.notes,
-      estimatedHours: serviceRow.estimated_hours,
+      serviceType: serviceRow.service_type as Service['serviceType'],
+      reportData: (serviceRow as any).report_data ?? undefined, // Pode ser undefined se não houver join (ajuste futuro via JOIN)
+      photos: serviceRow.photos ?? [],
+      photoTitles: serviceRow.photo_titles ?? [],
+      signatures: serviceRow.signatures ?? undefined,
+      date: serviceRow.date ?? undefined,
+      description: serviceRow.description ?? undefined,
+      client: serviceRow.client ?? undefined,
+      address: serviceRow.address ?? undefined,
+      city: serviceRow.city ?? undefined,
+      notes: serviceRow.notes ?? undefined,
+      estimatedHours: serviceRow.estimated_hours ?? undefined,
       feedback: undefined, // não vem do backend
-      customFields: serviceRow.custom_fields,
-      createdBy: serviceRow.created_by,
+      customFields: serviceRow.custom_fields ?? undefined,
+      createdBy: serviceRow.created_by ?? undefined,
     };
 
     return updatedService;
@@ -509,9 +508,6 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
 // Salva feedback no serviço (simplificado)
 export const addServiceFeedback = async (serviceId: string, feedback: ServiceFeedback): Promise<Service> => {
   try {
-    // Como não existe coluna "feedback" na tabela, você pode implementar persistência via reportData/customFields,
-    // Aqui, só adiciona in-memory
-
     // Busca o serviço
     const { data: serviceRow } = await supabase
       .from('services')
@@ -532,28 +528,28 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
     const fullService: Service = {
       id: serviceRow.id,
       title: serviceRow.title,
-      status: serviceRow.status as any,
+      status: serviceRow.status as Service['status'],
       location: serviceRow.location,
       technician,
       creationDate: serviceRow.created_at,
-      dueDate: serviceRow.due_date || undefined,
-      priority: serviceRow.priority || undefined,
+      dueDate: serviceRow.due_date ?? undefined,
+      priority: serviceRow.priority as Service['priority'],
       messages: [], // nesse ponto não busca do backend
-      feedback, // AQUI atribui na memória, não no backend
-      serviceType: serviceRow.service_type,
-      reportData: serviceRow.report_data,
-      photos: serviceRow.photos,
-      photoTitles: serviceRow.photo_titles,
-      signatures: serviceRow.signatures,
-      date: serviceRow.date,
-      description: serviceRow.description,
-      client: serviceRow.client,
-      address: serviceRow.address,
-      city: serviceRow.city,
-      notes: serviceRow.notes,
-      estimatedHours: serviceRow.estimated_hours,
-      customFields: serviceRow.custom_fields,
-      createdBy: serviceRow.created_by,
+      feedback, // atribui na memória, não no backend
+      serviceType: serviceRow.service_type as Service['serviceType'],
+      reportData: (serviceRow as any).report_data ?? undefined,
+      photos: serviceRow.photos ?? [],
+      photoTitles: serviceRow.photo_titles ?? [],
+      signatures: serviceRow.signatures ?? undefined,
+      date: serviceRow.date ?? undefined,
+      description: serviceRow.description ?? undefined,
+      client: serviceRow.client ?? undefined,
+      address: serviceRow.address ?? undefined,
+      city: serviceRow.city ?? undefined,
+      notes: serviceRow.notes ?? undefined,
+      estimatedHours: serviceRow.estimated_hours ?? undefined,
+      customFields: serviceRow.custom_fields ?? undefined,
+      createdBy: serviceRow.created_by ?? undefined,
     };
 
     return fullService;
