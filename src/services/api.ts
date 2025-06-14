@@ -37,11 +37,11 @@ export async function getService(id: string): Promise<any> {
     return null;
   }
 
-  // Adaptar technician para simular estrutura antiga (mock), usando profiles (placeholder)
-  // No banco real, não há join direto. Se precisar buscar technician, faça fetch extra depois. Aqui, apenas retorna vazio.
+  // Garantir que sempre haja um campo technician, do tipo esperado (mock/fake se necessário)
   return {
     ...data,
-    technician: data.technician ?? {
+    // Adiciona um campo 'technician' com defaults se não existir na tabela (mock)
+    technician: {
       id: "0",
       name: "Não atribuído",
       avatar: "",

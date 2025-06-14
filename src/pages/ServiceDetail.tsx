@@ -370,6 +370,17 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     );
   }
 
+  // Garante que sempre temos um technician válido, do mock (da camada de dados) ou adaptável
+  const safeTechnician = service?.technician ?? {
+    id: "0",
+    name: "Não atribuído",
+    avatar: "",
+    role: "tecnico",
+    signature: "",
+    email: "",
+    phone: ""
+  };
+
   const photosWithTitles = (service.photos || []).map((url, index) => ({
     url,
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
@@ -1006,7 +1017,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         />
                         
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-                          {/* Corrigir para apenas um argumento */}
                           <SignatureCapture
                             initialSignature={service.reportData?.clientSignature}
                             onChange={handleClientSignature}
@@ -1022,7 +1032,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         </p>
                         
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-                          {/* Corrigir para apenas um argumento */}
                           <SignatureCapture
                             initialSignature={safeTechnician.signature || ""}
                             onChange={handleTechnicianSignature}
