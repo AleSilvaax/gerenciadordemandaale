@@ -846,7 +846,11 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           <Card>
             <CardContent className="pt-6">
               <ChatSection
-                messages={service.messages}
+                // Ensure every message has a timestamp string (empty string as fallback)
+                messages={(service.messages || []).map((msg) => ({
+                  ...msg,
+                  timestamp: msg.timestamp ?? "",
+                }))}
                 newMessage={newMessage}
                 setNewMessage={setNewMessage}
                 onSend={handleAddMessage}
