@@ -171,7 +171,9 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
 };
 
 // Create a new service in Supabase, generating the service number client-side (no supabase.rpc)
-export const createServiceInDatabase = async (service: Omit<Service, "id"> & { serviceTypeId?: string }): Promise<Service | null> => {
+export const createServiceInDatabase = async (
+  service: Omit<Service, "id"> & { serviceTypeId?: string }
+): Promise<{ created: Service | null; technicianError?: string | null }> => {
   try {
     console.log('Criando service no banco (Supabase):', service);
 
@@ -208,7 +210,6 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       photos: service.photos ?? null,
       photo_titles: service.photoTitles ?? null,
       date: service.date ?? null
-      // Adicione mais campos se necessário
     };
     Object.keys(insertData).forEach(key => {
       if (insertData[key] === undefined) {
@@ -224,7 +225,6 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
 
     if (error) {
       console.error('Erro ao criar service (Supabase):', error);
-      // Retira tratamento de funções específicas (nextval_for_service)
       if (
         typeof error?.message === "string" &&
         error.message.toLowerCase().includes("permission denied")
@@ -236,8 +236,15 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
 
     console.log('Service criado com sucesso:', data);
 
+    let technicianError: string | null = null;
+
     if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
-      await assignTechnician(data.id, service.technician.id);
+      try {
+        await assignTechnician(data.id, service.technician.id);
+      } catch (err: any) {
+        technicianError = "Erro ao atribuir técnico. Verifique permissões ou tente posteriormente.";
+        console.error(technicianError, err);
+      }
     }
 
     // Helpers - safe type assertions and parse functions
@@ -277,42 +284,44 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
         : service.photos?.filter((x: any) => typeof x === 'string');
 
     return {
-      id: data.id,
-      title: data.title,
-      location: data.location,
-      status: data.status as ServiceStatus,
-      technician: service.technician || {
-        id: '0',
-        name: 'Não atribuído',
-        avatar: '',
-        role: 'tecnico',
+      created: {
+        id: data.id,
+        title: data.title,
+        location: data.location,
+        status: data.status as ServiceStatus,
+        technician: service.technician || {
+          id: '0',
+          name: 'Não atribuído',
+          avatar: '',
+          role: 'tecnico',
+        },
+        creationDate: data.created_at,
+        dueDate: data.due_date ?? service.dueDate,
+        priority: safePriority ?? service.priority,
+        serviceType: safeServiceType ?? service.serviceType,
+        description: data.description ?? service.description,
+        createdBy: data.created_by ?? service.createdBy,
+        client: data.client ?? service.client,
+        address: data.address ?? service.address,
+        city: data.city ?? service.city,
+        notes: data.notes ?? service.notes,
+        estimatedHours: data.estimated_hours ?? service.estimatedHours,
+        customFields: customFieldsParsed,
+        signatures: signaturesParsed,
+        messages: service.messages || [],
+        photos: safePhotos,
+        photoTitles: safePhotoTitles,
+        date: data.date ?? service.date
       },
-      creationDate: data.created_at,
-      dueDate: data.due_date ?? service.dueDate,
-      priority: safePriority ?? service.priority,
-      serviceType: safeServiceType ?? service.serviceType,
-      description: data.description ?? service.description,
-      createdBy: data.created_by ?? service.createdBy,
-      client: data.client ?? service.client,
-      address: data.address ?? service.address,
-      city: data.city ?? service.city,
-      notes: data.notes ?? service.notes,
-      estimatedHours: data.estimated_hours ?? service.estimatedHours,
-      customFields: customFieldsParsed,
-      signatures: signaturesParsed,
-      messages: service.messages || [],
-      photos: safePhotos,
-      photoTitles: safePhotoTitles,
-      date: data.date ?? service.date
+      technicianError
     };
   } catch (error) {
-    // Exibe erro de permissão genérico
     if (typeof error?.message === "string" && error.message === "PERMISSION_DENIED") {
       toast.error("Permissão negada ao criar demanda. Consulte o administrador.");
     }
     console.error('Erro geral em createServiceInDatabase:', error);
     toast.error("Falha ao criar serviço no servidor");
-    return null;
+    return { created: null, technicianError: null };
   }
 };
 

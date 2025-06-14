@@ -68,7 +68,6 @@ const NewService: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Busca o objeto completo do tipo selecionado
       const selectedTypeObj = serviceTypes.find((t) => t.id === selectedServiceTypeId);
 
       const serviceData = {
@@ -93,15 +92,18 @@ const NewService: React.FC = () => {
 
       console.log("Criando demanda (dados):", serviceData);
       
-      const created = await createService(serviceData);
+      const result = await createService(serviceData);
 
-      if (!created || !created.id) {
-        // Detecta mensagens de permissão e sequencia
+      if (!result || !result.created || !result.created.id) {
         toast.error("Erro ao criar demanda. Verifique se você tem permissão suficiente ou entre em contato com o administrador.");
         return;
       }
-
-      toast.success("Demanda criada com sucesso!");
+      if (result.technicianError) {
+        toast.success("Demanda criada, mas não foi possível atribuir o técnico.");
+        toast.info("Você poderá atribuir um técnico depois ao editar a demanda.");
+      } else {
+        toast.success("Demanda criada com sucesso!");
+      }
       navigate("/demandas");
     } catch (error: any) {
       let errMsg = "Erro ao criar demanda. Tente novamente.";
