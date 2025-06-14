@@ -159,7 +159,6 @@ const NewService: React.FC = () => {
                   <SelectValue placeholder="Selecione o tipo de serviço" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Lista todos tipos cadastrados dinamicamente */}
                   {serviceTypes
                     .filter((type) => type && type.name)
                     .map((type) => (
@@ -230,22 +229,6 @@ const NewService: React.FC = () => {
                 placeholder="Descreva os detalhes da demanda"
                 rows={3}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tipo-demanda">Tipo de Demanda *</Label>
-              <select
-                id="tipo-demanda"
-                className="w-full border rounded px-3 py-2"
-                value={tipoDemandaId}
-                onChange={(e) => setTipoDemandaId(Number(e.target.value))}
-                required
-              >
-                <option value="">Selecione...</option>
-                <option value={TipoDemanda.SUPORTE_TECNICO}>Suporte Técnico</option>
-                <option value={TipoDemanda.DESENVOLVIMENTO}>Desenvolvimento</option>
-                <option value={TipoDemanda.FINANCEIRO}>Financeiro</option>
-              </select>
             </div>
 
             <div className="flex gap-2 pt-4">
