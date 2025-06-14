@@ -63,7 +63,9 @@ const Estatisticas: React.FC = () => {
     if (timeFilter !== "all") {
       const cutoffDate = getDateFromFilter(timeFilter);
       result = result.filter(service => {
-        return service.date && new Date(service.date) >= cutoffDate;
+        // Corrige para aceitar criação, data customizada, etc
+        const dataServico = service.date || service.creationDate || (service as any).created_at;
+        return dataServico && new Date(dataServico) >= cutoffDate;
       });
     }
     if (selectedTechnician !== "all") {
