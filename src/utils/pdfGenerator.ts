@@ -1,4 +1,3 @@
-
 import { Service } from "@/types/serviceTypes";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -10,6 +9,10 @@ const SIGNATURE_LINE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCA
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
 const MARGIN_X = 18;
+
+function valueOrNA(val: any) {
+  return val ? val : "Não disponível";
+}
 
 function addHeader(pdf, title) {
   pdf.setFillColor(255,255,255);
@@ -58,15 +61,15 @@ function generateCover(pdf, service, totalPages) {
   pdf.setTextColor(30,30,40);
   pdf.setFontSize(12);
   pdf.text("Cliente:", MARGIN_X+8, y+13); 
-  pdf.text(service.reportData?.client || service.client || "", MARGIN_X+35, y+13);
+  pdf.text(valueOrNA(service.reportData?.client || service.client), MARGIN_X+35, y+13);
   pdf.text("Endereço:", MARGIN_X+8, y+28);
-  pdf.text(service.reportData?.address || service.address || "", MARGIN_X+35, y+28);
+  pdf.text(valueOrNA(service.reportData?.address || service.address), MARGIN_X+35, y+28);
   pdf.text("Demanda Nº:", MARGIN_X+8, y+43);
-  pdf.text(service.id, MARGIN_X+35, y+43);
+  pdf.text(valueOrNA(service.id), MARGIN_X+35, y+43);
   pdf.setFontSize(11);
   pdf.setTextColor(90,90,90);
   pdf.text("Data de Emissão:", PAGE_WIDTH-MARGIN_X-48, y+43);
-  pdf.text(new Date().toLocaleDateString("pt-BR"), PAGE_WIDTH-MARGIN_X-12, y+43, {align:"right"});
+  pdf.text((new Date().toLocaleDateString("pt-BR")), PAGE_WIDTH-MARGIN_X-12, y+43, {align:"right"});
   addFooter(pdf, 1, totalPages);
 }
 
@@ -87,11 +90,11 @@ function generateClientData(pdf, service, pageNum, totalPages) {
   y+=17;
   pdf.setFont("helvetica","normal"); pdf.setFontSize(11); pdf.setTextColor(40,40,40);
   pdf.text("Nome:", MARGIN_X+4, y+8);
-  pdf.text(service.reportData?.client || service.client || "", MARGIN_X+34, y+8);
+  pdf.text(valueOrNA(service.reportData?.client || service.client), MARGIN_X+34, y+8);
   pdf.text("Endereço:", MARGIN_X+4, y+22);
-  pdf.text(service.reportData?.address || service.address || "", MARGIN_X+34, y+22);
+  pdf.text(valueOrNA(service.reportData?.address || service.address), MARGIN_X+34, y+22);
   pdf.text("Cidade:", MARGIN_X+4, y+36);
-  pdf.text(service.reportData?.city || service.city || "", MARGIN_X+34, y+36);
+  pdf.text(valueOrNA(service.reportData?.city || service.city), MARGIN_X+34, y+36);
   addFooter(pdf, pageNum, totalPages);
 }
 
@@ -102,35 +105,34 @@ function generateTechnicalData(pdf, service, pageNum, totalPages) {
   generateSection(pdf, "Detalhes Técnicos", y);
 
   y+=13;
-  // Cria tabela técnica usando autoTable
   pdf.setFont("helvetica","normal"); pdf.setFontSize(11);
 
   let rows=[];
   if(service.reportData?.servicePhase === "inspection") {
     rows = [
-      ["Data da Vistoria", service.reportData?.inspectionDate || ""],
-      ["Tensão do Local", service.reportData?.voltage || ""],
-      ["Tipo de Alimentação", service.reportData?.supplyType || ""],
-      ["Distância até o ponto (m)", service.reportData?.installationDistance || ""],
-      ["Marca Wallbox", service.reportData?.wallboxBrand || ""],
-      ["Potência Wallbox", service.reportData?.wallboxPower || ""],
-      ["Aterramento", service.reportData?.groundingSystem || ""],
-      ["ART", service.reportData?.artNumber || ""],
-      ["Obstáculos", (service.reportData?.installationObstacles || "")],
+      ["Data da Vistoria", valueOrNA(service.reportData?.inspectionDate)],
+      ["Tensão do Local", valueOrNA(service.reportData?.voltage)],
+      ["Tipo de Alimentação", valueOrNA(service.reportData?.supplyType)],
+      ["Distância até o ponto (m)", valueOrNA(service.reportData?.installationDistance)],
+      ["Marca Wallbox", valueOrNA(service.reportData?.wallboxBrand)],
+      ["Potência Wallbox", valueOrNA(service.reportData?.wallboxPower)],
+      ["Aterramento", valueOrNA(service.reportData?.groundingSystem)],
+      ["ART", valueOrNA(service.reportData?.artNumber)],
+      ["Obstáculos", valueOrNA(service.reportData?.installationObstacles)],
     ];
   } else {
     rows = [
-      ["Data da Instalação", service.reportData?.installationDate || ""],
-      ["Marca e Modelo", service.reportData?.modelNumber || ""],
-      ["Número de Série", service.reportData?.serialNumberNew || ""],
-      ["Potência Carregador", service.reportData?.chargerLoad || ""],
-      ["Bitola do Cabo", service.reportData?.cableGauge || ""],
-      ["Disjuntor Carregador", service.reportData?.chargerCircuitBreaker || ""],
-      ["Status Carregador", service.reportData?.chargerStatus || ""],
-      ["Conformidade NBR17019", service.reportData?.compliesWithNBR17019 ? "Sim":"Não"],
-      ["Homologação", service.reportData?.homologatedInstallation ? "Sim":"Não"],
-      ["Garantia", service.reportData?.validWarranty ? "Sim":"Não"],
-      ["Adequação Necessária", service.reportData?.requiredAdjustment ? "Sim":"Não"],
+      ["Data da Instalação", valueOrNA(service.reportData?.installationDate)],
+      ["Marca e Modelo", valueOrNA(service.reportData?.modelNumber)],
+      ["Número de Série", valueOrNA(service.reportData?.serialNumberNew)],
+      ["Potência Carregador", valueOrNA(service.reportData?.chargerLoad)],
+      ["Bitola do Cabo", valueOrNA(service.reportData?.cableGauge)],
+      ["Disjuntor Carregador", valueOrNA(service.reportData?.chargerCircuitBreaker)],
+      ["Status Carregador", valueOrNA(service.reportData?.chargerStatus)],
+      ["Conformidade NBR17019", typeof service.reportData?.compliesWithNBR17019 === 'boolean' ? (service.reportData.compliesWithNBR17019 ? "Sim" : "Não") : "Não disponível"],
+      ["Homologação", typeof service.reportData?.homologatedInstallation === 'boolean' ? (service.reportData.homologatedInstallation ? "Sim" : "Não") : "Não disponível"],
+      ["Garantia", typeof service.reportData?.validWarranty === 'boolean' ? (service.reportData.validWarranty ? "Sim" : "Não") : "Não disponível"],
+      ["Adequação Necessária", typeof service.reportData?.requiredAdjustment === 'boolean' ? (service.reportData.requiredAdjustment ? "Sim" : "Não") : "Não disponível"],
     ];
   }
   autoTable(pdf, {
@@ -202,8 +204,8 @@ function generateSignatures(pdf, service, pageNum, totalPages) {
   }
   pdf.setTextColor(40,40,40); pdf.setFont("helvetica","normal");
   pdf.setFontSize(10);
-  pdf.text(`Nome: ${service.reportData?.clientName||service.reportData?.client||""}`, x, y+28);
-  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, x, y+37);
+  pdf.text("Nome: " + valueOrNA(service.reportData?.clientName||service.reportData?.client), x, y+28);
+  pdf.text("Data: " + (new Date().toLocaleDateString("pt-BR")), x, y+37);
 
   // TÉCNICO
   let y2 = y+55;
@@ -217,8 +219,8 @@ function generateSignatures(pdf, service, pageNum, totalPages) {
   } else {
     pdf.addImage(SIGNATURE_LINE, "PNG", x, y2+18, 100, 1.4);
   }
-  pdf.text(`Nome: ${service.technician.name||""}`, x, y2+28);
-  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, x, y2+37);
+  pdf.text("Nome: " + valueOrNA(service.technician.name), x, y2+28);
+  pdf.text("Data: " + (new Date().toLocaleDateString("pt-BR")), x, y2+37);
 
   addFooter(pdf, pageNum, totalPages);
 }
@@ -226,28 +228,33 @@ function generateSignatures(pdf, service, pageNum, totalPages) {
 // Função principal de geração do PDF
 export function generatePDF(service: Service, reportType: "inspection" | "installation" = null): boolean {
   try {
+    // Validação básica antes de gerar
+    const errors: string[] = [];
+    if (!service.id) errors.push("ID do serviço ausente.");
+    if (!service.title) errors.push("Título do serviço ausente.");
+    if (!service.serviceType) errors.push("Tipo de serviço ausente.");
+    if (!service.reportData) errors.push("Dados do relatório ausentes.");
+
+    // Informe no toast qualquer erro encontrado
+    if (errors.length > 0) {
+      toast.error(
+        "Erro ao gerar relatório detalhado", 
+        { description: errors.join(" ") }
+      );
+      return false;
+    }
+
     toast.info("Gerando relatório...", {description: "Por favor aguarde enquanto o relatório é gerado."});
 
-    // 1+4páginas (capa+clientes,tecnica,fotos,assinaturas)
     const totalPages = 4;
     const pdf = new jsPDF({unit:"mm", format:"a4"});
-    
-    // CAPA
+
     generateCover(pdf, service, totalPages);
-
-    // CLIENTE
     generateClientData(pdf, service, 2, totalPages);
-
-    // TÉCNICOS/DETALHES
     generateTechnicalData(pdf, service, 3, totalPages);
-
-    // FOTOS
     generatePhotosGrid(pdf, service, 4, totalPages);
-
-    // ASSINATURAS
     generateSignatures(pdf, service, 5, totalPages);
 
-    // Salvar PDF
     pdf.save(
       `relatorio-${service.reportData?.servicePhase||"relatorio"}-${service.id}.pdf`
     );
@@ -255,7 +262,11 @@ export function generatePDF(service: Service, reportType: "inspection" | "instal
     toast.success("Relatório gerado com sucesso",{description:"PDF pronto para envio ao cliente."});
     return true;
   } catch (error) {
-    toast.error("Erro ao gerar relatório",{description:"Houve uma falha ao gerar o PDF."});
+    // Log detalhado no console com objeto de entrada
+    console.error("Erro ao gerar relatório detalhado", {service, error});
+    toast.error("Erro ao gerar relatório detalhado",{
+      description: "Erro técnico. Confira os campos e veja o console para detalhes.",
+    });
     return false;
   }
 }

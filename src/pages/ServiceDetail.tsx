@@ -316,11 +316,19 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       return;
     }
 
-    // Assegura que reportData está atualizado com assinaturas e nomes
+    // Preenche todos os campos obrigatórios do reportData (fallbacks)
     const reportData = {
       ...service.reportData,
       clientSignature: service.reportData?.clientSignature || "",
       clientName: service.reportData?.clientName || service.client || "",
+      client: service.reportData?.client || service.client || "",
+      address: service.reportData?.address || service.address || "",
+      installationDate: service.reportData?.installationDate || "",
+      inspectionDate: service.reportData?.inspectionDate || "",
+      modelNumber: service.reportData?.modelNumber || "",
+      serialNumberNew: service.reportData?.serialNumberNew || "",
+      supplyType: service.reportData?.supplyType || "",
+      voltage: service.reportData?.voltage || ""
     };
 
     const safeService = {
@@ -329,7 +337,10 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
       technician: {
         ...service.technician,
         signature: service.technician.signature || "",
+        name: service.technician.name || "Não atribuído"
       },
+      client: service.client || reportData.client || "",
+      address: service.address || reportData.address || "",
     };
 
     try {
