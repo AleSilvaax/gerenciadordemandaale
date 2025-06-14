@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, UserRole, ServiceTypeConfig } from '@/types/serviceTypes';
 import { toast } from "sonner";
 import { CustomField } from '@/types/serviceTypes';
+import { TechnicalField } from "@/types/serviceTypes";
 
 // Interface para a tabela de mensagens de serviço
 interface ServiceMessageRow {
@@ -632,14 +633,33 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
       description: type.description ?? "",
       fields: (allFields || [])
         .filter((f) => f.service_type_id === type.id)
-        .map((f) => ({
-          id: f.id,
-          name: f.name,
-          type: f.type,
-          required: f.required,
-          options: f.options,
-          description: f.description,
-        })),
+        .map((f) => {
+          // Parse options: can be null, string[] or JSON/string
+          let options: string[] | undefined = undefined;
+          if (f.options) {
+            if (Array.isArray(f.options)) {
+              options = f.options as string[];
+            } else if (typeof f.options === "string") {
+              try {
+                options = JSON.parse(f.options);
+              } catch {
+                options = undefined;
+              }
+            } else if (typeof f.options === "object" && f.options !== null) {
+              // Possibly a JSON object or array
+              options = f.options as string[];
+            }
+          }
+
+          return {
+            id: f.id,
+            name: f.name,
+            type: f.type as TechnicalField["type"],
+            required: f.required,
+            description: f.description,
+            options,
+          } as TechnicalField;
+        }),
     }));
   } catch (e) {
     console.error("Erro ao buscar tipos de serviço:", e);
