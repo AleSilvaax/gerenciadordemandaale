@@ -1,845 +1,338 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, FileSpreadsheet, FilePenLine, Camera, MessageSquare, Star, CheckCircle2, ClipboardCheck, Download, Send, Plus } from "lucide-react";
-import { 
-  getService, 
-  updateService 
-} from '@/services/api';
-import { 
-  addServiceMessage,
-  addServiceFeedback
-} from '@/services/servicesDataService';
-import { Service, ServiceMessage, ServiceFeedback } from '@/types/serviceTypes';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { exportServicesToExcel, exportServicesToPDF } from '@/utils/reportExport';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
-import { SignatureCapture } from "@/components/ui-custom/SignatureCapture";
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useForm } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
-import ServiceSignatureSection from "./components/ServiceSignatureSection";
-import ServicePhotosSection from "./components/ServicePhotosSection";
-import DetailsFormSection from "./components/DetailsFormSection";
-import ServiceFlowSection from "./components/ServiceFlowSection";
-import PhotosSection from "./components/PhotosSection";
-import ChatSection from "./components/ChatSection";
-import FeedbackSection from "./components/FeedbackSection";
-import { supabase } from '@/integrations/supabase/client';
-import { useReportData } from "@/hooks/useReportData";
+import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  getService,
+  updateService,
+  addServiceMessage,
+  addServiceFeedback,
+} from "@/services/servicesDataService";
+import { Service, ServiceMessage, ServiceFeedback } from "@/types/serviceTypes";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/AuthContext";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Rating } from "@/components/ui-custom/Rating";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 
-const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+interface Params {
+  id: string;
+}
+
+interface ServiceDetailProps {
+  editMode?: boolean;
+}
+
+const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const [service, setService] = useState<Service | null>(null);
-  const [activeTab, setActiveTab] = useState("details");
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [detailsSaving, setDetailsSaving] = useState<boolean>(false);
-  const [statusUpdating, setStatusUpdating] = useState<boolean>(false);
-  const [newMessage, setNewMessage] = useState<string>("");
-  const [photoUploadUrl, setPhotoUploadUrl] = useState<string>("");
-  const [photoTitle, setPhotoTitle] = useState<string>("");
-  const messageEndRef = useRef<HTMLDivElement>(null);
-
-  // Forms
-  const detailsForm = useForm();
-  const reportForm = useForm();
-  const feedbackForm = useForm();
+  const [isLoading, setIsLoading] = useState(true);
+  const [newMessage, setNewMessage] = useState("");
+  const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
+  const { id } = useParams<Params>();
+  const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!id) return;
-    
-    const fetchServiceDetails = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getService(id);
-        setService(data);
-        
-        // Set active tab based on service status
-        if (data?.status === "concluido") {
-          setActiveTab("feedback");
-        } else if (data?.status === "pendente" && data?.serviceType === "Instalação") {
-          setActiveTab("report");
-        }
-      } catch (error) {
-        console.error('Error fetching service details:', error);
-        toast.error('Erro ao carregar detalhes da demanda');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchServiceDetails();
+    if (id) {
+      fetchService(id);
+    }
   }, [id]);
 
-  useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [service?.messages]);
-
-  const handleExportReport = (type: 'excel' | 'pdf') => {
-    if (!service) return;
-    
+  const fetchService = async (id: string) => {
+    setIsLoading(true);
     try {
-      if (type === 'excel') {
-        exportServicesToExcel([service]);
-        toast.success('Relatório Excel gerado com sucesso');
-      } else {
-        exportServicesToPDF([service]);
-        toast.success('Relatório PDF gerado com sucesso');
-      }
+      const serviceData = await getService(id);
+      setService(serviceData);
     } catch (error) {
-      console.error(`Error exporting ${type} report:`, error);
-      toast.error(`Erro ao gerar relatório ${type.toUpperCase()}`);
-    }
-  };
-
-  const updateServiceStatus = async (newStatus: 'pendente' | 'concluido' | 'cancelado', serviceType?: 'Vistoria' | 'Instalação') => {
-    if (!service || !id) return;
-    
-    setStatusUpdating(true);
-    
-    try {
-      const updatedService = await updateService({ 
-        id,
-        status: newStatus,
-        serviceType: serviceType || service.serviceType
-      });
-      
-      setService(updatedService);
-      
-      toast.success(`Status da demanda atualizado para ${newStatus}`);
-      
-      // If transitioning from inspection to installation
-      if (service.serviceType === 'Vistoria' && serviceType === 'Instalação') {
-        toast.info('Demanda convertida de Vistoria para Instalação');
-        setActiveTab('report');
-      }
-      
-      // If completing the service
-      if (newStatus === 'concluido') {
-        setActiveTab('feedback');
-      }
-    } catch (error) {
-      console.error('Error updating service status:', error);
-      toast.error('Erro ao atualizar status da demanda');
+      console.error("Erro ao carregar serviço:", error);
+      toast.error("Erro ao carregar detalhes do serviço");
     } finally {
-      setStatusUpdating(false);
+      setIsLoading(false);
     }
   };
 
-  // Função que salva detalhes da demanda
-  const handleSaveServiceDetails = async (data: any) => {
-    if (!service || !id) return;
-
-    setDetailsSaving(true);
-    try {
-      // Mescla dados editados com existentes para não sobrescrever campos não exibidos
-      const updatedService = await updateService({
-        id,
-        ...service,
-        ...data,
-      });
-      setService(updatedService);
-      toast.success('Detalhes da demanda salvos com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar detalhes:', error);
-      toast.error('Erro ao salvar detalhes da demanda');
-    } finally {
-      setDetailsSaving(false);
-    }
-  };
-
-  // Nova forma de update otimista do reportData local, passado para hook.
-  const updateLocalReportData = (mergedReportData: any) => {
+  const handleStatusChange = async (newStatus: Service["status"]) => {
     if (!service) return;
-    setService({ ...service, reportData: mergedReportData });
-  };
 
-  // Usa hook para lidar com saving e submit do relatório.
-  const { saving, handleSaveReportData } = useReportData(service, id, updateLocalReportData);
-
-  const handleAddPhoto = async (file: File, title: string): Promise<string> => {
-    if (!service || !id) {
-      toast.error('Não foi possível adicionar a foto');
-      return "";
-    }
-    
-    // In a real app, this would upload to a server
-    // For now, we'll create a local data URL
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        try {
-          const newPhotos = [...(service.photos || []), reader.result as string];
-          const newPhotoTitles = [...(service.photoTitles || []), title];
-          
-          const updatedService = await updateService({
-            id,
-            photos: newPhotos,
-            photoTitles: newPhotoTitles
-          });
-          
-          setService(updatedService);
-          resolve(reader.result as string);
-          toast.success('Foto adicionada com sucesso');
-        } catch (error) {
-          reject(error);
-          toast.error('Erro ao adicionar foto');
-        }
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const handleRemovePhoto = async (index: number): Promise<void> => {
-    if (!service || !id) return;
-    
     try {
-      const newPhotos = [...(service.photos || [])];
-      const newPhotoTitles = [...(service.photoTitles || [])];
-      
-      newPhotos.splice(index, 1);
-      newPhotoTitles.splice(index, 1);
-      
-      const updatedService = await updateService({
-        id,
-        photos: newPhotos,
-        photoTitles: newPhotoTitles
-      });
-      
-      setService(updatedService);
-      toast.success('Foto removida com sucesso');
+      await updateService({ id: service.id, status: newStatus });
+      toast.success("Status do serviço atualizado!");
+      fetchService(id!); // Recarrega os dados do serviço
     } catch (error) {
-      console.error('Error removing photo:', error);
-      toast.error('Erro ao remover foto');
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Erro ao atualizar o status do serviço");
     }
   };
 
-  const handleUpdatePhotoTitle = async (index: number, title: string): Promise<void> => {
-    if (!service || !id) return;
-    
-    try {
-      const newPhotoTitles = [...(service.photoTitles || [])];
-      newPhotoTitles[index] = title;
-      
-      const updatedService = await updateService({
-        id,
-        photoTitles: newPhotoTitles
-      });
-      
-      setService(updatedService);
-      toast.success('Título da foto atualizado');
-    } catch (error) {
-      console.error('Error updating photo title:', error);
-      toast.error('Erro ao atualizar título da foto');
-    }
-  };
-
-  // --- Salvamento de assinaturas atualizado ---
-  const handleSaveSignature = async (role: 'client' | 'technician', signatureData: string) => {
-    if (!service || !id) return;
+  const handleSendMessage = async () => {
+    if (!service || !newMessage.trim() || !user) return;
 
     try {
-      if (role === 'client') {
-        // Atualiza no Supabase usando snake_case, ignorando tipos TS com "as any"
-        await supabase
-          .from('report_data')
-          .update({
-            client_signature: signatureData,
-            client_name: service.reportData?.clientName || service.client || "",
-          } as any)
-          .eq('id', id);
-
-        // Atualiza local/TypeScript-friendly
-        const updatedReportData = {
-          ...service.reportData,
-          clientSignature: signatureData,
-          clientName: service.reportData?.clientName || service.client || "",
-        };
-
-        const updatedService = await updateService({
-          id,
-          reportData: updatedReportData,
-        });
-        setService(updatedService);
-        toast.success("Assinatura do cliente salva com sucesso!");
-      } else {
-        // Técnico: Supabase update só do perfil, ignorando tipos TS com "as any"
-        if (!service.technician?.id || service.technician.id === "0") {
-          toast.error("Técnico não atribuído.");
-          return;
-        }
-        await supabase
-          .from('profiles')
-          .update({ signature: signatureData } as any)
-          .eq('id', service.technician.id);
-
-        // Atualiza local na estrutura TeamMember (TeamMember aceita a prop signature)
-        const updatedTechnician = {
-          ...service.technician,
-          signature: signatureData,
-        };
-        const updatedService = await updateService({
-          id,
-          technician: updatedTechnician,
-        });
-        setService(updatedService);
-        toast.success("Assinatura do técnico salva com sucesso!");
-      }
-    } catch (error) {
-      toast.error("Erro ao salvar assinatura.");
-      console.error(error);
-    }
-  };
-
-  // --- Correção do fluxo do chat ---
-  const handleAddMessage = async () => {
-    if (!service || !id || !newMessage.trim()) return;
-
-    try {
-      // Usuário mockado, você pode conectar com o user autenticado se existir!
-      const message: ServiceMessage = {
-        senderId: "user-1",
-        senderName: "Usuário Atual",
-        senderRole: "administrador",
+      const messageData: ServiceMessage = {
+        senderId: user.id,
+        senderName: user.name || "Usuário",
+        senderRole: user.role || "tecnico",
         message: newMessage,
-        timestamp: new Date().toISOString(),
       };
-      const updatedService = await addServiceMessage(id, message);
-      setService(updatedService);
+      await addServiceMessage(service.id, messageData);
       setNewMessage("");
       toast.success("Mensagem enviada!");
+      fetchService(id!); // Recarrega os dados do serviço
     } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
-      console.error(error);
     }
   };
 
-  // Função que salva feedback (estrutura semelhante)
-  const handleSubmitFeedback = async (data: any) => {
-    if (!service || !id) return;
+  const handleSubmitFeedback = async () => {
+    if (!service) return;
+
     try {
-      const feedbackData: ServiceFeedback = {
-        clientRating: parseInt(data.clientRating),
-        clientComment: data.clientComment,
-        technicianFeedback: data.technicianFeedback
-      };
-      const updatedService = await updateService({
-        id,
-        feedback: feedbackData,
-      });
-      setService(updatedService);
-      toast.success('Feedback salvo com sucesso!');
+      await addServiceFeedback(service.id, feedback);
+      toast.success("Feedback enviado!");
+      fetchService(id!); // Recarrega os dados do serviço
     } catch (error) {
-      console.error('Erro ao enviar feedback:', error);
-      toast.error('Erro ao enviar feedback');
+      console.error("Erro ao enviar feedback:", error);
+      toast.error("Erro ao enviar feedback");
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <span className="ml-3 text-lg">Carregando detalhes...</span>
-        </div>
-      </div>
-    );
+    return <div>Carregando detalhes do serviço...</div>;
   }
 
   if (!service) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Demanda não encontrada</h2>
-          <p className="mb-6 text-gray-600">Não foi possível encontrar os detalhes da demanda solicitada.</p>
-          <Button onClick={() => navigate('/demandas')}>Voltar para lista de demandas</Button>
-        </div>
-      </div>
-    );
+    return <div>Serviço não encontrado.</div>;
   }
 
-  // Garante que sempre temos um technician válido, do mock (da camada de dados) ou adaptável
-  const safeTechnician = service?.technician ?? {
-    id: "0",
-    name: "Não atribuído",
-    avatar: "",
-    role: "tecnico",
-    signature: "",
-    email: "",
-    phone: ""
-  };
-
-  const photosWithTitles = (service.photos || []).map((url, index) => ({
-    url,
-    title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
-  }));
-
-  // HANDLERS para assinatura - aceitar apenas 1 argumento
-  // (garante que são passados corretamente para filhos que esperam só 1 argumento)
-  const handleClientSignature = (signature: string) => {
-    handleSaveSignature('client', signature);
-  };
-  const handleTechnicianSignature = (signature: string) => {
-    handleSaveSignature('technician', signature);
-  };
-
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}: {service.title}
-            </h1>
-            <div className="flex items-center mt-1 text-sm text-muted-foreground">
-              <Badge 
-                className={`mr-2 ${
-                  service.status === 'concluido' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                    : service.status === 'cancelado'
-                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                }`}
-              >
-                {service.status === 'concluido' 
-                  ? 'Concluído' 
-                  : service.status === 'cancelado' 
-                  ? 'Cancelado' 
-                  : 'Pendente'}
-              </Badge>
-              {service.date && (
-                <span>
-                  Criado em: {format(new Date(service.date), 'dd/MM/yyyy', { locale: ptBR })}
-                </span>
-              )}
+    <div className="container py-4 max-w-4xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Detalhes da Demanda</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Informações básicas */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">{service.title}</h2>
+                <p className="text-muted-foreground">
+                  Local: {service.location}
+                </p>
+                {service.number && (
+                  <p className="text-muted-foreground">
+                    Número da Demanda: {service.number}
+                  </p>
+                )}
+              </div>
+              <Badge variant="secondary">{service.status}</Badge>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm font-medium">
+                  Criação:{" "}
+                  {format(new Date(service.creationDate!), "PPP", {
+                    locale: ptBR,
+                  })}
+                </span>
+              </div>
+              <div>
+                {service.dueDate && (
+                  <span className="text-sm font-medium">
+                    Vencimento:{" "}
+                    {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Tecnico Responsável */}
+            <div className="flex items-center gap-2 mt-2 mb-4">
+              {/* Exibe o atual */}
+              <span className="font-medium">Técnico: {service.technician?.name ?? "Não atribuído"}</span>
+            </div>
+
+            {/* Só para gestores: exibe opção para editar/atribuir técnico */}
+            {hasPermission("gestor") && (
+              <TechnicianAssigner
+                currentTechnicianId={service.technician?.id}
+                onAssign={async (technician) => {
+                  // updateService já existente no backend
+                  await updateService({ id: service.id, technician });
+                  // Forçar reload ou atualizar localmente se necessário
+                  toast.success("Técnico atualizado!");
+                  // se preferir, pode disparar um refetch dos dados ou recarregar a página
+                  window.location.reload();
+                }}
+              />
+            )}
+
+            {/* Descrição */}
+            {service.description && (
+              <div>
+                <h4 className="text-md font-semibold">Descrição:</h4>
+                <p className="text-muted-foreground">{service.description}</p>
+              </div>
+            )}
           </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleExportReport('excel')}
-          >
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleExportReport('pdf')}
-          >
-            <FilePenLine className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-        </div>
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full">
-          <TabsTrigger value="details">Detalhes</TabsTrigger>
-          <TabsTrigger value="report">Dados do Relatório</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger>
-          <TabsTrigger value="feedback">Feedback</TabsTrigger>
-        </TabsList>
+          <Separator className="my-4" />
 
-        <TabsContent value="details" className="mt-4 space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <DetailsFormSection
-                service={service}
-                saving={detailsSaving}
-                statusUpdating={statusUpdating}
-                onSubmit={handleSaveServiceDetails}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <ServiceFlowSection
-                service={service}
-                statusUpdating={statusUpdating}
-                onConvertToInstallation={() => updateServiceStatus('pendente', 'Instalação')}
-                onFinalize={() => updateServiceStatus('concluido')}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <PhotosSection
-                photos={photosWithTitles}
-                onAddPhoto={handleAddPhoto}
-                onRemovePhoto={handleRemovePhoto}
-                onUpdateTitle={handleUpdatePhotoTitle}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* Ações (somente se não estiver em modo de edição) */}
+          {!editMode && (
+            <div className="flex justify-between">
+              <div>
+                {service.status !== "concluido" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange("concluido")}
+                  >
+                    Marcar como Concluído
+                  </Button>
+                )}
+                {service.status !== "cancelado" && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleStatusChange("cancelado")}
+                  >
+                    Cancelar Demanda
+                  </Button>
+                )}
+              </div>
+              <div>
+                <Button
+                  onClick={() => navigate(`/demandas/${id}/edit`)}
+                  disabled={!hasPermission("edit_services")}
+                >
+                  Editar Demanda
+                </Button>
+              </div>
+            </div>
+          )}
 
-        <TabsContent value="report" className="mt-4 space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-4">
-                Dados para o Relatório de {service.serviceType === 'Instalação' ? 'Instalação' : 'Vistoria'}
-              </h3>
-              
-              <Form {...reportForm}>
-                {/* handleSubmit espera só um argumento: a função de submit */}
-                <form className="space-y-6" onSubmit={reportForm.handleSubmit(handleSaveReportData)}>
-                  {service.serviceType === 'Vistoria' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={reportForm.control}
-                        name="inspectionDate"
-                        defaultValue={service.reportData?.inspectionDate || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data da Vistoria</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="voltage"
-                        defaultValue={service.reportData?.voltage || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tensão do Local</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Ex: 220V" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="supplyType"
-                        defaultValue={service.reportData?.supplyType || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de Alimentação</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Ex: Monofásico, Bifásico, Trifásico" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="installationDistance"
-                        defaultValue={service.reportData?.installationDistance || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Distância até o ponto (metros)</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" min="0" step="0.1" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="wallboxBrand"
-                        defaultValue={service.reportData?.wallboxBrand || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Marca do Wallbox</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="wallboxPower"
-                        defaultValue={service.reportData?.wallboxPower || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Potência do Wallbox</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Ex: 7,4kW" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="groundingSystem"
-                        defaultValue={service.reportData?.groundingSystem || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sistema de Aterramento</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="artNumber"
-                        defaultValue={service.reportData?.artNumber || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número da ART</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="col-span-1 md:col-span-2">
-                        <FormField
-                          control={reportForm.control}
-                          name="installationObstacles"
-                          defaultValue={service.reportData?.installationObstacles || ""}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Obstáculos no percurso</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} rows={3} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+          <Separator className="my-4" />
+
+          {/* Mensagens */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="messages">
+              <AccordionTrigger>Mensagens</AccordionTrigger>
+              <AccordionContent>
+                <ScrollArea className="h-[200px] pr-4">
+                  {service.messages && service.messages.length > 0 ? (
+                    service.messages.map((msg, index) => (
+                      <div key={index} className="mb-2">
+                        <div className="flex items-start gap-2">
+                          <Avatar>
+                            <AvatarImage src={msg.senderId} />
+                            <AvatarFallback>{msg.senderName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="text-sm font-medium">
+                              {msg.senderName}
+                              <span className="text-xs text-muted-foreground ml-1">
+                                {format(new Date(msg.timestamp!), "dd/MM/yyyy HH:mm", {
+                                  locale: ptBR,
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-800">{msg.message}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={reportForm.control}
-                        name="installationDate"
-                        defaultValue={service.reportData?.installationDate || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data da Instalação</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="modelNumber"
-                        defaultValue={service.reportData?.modelNumber || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Marca e Modelo</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="serialNumberNew"
-                        defaultValue={service.reportData?.serialNumberNew || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número de Série</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="chargerLoad"
-                        defaultValue={service.reportData?.chargerLoad || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Potência do Carregador</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="cableGauge"
-                        defaultValue={service.reportData?.cableGauge || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Bitola do Cabo</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="chargerCircuitBreaker"
-                        defaultValue={service.reportData?.chargerCircuitBreaker || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Disjuntor do Carregador</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="compliesWithNBR17019"
-                        defaultValue={service.reportData?.compliesWithNBR17019 || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Instalação atende NBR17019</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="sim">Sim</SelectItem>
-                                <SelectItem value="nao">Não</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={reportForm.control}
-                        name="homologatedInstallation"
-                        defaultValue={service.reportData?.homologatedInstallation || ""}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Instalação Homologada</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="sim">Sim</SelectItem>
-                                <SelectItem value="nao">Não</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
+                    <p className="text-muted-foreground">
+                      Nenhuma mensagem para esta demanda.
+                    </p>
+                  )}
+                </ScrollArea>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Input
+                    type="text"
+                    placeholder="Digite sua mensagem..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                  />
+                  <Button type="button" onClick={handleSendMessage}>
+                    Enviar <Send className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <Separator className="my-4" />
+
+          {/* Feedback */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="feedback">
+              <AccordionTrigger>Feedback</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="rating">Avaliação do Cliente</Label>
+                    <Rating
+                      id="rating"
+                      value={feedback.clientRating}
+                      onChange={(value) =>
+                        setFeedback({ ...feedback, clientRating: value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="comment">Comentário do Cliente</Label>
+                    <Textarea
+                      id="comment"
+                      placeholder="Deixe seu comentário..."
+                      value={feedback.clientComment}
+                      onChange={(e) =>
+                        setFeedback({ ...feedback, clientComment: e.target.value })
+                      }
+                    />
+                  </div>
+                  {/* Feedback do Técnico (apenas se o usuário for um técnico) */}
+                  {user?.role === "tecnico" && (
+                    <div>
+                      <Label htmlFor="techFeedback">Feedback do Técnico</Label>
+                      <Textarea
+                        id="techFeedback"
+                        placeholder="Deixe seu feedback técnico..."
+                        value={feedback.technicianFeedback}
+                        onChange={(e) =>
+                          setFeedback({
+                            ...feedback,
+                            technicianFeedback: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   )}
-                  
-                  <div className="col-span-1 md:col-span-2 pt-4">
-                    <FormField
-                      control={reportForm.control}
-                      name="technicalComments"
-                      defaultValue={service.reportData?.technicalComments || ""}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Comentários Técnicos</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} rows={4} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* --- ASSINATURAS AGORA ESTÃO NO COMPONENTE DEDICADO --- */}
-                  <ServiceSignatureSection
-                    clientSignature={service.reportData?.clientSignature}
-                    technicianSignature={service.technician.signature || ""}
-                    clientName={service.reportData?.clientName || service.client || ""}
-                    technicianName={safeTechnician.name}
-                    onClientSignature={handleClientSignature}
-                    onTechnicianSignature={handleTechnicianSignature}
-                  />
-                  {/* ----------------------------------------------- */}
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button type="submit" disabled={saving}>
-                      {saving ? "Salvando..." : "Salvar Dados do Relatório"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="chat" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <ChatSection
-                // Ensure every message has a timestamp string (empty string as fallback)
-                messages={(service.messages || []).map((msg) => ({
-                  ...msg,
-                  timestamp: msg.timestamp ?? "",
-                }))}
-                newMessage={newMessage}
-                setNewMessage={setNewMessage}
-                onSend={handleAddMessage}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="feedback" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <FeedbackSection
-                service={service}
-                feedbackForm={feedbackForm}
-                statusUpdating={statusUpdating}
-                onFinalize={() => updateServiceStatus('concluido')}
-                onSubmit={handleSubmitFeedback}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  <Button onClick={handleSubmitFeedback}>Enviar Feedback</Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 };
