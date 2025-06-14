@@ -470,6 +470,29 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
 
     if (!serviceRow) throw new Error('Serviço não encontrado.');
 
+    // Correção dos tipos para signatures e customFields
+    let safeSignatures: { client?: string; technician?: string } | undefined = undefined;
+    if (serviceRow.signatures) {
+      if (typeof serviceRow.signatures === 'string') {
+        try {
+          safeSignatures = JSON.parse(serviceRow.signatures);
+        } catch { /* deixa undefined */ }
+      } else if (typeof serviceRow.signatures === 'object' && serviceRow.signatures !== null) {
+        safeSignatures = serviceRow.signatures as { client?: string; technician?: string };
+      }
+    }
+    let safeCustomFields: CustomField[] | undefined = undefined;
+    if (serviceRow.custom_fields) {
+      if (typeof serviceRow.custom_fields === 'string') {
+        try {
+          const parsed = JSON.parse(serviceRow.custom_fields);
+          if (Array.isArray(parsed)) safeCustomFields = parsed;
+        } catch { /* deixa undefined */ }
+      } else if (Array.isArray(serviceRow.custom_fields)) {
+        safeCustomFields = serviceRow.custom_fields as CustomField[];
+      }
+    }
+
     // Retorna o serviço atualizado, "completa" os campos obrigatórios (uso de cast manual)
     const updatedService: Service = {
       id: serviceRow.id,
@@ -482,10 +505,10 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
       priority: serviceRow.priority as Service['priority'],
       messages,
       serviceType: serviceRow.service_type as Service['serviceType'],
-      reportData: (serviceRow as any).report_data ?? undefined, // Pode ser undefined se não houver join (ajuste futuro via JOIN)
+      reportData: (serviceRow as any).report_data ?? undefined,
       photos: serviceRow.photos ?? [],
       photoTitles: serviceRow.photo_titles ?? [],
-      signatures: serviceRow.signatures ?? undefined,
+      signatures: safeSignatures,
       date: serviceRow.date ?? undefined,
       description: serviceRow.description ?? undefined,
       client: serviceRow.client ?? undefined,
@@ -493,8 +516,8 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
       city: serviceRow.city ?? undefined,
       notes: serviceRow.notes ?? undefined,
       estimatedHours: serviceRow.estimated_hours ?? undefined,
-      feedback: undefined, // não vem do backend
-      customFields: serviceRow.custom_fields ?? undefined,
+      feedback: undefined,
+      customFields: safeCustomFields,
       createdBy: serviceRow.created_by ?? undefined,
     };
 
@@ -524,6 +547,29 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
       role: 'tecnico',
     };
 
+    // Correção dos tipos para signatures e customFields
+    let feedbackSafeSignatures: { client?: string; technician?: string } | undefined = undefined;
+    if (serviceRow.signatures) {
+      if (typeof serviceRow.signatures === 'string') {
+        try {
+          feedbackSafeSignatures = JSON.parse(serviceRow.signatures);
+        } catch { /* deixa undefined */ }
+      } else if (typeof serviceRow.signatures === 'object' && serviceRow.signatures !== null) {
+        feedbackSafeSignatures = serviceRow.signatures as { client?: string; technician?: string };
+      }
+    }
+    let feedbackSafeCustomFields: CustomField[] | undefined = undefined;
+    if (serviceRow.custom_fields) {
+      if (typeof serviceRow.custom_fields === 'string') {
+        try {
+          const parsed = JSON.parse(serviceRow.custom_fields);
+          if (Array.isArray(parsed)) feedbackSafeCustomFields = parsed;
+        } catch { /* deixa undefined */ }
+      } else if (Array.isArray(serviceRow.custom_fields)) {
+        feedbackSafeCustomFields = serviceRow.custom_fields as CustomField[];
+      }
+    }
+
     // Retorna o serviço preenchendo as propriedades corretas
     const fullService: Service = {
       id: serviceRow.id,
@@ -535,12 +581,12 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
       dueDate: serviceRow.due_date ?? undefined,
       priority: serviceRow.priority as Service['priority'],
       messages: [], // nesse ponto não busca do backend
-      feedback, // atribui na memória, não no backend
+      feedback, // atribui na memória
       serviceType: serviceRow.service_type as Service['serviceType'],
       reportData: (serviceRow as any).report_data ?? undefined,
       photos: serviceRow.photos ?? [],
       photoTitles: serviceRow.photo_titles ?? [],
-      signatures: serviceRow.signatures ?? undefined,
+      signatures: feedbackSafeSignatures,
       date: serviceRow.date ?? undefined,
       description: serviceRow.description ?? undefined,
       client: serviceRow.client ?? undefined,
@@ -548,7 +594,7 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
       city: serviceRow.city ?? undefined,
       notes: serviceRow.notes ?? undefined,
       estimatedHours: serviceRow.estimated_hours ?? undefined,
-      customFields: serviceRow.custom_fields ?? undefined,
+      customFields: feedbackSafeCustomFields,
       createdBy: serviceRow.created_by ?? undefined,
     };
 
