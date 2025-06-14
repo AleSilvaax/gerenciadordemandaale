@@ -125,15 +125,13 @@ const Equipe: React.FC = () => {
   );
 
   const handleAddMember = async () => {
-    if (newMember.name.trim() && newMember.email.trim()) {
+    if (newMember.name.trim()) {
       setIsSaving(true);
       
       try {
         const newTeamMember = await addTeamMember({
           name: newMember.name,
           role: newMember.role,
-          email: newMember.email,
-          phone: newMember.phone,
           avatar: ""
         });
         
@@ -153,7 +151,7 @@ const Equipe: React.FC = () => {
         setIsSaving(false);
       }
     } else {
-      toast.error("Preencha nome e email do membro.");
+      toast.error("Preencha nome do membro.");
     }
   };
 
