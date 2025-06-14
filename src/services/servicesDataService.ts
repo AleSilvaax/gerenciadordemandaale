@@ -634,20 +634,30 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
       fields: (allFields || [])
         .filter((f) => f.service_type_id === type.id)
         .map((f) => {
-          // Parse options: can be null, string[] or JSON/string
           let options: string[] | undefined = undefined;
           if (f.options) {
             if (Array.isArray(f.options)) {
-              options = f.options as string[];
+              // Already an array
+              options = f.options;
             } else if (typeof f.options === "string") {
+              // Try to parse stringified array
               try {
-                options = JSON.parse(f.options);
+                const parsed = JSON.parse(f.options);
+                if (Array.isArray(parsed)) {
+                  options = parsed;
+                }
               } catch {
                 options = undefined;
               }
             } else if (typeof f.options === "object" && f.options !== null) {
-              // Possibly a JSON object or array
-              options = f.options as string[];
+              // Might be a plain object: check if EVERY value is a string and keys are numeric
+              const obj = f.options as unknown;
+              // Try: Object.values(obj). If keys are 0,1,2..., it might be from Postgres JSON array
+              const asArray = Object.values(obj);
+              if (Array.isArray(asArray) && asArray.every(x => typeof x === "string")) {
+                options = asArray as string[];
+              }
+              // else, leave options undefined
             }
           }
 
