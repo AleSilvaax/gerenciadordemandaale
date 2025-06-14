@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
@@ -11,7 +10,7 @@ interface FeedbackSectionProps {
   feedbackForm: any;
   statusUpdating: boolean;
   onFinalize: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
 }
 
 const FeedbackSection: React.FC<FeedbackSectionProps> = ({

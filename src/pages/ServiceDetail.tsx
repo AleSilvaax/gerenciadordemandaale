@@ -910,7 +910,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                 feedbackForm={feedbackForm}
                 statusUpdating={statusUpdating}
                 onFinalize={() => updateServiceStatus('concluido')}
-                onSubmit={feedbackForm.handleSubmit(handleSubmitFeedback)}
+                onSubmit={handleSubmitFeedback}
               />
             </CardContent>
           </Card>
