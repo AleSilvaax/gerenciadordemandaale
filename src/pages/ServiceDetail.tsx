@@ -134,44 +134,46 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
+  // Função que salva detalhes da demanda
   const handleSaveServiceDetails = async (data: any) => {
     if (!service || !id) return;
-    
+
     setSaving(true);
-    
     try {
-      const updatedService = await updateService({ 
+      // Mescla dados editados com existentes para não sobrescrever campos não exibidos
+      const updatedService = await updateService({
         id,
-        ...data 
+        ...service,
+        ...data,
       });
       setService(updatedService);
-      toast.success('Detalhes da demanda atualizados com sucesso');
+      toast.success('Detalhes da demanda salvos com sucesso!');
     } catch (error) {
-      console.error('Error saving service details:', error);
+      console.error('Erro ao salvar detalhes:', error);
       toast.error('Erro ao salvar detalhes da demanda');
     } finally {
       setSaving(false);
     }
   };
 
+  // Função que salva dados do relatório
   const handleSaveReportData = async (data: any) => {
     if (!service || !id) return;
-    
     setSaving(true);
-    
     try {
-      const updatedService = await updateService({ 
-        id, 
-        reportData: {
-          ...service.reportData,
-          ...data
-        }
+      // Atualiza os dados aninhados dentro de reportData
+      const mergedReportData = {
+        ...service.reportData,
+        ...data,
+      };
+      const updatedService = await updateService({
+        id,
+        reportData: mergedReportData,
       });
-      
       setService(updatedService);
-      toast.success('Dados do relatório atualizados com sucesso');
+      toast.success('Dados do relatório salvos com sucesso!');
     } catch (error) {
-      console.error('Error saving report data:', error);
+      console.error('Erro ao salvar relatório:', error);
       toast.error('Erro ao salvar dados do relatório');
     } finally {
       setSaving(false);
@@ -315,21 +317,23 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     }
   };
 
+  // Função que salva feedback (estrutura semelhante)
   const handleSubmitFeedback = async (data: any) => {
     if (!service || !id) return;
-    
     try {
       const feedbackData: ServiceFeedback = {
         clientRating: parseInt(data.clientRating),
         clientComment: data.clientComment,
         technicianFeedback: data.technicianFeedback
       };
-      
-      const updatedService = await addServiceFeedback(id, feedbackData);
+      const updatedService = await updateService({
+        id,
+        feedback: feedbackData,
+      });
       setService(updatedService);
-      toast.success('Feedback enviado com sucesso');
+      toast.success('Feedback salvo com sucesso!');
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      console.error('Erro ao enviar feedback:', error);
       toast.error('Erro ao enviar feedback');
     }
   };

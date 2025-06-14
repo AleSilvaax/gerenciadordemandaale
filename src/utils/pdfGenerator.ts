@@ -1,613 +1,261 @@
+
 import { Service } from "@/types/serviceTypes";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
-// Background image for cover page (car charging station)
-const BACKGROUND_IMAGE = "/lovable-uploads/c5f3330e-0914-4da8-9bf1-01a2e1afb4dd.png"; // Updated with the new image
-// Signature image (empty signature line)
+const LOGO_IMAGE = "/lovable-uploads/c5f3330e-0914-4da8-9bf1-01a2e1afb4dd.png";
 const SIGNATURE_LINE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCAYAAABkOJMpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgSURBVHgB7cMBDQAAAMKg909tDjegAAAAAAAAAAAAPgYQCAABy4qsDQAAAABJRU5ErkJggg==";
 
-// Function to create a new jsPDF instance with consistent styling
-const createPdfDocument = () => {
-  const pdf = new jsPDF();
-  
-  // Set default font
-  pdf.setFont("helvetica");
-  
-  return pdf;
-};
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
+const MARGIN_X = 18;
 
-// Function to handle image loading safely
-const safelyAddImage = (pdf, imagePath, format, x, y, width, height) => {
-  try {
-    // Try to add the image - strip any domain prefixes if present
-    const cleanPath = imagePath.replace(/^https?:\/\/[^\/]+/i, '');
-    pdf.addImage(cleanPath, format, x, y, width, height);
-    return true;
-  } catch (error) {
-    console.error(`Error adding image ${imagePath}:`, error);
-    return false;
+function addHeader(pdf, title) {
+  pdf.setFillColor(255,255,255);
+  pdf.rect(0,0,PAGE_WIDTH,28,'F');
+  if (LOGO_IMAGE) {
+    pdf.addImage(LOGO_IMAGE, 'PNG', 10, 7, 20, 14);
   }
-};
-
-// Calculate image dimensions while maintaining aspect ratio
-const calculateImageDimensions = (origWidth, origHeight, maxWidth, maxHeight) => {
-  if (origWidth <= maxWidth && origHeight <= maxHeight) {
-    return { width: origWidth, height: origHeight };
-  }
-
-  const ratio = Math.min(maxWidth / origWidth, maxHeight / origHeight);
-  return { 
-    width: origWidth * ratio, 
-    height: origHeight * ratio 
-  };
-};
-
-// Create a semi-transparent overlay for better text readability
-const addSemiTransparentOverlay = (pdf, x, y, width, height, color, opacity) => {
-  // For different opacity levels, we'll use different RGB values to simulate transparency
-  // This is a workaround since setGlobalAlpha is not available
-  
-  // Convert opacity (0-1) to color intensity (0-255)
-  const colorValue = Math.floor(255 * (1 - opacity));
-  
-  if (color === "black") {
-    pdf.setFillColor(colorValue, colorValue, colorValue);
-  } else if (color === "white") {
-    pdf.setFillColor(255, 255, 255);
-  } else if (color === "yellow") {
-    pdf.setFillColor(255, 240, 0);
-  }
-  
-  pdf.rect(x, y, width, height, "F");
-};
-
-// Generate the cover page with a modern design based on new requirements
-const generateCoverPage = (pdf, service) => {
-  // Add background image (full page)
-  if (!safelyAddImage(pdf, BACKGROUND_IMAGE, 'PNG', 0, 0, 210, 297)) {
-    // If background image fails, use a solid color background
-    pdf.setFillColor(30, 30, 30);
-    pdf.rect(0, 0, 210, 297, "F");
-  }
-  
-  // Add semi-transparent overlay for better text readability
-  addSemiTransparentOverlay(pdf, 0, 0, 210, 297, "black", 0.5);
-  
-  // Add date with modern styling
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(12);
-  const date = new Date().toLocaleDateString("pt-BR");
-  pdf.text(`${date}`, 20, 60);
-  
-  // Add technician name with accent color
-  pdf.setTextColor(255, 240, 0);
+  pdf.setFont("helvetica", "bold");
   pdf.setFontSize(14);
-  pdf.text(`${service.technician.name}`, 20, 75);
-  
-  // Add title with larger, more impactful font
-  pdf.setFontSize(42);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("RELATÓRIO", 20, 130);
-  
-  // Different second line based on service phase with consistent styling
-  const phaseText = service.reportData?.servicePhase === "inspection" ? "DE VISTORIA" : "DE INSTALAÇÃO";
-  pdf.text(phaseText, 20, 155);
-  
-  // Add client and service info with better spacing and organization
-  pdf.setFontSize(14);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("CLIENTE", 20, 230);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text(`${service.reportData?.client || ""}`, 20, 245);
-  
-  // Using "DEMANDA" as requested
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("DEMANDA", 20, 265);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text(service.id, 20, 280);
-};
+  pdf.setTextColor(40,40,40);
+  pdf.text(title, 36, 18);
+}
 
-// Generate the technicians page with improved image quality
-const generateTechniciansPage = (pdf, service) => {
-  // Background color
-  pdf.setFillColor(30, 30, 30);
-  pdf.rect(0, 0, 210, 297, "F");
-  
-  // Add title
-  pdf.setFontSize(30);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("TÉCNICOS", 20, 40);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("RESPONSÁVEIS", 20, 55);
-  
-  // Add technician photo with proper aspect ratio and smaller size
-  if (service.technician && service.technician.avatar) {
-    // Using smaller dimensions for better fitting and quality
-    safelyAddImage(pdf, service.technician.avatar, 'PNG', 20, 80, 25, 25);
-  }
-  
-  // Add technician info with better spacing
-  pdf.setFontSize(18);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text(`${service.technician.name}`, 60, 95);
-  
-  pdf.setFontSize(14);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("Eletricista instalador", 60, 110);
-};
+function addFooter(pdf, pageNum, totalPages) {
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.setTextColor(130,130,130);
+  const today = new Date().toLocaleDateString("pt-BR");
+  pdf.text(`Emitido em: ${today}`, MARGIN_X, PAGE_HEIGHT-8);
+  pdf.text(`Página ${pageNum} de ${totalPages}`, PAGE_WIDTH - MARGIN_X - 35, PAGE_HEIGHT-8);
+}
 
-// Generate the service description page with improved layout
-const generateDescriptionPage = (pdf, service) => {
-  // Background color
-  pdf.setFillColor(30, 30, 30);
-  pdf.rect(0, 0, 210, 297, "F");
-  
-  // Add title
-  pdf.setFontSize(30);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("DESCRIÇÃO DO", 20, 40);
-  pdf.setTextColor(255, 240, 0);
-  
-  // Different title based on service phase
-  const phaseText = service.reportData?.servicePhase === "inspection" ? "LEVANTAMENTO" : "SERVIÇO";
-  pdf.text(phaseText, 20, 55);
-  
-  // Add service description
-  pdf.setFontSize(12);
-  pdf.setTextColor(255, 255, 255);
-  
-  const description = service.reportData?.technicalComments || 
-    `Referente à ${service.reportData?.servicePhase === "inspection" ? "vistoria" : "instalação"} de carregador veicular do cliente ${service.reportData?.client || service.title}.`;
-  
-  // Split long text to fit page
-  const lines = pdf.splitTextToSize(description, 170);
-  pdf.text(lines, 20, 75);
-  
-  // Add photos with titles if they exist
-  if (service.photos && service.photos.length > 0) {
-    pdf.setFontSize(16);
-    pdf.setTextColor(255, 240, 0);
-    pdf.text("REGISTROS FOTOGRÁFICOS", 20, 120);
-    
-    let yPos = 135;
-    let photosAdded = 0;
-    const photoWidth = 75;
-    const photoHeight = 56; // 4:3 aspect ratio
-    const padding = 10;
-    const xPos1 = 20;
-    const xPos2 = 105;
-    const pageMargin = 20; // Ensure photos respect page margins
-    
-    for (let i = 0; i < Math.min(4, service.photos.length); i++) {
-      // Calculate positioning for 2 photos per row
-      const xPos = i % 2 === 0 ? xPos1 : xPos2;
-      if (i % 2 === 0 && i > 0) yPos += photoHeight + 30; // New row
-      
-      // Make sure photos don't exceed page bounds - reduced page bounds to respect margins
-      if (yPos + photoHeight > 260) {
-        pdf.addPage();
-        pdf.setFillColor(30, 30, 30);
-        pdf.rect(0, 0, 210, 297, "F");
-        yPos = 40;
-      }
-      
-      if (safelyAddImage(pdf, service.photos[i], 'JPEG', xPos, yPos, photoWidth, photoHeight)) {
-        // Add photo title/caption if available
-        pdf.setFontSize(9);
-        pdf.setTextColor(255, 255, 255);
-        const photoTitle = service.photoTitles && service.photoTitles[i] ? service.photoTitles[i] : `Foto ${i + 1}`;
-        
-        // Add a small background for the caption to ensure it's readable
-        const captionWidth = photoWidth;
-        const captionHeight = 10;
-        const captionY = yPos + photoHeight + 1;
-        
-        pdf.setFillColor(50, 50, 50);
-        pdf.rect(xPos, captionY, captionWidth, captionHeight, 'F');
-        
-        pdf.text(photoTitle, xPos + 2, captionY + 7);
-        photosAdded++;
-      }
-    }
-    
-    // If there are more than 4 photos, add another page
-    if (service.photos.length > 4) {
-      pdf.addPage();
-      pdf.setFillColor(30, 30, 30);
-      pdf.rect(0, 0, 210, 297, "F");
-      
-      pdf.setFontSize(16);
-      pdf.setTextColor(255, 240, 0);
-      pdf.text("REGISTROS FOTOGRÁFICOS (CONTINUAÇÃO)", 20, 40);
-      
-      yPos = 55;
-      
-      for (let i = 4; i < Math.min(12, service.photos.length); i++) {
-        // Calculate positioning for 2 photos per row
-        const xPos = (i - 4) % 2 === 0 ? xPos1 : xPos2;
-        if ((i - 4) % 2 === 0 && (i - 4) > 0) yPos += photoHeight + 30; // New row
-        
-        // Make sure photos don't exceed page bounds - respect margins
-        if (yPos + photoHeight > 260) {
-          pdf.addPage();
-          pdf.setFillColor(30, 30, 30);
-          pdf.rect(0, 0, 210, 297, "F");
-          yPos = 40;
-        }
-        
-        if (safelyAddImage(pdf, service.photos[i], 'JPEG', xPos, yPos, photoWidth, photoHeight)) {
-          // Add photo title/caption if available
-          pdf.setFontSize(9);
-          pdf.setTextColor(255, 255, 255);
-          const photoTitle = service.photoTitles && service.photoTitles[i] ? service.photoTitles[i] : `Foto ${i + 1}`;
-          
-          // Add a small background for the caption
-          const captionWidth = photoWidth;
-          const captionHeight = 10;
-          const captionY = yPos + photoHeight + 1;
-          
-          pdf.setFillColor(50, 50, 50);
-          pdf.rect(xPos, captionY, captionWidth, captionHeight, 'F');
-          
-          pdf.text(photoTitle, xPos + 2, captionY + 7);
-        }
-      }
-    }
-    
-    if (photosAdded === 0) {
-      pdf.setFontSize(10);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text("(Sem fotos disponíveis ou erro ao carregar)", 20, 145);
-    }
+function generateCover(pdf, service, totalPages) {
+  pdf.setFillColor(240, 240, 245);
+  pdf.rect(0,0,PAGE_WIDTH,PAGE_HEIGHT,'F');
+  addHeader(pdf, 
+    service.reportData?.servicePhase === "inspection" 
+      ? "Relatório Técnico de Vistoria" 
+      : "Relatório Final de Instalação"
+  );
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(28);
+  pdf.setTextColor(30,30,40);
+  pdf.text("RELATÓRIO", PAGE_WIDTH/2, 72, { align:"center"});
+  pdf.setFontSize(15);
+  pdf.setTextColor(120,120,120);
+  if(service.reportData?.servicePhase === "inspection") {
+    pdf.text("Vistoria de Ponto de Recarga", PAGE_WIDTH/2, 85, { align:"center"});
   } else {
-    pdf.setFontSize(10);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text("(Sem fotos disponíveis)", 20, 145);
+    pdf.text("Instalação de Ponto de Recarga", PAGE_WIDTH/2, 85, { align:"center"});
   }
-};
-
-// Generate technical details page based on service phase
-const generateDetailsPage = (pdf, service) => {
-  // Background color
-  pdf.setFillColor(30, 30, 30);
-  pdf.rect(0, 0, 210, 297, "F");
-  
-  // Add title
-  pdf.setFontSize(30);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("DETALHES", 20, 40);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("TÉCNICOS", 20, 55);
-  
-  // Add service details in a table-like format
+  // Info box
+  let y=110;
+  pdf.setFillColor(255,255,255);
+  pdf.roundedRect(MARGIN_X, y, PAGE_WIDTH-MARGIN_X*2, 53, 5,5,"F");
+  pdf.setTextColor(30,30,40);
   pdf.setFontSize(12);
-  pdf.setTextColor(255, 255, 255);
-  
-  let yPos = 75;
-  const xPos1 = 20;
-  const xPos2 = 100;
-  const lineHeight = 10;
-  
-  // Add client details for both types
-  const commonDetails = [
-    { label: "Cliente:", value: service.reportData?.client || "" },
-    { label: "Endereço:", value: service.reportData?.address || "" },
-    { label: "Cidade:", value: service.reportData?.city || "" },
-  ];
-  
-  // Add phase-specific details
-  if (service.reportData?.servicePhase === "inspection") {
-    // Inspection details with better organization
-    const inspectionDetails = [
-      ...commonDetails,
-      { label: "Data da Vistoria:", value: service.reportData?.inspectionDate || "" },
-      { label: "Tensão do local:", value: service.reportData?.voltage || "" },
-      { label: "Tipo de alimentação:", value: service.reportData?.supplyType || "" },
-      { label: "Distância até ponto:", value: service.reportData?.installationDistance || "" },
-      { label: "Obstáculos no percurso:", value: service.reportData?.installationObstacles || "" },
-      { label: "Possui quadro existente:", value: service.reportData?.existingPanel ? "Sim" : "Não" },
+  pdf.text("Cliente:", MARGIN_X+8, y+13); 
+  pdf.text(service.reportData?.client || service.client || "", MARGIN_X+35, y+13);
+  pdf.text("Endereço:", MARGIN_X+8, y+28);
+  pdf.text(service.reportData?.address || service.address || "", MARGIN_X+35, y+28);
+  pdf.text("Demanda Nº:", MARGIN_X+8, y+43);
+  pdf.text(service.id, MARGIN_X+35, y+43);
+  pdf.setFontSize(11);
+  pdf.setTextColor(90,90,90);
+  pdf.text("Data de Emissão:", PAGE_WIDTH-MARGIN_X-48, y+43);
+  pdf.text(new Date().toLocaleDateString("pt-BR"), PAGE_WIDTH-MARGIN_X-12, y+43, {align:"right"});
+  addFooter(pdf, 1, totalPages);
+}
+
+function generateSection(pdf, title, y) {
+  pdf.setFillColor(249,249,253);
+  pdf.rect(MARGIN_X, y, PAGE_WIDTH-MARGIN_X*2, 11, "F");
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.setTextColor(32,32,110);
+  pdf.text(title, MARGIN_X+3, y+8);
+}
+
+function generateClientData(pdf, service, pageNum, totalPages) {
+  pdf.addPage();
+  addHeader(pdf, "1. Dados do Cliente");
+  let y=40;
+  generateSection(pdf, "Dados do Cliente", y);
+  y+=17;
+  pdf.setFont("helvetica","normal"); pdf.setFontSize(11); pdf.setTextColor(40,40,40);
+  pdf.text("Nome:", MARGIN_X+4, y+8);
+  pdf.text(service.reportData?.client || service.client || "", MARGIN_X+34, y+8);
+  pdf.text("Endereço:", MARGIN_X+4, y+22);
+  pdf.text(service.reportData?.address || service.address || "", MARGIN_X+34, y+22);
+  pdf.text("Cidade:", MARGIN_X+4, y+36);
+  pdf.text(service.reportData?.city || service.city || "", MARGIN_X+34, y+36);
+  addFooter(pdf, pageNum, totalPages);
+}
+
+function generateTechnicalData(pdf, service, pageNum, totalPages) {
+  pdf.addPage();
+  addHeader(pdf, "2. Detalhes Técnicos");
+  let y=40;
+  generateSection(pdf, "Detalhes Técnicos", y);
+
+  y+=13;
+  // Cria tabela técnica usando autoTable
+  pdf.setFont("helvetica","normal"); pdf.setFontSize(11);
+
+  let rows=[];
+  if(service.reportData?.servicePhase === "inspection") {
+    rows = [
+      ["Data da Vistoria", service.reportData?.inspectionDate || ""],
+      ["Tensão do Local", service.reportData?.voltage || ""],
+      ["Tipo de Alimentação", service.reportData?.supplyType || ""],
+      ["Distância até o ponto (m)", service.reportData?.installationDistance || ""],
+      ["Marca Wallbox", service.reportData?.wallboxBrand || ""],
+      ["Potência Wallbox", service.reportData?.wallboxPower || ""],
+      ["Aterramento", service.reportData?.groundingSystem || ""],
+      ["ART", service.reportData?.artNumber || ""],
+      ["Obstáculos", (service.reportData?.installationObstacles || "")],
     ];
-    
-    inspectionDetails.forEach(item => {
-      pdf.setTextColor(255, 240, 0);
-      pdf.text(item.label, xPos1, yPos);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(item.value, xPos2, yPos);
-      yPos += lineHeight;
-    });
-    
-    // Add Wallbox details
-    yPos += lineHeight;
-    pdf.setTextColor(255, 240, 0);
-    pdf.text("WALLBOX:", xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(`- Marca: ${service.reportData?.wallboxBrand || ""}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.text(`- Potência: ${service.reportData?.wallboxPower || ""}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.text(`- Tensão: ${service.reportData?.voltage || ""}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.text(`- Alimentação: ${service.reportData?.powerSupplyType || ""}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    // Add electrical panel details if applicable with better sections
-    if (service.reportData?.existingPanel) {
-      yPos += lineHeight/2;
-      pdf.setTextColor(255, 240, 0);
-      pdf.text("QUADRO ELÉTRICO:", xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(`- Tipo: ${service.reportData?.panelType || ""}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      // Changed from "amperagem" to "corrente" as requested
-      pdf.text(`- Corrente: ${service.reportData?.panelAmps || ""}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.text(`- Tensão entre fases: ${service.reportData?.voltageBetweenPhases || "N/A"}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.text(`- Tensão fase/neutro: ${service.reportData?.voltageBetweenPhaseAndNeutral || ""}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.text(`- Trifásico: ${service.reportData?.hasThreePhase ? "Sim" : "Não"}`, xPos1, yPos);
-      yPos += lineHeight;
-    }
-    
-    // Add infrastructure assessment with improved structure
-    yPos += lineHeight/2;
-    pdf.setTextColor(255, 240, 0);
-    pdf.text("INFRAESTRUTURA NECESSÁRIA:", xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(`- Necessita infraestrutura: ${service.reportData?.needsInfrastructure ? "Sim" : "Não"}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    if (service.reportData?.needsInfrastructure) {
-      pdf.text(`- Necessita andaime: ${service.reportData?.needsScaffolding ? "Sim" : "Não"}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.text(`- Necessita furo técnico: ${service.reportData?.needsTechnicalHole ? "Sim" : "Não"}`, xPos1, yPos);
-      yPos += lineHeight;
-      
-      pdf.text(`- Necessita alvenaria: ${service.reportData?.needsMasonry ? "Sim" : "Não"}`, xPos1, yPos);
-      yPos += lineHeight;
-    }
-    
-    // Add grounding system info
-    pdf.text(`- Sistema de aterramento: ${service.reportData?.groundingSystem || "Não especificado"}`, xPos1, yPos);
-    yPos += lineHeight;
-    
-    // Add ART info if available
-    if (service.reportData?.artNumber) {
-      pdf.text(`- ART: ${service.reportData?.artNumber}`, xPos1, yPos);
-      yPos += lineHeight;
-    }
   } else {
-    // Installation details with better organization
-    const installationDetails = [
-      ...commonDetails,
-      { label: "Data da Instalação:", value: service.reportData?.installationDate || "" },
-      { label: "Marca e Modelo:", value: service.reportData?.modelNumber || "" },
-      { label: "Número de Série:", value: service.reportData?.serialNumberNew || "" },
-      { label: "Potência do carregador:", value: service.reportData?.chargerLoad || "" },
-      { label: "Bitola do cabo:", value: service.reportData?.cableGauge || "" },
-      { label: "Disjuntor do carregador:", value: service.reportData?.chargerCircuitBreaker || "" },
-      { label: "Status do carregador:", value: service.reportData?.chargerStatus || "" }
+    rows = [
+      ["Data da Instalação", service.reportData?.installationDate || ""],
+      ["Marca e Modelo", service.reportData?.modelNumber || ""],
+      ["Número de Série", service.reportData?.serialNumberNew || ""],
+      ["Potência Carregador", service.reportData?.chargerLoad || ""],
+      ["Bitola do Cabo", service.reportData?.cableGauge || ""],
+      ["Disjuntor Carregador", service.reportData?.chargerCircuitBreaker || ""],
+      ["Status Carregador", service.reportData?.chargerStatus || ""],
+      ["Conformidade NBR17019", service.reportData?.compliesWithNBR17019 ? "Sim":"Não"],
+      ["Homologação", service.reportData?.homologatedInstallation ? "Sim":"Não"],
+      ["Garantia", service.reportData?.validWarranty ? "Sim":"Não"],
+      ["Adequação Necessária", service.reportData?.requiredAdjustment ? "Sim":"Não"],
     ];
-    
-    installationDetails.forEach(item => {
-      pdf.setTextColor(255, 240, 0);
-      pdf.text(item.label, xPos1, yPos);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(item.value, xPos2, yPos);
-      yPos += lineHeight;
-    });
-    
-    // Add compliance information with improved layout
-    yPos += 10;
-    pdf.setTextColor(255, 240, 0);
-    pdf.text("Conformidade:", xPos1, yPos);
-    pdf.setTextColor(255, 255, 255);
-    
-    yPos += lineHeight;
-    pdf.text(`- Instalação atende NBR17019: ${service.reportData?.compliesWithNBR17019 ? "Sim" : "Não"}`, xPos1, yPos);
-    
-    yPos += lineHeight;
-    pdf.text(`- Realizada com homologado: ${service.reportData?.homologatedInstallation ? "Sim" : "Não"}`, xPos1, yPos);
-    
-    yPos += lineHeight;
-    pdf.text(`- Garantia procede: ${service.reportData?.validWarranty ? "Sim" : "Não"}`, xPos1, yPos);
-    
-    yPos += lineHeight;
-    pdf.text(`- Foi necessário adequação: ${service.reportData?.requiredAdjustment ? "Sim" : "Não"}`, xPos1, yPos);
-    
-    if (service.reportData?.requiredAdjustment && service.reportData?.adjustmentDescription) {
-      yPos += lineHeight;
-      pdf.text("Descrição da adequação:", xPos1, yPos);
-      
-      yPos += lineHeight;
-      const adjustmentLines = pdf.splitTextToSize(service.reportData.adjustmentDescription, 170);
-      pdf.text(adjustmentLines, xPos1, yPos);
-    }
   }
-  
-  // Add custom fields if any
-  if (service.reportData?.customFields && service.reportData.customFields.length > 0) {
-    yPos += lineHeight * 2;
-    pdf.setTextColor(255, 240, 0);
-    pdf.text("CAMPOS PERSONALIZADOS:", xPos1, yPos);
-    yPos += lineHeight;
-    
-    pdf.setTextColor(255, 255, 255);
-    service.reportData.customFields.forEach(field => {
-      let displayValue = "";
-      
-      if (field.type === 'boolean') {
-        displayValue = field.value ? "Sim" : "Não";
-      } else if (field.type === 'select') {
-        displayValue = field.value as string;
-      } else {
-        displayValue = String(field.value || "");
-      }
-      
-      pdf.setTextColor(255, 240, 0);
-      pdf.text(`${field.label}:`, xPos1, yPos);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(displayValue, xPos2, yPos);
-      yPos += lineHeight;
-      
-      // Check if we need a new page
-      if (yPos > 260) {
-        pdf.addPage();
-        pdf.setFillColor(30, 30, 30);
-        pdf.rect(0, 0, 210, 297, "F");
-        yPos = 40;
-      }
-    });
-  }
-};
-
-// Generate signature page with improved layout for digital signatures
-const generateSignaturePage = (pdf, service) => {
-  // Background color
-  pdf.setFillColor(30, 30, 30);
-  pdf.rect(0, 0, 210, 297, "F");
-  
-  // Add title
-  pdf.setFontSize(30);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text("ASSINATURAS", 20, 40);
-  
-  // Client signature section
-  pdf.setFontSize(16);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("ASSINATURA DO CLIENTE", 20, 75);
-  
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(12);
-  pdf.text(`Nome: ${service.reportData?.clientName || ""}`, 20, 90);
-  
-  // Add client signature if it exists or signature line
-  if (service.reportData?.clientSignature) {
-    // Add the signature without white background
-    pdf.setDrawColor(255, 255, 255);
-    pdf.setLineWidth(0.5);
-    pdf.setTextColor(255, 255, 255);
-    safelyAddImage(pdf, service.reportData.clientSignature, 'PNG', 20, 105, 120, 40);
-  } else {
-    // Add signature line for client
-    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 115, 170, 1);
-    pdf.setFontSize(10);
-    pdf.text("Assinatura do cliente ou representante", 20, 125);
-  }
-  
-  // Technician signature section
-  pdf.setFontSize(16);
-  pdf.setTextColor(255, 240, 0);
-  pdf.text("ASSINATURA DO TÉCNICO", 20, 155);
-  
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(12);
-  pdf.text(`Nome: ${service.technician.name}`, 20, 170);
-  
-  // Add technician signature if it exists or signature line
-  if (service.technician.signature) {
-    // Add the signature without white background
-    pdf.setDrawColor(255, 255, 255);
-    pdf.setLineWidth(0.5);
-    pdf.setTextColor(255, 255, 255);
-    safelyAddImage(pdf, service.technician.signature, 'PNG', 20, 185, 120, 40);
-  } else {
-    // Add signature line for technician
-    safelyAddImage(pdf, SIGNATURE_LINE, 'PNG', 20, 195, 170, 1);
-    pdf.setFontSize(10);
-    pdf.text("Assinatura do técnico responsável", 20, 205);
-  }
-  
-  // Add date and service number
-  pdf.setFontSize(12);
-  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, 20, 230);
-  pdf.text(`Número da Demanda: ${service.id}`, 20, 245);
-  
-  // Disclaimer
-  pdf.setFontSize(8);
-  pdf.setTextColor(200, 200, 200);
-  const disclaimer = "Este documento confirma que o serviço foi executado conforme as especificações técnicas e que ambas as partes estão de acordo com o trabalho realizado.";
-  const disclaimerLines = pdf.splitTextToSize(disclaimer, 170);
-  pdf.text(disclaimerLines, 20, 260);
-};
-
-export function generatePDF(service: Service, reportType: "inspection" | "installation" = null): boolean {
-  console.log("Generating PDF for service:", service.id);
-  
-  const actualReportType = reportType || service.reportData?.servicePhase || "inspection";
-  
-  // Show toast indicating PDF is being generated
-  toast.info("Gerando relatório...", {
-    description: "Por favor aguarde enquanto o relatório é gerado."
+  autoTable(pdf, {
+    startY: y+15,
+    head: [["Campo","Valor"]],
+    body: rows,
+    headStyles: {fillColor: [32,32,110], textColor:[255,255,255], fontStyle:"bold"},
+    bodyStyles:{fillColor:[255,255,255]},
+    alternateRowStyles:{fillColor:[249,249,253]},
+    styles:{
+      minCellHeight:8, cellPadding:2,
+      fontSize:10,
+    },
+    margin:{left:MARGIN_X, right:MARGIN_X},
+    didDrawPage: (data)=>{ addFooter(pdf, pageNum, totalPages);}
   });
-  
+}
+
+function generatePhotosGrid(pdf, service, pageNum, totalPages) {
+  pdf.addPage();
+  addHeader(pdf, "3. Registros Fotográficos");
+  let y=40;
+  generateSection(pdf, "Registros Fotográficos", y);
+  pdf.setFontSize(10);
+  y+=15;
+  // Organiza até 4 fotos por página
+  let photos = service.photos || [];
+  let titles = service.photoTitles || [];
+  let colW = 80, rowH=50, gapX=14, gapY=18;
+  let maxPerPage = 4; // 2x2 grid, 4 fotos por página
+  for(let i=0; i<photos.length; i++) {
+    let row = Math.floor(i%maxPerPage/2);
+    let col = i%2;
+    let x = MARGIN_X + col*(colW+gapX);
+    let yImg = y + row*(rowH+gapY);
+
+    try{
+      // eslint-disable-next-line
+      pdf.addImage(photos[i],"JPEG", x, yImg, colW, rowH);
+    }catch{}
+    // Foto legenda
+    pdf.setFontSize(9); pdf.setTextColor(80,80,80);
+    let caption = titles[i] || ("Foto "+(i+1));
+    pdf.text(caption, x, yImg+rowH+8);
+    if((i+1)%maxPerPage===0 && i!==photos.length-1){
+      addFooter(pdf, pageNum, totalPages);
+      pdf.addPage();
+      addHeader(pdf,"3. Registros Fotográficos");
+      y=40+15; //reset
+    }
+  }
+  addFooter(pdf, pageNum, totalPages);
+}
+
+function generateSignatures(pdf, service, pageNum, totalPages) {
+  pdf.addPage();
+  addHeader(pdf, "4. Assinaturas");
+  let y=58, x = MARGIN_X+4;
+
+  // CLIENTE
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(11); pdf.setTextColor(32,32,110);
+  pdf.text("Assinatura Cliente", x, y);
+  y+=7;
+  if(service.reportData?.clientSignature){
+    pdf.addImage(service.reportData.clientSignature,"PNG",x,y,110,28);
+  } else {
+    pdf.addImage(SIGNATURE_LINE, "PNG", x, y+12, 100, 1.4);
+  }
+  pdf.setTextColor(40,40,40); pdf.setFont("helvetica","normal");
+  pdf.setFontSize(10);
+  pdf.text(`Nome: ${service.reportData?.clientName||service.reportData?.client||""}`, x, y+28);
+  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, x, y+37);
+
+  // TÉCNICO
+  let y2 = y+55;
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(11); pdf.setTextColor(32,32,110);
+  pdf.text("Assinatura Técnico", x, y2);
+  pdf.setFontSize(10); pdf.setTextColor(40,40,40);
+  pdf.setFont("helvetica","normal");
+  if(service.technician?.signature){
+    pdf.addImage(service.technician.signature,"PNG",x,y2+7,110,28);
+  } else {
+    pdf.addImage(SIGNATURE_LINE, "PNG", x, y2+18, 100, 1.4);
+  }
+  pdf.text(`Nome: ${service.technician.name||""}`, x, y2+28);
+  pdf.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, x, y2+37);
+
+  addFooter(pdf, pageNum, totalPages);
+}
+
+// Função principal de geração do PDF
+export function generatePDF(service: Service, reportType: "inspection" | "installation" = null): boolean {
   try {
-    // Create PDF document
-    const pdf = createPdfDocument();
+    toast.info("Gerando relatório...", {description: "Por favor aguarde enquanto o relatório é gerado."});
+
+    // 1+4páginas (capa+clientes,tecnica,fotos,assinaturas)
+    const totalPages = 4;
+    const pdf = new jsPDF({unit:"mm", format:"a4"});
     
-    // Generate cover page
-    generateCoverPage(pdf, {...service, reportData: {...service.reportData, servicePhase: actualReportType}});
-    
-    // Add technicians page
-    pdf.addPage();
-    generateTechniciansPage(pdf, service);
-    
-    // Add description page
-    pdf.addPage();
-    generateDescriptionPage(pdf, service);
-    
-    // Add technical details page
-    pdf.addPage();
-    generateDetailsPage(pdf, {...service, reportData: {...service.reportData, servicePhase: actualReportType}});
-    
-    // Add signature page
-    pdf.addPage();
-    generateSignaturePage(pdf, service);
-    
-    // Save the PDF with a proper name based on service phase
-    pdf.save(`relatório-${actualReportType === "inspection" ? "vistoria" : "instalação"}-${service.id}.pdf`);
-    
-    // Show success toast after PDF is ready
-    toast.success("Relatório gerado com sucesso", {
-      description: `O PDF para ${actualReportType === "inspection" ? "vistoria" : "instalação"} ${service.id} foi gerado e baixado automaticamente.`
-    });
-    
+    // CAPA
+    generateCover(pdf, service, totalPages);
+
+    // CLIENTE
+    generateClientData(pdf, service, 2, totalPages);
+
+    // TÉCNICOS/DETALHES
+    generateTechnicalData(pdf, service, 3, totalPages);
+
+    // FOTOS
+    generatePhotosGrid(pdf, service, 4, totalPages);
+
+    // ASSINATURAS
+    generateSignatures(pdf, service, 5, totalPages);
+
+    // Salvar PDF
+    pdf.save(
+      `relatorio-${service.reportData?.servicePhase||"relatorio"}-${service.id}.pdf`
+    );
+
+    toast.success("Relatório gerado com sucesso",{description:"PDF pronto para envio ao cliente."});
     return true;
   } catch (error) {
-    console.error("Error generating PDF:", error);
-    
-    toast.error("Erro ao gerar o relatório", {
-      description: "Ocorreu um erro ao gerar o PDF. Por favor, tente novamente."
-    });
-    
+    toast.error("Erro ao gerar relatório",{description:"Houve uma falha ao gerar o PDF."});
     return false;
   }
-}
-
-export function downloadPDF(service: Service): void {
-  generatePDF(service);
-}
-
-export function downloadInspectionPDF(service: Service): void {
-  generatePDF(service, "inspection");
-}
-
-export function downloadInstallationPDF(service: Service): void {
-  generatePDF(service, "installation");
 }
