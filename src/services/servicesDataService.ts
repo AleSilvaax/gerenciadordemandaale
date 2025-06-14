@@ -123,15 +123,41 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     // Format the service number
     const number = `SRV-${numberData.toString().padStart(5, '0')}`;
     
-    // Create service record
+    // Prepare all fields
+    const insertData: any = {
+      title: service.title,
+      location: service.location,
+      status: service.status,
+      number: number,
+      due_date: service.dueDate ?? null,
+      priority: service.priority ?? 'media',
+      service_type: service.serviceType ?? 'Vistoria',
+      description: service.description ?? null,
+      created_by: service.createdBy ?? null,
+      client: service.client ?? null,
+      address: service.address ?? null,
+      city: service.city ?? null,
+      notes: service.notes ?? null,
+      estimated_hours: service.estimatedHours ?? null,
+      custom_fields: service.customFields ? JSON.stringify(service.customFields) : null,
+      signatures: service.signatures ? JSON.stringify(service.signatures) : null,
+      photos: service.photos ?? null,
+      photo_titles: service.photoTitles ?? null,
+      date: service.date ?? null
+      // Adicione mais campos se necessário
+    };
+    
+    // Remove chaves com valor undefined, pois Supabase pode rejeitar
+    Object.keys(insertData).forEach(key => {
+      if (insertData[key] === undefined) {
+        delete insertData[key];
+      }
+    });
+
+    // Cria o registro no banco
     const { data, error } = await supabase
       .from('services')
-      .insert({
-        title: service.title,
-        location: service.location,
-        status: service.status,
-        number: number  // Include the required number field
-      })
+      .insert(insertData)
       .select()
       .single();
     
@@ -142,12 +168,12 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
     
     console.log('Service created successfully:', data);
     
-    // If a technician is assigned, create the relationship
+    // Se houver técnico atribuído, cria relação
     if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
       await assignTechnician(data.id, service.technician.id);
     }
     
-    // Construct and return a properly typed Service object
+    // Retorna o objeto Service preenchido
     return {
       id: data.id,
       title: data.title,
@@ -160,10 +186,22 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
         role: 'tecnico',
       },
       creationDate: data.created_at,
-      // Provide defaults for required properties
-      dueDate: service.dueDate,
-      priority: service.priority,
+      dueDate: data.due_date ?? service.dueDate,
+      priority: data.priority ?? service.priority,
+      serviceType: data.service_type ?? service.serviceType,
+      description: data.description ?? service.description,
+      createdBy: data.created_by ?? service.createdBy,
+      client: data.client ?? service.client,
+      address: data.address ?? service.address,
+      city: data.city ?? service.city,
+      notes: data.notes ?? service.notes,
+      estimatedHours: data.estimated_hours ?? service.estimatedHours,
+      customFields: data.custom_fields ? JSON.parse(data.custom_fields) : undefined,
+      signatures: data.signatures ? JSON.parse(data.signatures) : undefined,
       messages: service.messages || [],
+      photos: data.photos ?? service.photos,
+      photoTitles: data.photo_titles ?? service.photoTitles,
+      date: data.date ?? service.date
     };
   } catch (error) {
     console.error('Error in createServiceInDatabase:', error);
