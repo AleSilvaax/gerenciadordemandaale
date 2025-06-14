@@ -27,6 +27,8 @@ import { useForm } from "react-hook-form";
 import { generatePDF } from "@/utils/pdfGenerator";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import ServiceSignatureSection from "./components/ServiceSignatureSection";
+import ServicePhotosSection from "./components/ServicePhotosSection";
 
 const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) => {
   const { id } = useParams<{ id: string }>();
@@ -373,6 +375,10 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     title: (service.photoTitles && service.photoTitles[index]) || `Foto ${index + 1}`
   }));
 
+  // Handler refinados para assinatura (garantem só 1 argumento!)
+  const handleClientSignature = (signature: string) => handleSaveSignature('client', signature);
+  const handleTechnicianSignature = (signature: string) => handleSaveSignature('technician', signature);
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -676,7 +682,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">Anexos e Fotos</h3>
               
-              <PhotoUploader
+              <ServicePhotosSection
                 photos={photosWithTitles}
                 onAddPhoto={handleAddPhoto}
                 onRemovePhoto={handleRemovePhoto}
@@ -1003,7 +1009,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                           <SignatureCapture
                             initialSignature={service.reportData?.clientSignature}
-                            onChange={(data) => handleSaveSignature('client', data)}
+                            onChange={(data) => handleClientSignature(data)}
                             label="Assinatura do Cliente"
                           />
                         </div>
@@ -1018,7 +1024,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                           <SignatureCapture
                             initialSignature={service.technician.signature}
-                            onChange={(data) => handleSaveSignature('technician', data)}
+                            onChange={(data) => handleTechnicianSignature(data)}
                             label="Assinatura do Técnico"
                           />
                         </div>
