@@ -332,10 +332,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
       id: profile.id,
       name: profile.name || "Sem Nome",
       avatar: profile.avatar || "",
-      role,
-      email: profile.email || "",
-      phone: profile.phone || "",
-      signature: profile.signature || ""
+      role
     };
   });
   return members;
@@ -354,9 +351,7 @@ export const addTeamMember = async (member: {
     .from('profiles')
     .insert({
       name: member.name,
-      avatar: member.avatar || "",
-      email: member.email || "",
-      phone: member.phone || ""
+      avatar: member.avatar || ""
     })
     .select()
     .single();
@@ -376,10 +371,7 @@ export const addTeamMember = async (member: {
     id: profile.id,
     name: profile.name || "",
     avatar: profile.avatar || "",
-    role: member.role,
-    email: profile.email || "",
-    phone: profile.phone || "",
-    signature: profile.signature || ""
+    role: member.role
   };
 };
 
