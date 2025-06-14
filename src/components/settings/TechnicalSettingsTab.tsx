@@ -233,215 +233,46 @@ export const TechnicalSettingsTab = () => {
             Gerencie tipos de serviço e campos técnicos personalizados
           </CardDescription>
         </CardHeader>
-        
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
             {/* Lista de Tipos de Serviço */}
-            <div className="lg:col-span-2 border rounded-lg p-3 h-[500px] flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">Tipos de Serviço</h3>
-                <Button size="sm" variant="ghost" onClick={handleCreateNewType}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <Separator className="my-2" />
-              <ScrollArea className="flex-grow">
-                <div className="space-y-1 pr-3">
-                  {serviceTypes.map(type => (
-                    <button
-                      key={type.id}
-                      onClick={() => handleSelectType(type)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        selectedType?.id === type.id 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'hover:bg-muted'
-                      }`}
-                    >
-                      {type.name}
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-            
+            <ServiceTypeList
+              serviceTypes={serviceTypes}
+              selectedType={selectedType}
+              onSelectType={handleSelectType}
+              onCreateNewType={handleCreateNewType}
+            />
+
             {/* Detalhes do Tipo Selecionado */}
             <div className="lg:col-span-5 border rounded-lg p-4 h-[500px] flex flex-col">
               {selectedType ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="space-y-1 flex-grow">
-                      <Label htmlFor="type-name">Nome do Tipo de Serviço</Label>
-                      <Input
-                        id="type-name"
-                        value={selectedType.name}
-                        onChange={(e) => setSelectedType({...selectedType, name: e.target.value})}
-                      />
-                    </div>
-                    <div className="flex ml-2 space-x-2">
-                      <Button size="sm" variant="destructive" onClick={handleDeleteType}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4 mb-4">
-                    <div>
-                      <Label htmlFor="type-description">Descrição</Label>
-                      <Textarea
-                        id="type-description"
-                        value={selectedType.description}
-                        onChange={(e) => setSelectedType({...selectedType, description: e.target.value})}
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium">Campos Personalizados</h3>
-                    <Button size="sm" variant="ghost" onClick={handleAddField}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <Separator className="my-2" />
-                  
-                  <ScrollArea className="flex-grow pr-3">
+                  <ServiceTypeForm
+                    selectedType={selectedType}
+                    onUpdateType={handleUpdateType}
+                    onChange={setSelectedType}
+                    onDeleteType={handleDeleteType}
+                    isSaving={isSaving}
+                  />
+
+                  <div className="mt-6 flex-1 flex flex-col overflow-y-auto">
                     {editingField ? (
-                      <div className="p-3 border rounded-md">
-                        <h4 className="font-medium mb-3">
-                          {isNewField ? "Novo Campo" : "Editar Campo"}
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div>
-                            <Label htmlFor="field-name">Nome do Campo</Label>
-                            <Input
-                              id="field-name"
-                              value={editingField.name}
-                              onChange={(e) => setEditingField({...editingField, name: e.target.value})}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="field-type">Tipo</Label>
-                            <select
-                              id="field-type"
-                              value={editingField.type}
-                              onChange={(e) => setEditingField({
-                                ...editingField, 
-                                type: e.target.value as TechnicalField['type']
-                              })}
-                              className="w-full p-2 border rounded-md bg-background"
-                            >
-                              <option value="text">Texto</option>
-                              <option value="number">Número</option>
-                              <option value="select">Seleção</option>
-                              <option value="boolean">Sim/Não</option>
-                              <option value="date">Data</option>
-                              <option value="textarea">Área de Texto</option>
-                            </select>
-                          </div>
-                          
-                          {editingField.type === 'select' && (
-                            <div>
-                              <Label htmlFor="field-options">Opções (separadas por vírgula)</Label>
-                              <Input
-                                id="field-options"
-                                value={editingField.options?.join(',') || ''}
-                                onChange={(e) => setEditingField({
-                                  ...editingField, 
-                                  options: e.target.value.split(',').map(o => o.trim())
-                                })}
-                              />
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id="field-required"
-                              checked={editingField.required}
-                              onCheckedChange={(checked) => 
-                                setEditingField({...editingField, required: checked})
-                              }
-                            />
-                            <Label htmlFor="field-required">Campo Obrigatório</Label>
-                          </div>
-                          
-                          <div className="flex justify-end space-x-2 pt-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => setEditingField(null)}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button onClick={handleSaveField}>
-                              Salvar Campo
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                      <TechnicalFieldForm
+                        editingField={editingField}
+                        isNewField={isNewField}
+                        onChange={setEditingField}
+                        onCancel={() => setEditingField(null)}
+                        onSave={handleSaveField}
+                        isSaving={isSaving}
+                      />
                     ) : (
-                      <div>
-                        {selectedType.fields.length === 0 ? (
-                          <div className="text-center py-6 text-muted-foreground">
-                            <p>Nenhum campo personalizado definido</p>
-                            <Button variant="ghost" className="mt-2" onClick={handleAddField}>
-                              <Plus className="h-4 w-4 mr-1" />
-                              Adicionar Campo
-                            </Button>
-                          </div>
-                        ) : (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Obrigatório</TableHead>
-                                <TableHead className="w-[100px]">Ações</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {selectedType.fields.map(field => (
-                                <TableRow key={field.id}>
-                                  <TableCell>{field.name}</TableCell>
-                                  <TableCell>
-                                    {field.type === 'text' && 'Texto'}
-                                    {field.type === 'number' && 'Número'}
-                                    {field.type === 'select' && 'Seleção'}
-                                    {field.type === 'boolean' && 'Sim/Não'}
-                                    {field.type === 'date' && 'Data'}
-                                    {field.type === 'textarea' && 'Área de Texto'}
-                                  </TableCell>
-                                  <TableCell>{field.required ? 'Sim' : 'Não'}</TableCell>
-                                  <TableCell>
-                                    <div className="flex space-x-1">
-                                      <Button size="sm" variant="ghost" onClick={() => handleEditField(field)}>
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => handleDeleteField(field.id)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        )}
-                      </div>
+                      <TechnicalFieldList
+                        fields={selectedType.fields}
+                        onEditField={handleEditField}
+                        onDeleteField={handleDeleteField}
+                        onAddField={handleAddField}
+                      />
                     )}
-                  </ScrollArea>
-                  
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={handleUpdateType}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar Alterações
-                    </Button>
                   </div>
                 </>
               ) : (
@@ -460,7 +291,6 @@ export const TechnicalSettingsTab = () => {
             </div>
           </div>
         </CardContent>
-        
         <CardFooter className="flex justify-between border-t pt-5">
           <div className="flex space-x-2">
             <Button variant="outline" onClick={resetToDefaults}>
@@ -504,3 +334,8 @@ export const TechnicalSettingsTab = () => {
     </div>
   );
 };
+
+import { ServiceTypeList } from "./ServiceTypeList";
+import { ServiceTypeForm } from "./ServiceTypeForm";
+import { TechnicalFieldList } from "./TechnicalFieldList";
+import { TechnicalFieldForm } from "./TechnicalFieldForm";
