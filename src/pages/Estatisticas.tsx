@@ -70,10 +70,7 @@ const Estatisticas: React.FC = () => {
       result = result.filter(service => service.technician && service.technician.id === selectedTechnician);
     }
     if (selectedServiceType !== "all") {
-      result = result.filter(service => {
-        // Aceita tanto serviceType quanto service_type só para garantir, debug:
-        return (service.serviceType ?? service.service_type) === selectedServiceType;
-      });
+      result = result.filter(service => service.serviceType === selectedServiceType);
     }
     console.log("Demanda pós-filtro (Estatisticas):", result);
     setFilteredServices(result);
