@@ -529,7 +529,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
             <CardContent className="pt-6">
               <DetailsFormSection
                 service={service}
-                saving={detailsSaving}
+                saving={detailsSaving} // <-- Corrigido: agora existe o detailsSaving!
                 statusUpdating={statusUpdating}
                 onSubmit={handleSaveServiceDetails}
               />
