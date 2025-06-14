@@ -380,6 +380,50 @@ export type Database = {
         }
         Relationships: []
       }
+      technical_fields: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          options: Json | null
+          required: boolean
+          service_type_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          options?: Json | null
+          required?: boolean
+          service_type_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          options?: Json | null
+          required?: boolean
+          service_type_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technical_fields_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

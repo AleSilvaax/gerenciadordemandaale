@@ -606,6 +606,116 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
   }
 };
 
+// Funções para Tipo de Serviço e Campos Técnicos (Banco de Dados Supabase)
+
+// Busca todos os tipos de serviço
+export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]> => {
+  try {
+    const { data: types, error } = await supabase
+      .from("service_types")
+      .select("*");
+
+    if (error || !types) {
+      throw error || new Error("Falha ao carregar tipos");
+    }
+
+    // Busca fields para cada tipo de serviço
+    const { data: allFields, error: fieldsError } = await supabase
+      .from("technical_fields")
+      .select("*");
+
+    if (fieldsError) throw fieldsError;
+
+    return types.map((type) => ({
+      id: type.id,
+      name: type.name,
+      description: type.description ?? "",
+      fields: (allFields || [])
+        .filter((f) => f.service_type_id === type.id)
+        .map((f) => ({
+          id: f.id,
+          name: f.name,
+          type: f.type,
+          required: f.required,
+          options: f.options,
+          description: f.description,
+        })),
+    }));
+  } catch (e) {
+    console.error("Erro ao buscar tipos de serviço:", e);
+    return [];
+  }
+};
+
+// Cria novo tipo de serviço
+export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
+  const { data, error } = await supabase
+    .from("service_types")
+    .insert({ name: type.name, description: type.description })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Atualiza tipo de serviço
+export const updateServiceType = async (type: ServiceTypeConfig) => {
+  const { data, error } = await supabase
+    .from("service_types")
+    .update({ name: type.name, description: type.description })
+    .eq("id", type.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Exclui tipo de serviço (e cascade nos campos)
+export const deleteServiceType = async (id: string) => {
+  const { error } = await supabase.from("service_types").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// CRUD campos técnicos
+export const createTechnicalField = async (serviceTypeId: string, field: Omit<TechnicalField, "id">) => {
+  const { data, error } = await supabase
+    .from("technical_fields")
+    .insert({
+      service_type_id: serviceTypeId,
+      name: field.name,
+      description: field.description,
+      type: field.type,
+      required: field.required,
+      options: field.options ? JSON.stringify(field.options) : null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateTechnicalField = async (field: TechnicalField) => {
+  const { data, error } = await supabase
+    .from("technical_fields")
+    .update({
+      name: field.name,
+      description: field.description,
+      type: field.type,
+      required: field.required,
+      options: field.options ? JSON.stringify(field.options) : null,
+    })
+    .eq("id", field.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteTechnicalField = async (fieldId: string) => {
+  const { error } = await supabase.from("technical_fields").delete().eq("id", fieldId);
+  if (error) throw error;
+};
+
 // Unified exports for codebase compatibility
 
 // Data retrieval

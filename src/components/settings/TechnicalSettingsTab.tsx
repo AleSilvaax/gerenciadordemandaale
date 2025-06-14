@@ -19,49 +19,17 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { ServiceTypeConfig, TechnicalField } from "@/types/serviceTypes";
+import {
+  getServiceTypesFromDatabase,
+  createServiceType,
+  updateServiceType,
+  deleteServiceType,
+  createTechnicalField,
+  updateTechnicalField,
+  deleteTechnicalField,
+} from "@/services/servicesDataService";
 
-// Dados iniciais para demonstração
-const defaultServiceTypes: ServiceTypeConfig[] = [
-  {
-    id: "maintenance",
-    name: "Manutenção",
-    description: "Serviços de manutenção preventiva e corretiva",
-    fields: [
-      { id: "equipment", name: "Equipamento", type: "text", required: true },
-      { id: "model", name: "Modelo", type: "text", required: true },
-      { id: "serialNumber", name: "Número de Série", type: "text", required: false },
-      { id: "issueDescription", name: "Descrição do Problema", type: "textarea", required: true },
-      { 
-        id: "maintenanceType", 
-        name: "Tipo de Manutenção", 
-        type: "select", 
-        required: true,
-        options: ["Preventiva", "Corretiva", "Preditiva"]
-      }
-    ]
-  },
-  {
-    id: "installation",
-    name: "Instalação",
-    description: "Serviços de instalação de equipamentos",
-    fields: [
-      { id: "equipment", name: "Equipamento", type: "text", required: true },
-      { id: "location", name: "Local da Instalação", type: "text", required: true },
-      { id: "requiresTraining", name: "Requer Treinamento", type: "boolean", required: false },
-      { id: "additionalComments", name: "Observações Adicionais", type: "textarea", required: false }
-    ]
-  },
-  {
-    id: "inspection",
-    name: "Vistoria",
-    description: "Serviços de vistoria técnica",
-    fields: [
-      { id: "inspectionArea", name: "Área de Vistoria", type: "text", required: true },
-      { id: "checklist", name: "Checklist", type: "textarea", required: true }
-    ]
-  }
-];
-
+// Remover mocks e usaremos apenas dados do Supabase:
 export const TechnicalSettingsTab = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [selectedType, setSelectedType] = useState<ServiceTypeConfig | null>(null);
@@ -69,112 +37,131 @@ export const TechnicalSettingsTab = () => {
   const [isNewField, setIsNewField] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Carregando os tipos de serviço salvos ou usando os padrões
+  // Carregando tipos do banco
   useEffect(() => {
-    const savedTypes = localStorage.getItem('serviceTypes');
-    if (savedTypes) {
-      try {
-        const parsedTypes = JSON.parse(savedTypes);
-        setServiceTypes(parsedTypes);
-      } catch (e) {
-        console.error("Erro ao carregar tipos de serviço:", e);
-        setServiceTypes(defaultServiceTypes);
-      }
-    } else {
-      setServiceTypes(defaultServiceTypes);
-    }
+    refreshTypes();
   }, []);
 
-  // Salvando os tipos de serviço quando são alterados
-  useEffect(() => {
-    if (serviceTypes.length > 0) {
-      localStorage.setItem('serviceTypes', JSON.stringify(serviceTypes));
+  async function refreshTypes() {
+    setIsSaving(true);
+    const types = await getServiceTypesFromDatabase();
+    setServiceTypes(types);
+    // se estava editando um tipo, buscar versão atualizada
+    if(selectedType) {
+      const updated = types.find(t => t.id === selectedType.id);
+      setSelectedType(updated || null);
     }
-  }, [serviceTypes]);
+    setIsSaving(false);
+  }
 
+  // Selecionar tipo
   const handleSelectType = (type: ServiceTypeConfig) => {
     setSelectedType(type);
     setEditingField(null);
   };
 
-  const handleCreateNewType = () => {
-    const newType: ServiceTypeConfig = {
-      id: `type-${Date.now()}`,
-      name: "Novo Tipo de Serviço",
-      description: "Descrição do novo tipo de serviço",
-      fields: []
-    };
-    
-    setServiceTypes([...serviceTypes, newType]);
-    setSelectedType(newType);
+  // Criar novo tipo de serviço
+  const handleCreateNewType = async () => {
+    setIsSaving(true);
+    try {
+      const data = await createServiceType({ name: "Novo Tipo de Serviço", description: "" });
+      await refreshTypes();
+      setSelectedType({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        fields: [],
+      });
+      toast.success("Tipo de serviço criado.");
+    } catch {
+      toast.error("Erro ao criar tipo.");
+    }
+    setIsSaving(false);
   };
 
-  const handleUpdateType = () => {
+  // Salvar alterações no tipo
+  const handleUpdateType = async () => {
     if (!selectedType) return;
-
-    setServiceTypes(types => 
-      types.map(t => 
-        t.id === selectedType.id ? selectedType : t
-      )
-    );
-    
-    toast.success("Tipo de serviço atualizado com sucesso");
+    setIsSaving(true);
+    try {
+      await updateServiceType(selectedType);
+      await refreshTypes();
+      toast.success("Tipo de serviço atualizado.");
+    } catch {
+      toast.error("Erro ao atualizar tipo.");
+    }
+    setIsSaving(false);
   };
 
-  const handleDeleteType = () => {
+  // Excluir tipo de serviço
+  const handleDeleteType = async () => {
     if (!selectedType) return;
-    
-    setServiceTypes(types => types.filter(t => t.id !== selectedType.id));
-    setSelectedType(null);
-    toast.success("Tipo de serviço excluído com sucesso");
+    setIsSaving(true);
+    try {
+      await deleteServiceType(selectedType.id);
+      await refreshTypes();
+      setSelectedType(null);
+      toast.success("Tipo excluído.");
+    } catch {
+      toast.error("Erro ao excluir tipo.");
+    }
+    setIsSaving(false);
   };
 
+  // Adicionar campo técnico
   const handleAddField = () => {
-    const newField: TechnicalField = {
-      id: `field-${Date.now()}`,
+    setEditingField({
+      id: "",
       name: "Novo Campo",
       type: "text",
-      required: false
-    };
-    
-    setEditingField(newField);
+      required: false,
+      options: [],
+      description: "",
+    });
     setIsNewField(true);
   };
 
+  // Editar campo técnico
   const handleEditField = (field: TechnicalField) => {
-    setEditingField({...field});
+    setEditingField({ ...field });
     setIsNewField(false);
   };
 
-  const handleSaveField = () => {
+  // Salvar campo técnico (cria ou atualiza)
+  const handleSaveField = async () => {
     if (!selectedType || !editingField) return;
-
-    let updatedFields;
-    
-    if (isNewField) {
-      updatedFields = [...selectedType.fields, editingField];
-    } else {
-      updatedFields = selectedType.fields.map(f => 
-        f.id === editingField.id ? editingField : f
-      );
+    setIsSaving(true);
+    try {
+      if (isNewField) {
+        await createTechnicalField(selectedType.id, {
+          ...editingField,
+          id: undefined, // para o insert
+        } as any);
+      } else {
+        await updateTechnicalField(editingField);
+      }
+      setEditingField(null);
+      setIsNewField(false);
+      await refreshTypes();
+      toast.success("Campo salvo.");
+    } catch {
+      toast.error("Erro ao salvar campo.");
     }
-    
-    setSelectedType({
-      ...selectedType,
-      fields: updatedFields
-    });
-    
-    setEditingField(null);
-    setIsNewField(false);
+    setIsSaving(false);
   };
 
-  const handleDeleteField = (fieldId: string) => {
+  // Excluir campo técnico
+  const handleDeleteField = async (fieldId: string) => {
     if (!selectedType) return;
-
-    setSelectedType({
-      ...selectedType,
-      fields: selectedType.fields.filter(f => f.id !== fieldId)
-    });
+    setIsSaving(true);
+    try {
+      await deleteTechnicalField(fieldId);
+      await refreshTypes();
+      toast.success("Campo excluído.");
+    } catch {
+      toast.error("Erro ao excluir campo.");
+    }
+    setIsSaving(false);
   };
 
   const handleExportSettings = () => {
@@ -227,7 +214,7 @@ export const TechnicalSettingsTab = () => {
   };
 
   const resetToDefaults = () => {
-    setServiceTypes(defaultServiceTypes);
+    // setServiceTypes(defaultServiceTypes);
     setSelectedType(null);
     toast.success("Configurações restauradas para os valores padrão");
   };
