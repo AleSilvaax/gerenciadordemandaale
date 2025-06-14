@@ -146,7 +146,6 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       date: service.date ?? null
       // Adicione mais campos se necessário
     };
-    
     // Remove chaves com valor undefined, pois Supabase pode rejeitar
     Object.keys(insertData).forEach(key => {
       if (insertData[key] === undefined) {
@@ -160,25 +159,60 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       .insert(insertData)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error creating service in Supabase:', error);
       throw error;
     }
-    
+
     console.log('Service created successfully:', data);
-    
+
     // Se houver técnico atribuído, cria relação
     if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
       await assignTechnician(data.id, service.technician.id);
     }
-    
-    // Retorna o objeto Service preenchido
+
+    // Helpers - safe type assertions and parse functions
+    const safePriority = typeof data.priority === 'string' &&
+      ['baixa', 'media', 'alta', 'urgente'].includes(data.priority)
+      ? data.priority as ServicePriority
+      : undefined;
+    const safeServiceType = typeof data.service_type === 'string' &&
+      ['Vistoria', 'Instalação', 'Manutenção'].includes(data.service_type)
+      ? data.service_type as ServiceType
+      : undefined;
+
+    // Parse possible JSON fields
+    let customFieldsParsed: any = undefined;
+    if (data.custom_fields) {
+      try {
+        const parsed = typeof data.custom_fields === "string" ? JSON.parse(data.custom_fields) : data.custom_fields;
+        customFieldsParsed = Array.isArray(parsed) ? parsed : undefined;
+      } catch { customFieldsParsed = undefined; }
+    }
+    let signaturesParsed: any = undefined;
+    if (data.signatures) {
+      try {
+        signaturesParsed = typeof data.signatures === "string" ? JSON.parse(data.signatures) : data.signatures;
+      } catch { signaturesParsed = undefined; }
+    }
+
+    // Arrays seguros
+    const safePhotoTitles =
+      Array.isArray(data.photo_titles)
+        ? data.photo_titles.filter((x: any) => typeof x === 'string')
+        : service.photoTitles?.filter((x: any) => typeof x === 'string');
+
+    const safePhotos =
+      Array.isArray(data.photos)
+        ? data.photos.filter((x: any) => typeof x === 'string')
+        : service.photos?.filter((x: any) => typeof x === 'string');
+
     return {
       id: data.id,
       title: data.title,
       location: data.location,
-      status: data.status as any,
+      status: data.status as ServiceStatus,
       technician: service.technician || {
         id: '0',
         name: 'Não atribuído',
@@ -187,8 +221,8 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       },
       creationDate: data.created_at,
       dueDate: data.due_date ?? service.dueDate,
-      priority: data.priority ?? service.priority,
-      serviceType: data.service_type ?? service.serviceType,
+      priority: safePriority ?? service.priority,
+      serviceType: safeServiceType ?? service.serviceType,
       description: data.description ?? service.description,
       createdBy: data.created_by ?? service.createdBy,
       client: data.client ?? service.client,
@@ -196,11 +230,11 @@ export const createServiceInDatabase = async (service: Omit<Service, "id">): Pro
       city: data.city ?? service.city,
       notes: data.notes ?? service.notes,
       estimatedHours: data.estimated_hours ?? service.estimatedHours,
-      customFields: data.custom_fields ? JSON.parse(data.custom_fields) : undefined,
-      signatures: data.signatures ? JSON.parse(data.signatures) : undefined,
+      customFields: customFieldsParsed,
+      signatures: signaturesParsed,
       messages: service.messages || [],
-      photos: data.photos ?? service.photos,
-      photoTitles: data.photo_titles ?? service.photoTitles,
+      photos: safePhotos,
+      photoTitles: safePhotoTitles,
       date: data.date ?? service.date
     };
   } catch (error) {
