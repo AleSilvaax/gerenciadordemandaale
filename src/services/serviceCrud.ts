@@ -349,10 +349,36 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     }
     
     console.log('Service updated successfully:', data);
-    
-    // Update technician if provided
-    if (service.technician && service.technician.id && service.technician.id !== '0') {
-      await assignTechnician(service.id, service.technician.id);
+
+    // SEMPRE limpar relação anterior de técnico!
+    const { error: deleteError } = await supabase
+      .from('service_technicians')
+      .delete()
+      .eq('service_id', service.id);
+
+    if (deleteError) {
+      console.error('Erro ao remover técnico antigo:', deleteError);
+      // Não interrompe o resto do fluxo: só loga.
+    }
+
+    // Reatribuir, se houver técnico válido (não null/não '0')
+    if (
+      service.technician &&
+      service.technician.id &&
+      service.technician.id !== '0' &&
+      service.technician.id !== 'none'
+    ) {
+      const { error: insertError } = await supabase
+        .from('service_technicians')
+        .insert({
+          service_id: service.id,
+          technician_id: service.technician.id
+        });
+
+      if (insertError) {
+        console.error('Erro ao atribuir novo técnico:', insertError);
+        // Não throw, pois já atualizou o serviço em si.
+      }
     }
     
     // Construct and return a properly typed Service object
@@ -367,7 +393,6 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         avatar: '',
         role: 'tecnico',
       },
-      // Provide defaults for required properties
       creationDate: data.created_at,
       dueDate: service.dueDate,
       priority: service.priority,
