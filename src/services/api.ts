@@ -10,7 +10,6 @@ export async function updateService(data: any): Promise<any> {
   // Atualizar updated_at automaticamente
   updateData.updated_at = new Date().toISOString();
 
-  // Envia os campos aninhados normalmente (Supabase/SQlite lida com JSON sem problemas)
   const { data: updated, error } = await supabase
     .from("services")
     .update(updateData)
@@ -47,47 +46,5 @@ export async function getService(id: string): Promise<any> {
   return data;
 }
 
-export async function addServiceMessage(id: string, messageData: any): Promise<any> {
-  const { data, error } = await supabase
-    .from('services')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching service:", error);
-    throw error;
-  }
-
-  const updatedMessages = [...(data.messages || []), messageData];
-
-  const { data: updated, error: updateError } = await supabase
-    .from('services')
-    .update({ messages: updatedMessages })
-    .eq('id', id)
-    .select('*')
-    .single();
-
-  if (updateError) {
-    console.error("Error updating service with new message:", updateError);
-    throw updateError;
-  }
-
-  return updated;
-}
-
-export async function addServiceFeedback(id: string, feedbackData: any): Promise<any> {
-  const { data, error } = await supabase
-    .from('services')
-    .update({ feedback: feedbackData })
-    .eq('id', id)
-    .select('*')
-    .single();
-
-  if (error) {
-    console.error("Error adding service feedback:", error);
-    throw error;
-  }
-
-  return data;
-}
+// The rest of the functions reference old "messages" and "feedback" fields that don't appear in your schema
+// It's safest to remove or comment them out for now, since these are not used by any of the importing files.

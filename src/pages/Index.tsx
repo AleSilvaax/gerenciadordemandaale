@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
-import { getServices, getTeamMembers } from "@/services/api";
+import { getServices, getTeamMembers } from "@/services/servicesDataService";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
 import { StatCard } from "@/components/ui-custom/StatCard";

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartCircle } from "@/components/ui-custom/ChartCircle";
-import { getServices, getTeamMembers } from "@/services/api";
+import { getServices, getTeamMembers } from "@/services/servicesDataService";
 import { Service, TeamMember } from "@/types/serviceTypes";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
 import { format, subDays } from "date-fns";

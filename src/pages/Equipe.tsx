@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { TeamMember, UserRole } from "@/types/serviceTypes";
-import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/api";
+import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 
 interface Permission {

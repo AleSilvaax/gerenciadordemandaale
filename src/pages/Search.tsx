@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search as SearchIcon, Clock, MapPin, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { getServices } from "@/services/api";
+import { getServices } from "@/services/servicesDataService";
 import { Service } from "@/types/serviceTypes";
 import { formatDate } from "@/utils/formatters";
 

@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { getServices, deleteService } from "@/services/api";
+import { getServices, deleteService } from "@/services/servicesDataService";
 import { Service, ServiceStatus } from "@/types/serviceTypes";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
