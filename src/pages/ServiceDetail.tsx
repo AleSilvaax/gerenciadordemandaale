@@ -253,18 +253,22 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
 
     try {
       if (role === 'client') {
-        // Salva assinatura no report_data
+        // Atualiza no Supabase usando snake_case, MAS não passa para updateService (que espera camelCase/reportData)
+        await supabase
+          .from('report_data')
+          .update({
+            client_signature: signatureData,
+            client_name: service.reportData?.clientName || service.client || "",
+          })
+          .eq('id', id);
+
+        // Atualiza local/TypeScript-friendly
         const updatedReportData = {
           ...service.reportData,
           clientSignature: signatureData,
           clientName: service.reportData?.clientName || service.client || "",
         };
-        // Atualiza no backend (report_data)
-        await supabase
-          .from('report_data')
-          .update({ client_signature: signatureData, client_name: updatedReportData.clientName })
-          .eq('id', id);
-        // Atualiza serviço principal para refletir no front local
+
         const updatedService = await updateService({
           id,
           reportData: updatedReportData,
@@ -272,7 +276,7 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
         setService(updatedService);
         toast.success("Assinatura do cliente salva com sucesso!");
       } else {
-        // Salva assinatura do técnico no perfil (profile/signature)
+        // Técnico: Supabase update só do perfil
         if (!service.technician?.id || service.technician.id === "0") {
           toast.error("Técnico não atribuído.");
           return;
@@ -281,7 +285,8 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
           .from('profiles')
           .update({ signature: signatureData })
           .eq('id', service.technician.id);
-        // Atualiza local também para refletir imediatamente na UI
+
+        // Atualiza local na estrutura TeamMember (TeamMember aceita a prop signature)
         const updatedTechnician = {
           ...service.technician,
           signature: signatureData,
