@@ -45,7 +45,7 @@ const NewService: React.FC = () => {
         ]);
         setTeamMembers(members);
         setServiceTypes(types.filter((t) => !!t.name));
-        // Se houver tipos no banco, seleciona o primeiro por padrão
+        // Default select first type if exists
         if (types && types.length > 0) {
           setSelectedServiceTypeId(types[0].id);
         }
@@ -65,14 +65,12 @@ const NewService: React.FC = () => {
       return;
     }
 
-    if (!tipoDemandaId) {
-      toast.error("Escolha um tipo de demanda.");
-      return;
-    }
-
     setIsLoading(true);
     
     try {
+      // Busca o objeto completo do tipo selecionado
+      const selectedTypeObj = serviceTypes.find((t) => t.id === selectedServiceTypeId);
+
       const serviceData = {
         title: title.trim(),
         location: location.trim(),
@@ -85,8 +83,8 @@ const NewService: React.FC = () => {
         },
         creationDate: new Date().toISOString(),
         messages: [],
-        serviceType: serviceTypes.find((t) => t.id === selectedServiceTypeId)?.name ?? "",
-        serviceTypeId: selectedServiceTypeId, // Passa o id para o backend!
+        serviceType: selectedTypeObj?.name ?? "", // agora pode ser qualquer string
+        serviceTypeId: selectedServiceTypeId,
         priority: priority as any,
         dueDate: dueDate?.toISOString(),
         description,
