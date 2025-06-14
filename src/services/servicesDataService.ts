@@ -1,3 +1,4 @@
+
 export {
   getServicesFromDatabase as getServices,
   createServiceInDatabase as createService,
@@ -12,8 +13,9 @@ export {
   deleteTeamMember
 } from "./teamMembersService";
 
+// Fix: Re-export everything (including getServiceTypesFromDatabase) from 'serviceTypesService'
 export {
-  getServiceTypesFromDatabase as getServiceTypes,
+  getServiceTypesFromDatabase,
   createServiceType,
   updateServiceType,
   deleteServiceType,
@@ -28,3 +30,4 @@ export {
 } from "./serviceMessaging";
 
 // Export any legacy helpers here if needed, or migrate their usage to the split modules above.
+
