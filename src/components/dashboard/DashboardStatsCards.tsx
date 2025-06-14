@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { motion, useAnimation } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Stat {
   label: string;
@@ -32,17 +32,20 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats 
 
 const CountUpCard: React.FC<Stat> = ({ label, value, color, icon }) => {
   const [displayValue, setDisplayValue] = React.useState(0);
-  const controls = useAnimation();
 
   React.useEffect(() => {
-    controls.start({ val: value, transition: { duration: 1, ease: "easeOut" } });
-    // Animate value up using a basic timestamp loop (for ultimate smoothness, a lib could be used)
+    // Animate value up using a basic timestamp loop
     let raf: number;
     let start: number = 0;
-    let frame = (timestamp: number) => {
+    let lastFrameValue = 0;
+    const frame = (timestamp: number) => {
       if (!start) start = timestamp;
       const progress = Math.min((timestamp - start) / 1000, 1);
-      setDisplayValue(Math.floor(progress * value));
+      const currentValue = Math.floor(progress * value);
+      if (currentValue !== lastFrameValue) {
+        setDisplayValue(currentValue);
+        lastFrameValue = currentValue;
+      }
       if (progress < 1) raf = requestAnimationFrame(frame);
       else setDisplayValue(value);
     };
