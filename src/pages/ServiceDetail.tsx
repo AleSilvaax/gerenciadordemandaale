@@ -687,7 +687,6 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                 onAddPhoto={handleAddPhoto}
                 onRemovePhoto={handleRemovePhoto}
                 onUpdateTitle={handleUpdatePhotoTitle}
-                className="mt-4"
               />
             </CardContent>
           </Card>
@@ -1007,9 +1006,10 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         />
                         
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
+                          {/* Corrigir para apenas um argumento */}
                           <SignatureCapture
                             initialSignature={service.reportData?.clientSignature}
-                            onChange={(data) => handleClientSignature(data)}
+                            onChange={handleClientSignature}
                             label="Assinatura do Cliente"
                           />
                         </div>
@@ -1022,9 +1022,10 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
                         </p>
                         
                         <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
+                          {/* Corrigir para apenas um argumento */}
                           <SignatureCapture
                             initialSignature={service.technician.signature}
-                            onChange={(data) => handleTechnicianSignature(data)}
+                            onChange={handleTechnicianSignature}
                             label="Assinatura do Técnico"
                           />
                         </div>

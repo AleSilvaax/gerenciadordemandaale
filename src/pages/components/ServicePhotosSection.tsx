@@ -1,4 +1,5 @@
 
+// Adicionar className como prop opcional ou remover dos usos
 import React from "react";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 
@@ -12,6 +13,7 @@ interface ServicePhotosSectionProps {
   onAddPhoto: (file: File, title: string) => Promise<string>;
   onRemovePhoto: (idx: number) => Promise<void>;
   onUpdateTitle: (idx: number, title: string) => Promise<void>;
+  // className?: string; // Descomente caso queira suportar className no futuro
 }
 
 const ServicePhotosSection: React.FC<ServicePhotosSectionProps> = ({
@@ -19,6 +21,7 @@ const ServicePhotosSection: React.FC<ServicePhotosSectionProps> = ({
   onAddPhoto,
   onRemovePhoto,
   onUpdateTitle,
+  // className,
 }) => (
   <div>
     <h3 className="text-lg font-medium mb-4">Anexos e Fotos</h3>
@@ -27,7 +30,7 @@ const ServicePhotosSection: React.FC<ServicePhotosSectionProps> = ({
       onAddPhoto={onAddPhoto}
       onRemovePhoto={onRemovePhoto}
       onUpdateTitle={onUpdateTitle}
-      className="mt-4"
+      // className={className}
     />
   </div>
 );
