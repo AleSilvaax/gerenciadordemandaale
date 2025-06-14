@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TipoDemanda, PrioridadeDemanda, StatusDemanda } from "../models/service.enums";
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const NewService: React.FC = () => {
   const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>("Vistoria");
   const [priority, setPriority] = useState("media");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [tipoDemandaId, setTipoDemandaId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,6 +57,11 @@ const NewService: React.FC = () => {
     
     if (!title.trim() || !location.trim()) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!tipoDemandaId) {
+      toast.error("Escolha um tipo de demanda.");
       return;
     }
 
@@ -223,6 +230,22 @@ const NewService: React.FC = () => {
                 placeholder="Descreva os detalhes da demanda"
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo-demanda">Tipo de Demanda *</Label>
+              <select
+                id="tipo-demanda"
+                className="w-full border rounded px-3 py-2"
+                value={tipoDemandaId}
+                onChange={(e) => setTipoDemandaId(Number(e.target.value))}
+                required
+              >
+                <option value="">Selecione...</option>
+                <option value={TipoDemanda.SUPORTE_TECNICO}>Suporte Técnico</option>
+                <option value={TipoDemanda.DESENVOLVIMENTO}>Desenvolvimento</option>
+                <option value={TipoDemanda.FINANCEIRO}>Financeiro</option>
+              </select>
             </div>
 
             <div className="flex gap-2 pt-4">
