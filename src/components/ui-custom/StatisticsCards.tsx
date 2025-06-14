@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Service, TeamMember } from '@/types/serviceTypes';
@@ -9,23 +10,30 @@ interface StatisticsCardsProps {
 }
 
 export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, teamMembers, className }) => {
+  // Log para depuração, garantir que sempre vemos quantos dados chegam
+  React.useEffect(() => {
+    console.log('[StatisticsCards] Dados recebidos - services:', services?.length, 'teamMembers:', teamMembers?.length);
+  }, [services, teamMembers]);
+
   // Service status statistics
   const statusData = React.useMemo(() => {
-    const pendingCount = services.filter(s => s.status === 'pendente').length;
-    const completedCount = services.filter(s => s.status === 'concluido').length;
-    const cancelledCount = services.filter(s => s.status === 'cancelado').length;
-    
+    // Garantir sempre array válido
+    const pendente = services?.filter(s => s.status === 'pendente').length || 0;
+    const concluido = services?.filter(s => s.status === 'concluido').length || 0;
+    const cancelado = services?.filter(s => s.status === 'cancelado').length || 0;
     return [
-      { name: 'Pendentes', value: pendingCount, color: '#f59e0b' },
-      { name: 'Concluídos', value: completedCount, color: '#10b981' },
-      { name: 'Cancelados', value: cancelledCount, color: '#ef4444' }
+      { name: 'Pendentes', value: pendente, color: '#f59e0b' },
+      { name: 'Concluídos', value: concluido, color: '#10b981' },
+      { name: 'Cancelados', value: cancelado, color: '#ef4444' }
     ];
   }, [services]);
-  
+
   // Service type statistics
   const typeData = React.useMemo(() => {
+    if (!Array.isArray(services)) return [];
     const types = services.reduce((acc, service) => {
-      const type = service.serviceType || service.service_type || 'outros';
+      // usa apenas serviceType (certo em nosso model)
+      const type = service.serviceType ?? 'outros';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -41,43 +49,41 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
       color: typeColors[type as keyof typeof typeColors] || '#64748b'
     }));
   }, [services]);
-  
+
   // Service priority statistics
   const priorityData = React.useMemo(() => {
+    if (!Array.isArray(services)) return [];
     const priorities = services.reduce((acc, service) => {
       const priority = service.priority || 'media';
       acc[priority] = (acc[priority] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
     const priorityColors = {
       baixa: '#3b82f6',
       media: '#f59e0b',
       alta: '#f97316',
       urgente: '#ef4444'
     };
-    
     const priorityOrder = ['baixa', 'media', 'alta', 'urgente'];
-    
     return priorityOrder.map(priority => ({
-      name: priority === 'baixa' ? 'Baixa' : 
+      name: priority === 'baixa' ? 'Baixa' :
             priority === 'media' ? 'Média' :
             priority === 'alta' ? 'Alta' : 'Urgente',
       value: priorities[priority] || 0,
       color: priorityColors[priority as keyof typeof priorityColors]
     }));
   }, [services]);
-  
+
   // Service distribution by technician
   const technicianData = React.useMemo(() => {
-    // Count services per technician
+    if (!Array.isArray(services)) return [];
     const technicianCounts = services.reduce((acc, service) => {
-      const techId = service.technician.id;
+      // Defensive: se não houver technician ou id, ignora
+      const techId = service.technician?.id;
+      if (!techId) return acc;
       acc[techId] = (acc[techId] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
-    // Map technician IDs to names and counts
     return Object.entries(technicianCounts)
       .map(([techId, count]) => {
         const tech = teamMembers.find(m => m.id === techId);
@@ -226,3 +232,4 @@ export const StatisticsCards: React.FC<StatisticsCardsProps> = ({ services, team
     </div>
   );
 };
+

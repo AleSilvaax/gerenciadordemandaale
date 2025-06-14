@@ -38,7 +38,7 @@ const layoutOptions = [
 ];
 
 export const VisualPreferencesTab = () => {
-  const { isDarkMode, setDarkMode } = useTheme();
+  const { isDarkMode, setDarkMode, theme, setTheme } = useTheme();
   const [colorScheme, setColorScheme] = React.useState<string>("default");
   const [layout, setLayout] = React.useState<string>("balanced");
   const [animationLevel, setAnimationLevel] = React.useState<number>(50);
@@ -91,7 +91,9 @@ export const VisualPreferencesTab = () => {
     document.documentElement.setAttribute('data-color-scheme', colorScheme);
     document.documentElement.setAttribute('data-layout', layout);
     document.documentElement.style.setProperty('--animation-speed-factor', `${animationLevel / 50}`);
-  }, [colorScheme, layout, animationLevel, animations]);
+    // Sincronizar opção dark/light sempre que salvar preferências para UX consistente
+    setDarkMode(theme === "dark");
+  }, [colorScheme, layout, animationLevel, setDarkMode, theme]);
 
   const resetToDefaults = () => {
     setColorScheme("default");

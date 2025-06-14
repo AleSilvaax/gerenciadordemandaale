@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, BellDot, Filter, Download, Calendar, Clock, BarChart2, CalendarDays, Search } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -41,12 +40,16 @@ const Estatisticas: React.FC = () => {
           getServices(),
           getTeamMembers()
         ]);
-        
-        setServices(servicesData);
-        setTeamMembers(teamData);
+        // Adicionar logs para depuração
+        console.log("Serviços recebidos:", servicesData);
+        console.log("Membros da equipe recebidos:", teamData);
+        setServices(servicesData ?? []);
+        setTeamMembers(teamData ?? []);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast("Erro ao carregar dados estatísticos");
+        setServices([]);
+        setTeamMembers([]);
       } finally {
         setIsLoading(false);
       }
@@ -190,6 +193,21 @@ const Estatisticas: React.FC = () => {
     return (
       <div className="min-h-screen p-4 flex justify-center items-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // Mostrar aviso especial se não houver dados
+  if (!services.length) {
+    return (
+      <div className="min-h-screen p-4 flex flex-col items-center">
+        <h2 className="text-center text-lg mb-2">Sem dados de estatísticas</h2>
+        <p className="text-center text-sm text-muted-foreground mb-4">
+          Nenhuma demanda foi registrada no sistema ainda. Crie uma nova demanda para visualizar estatísticas.
+        </p>
+        <Link to="/novademanda">
+          <Button>Nova Demanda</Button>
+        </Link>
       </div>
     );
   }
