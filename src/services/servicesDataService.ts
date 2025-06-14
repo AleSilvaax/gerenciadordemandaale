@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -309,4 +308,50 @@ export const addServiceMessageToDatabase = async (
     toast.error("Falha ao adicionar mensagem ao serviço");
     return false;
   }
+};
+
+// Unified exports for codebase compatibility
+
+// Data retrieval
+export const getServices = getServicesFromDatabase;
+
+// Service CRUD
+export const createService = createServiceInDatabase;
+export const updateService = updateServiceInDatabase;
+export const deleteService = deleteServiceFromDatabase;
+
+// Team member management
+export const getTeamMembers = async () => {
+  // Placeholder or implementation
+  if (typeof window === "undefined") throw new Error("getTeamMembers not implemented for server");
+  // Example: fetch all profiles with role
+  // You should replace this with the actual implementation as needed.
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*');
+  if (error) throw error;
+  return data;
+};
+export const addTeamMember = () => {
+  throw new Error("addTeamMember implementation missing");
+};
+export const updateTeamMember = () => {
+  throw new Error("updateTeamMember implementation missing");
+};
+export const deleteTeamMember = () => {
+  throw new Error("deleteTeamMember implementation missing");
+};
+
+// Service Types (stub, adapt as needed)
+export const getServiceTypes = async () => {
+  // Placeholder for fetching service types
+  return [];
+};
+
+// Service messaging - placeholder stubs, adapt as needed
+export const addServiceMessage = () => {
+  throw new Error("addServiceMessage implementation missing");
+};
+export const addServiceFeedback = () => {
+  throw new Error("addServiceFeedback implementation missing");
 };
