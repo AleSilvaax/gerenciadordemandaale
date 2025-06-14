@@ -34,6 +34,7 @@ import ServiceFlowSection from "./components/ServiceFlowSection";
 import PhotosSection from "./components/PhotosSection";
 import ChatSection from "./components/ChatSection";
 import FeedbackSection from "./components/FeedbackSection";
+import { supabase } from '@/integrations/supabase/client';
 
 const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) => {
   const { id } = useParams<{ id: string }>();
@@ -238,20 +239,50 @@ const ServiceDetail: React.FC<{ editMode?: boolean }> = ({ editMode = false }) =
     if (!service || !id) return;
     setSaving(true);
     try {
-      // Atualiza os dados aninhados dentro de reportData
-      const mergedReportData = {
-        ...service.reportData,
-        ...data,
+      // Mapeia dados do formulário (camelCase) para colunas do BD (snake_case)
+      const dbData: { [key: string]: any } = {
+        installation_date: data.installationDate,
+        model_number: data.modelNumber,
+        serial_number_new: data.serialNumberNew,
+        cable_gauge: data.cableGauge,
+        charger_circuit_breaker: data.chargerCircuitBreaker,
+        complies_with_nbr17019: data.compliesWithNBR17019 ? data.compliesWithNBR17019 === 'sim' : undefined,
+        homologated_installation: data.homologatedInstallation ? data.homologatedInstallation === 'sim' : undefined,
+        technical_comments: data.technicalComments,
+        // Campos de Vistoria não estão na tabela report_data e não podem ser salvos no momento.
+        // ex: inspection_date, voltage, etc.
       };
-      const updatedService = await updateService({
-        id,
-        reportData: mergedReportData,
-      });
-      setService(updatedService);
+
+      // Remove propriedades indefinidas para não sobrescrever dados existentes com null
+      Object.keys(dbData).forEach(key => (dbData[key] === undefined || dbData[key] === null) && delete dbData[key]);
+
+      if (Object.keys(dbData).length > 0) {
+        const { error } = await supabase
+          .from('report_data')
+          .update(dbData)
+          .eq('id', id);
+
+        if (error) {
+          // Se a linha não existir, a atualização falha. Tenta inserir.
+          const { error: insertError } = await supabase
+            .from('report_data')
+            .insert({ id, ...dbData });
+
+          if (insertError) {
+            console.error('Erro ao inserir dados do relatório:', insertError);
+            throw insertError;
+          }
+        }
+      }
+
+      // Atualiza o estado local de forma otimista
+      const mergedReportData = { ...service.reportData, ...data };
+      setService({ ...service, reportData: mergedReportData });
       toast.success('Dados do relatório salvos com sucesso!');
+
     } catch (error) {
       console.error('Erro ao salvar relatório:', error);
-      toast.error('Erro ao salvar dados do relatório');
+      toast.error('Erro ao salvar dados do relatório. Verifique os dados e a conexão.');
     } finally {
       setSaving(false);
     }

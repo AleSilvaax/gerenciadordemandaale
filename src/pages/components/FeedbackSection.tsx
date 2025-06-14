@@ -77,7 +77,13 @@ const FeedbackSection: React.FC<FeedbackSectionProps> = ({
   }
   return (
     <Form {...feedbackForm}>
-      <form className="space-y-4" onSubmit={feedbackForm.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          feedbackForm.handleSubmit(onSubmit)();
+        }}
+      >
         <FormField
           control={feedbackForm.control}
           name="clientRating"
