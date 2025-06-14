@@ -9,6 +9,7 @@ export interface AuthUser {
   phone?: string;
   role: UserRole;
   permissions: string[];
+  team_id?: string;
 }
 
 export interface AuthContextType {
@@ -28,6 +29,6 @@ export interface RegisterFormData {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
   role: UserRole;
+  team_id: string;
 }

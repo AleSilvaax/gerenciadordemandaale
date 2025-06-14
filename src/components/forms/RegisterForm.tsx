@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserRole } from '@/types/serviceTypes';
 import { useAuth } from '@/context/AuthContext';
 import { RegisterFormData } from '@/types/auth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Team {
@@ -49,7 +49,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
     console.log("Resultado da busca por equipes:", { data, error });
 
     if (error) {
-      toast({ title: 'Erro ao carregar equipes', description: error.message, variant: 'destructive' });
+      toast.error('Erro ao carregar equipes', { description: error.message });
     } else if (data) {
       // Log 3: Mostra quantas equipes foram encontradas
       console.log(`Encontradas ${data.length} equipes.`); 
