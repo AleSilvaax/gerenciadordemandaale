@@ -60,8 +60,8 @@ const NewService: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !location.trim() || !selectedServiceTypeId) {
-      toast.error("Por favor, preencha todos os campos obrigatórios");
+    if (!title.trim() || !location.trim() || !selectedServiceTypeId || !user?.id) {
+      toast.error("Por favor, preencha todos os campos obrigatórios e garanta que está logado.");
       return;
     }
 
@@ -83,20 +83,20 @@ const NewService: React.FC = () => {
         },
         creationDate: new Date().toISOString(),
         messages: [],
-        serviceType: selectedTypeObj?.name ?? "", // agora pode ser qualquer string
+        serviceType: selectedTypeObj?.name ?? "",
         serviceTypeId: selectedServiceTypeId,
         priority: priority as any,
         dueDate: dueDate?.toISOString(),
         description,
-        createdBy: user?.id,
+        createdBy: user.id as string, // sempre um string UUID
       };
 
-      console.log("Creating service with data:", serviceData);
+      console.log("Criando demanda (dados):", serviceData);
       
       const created = await createService(serviceData);
 
       if (!created || !created.id) {
-        toast.error("Erro ao criar demanda. Verifique as permissões ou tente novamente.");
+        toast.error("Erro ao criar demanda. Verifique suas permissões ou tente novamente.");
         return;
       }
 
@@ -110,7 +110,14 @@ const NewService: React.FC = () => {
       ) {
         errMsg = "Permissão negada ao criar demanda. Verifique suas permissões de acesso ou consulte o administrador.";
       }
-      console.error("Error creating service:", error);
+      // Se for erro de sequence/nextval
+      if (
+        typeof error?.message === "string" &&
+        error.message.toLowerCase().includes("nextval_for_service")
+      ) {
+        errMsg = "Falha ao gerar número da demanda (permissão ou configuração do banco).";
+      }
+      console.error("Erro ao criar demanda:", error);
       toast.error(errMsg);
     } finally {
       setIsLoading(false);

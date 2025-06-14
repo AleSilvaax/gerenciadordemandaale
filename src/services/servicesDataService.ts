@@ -110,19 +110,24 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
 // Create a new service in Supabase, accepting and saving service_type_id
 export const createServiceInDatabase = async (service: Omit<Service, "id"> & { serviceTypeId?: string }): Promise<Service | null> => {
   try {
-    console.log('Creating new service in database:', service);
-    
+    console.log('Criando service no banco (Supabase):', service);
+
+    // ALERTA: garantir que createdBy existe
+    if (!service.createdBy) {
+      throw new Error("Usuário não autenticado ou campo createdBy não preenchido.");
+    }
+
     // Generate a service number
     const { data: numberData, error: numberError } = await supabase.rpc('nextval_for_service');
-    
+
     if (numberError) {
-      console.error('Error generating service number:', numberError);
+      console.error('Erro ao gerar número do serviço:', numberError);
       throw numberError;
     }
-    
+
     // Format the service number
     const number = `SRV-${numberData.toString().padStart(5, '0')}`;
-    
+
     // Prepare all fields
     const insertData: any = {
       title: service.title,
@@ -132,7 +137,7 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       due_date: service.dueDate ?? null,
       priority: service.priority ?? 'media',
       service_type: service.serviceType ?? 'Vistoria',
-      service_type_id: service.serviceTypeId ?? null, // <-- armazena fk
+      service_type_id: service.serviceTypeId ?? null,
       description: service.description ?? null,
       created_by: service.createdBy ?? null,
       client: service.client ?? null,
@@ -147,14 +152,12 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       date: service.date ?? null
       // Adicione mais campos se necessário
     };
-    // Remove chaves com valor undefined, pois Supabase pode rejeitar
     Object.keys(insertData).forEach(key => {
       if (insertData[key] === undefined) {
         delete insertData[key];
       }
     });
 
-    // Cria o registro no banco
     const { data, error } = await supabase
       .from('services')
       .insert(insertData)
@@ -162,13 +165,25 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       .single();
 
     if (error) {
-      console.error('Error creating service in Supabase:', error);
+      console.error('Erro ao criar service (Supabase):', error);
+      // Refinar mensagem: permission denied ou erro da função de sequence
+      if (
+        typeof error?.message === "string" &&
+        error.message.toLowerCase().includes("permission denied")
+      ) {
+        throw new Error("PERMISSION_DENIED");
+      }
+      if (
+        typeof error?.message === "string" &&
+        error.message.toLowerCase().includes("nextval_for_service")
+      ) {
+        throw new Error("NEXTVAL_FOR_SERVICE_NOT_ALLOWED");
+      }
       throw error;
     }
 
-    console.log('Service created successfully:', data);
+    console.log('Service criado com sucesso:', data);
 
-    // Se houver técnico atribuído, cria relação
     if (service.technician && service.technician.id && service.technician.id !== '0' && data.id) {
       await assignTechnician(data.id, service.technician.id);
     }
@@ -239,7 +254,15 @@ export const createServiceInDatabase = async (service: Omit<Service, "id"> & { s
       date: data.date ?? service.date
     };
   } catch (error) {
-    console.error('Error in createServiceInDatabase:', error);
+    // Mostra erro de permissão específico
+    if (typeof error?.message === "string" && error.message === "PERMISSION_DENIED") {
+      toast.error("Permissão negada ao criar demanda. Consulte o administrador.");
+    }
+    if (typeof error?.message === "string" && error.message === "NEXTVAL_FOR_SERVICE_NOT_ALLOWED") {
+      toast.error("Falha ao gerar número da demanda. Função protegida/confirma permissões no banco.");
+    }
+
+    console.error('Erro geral em createServiceInDatabase:', error);
     toast.error("Falha ao criar serviço no servidor");
     return null;
   }
