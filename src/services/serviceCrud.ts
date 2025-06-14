@@ -377,7 +377,9 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
       if (insertError) {
         console.error('Erro ao atribuir novo técnico:', insertError);
-        // Não throw, pois já atualizou o serviço em si.
+        toast.error(`Erro ao atribuir técnico: ${insertError.message || "erro desconhecido"}`);
+      } else {
+        toast.success("Técnico atribuído no banco com sucesso.");
       }
     }
     
