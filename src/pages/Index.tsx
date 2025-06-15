@@ -12,6 +12,7 @@ import { TeamMember } from "@/types/serviceTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -20,8 +21,24 @@ const Index: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
   const { user, hasPermission, canAccessRoute } = useAuth();
-  
+
+  // Novo: useTechnicianServices
+  const { data: technicianServices, isLoading: techLoading, error: techError } = useTechnicianServices();
+
   useEffect(() => {
+    if (user?.role === "tecnico") {
+      setIsLoading(techLoading);
+      if (techError) {
+        toast.error("Erro ao carregar demandas do técnico");
+        setServices([]);
+      } else if (technicianServices) {
+        setServices(technicianServices);
+      }
+      // Não chama fetchData
+      return;
+    }
+
+    // Para admin/gestor continua o fetch padrão
     const fetchData = async () => {
       try {
         console.log('Fetching dashboard data...');
@@ -43,7 +60,7 @@ const Index: React.FC = () => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, technicianServices, techLoading, techError]);
   
   // Calculate statistics
   const pendingServices = services.filter(
