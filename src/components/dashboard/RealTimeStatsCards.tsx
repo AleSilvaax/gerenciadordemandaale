@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { StatCard } from "@/components/ui-custom/StatCard";
 import { TrendingUp, CheckCircle, Clock, AlertTriangle } from "lucide-react";
@@ -32,12 +31,12 @@ export const RealTimeStatsCards: React.FC = () => {
         const pending = services.filter(s => s.status === 'pendente').length;
         const canceled = services.filter(s => s.status === 'cancelado').length;
         
-        // Calculate overdue services (pending services with scheduledDate in the past)
+        // Calculate overdue services (pending services with dueDate in the past)
         const now = new Date();
         const overdue = services.filter(s => {
           if (s.status !== 'pendente') return false;
-          const scheduledDate = new Date(s.scheduledDate || s.createdAt);
-          return scheduledDate < now;
+          const dueDate = new Date(s.dueDate || s.creationDate);
+          return dueDate < now;
         }).length;
 
         const total = services.length;
