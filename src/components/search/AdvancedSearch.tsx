@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export interface SearchFilters {
   searchTerm: string;
@@ -28,12 +28,14 @@ interface AdvancedSearchProps {
   filters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onClearFilters: () => void;
+  className?: string;
 }
 
 export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   filters,
   onFiltersChange,
-  onClearFilters
+  onClearFilters,
+  className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -61,7 +63,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   const activeFiltersCount = getActiveFiltersCount();
 
   return (
-    <Card className="card-enhanced">
+    <Card className={cn("card-enhanced", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
