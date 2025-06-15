@@ -33,7 +33,9 @@ export default defineConfig(({ mode }) => ({
       }
     },
     chunkSizeWarningLimit: 1000,
-    sourcemap: false
+    sourcemap: false,
+    assetsDir: 'assets',
+    outDir: 'dist'
   },
   // Test configuration
   test: {

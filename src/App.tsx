@@ -47,7 +47,7 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Router basename="/">
+        <Router>
           <AuthProvider>
             <Routes>
               {/* Public routes */}

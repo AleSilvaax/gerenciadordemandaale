@@ -2,7 +2,7 @@
 import React, { Suspense } from 'react';
 import { PageLoader } from '@/components/common/PageLoader';
 
-// Função para criar lazy imports com retry automático
+// Função para criar lazy imports com retry automático melhorado
 const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
   return React.lazy(async () => {
     try {
@@ -17,17 +17,31 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
       } catch (retryError) {
         console.error(`Falha no retry para ${componentName}:`, retryError);
         
-        // Se falhar novamente, força um reload da página
-        if (window.location.pathname !== '/') {
-          window.location.href = '/';
-        }
-        throw retryError;
+        // Em vez de redirecionar, vamos retornar um componente de erro
+        return {
+          default: () => (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2">Erro ao carregar página</h2>
+                <p className="text-muted-foreground mb-4">
+                  Não foi possível carregar o componente {componentName}.
+                </p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90"
+                >
+                  Recarregar Página
+                </button>
+              </div>
+            </div>
+          )
+        };
       }
     }
   });
 };
 
-// Lazy load all pages with retry mechanism
+// Lazy load all pages with improved retry mechanism
 const Index = createLazyComponent(() => import('@/pages/Index'), 'Index');
 const Demandas = createLazyComponent(() => import('@/pages/Demandas'), 'Demandas');
 const ServiceDetail = createLazyComponent(() => import('@/pages/ServiceDetail'), 'ServiceDetail');
