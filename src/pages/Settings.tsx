@@ -36,7 +36,7 @@ const Settings: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-8"
+        className="container mx-auto p-2 sm:p-6 pb-24 space-y-8 w-full max-w-full"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -59,8 +59,8 @@ const Settings: React.FC = () => {
 
         {/* Settings Content */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-            <CardContent className="p-6">
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg w-full max-w-full">
+            <CardContent className="p-2 sm:p-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-4 bg-background/50">
                   <TabsTrigger value="technical" className="flex items-center gap-2">
@@ -81,20 +81,20 @@ const Settings: React.FC = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="technical" className="mt-6">
+                <TabsContent value="technical" className="mt-3 sm:mt-6">
                   <TechnicalSettingsTab />
                 </TabsContent>
 
-                <TabsContent value="permissions" className="mt-6">
+                <TabsContent value="permissions" className="mt-3 sm:mt-6">
                   <PermissionsTab />
                 </TabsContent>
 
-                <TabsContent value="visual" className="mt-6">
+                <TabsContent value="visual" className="mt-3 sm:mt-6">
                   <EnhancedVisualPreferencesTab />
                 </TabsContent>
 
-                <TabsContent value="team" className="mt-6">
-                  <div className="space-y-6">
+                <TabsContent value="team" className="mt-3 sm:mt-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Configurações da Equipe</h3>
                       <p className="text-muted-foreground">Gerencie configurações relacionadas à equipe.</p>

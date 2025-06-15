@@ -142,8 +142,8 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
-      <motion.div 
-        className="container mx-auto p-4 pb-24 space-y-6"
+      <motion.div
+        className="container mx-auto p-2 sm:p-4 pb-24 space-y-6"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -193,6 +193,7 @@ const Index: React.FC = () => {
             filters={filters}
             onFiltersChange={setFilters}
             onClearFilters={clearFilters}
+            className="w-full max-w-full !px-0"
           />
         </motion.div>
 
@@ -213,7 +214,7 @@ const Index: React.FC = () => {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2 text-left-force">
@@ -276,7 +277,7 @@ const Index: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   {recentServices.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {recentServices.map((service, index) => (
                         <motion.div
                           key={service.id}
@@ -291,8 +292,8 @@ const Index: React.FC = () => {
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground text-left-force">
-                        {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all' 
-                          ? 'Nenhuma demanda encontrada com os filtros aplicados' 
+                        {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all'
+                          ? 'Nenhuma demanda encontrada com os filtros aplicados'
                           : 'Nenhuma demanda encontrada'}
                       </p>
                     </div>
@@ -302,7 +303,7 @@ const Index: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="quick-actions" className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/new-service" className="block">
                     <CardContent className="p-8 text-center">
