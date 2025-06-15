@@ -25,6 +25,7 @@ import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
+import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -41,6 +42,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
   const [editingPhotoIndex, setEditingPhotoIndex] = useState<number | null>(null);
   const [editingPhotoTitle, setEditingPhotoTitle] = useState("");
+  const [photos, setPhotos] = useState<any[]>([]);
   const { id } = useParams<{ id?: string }>();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +52,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       fetchService(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (service) {
+      // Converter fotos do serviço para o formato do PhotoUploader
+      const uploaderPhotos = (service.photos || []).map((photoUrl, index) => ({
+        id: `service-photo-${index}`,
+        file: new File([], service.photoTitles?.[index] || `photo-${index}`, { type: 'image/jpeg' }),
+        url: photoUrl,
+        title: service.photoTitles?.[index] || `Foto ${index + 1}`,
+        compressed: false
+      }));
+      setPhotos(uploaderPhotos);
+    }
+  }, [service]);
 
   const fetchService = async (serviceId: string) => {
     setIsLoading(true);
@@ -168,61 +184,47 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   };
 
-  const handleRemovePhoto = async (index: number) => {
+  const handleUpdateCustomFields = async (fields: CustomField[]) => {
     if (!service) return;
-    
+
     try {
-      console.log("Removendo foto no índice:", index);
-      
-      const updatedPhotos = service.photos?.filter((_, i) => i !== index) || [];
-      const updatedTitles = service.photoTitles?.filter((_, i) => i !== index) || [];
+      console.log("Salvando campos técnicos:", fields);
       
       await updateService({ 
         id: service.id, 
-        photos: updatedPhotos,
-        photoTitles: updatedTitles
+        customFields: fields
       });
       
-      toast.success("Foto removida com sucesso!");
-      await fetchService(service.id);
+      toast.success("Campos técnicos salvos com sucesso!");
+      fetchService(id!);
     } catch (error) {
-      console.error("Erro ao remover foto:", error);
-      toast.error("Erro ao remover foto");
+      console.error("Erro ao salvar campos técnicos:", error);
+      toast.error("Erro ao salvar campos técnicos");
     }
   };
 
-  const handleUpdatePhotoTitle = async (index: number, newTitle: string) => {
+  const handlePhotosChange = async (newPhotos: any[]) => {
     if (!service) return;
-    
+
     try {
-      console.log("Atualizando título da foto:", { index, newTitle });
+      console.log("Atualizando fotos:", newPhotos);
       
-      const updatedTitles = [...(service.photoTitles || [])];
-      updatedTitles[index] = newTitle;
+      // Extrair URLs e títulos das fotos
+      const photoUrls = newPhotos.map(photo => photo.url);
+      const photoTitles = newPhotos.map(photo => photo.title);
       
       await updateService({ 
         id: service.id, 
-        photoTitles: updatedTitles
+        photos: photoUrls,
+        photoTitles: photoTitles
       });
       
-      toast.success("Título da foto atualizado!");
-      setEditingPhotoIndex(null);
-      setEditingPhotoTitle("");
+      toast.success("Fotos atualizadas com sucesso!");
       await fetchService(service.id);
     } catch (error) {
-      console.error("Erro ao atualizar título da foto:", error);
-      toast.error("Erro ao atualizar título da foto");
+      console.error("Erro ao atualizar fotos:", error);
+      toast.error("Erro ao atualizar fotos");
     }
-  };
-
-  const startEditingPhoto = (index: number, currentTitle: string) => {
-    setEditingPhotoIndex(index);
-    setEditingPhotoTitle(currentTitle);
-  };
-
-  const cancelEditingPhoto = () => {
-    setEditingPhotoIndex(null);
-    setEditingPhotoTitle("");
   };
 
   const getStatusIcon = (status: string) => {
@@ -244,25 +246,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         return "bg-red-500/10 text-red-500 border-red-500/20";
       default:
         return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-    }
-  };
-
-  const handleUpdateCustomFields = async (fields: CustomField[]) => {
-    if (!service) return;
-
-    try {
-      console.log("Salvando campos técnicos:", fields);
-      
-      await updateService({ 
-        id: service.id, 
-        customFields: fields
-      });
-      
-      toast.success("Campos técnicos salvos com sucesso!");
-      fetchService(id!);
-    } catch (error) {
-      console.error("Erro ao salvar campos técnicos:", error);
-      toast.error("Erro ao salvar campos técnicos");
     }
   };
 
@@ -442,7 +425,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </motion.div>
             )}
 
-            {/* Enhanced Photos Section */}
+            {/* Photos Section with PhotoUploader */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -452,53 +435,15 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Camera className="w-5 h-5" />
-                    Fotos e Anexos ({service.photos?.length || 0})
+                    Fotos e Anexos
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {service.photos && service.photos.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {service.photos.map((photo, index) => (
-                        <div key={index} className="relative group border rounded-lg overflow-hidden">
-                          <img
-                            src={photo}
-                            alt={service.photoTitles?.[index] || `Foto ${index + 1}`}
-                            className="w-full h-48 object-cover"
-                          />
-                          
-                          {/* Photo Actions Overlay */}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => startEditingPhoto(index, service.photoTitles?.[index] || '')}
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleRemovePhoto(index)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          
-                          {/* Photo Title */}
-                          <div className="p-3 bg-background/90">
-                            <p className="text-sm font-medium text-center">
-                              {service.photoTitles?.[index] || `Foto ${index + 1}`}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhuma foto adicionada ainda</p>
-                    </div>
-                  )}
+                  <PhotoUploader
+                    photos={photos}
+                    onPhotosChange={handlePhotosChange}
+                    maxPhotos={10}
+                  />
                 </CardContent>
               </Card>
             </motion.div>
@@ -715,36 +660,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
         </div>
-
-        {/* Photo Edit Dialog */}
-        <Dialog open={editingPhotoIndex !== null} onOpenChange={() => cancelEditingPhoto()}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Título da Foto</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="photo-title">Título da Foto</Label>
-                <Input
-                  id="photo-title"
-                  value={editingPhotoTitle}
-                  onChange={(e) => setEditingPhotoTitle(e.target.value)}
-                  placeholder="Digite o novo título..."
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={cancelEditingPhoto}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={() => editingPhotoIndex !== null && handleUpdatePhotoTitle(editingPhotoIndex, editingPhotoTitle)}
-                >
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </motion.div>
     </div>
   );
