@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search, Filter, Plus, SortDesc, Calendar, MapPin, User, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -106,7 +107,7 @@ const Demandas: React.FC = () => {
               Gerencie todas as solicitações de serviço
             </p>
           </div>
-          <Link to="/new-service">
+          <Link to="/nova-demanda">
             <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Nova Demanda
@@ -230,7 +231,7 @@ const Demandas: React.FC = () => {
                     : "Comece criando sua primeira demanda"
                   }
                 </p>
-                <Link to="/new-service">
+                <Link to="/nova-demanda">
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
                     Criar Primeira Demanda
