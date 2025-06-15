@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -248,6 +247,25 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   };
 
+  const handleUpdateCustomFields = async (fields: CustomField[]) => {
+    if (!service) return;
+
+    try {
+      console.log("Salvando campos técnicos:", fields);
+      
+      await updateService({ 
+        id: service.id, 
+        customFields: fields
+      });
+      
+      toast.success("Campos técnicos salvos com sucesso!");
+      fetchService(id!);
+    } catch (error) {
+      console.error("Erro ao salvar campos técnicos:", error);
+      toast.error("Erro ao salvar campos técnicos");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
@@ -408,24 +426,19 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </Card>
             </motion.div>
 
-            {/* Custom Fields */}
-            {service.customFields && service.customFields.length > 0 && (
+            {/* Technical Fields Checklist */}
+            {service.serviceType && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.15 }}
               >
-                <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Campos Técnicos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CustomFieldRenderer 
-                      fields={service.customFields} 
-                      disabled={true}
-                    />
-                  </CardContent>
-                </Card>
+                <TechnicalFieldsManager
+                  serviceType={service.serviceType}
+                  currentFields={service.customFields || []}
+                  onFieldsUpdate={handleUpdateCustomFields}
+                  disabled={editMode}
+                />
               </motion.div>
             )}
 
