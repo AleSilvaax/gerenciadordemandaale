@@ -5,16 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   getServices,
   updateService,
   addServiceMessage,
-  addServiceFeedback,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback } from "@/types/serviceTypes";
 import { format } from "date-fns";
@@ -25,17 +18,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, CheckCircle, XCircle, Clock, Camera } from "lucide-react";
+import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, CheckCircle, XCircle, Clock, Camera, Trash2, Edit3 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui-custom/Rating";
-import { Separator } from "@/components/ui/separator";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
 import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
 import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ServiceDetailProps {
   editMode?: boolean;
@@ -46,6 +38,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
+  const [editingPhotoIndex, setEditingPhotoIndex] = useState<number | null>(null);
+  const [editingPhotoTitle, setEditingPhotoTitle] = useState("");
   const { id } = useParams<{ id?: string }>();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
@@ -65,7 +59,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       if (found) {
         console.log("Serviço encontrado:", found);
         setService(found);
-        // Carregar feedback existente se houver
         if (found.feedback) {
           setFeedback(found.feedback);
         }
@@ -108,12 +101,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         timestamp: new Date().toISOString(),
       };
       
-      // Usar apenas addServiceMessage - não duplicar no serviço
       await addServiceMessage(service.id, messageData);
       
       setNewMessage("");
       toast.success("Mensagem enviada!");
-      // Recarregar dados do serviço para mostrar a nova mensagem
       fetchService(id!);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
@@ -127,7 +118,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     try {
       console.log("Salvando feedback:", feedback);
       
-      // Salvar o feedback diretamente no serviço
       await updateService({ 
         id: service.id, 
         feedback: feedback 
@@ -151,7 +141,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         ...signatures
       };
       
-      // Usar updateService que agora salva corretamente as assinaturas
       await updateService({ 
         id: service.id, 
         signatures: updatedSignatures
@@ -178,51 +167,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   };
 
-  const handleAddPhoto = async (file: File, title: string): Promise<string> => {
-    if (!service) throw new Error("Service not found");
-    
-    try {
-      console.log("Adicionando foto:", { fileName: file.name, title, size: file.size });
-      
-      // Converter arquivo para base64 para salvar
-      const reader = new FileReader();
-      const photoUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          console.log("Foto convertida para base64, tamanho:", result.length);
-          resolve(result);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      
-      // Atualizar arrays de fotos e títulos
-      const updatedPhotos = [...(service.photos || []), photoUrl];
-      const updatedTitles = [...(service.photoTitles || []), title];
-      
-      console.log("Salvando foto no serviço - total de fotos:", updatedPhotos.length);
-      
-      // Salvar no serviço usando updateService corrigido
-      await updateService({ 
-        id: service.id, 
-        photos: updatedPhotos,
-        photoTitles: updatedTitles
-      });
-      
-      toast.success("Foto adicionada com sucesso!");
-      
-      // Recarregar dados do serviço
-      await fetchService(service.id);
-      
-      return photoUrl;
-    } catch (error) {
-      console.error("Erro ao adicionar foto:", error);
-      toast.error("Erro ao adicionar foto");
-      throw error;
-    }
-  };
-
-  const handleRemovePhoto = async (index: number): Promise<void> => {
+  const handleRemovePhoto = async (index: number) => {
     if (!service) return;
     
     try {
@@ -245,14 +190,14 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   };
 
-  const handleUpdatePhotoTitle = async (index: number, title: string): Promise<void> => {
+  const handleUpdatePhotoTitle = async (index: number, newTitle: string) => {
     if (!service) return;
     
     try {
-      console.log("Atualizando título da foto:", { index, title });
+      console.log("Atualizando título da foto:", { index, newTitle });
       
       const updatedTitles = [...(service.photoTitles || [])];
-      updatedTitles[index] = title;
+      updatedTitles[index] = newTitle;
       
       await updateService({ 
         id: service.id, 
@@ -260,11 +205,23 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       });
       
       toast.success("Título da foto atualizado!");
+      setEditingPhotoIndex(null);
+      setEditingPhotoTitle("");
       await fetchService(service.id);
     } catch (error) {
       console.error("Erro ao atualizar título da foto:", error);
       toast.error("Erro ao atualizar título da foto");
     }
+  };
+
+  const startEditingPhoto = (index: number, currentTitle: string) => {
+    setEditingPhotoIndex(index);
+    setEditingPhotoTitle(currentTitle);
+  };
+
+  const cancelEditingPhoto = () => {
+    setEditingPhotoIndex(null);
+    setEditingPhotoTitle("");
   };
 
   const getStatusIcon = (status: string) => {
@@ -378,7 +335,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Dates */}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
                       <Calendar className="w-5 h-5 text-primary" />
@@ -402,7 +359,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                     )}
                   </div>
 
-                  {/* Technician */}
                   <div className="p-3 bg-background/30 rounded-lg border border-border/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -424,7 +380,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                     </div>
                   </div>
 
-                  {/* Technician Assigner for Managers */}
                   {hasPermission("gestor") && (
                     <TechnicianAssigner
                       currentTechnicianId={service.technician?.id}
@@ -436,7 +391,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                     />
                   )}
 
-                  {/* Description */}
                   {service.description && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium flex items-center gap-2">
@@ -461,7 +415,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               >
                 <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Campos Personalizados</CardTitle>
+                    <CardTitle className="text-lg">Campos Técnicos</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CustomFieldRenderer 
@@ -473,7 +427,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </motion.div>
             )}
 
-            {/* Photos Section */}
+            {/* Enhanced Photos Section */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -483,24 +437,53 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Camera className="w-5 h-5" />
-                    Fotos e Anexos
+                    Fotos e Anexos ({service.photos?.length || 0})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PhotoUploader
-                    photos={service?.photos?.map((url, index) => ({
-                      id: `service-photo-${service.id}-${index}`,
-                      file: new File([], service.photoTitles?.[index] || `Foto ${index + 1}`, { type: 'image/jpeg' }),
-                      url,
-                      title: service.photoTitles?.[index] || `Foto ${index + 1}`,
-                      compressed: false
-                    })) || []}
-                    onPhotosChange={(newPhotos) => {
-                      // Handle photos change - this will be called by PhotoUploader
-                      // For now, we'll log it since we have separate handlers
-                      console.log('Photos changed via PhotoUploader:', newPhotos);
-                    }}
-                  />
+                  {service.photos && service.photos.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {service.photos.map((photo, index) => (
+                        <div key={index} className="relative group border rounded-lg overflow-hidden">
+                          <img
+                            src={photo}
+                            alt={service.photoTitles?.[index] || `Foto ${index + 1}`}
+                            className="w-full h-48 object-cover"
+                          />
+                          
+                          {/* Photo Actions Overlay */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => startEditingPhoto(index, service.photoTitles?.[index] || '')}
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRemovePhoto(index)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Photo Title */}
+                          <div className="p-3 bg-background/90">
+                            <p className="text-sm font-medium text-center">
+                              {service.photoTitles?.[index] || `Foto ${index + 1}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhuma foto adicionada ainda</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -552,9 +535,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             )}
           </div>
 
-          {/* Right Column - Messages, Feedback and Signatures */}
+          {/* Right Column - Messages and Feedback */}
           <div className="space-y-6">
-            {/* Messages Section */}
+            {/* Enhanced Messages Section with Timestamps */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -564,7 +547,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" />
-                    Mensagens
+                    Mensagens ({service.messages?.length || 0})
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -582,9 +565,14 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                             <div className="flex-1 space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium">{msg.senderName}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {msg.timestamp ? format(new Date(msg.timestamp), "dd/MM HH:mm", { locale: ptBR }) : ""}
-                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {msg.senderRole}
+                                </Badge>
+                                {msg.timestamp && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(msg.timestamp), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm text-muted-foreground">{msg.message}</p>
                             </div>
@@ -615,7 +603,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </Card>
             </motion.div>
 
-            {/* Feedback Section */}
+            {/* Enhanced Feedback Section */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -629,43 +617,71 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium">Avaliação do Cliente</Label>
-                      <Rating
-                        value={feedback.clientRating}
-                        onChange={(value) => setFeedback({ ...feedback, clientRating: value })}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium">Comentário do Cliente</Label>
-                      <Textarea
-                        placeholder="Deixe seu comentário..."
-                        value={feedback.clientComment || ""}
-                        onChange={(e) => setFeedback({ ...feedback, clientComment: e.target.value })}
-                        className="bg-background/50 resize-none"
-                        rows={3}
-                      />
-                    </div>
-                    
-                    {user?.role === "tecnico" && (
+                  {service.feedback ? (
+                    <div className="space-y-4">
                       <div>
-                        <Label className="text-sm font-medium">Feedback do Técnico</Label>
+                        <Label className="text-sm font-medium">Avaliação do Cliente</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Rating value={service.feedback.clientRating} readOnly />
+                          <span className="text-sm text-muted-foreground">
+                            ({service.feedback.clientRating}/5)
+                          </span>
+                        </div>
+                        {service.feedback.clientComment && (
+                          <div className="mt-2 p-3 bg-background/30 rounded-lg border border-border/30">
+                            <p className="text-sm">{service.feedback.clientComment}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {service.feedback.technicianFeedback && (
+                        <div>
+                          <Label className="text-sm font-medium">Feedback do Técnico</Label>
+                          <div className="mt-1 p-3 bg-background/30 rounded-lg border border-border/30">
+                            <p className="text-sm">{service.feedback.technicianFeedback}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-medium">Avaliação do Cliente</Label>
+                        <Rating
+                          value={feedback.clientRating}
+                          onChange={(value) => setFeedback({ ...feedback, clientRating: value })}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Comentário do Cliente</Label>
                         <Textarea
-                          placeholder="Deixe seu feedback técnico..."
-                          value={feedback.technicianFeedback || ""}
-                          onChange={(e) => setFeedback({ ...feedback, technicianFeedback: e.target.value })}
+                          placeholder="Deixe seu comentário..."
+                          value={feedback.clientComment || ""}
+                          onChange={(e) => setFeedback({ ...feedback, clientComment: e.target.value })}
                           className="bg-background/50 resize-none"
                           rows={3}
                         />
                       </div>
-                    )}
-                    
-                    <Button onClick={handleSubmitFeedback} className="w-full">
-                      Salvar Feedback
-                    </Button>
-                  </div>
+                      
+                      {user?.role === "tecnico" && (
+                        <div>
+                          <Label className="text-sm font-medium">Feedback do Técnico</Label>
+                          <Textarea
+                            placeholder="Deixe seu feedback técnico..."
+                            value={feedback.technicianFeedback || ""}
+                            onChange={(e) => setFeedback({ ...feedback, technicianFeedback: e.target.value })}
+                            className="bg-background/50 resize-none"
+                            rows={3}
+                          />
+                        </div>
+                      )}
+                      
+                      <Button onClick={handleSubmitFeedback} className="w-full">
+                        Salvar Feedback
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -684,6 +700,36 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
         </div>
+
+        {/* Photo Edit Dialog */}
+        <Dialog open={editingPhotoIndex !== null} onOpenChange={() => cancelEditingPhoto()}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Título da Foto</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="photo-title">Título da Foto</Label>
+                <Input
+                  id="photo-title"
+                  value={editingPhotoTitle}
+                  onChange={(e) => setEditingPhotoTitle(e.target.value)}
+                  placeholder="Digite o novo título..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={cancelEditingPhoto}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => editingPhotoIndex !== null && handleUpdatePhotoTitle(editingPhotoIndex, editingPhotoTitle)}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );

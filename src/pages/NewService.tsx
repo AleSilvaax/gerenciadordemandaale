@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createService, getTeamMembers, getServiceTypesFromDatabase } from "@/services/servicesDataService";
-import { TeamMember, ServiceType, ServiceTypeConfig } from "@/types/serviceTypes";
+import { TeamMember, ServiceType, ServiceTypeConfig, TechnicalField, CustomField } from "@/types/serviceTypes";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
+import { TechnicalFieldsRenderer } from "@/components/ui-custom/TechnicalFieldsRenderer";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ const NewService: React.FC = () => {
   const [priority, setPriority] = useState("media");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string>("");
+  const [technicalFieldValues, setTechnicalFieldValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +62,13 @@ const NewService: React.FC = () => {
     fetchData();
   }, []);
 
+  // Reset technical fields when service type changes
+  useEffect(() => {
+    setTechnicalFieldValues({});
+  }, [selectedServiceTypeId]);
+
+  const selectedServiceType = serviceTypes.find(type => type.id === selectedServiceTypeId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -70,7 +78,8 @@ const NewService: React.FC = () => {
       location: location.trim(),
       selectedServiceTypeId,
       userId: user?.id,
-      selectedTechnician
+      selectedTechnician,
+      technicalFieldValues
     });
     
     // Validações básicas
@@ -94,6 +103,18 @@ const NewService: React.FC = () => {
       return;
     }
 
+    // Validar campos técnicos obrigatórios
+    if (selectedServiceType?.fields) {
+      const requiredFields = selectedServiceType.fields.filter(field => field.required);
+      for (const field of requiredFields) {
+        const value = technicalFieldValues[field.id];
+        if (!value && value !== 0 && value !== false) {
+          toast.error(`O campo "${field.name}" é obrigatório`);
+          return;
+        }
+      }
+    }
+
     setIsLoading(true);
     
     try {
@@ -104,6 +125,15 @@ const NewService: React.FC = () => {
         setIsLoading(false);
         return;
       }
+
+      // Converter technical fields para custom fields
+      const customFields: CustomField[] = selectedServiceType?.fields.map(field => ({
+        id: field.id,
+        label: field.name,
+        type: field.type,
+        value: technicalFieldValues[field.id] || (field.type === 'number' ? 0 : field.type === 'boolean' ? false : ''),
+        options: field.options
+      })) || [];
 
       const serviceData = {
         title: title.trim(),
@@ -123,6 +153,7 @@ const NewService: React.FC = () => {
         dueDate: dueDate?.toISOString(),
         description: description.trim() || undefined,
         createdBy: user.id,
+        customFields: customFields.length > 0 ? customFields : undefined,
       };
 
       console.log("Dados da demanda preparados:", serviceData);
@@ -175,6 +206,13 @@ const NewService: React.FC = () => {
     }
   };
 
+  const handleTechnicalFieldChange = (fieldId: string, value: any) => {
+    setTechnicalFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  };
+
   return (
     <div className="container py-4 max-w-2xl mx-auto">
       <Card>
@@ -224,6 +262,17 @@ const NewService: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Technical Fields Section */}
+            {selectedServiceType && selectedServiceType.fields.length > 0 && (
+              <Card className="p-4 bg-muted/30">
+                <TechnicalFieldsRenderer
+                  fields={selectedServiceType.fields}
+                  values={technicalFieldValues}
+                  onChange={handleTechnicalFieldChange}
+                />
+              </Card>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="priority">Prioridade</Label>
