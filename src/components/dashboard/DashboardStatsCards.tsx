@@ -4,17 +4,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-const cardAccentColors: Record<string, string> = {
-  "Total de Demandas": "bg-blue-500",
-  "Concluídas": "bg-green-500",
-  "Pendentes": "bg-yellow-500",
-  "Atrasadas": "bg-red-500",
+const cardGradients: Record<string, string> = {
+  "Total de Demandas": "from-blue-500 to-cyan-600",
+  "Concluídas": "from-green-500 to-emerald-600", 
+  "Pendentes": "from-yellow-500 to-orange-600",
+  "Atrasadas": "from-red-500 to-pink-600",
 };
 
 interface Stat {
   label: string;
   value: number;
-  color?: string; // Legacy, não usado aqui
+  color?: string;
   icon?: React.ReactNode;
   description?: string;
 }
@@ -24,19 +24,18 @@ interface DashboardStatsCardsProps {
 }
 
 export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats }) => {
-  // Animação de container: stagger.
   const container = {
     hidden: {},
     show: {
       transition: {
-        staggerChildren: 0.13,
+        staggerChildren: 0.1,
       },
     },
   };
 
   return (
     <motion.div
-      className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
       variants={container}
       initial="hidden"
       animate="show"
@@ -56,12 +55,17 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({ stats 
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.95 },
+  hidden: { opacity: 0, y: 40, scale: 0.9 },
   show: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring' as const, stiffness: 80, damping: 15 }
+    transition: { 
+      type: 'spring' as const, 
+      stiffness: 100, 
+      damping: 15,
+      duration: 0.6
+    }
   }
 };
 
@@ -73,78 +77,111 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
   const [displayValue, setDisplayValue] = React.useState(0);
 
   React.useEffect(() => {
-    // Animação "count up"
     let raf: number;
     let start: number = 0;
     let lastFrameValue = 0;
-    const duration = 1.15; // seconds
+    const duration = 1.5;
+    
     const frame = (timestamp: number) => {
       if (!start) start = timestamp;
       const progress = Math.min((timestamp - start) / (duration * 1000), 1);
-      const currentValue = Math.floor(progress * value);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const currentValue = Math.floor(easeOut * value);
+      
       if (currentValue !== lastFrameValue) {
         setDisplayValue(currentValue);
         lastFrameValue = currentValue;
       }
-      if (progress < 1) raf = requestAnimationFrame(frame);
-      else setDisplayValue(value);
+      
+      if (progress < 1) {
+        raf = requestAnimationFrame(frame);
+      } else {
+        setDisplayValue(value);
+      }
     };
+    
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [value]);
 
-  // Definindo cor de detalhe baseada no label
-  const accentClass = cardAccentColors[label] || "bg-blue-500";
-  const iconColor = cardAccentColors[label]?.replace("bg-", "text-") || "text-blue-500";
+  const gradientClass = cardGradients[label] || "from-slate-500 to-slate-600";
 
   return (
     <motion.div
       variants={cardVariants}
       whileHover={{
-        scale: 1.03,
-        boxShadow: "0 8px 32px 0 rgba(0,0,0,0.14)"
+        scale: 1.05,
+        y: -8,
+        transition: { duration: 0.2 }
       }}
+      whileTap={{ scale: 0.98 }}
+      className="group cursor-pointer"
     >
       <Card className={cn(
-        "overflow-hidden border border-border shadow-sm rounded-xl px-0 py-0 transition-all duration-300 bg-card relative"
+        "relative overflow-hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm",
+        "border border-white/20 shadow-lg hover:shadow-2xl",
+        "transition-all duration-300 group-hover:border-white/40"
       )}>
-        {/* Barra lateral colorida */}
+        {/* Gradiente de fundo animado */}
         <div className={cn(
-          "absolute left-0 top-0 h-full w-1 rounded-s-xl",
-          accentClass
+          "absolute inset-0 bg-gradient-to-br opacity-5 group-hover:opacity-10 transition-opacity duration-300",
+          gradientClass
         )} />
-        <CardContent className={cn(
-          "py-7 px-7 flex flex-col h-full min-h-[104px] justify-between"
-        )}>
-          <div className="flex items-center gap-3 justify-between mb-0">
-            <div>
-              <div className={cn(
-                "text-3xl md:text-4xl font-extrabold tracking-tight leading-none transition-colors duration-200 text-foreground"
-              )}>
+        
+        {/* Barra lateral gradiente */}
+        <div className={cn(
+          "absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b transition-all duration-300 group-hover:w-2",
+          gradientClass
+        )} />
+        
+        <CardContent className="relative p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {/* Valor principal */}
+              <motion.div 
+                className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2"
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: index ? index * 0.1 : 0, duration: 0.5, type: "spring" }}
+              >
                 {displayValue}
-              </div>
-              <p className={cn(
-                "text-xs font-semibold uppercase tracking-wide mt-1 text-muted-foreground"
-              )}>{label}</p>
+              </motion.div>
+              
+              {/* Label */}
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                {label}
+              </p>
+              
+              {/* Descrição */}
+              {description && (
+                <p className="text-xs text-slate-500 dark:text-slate-500">
+                  {description}
+                </p>
+              )}
             </div>
-            {/* Opcional: pode usar o ícone colorido, atualmente não utilizado */}
-            {/* {icon && (
-              <div className={cn(
-                "w-10 h-10 flex items-center justify-center rounded-full bg-muted/40",
-                iconColor
-              )}>
+            
+            {/* Ícone */}
+            {icon && (
+              <motion.div 
+                className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center",
+                  "bg-gradient-to-br shadow-lg text-white",
+                  gradientClass
+                )}
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                transition={{ delay: (index ? index * 0.1 : 0) + 0.3, duration: 0.5 }}
+                whileHover={{ scale: 1.1, rotate: 5 }}
+              >
                 {icon}
-              </div>
-            )} */}
+              </motion.div>
+            )}
           </div>
-          {!!description && (
-            <div className="pt-2">
-              <span className="text-xs text-muted-foreground">{description}</span>
-            </div>
-          )}
+          
+          {/* Efeito de brilho no hover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
         </CardContent>
       </Card>
     </motion.div>
   );
 };
-
