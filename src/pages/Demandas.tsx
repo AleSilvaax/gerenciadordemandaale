@@ -12,11 +12,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FileText, Search as SearchIcon, Filter, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
+import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 
 const Demandas: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { hasPermission, canAccessRoute } = useAuth();
+  const { user, hasPermission, canAccessRoute } = useAuth();
+
+  // Adicionar hook para buscar demandas do técnico (caso seja técnico)
+  const { data: technicianServices, isLoading: techLoading, error: techError } = useTechnicianServices();
+  
   const [services, setServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
@@ -24,6 +29,21 @@ const Demandas: React.FC = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+
+    // Se for técnico, usa o hook específico
+    if (user.role === "tecnico") {
+      setLoading(techLoading);
+      if (techError) {
+        toast.error("Erro ao carregar demandas do técnico");
+        setServices([]);
+      } else if (technicianServices) {
+        setServices(technicianServices);
+      }
+      return;
+    }
+
+    // Para admin/gestor, busca normalmente
     const fetchServices = async () => {
       try {
         const data = await getServices();
@@ -39,7 +59,7 @@ const Demandas: React.FC = () => {
     };
 
     fetchServices();
-  }, []);
+  }, [user, technicianServices, techLoading, techError]);
 
   const handleDelete = async (id: string) => {
     if (!hasPermission('delete_services')) {
