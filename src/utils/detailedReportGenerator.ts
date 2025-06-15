@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import { Service, CustomField } from "@/types/serviceTypes";
 import { formatDate } from "./formatters";
@@ -29,6 +28,39 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
       .replace(/[^\w\s\-.,()\/]/g, '') // Remove caracteres especiais
       .trim();
+  };
+
+  // Função para calcular dimensões proporcionais da imagem
+  const calculateImageDimensions = (base64Url: string): { width: number; height: number } => {
+    try {
+      // Criar uma imagem temporária para obter dimensões reais
+      const img = new Image();
+      img.src = base64Url;
+      
+      const originalWidth = img.naturalWidth || 800;
+      const originalHeight = img.naturalHeight || 600;
+      
+      // Definir tamanho máximo para fotos (preservando proporção)
+      const maxWidth = 120; // Reduzido de 160 para 120
+      const maxHeight = 90;  // Reduzido de 80 para 90
+      
+      // Calcular proporção
+      const aspectRatio = originalWidth / originalHeight;
+      
+      let finalWidth = maxWidth;
+      let finalHeight = maxWidth / aspectRatio;
+      
+      // Se a altura exceder o máximo, ajustar pela altura
+      if (finalHeight > maxHeight) {
+        finalHeight = maxHeight;
+        finalWidth = maxHeight * aspectRatio;
+      }
+      
+      return { width: finalWidth, height: finalHeight };
+    } catch (error) {
+      console.warn('Erro ao calcular dimensões da imagem, usando padrão:', error);
+      return { width: 120, height: 90 };
+    }
   };
 
   // Função para adicionar cabeçalho
@@ -229,13 +261,13 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     yPosition += 10;
   }
 
-  // PÁGINA DE FOTOS - MELHORADA
+  // PÁGINA DE FOTOS - MELHORADA COM DIMENSÕES PROPORCIONAIS
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
     yPosition = addHeader("ANEXOS FOTOGRAFICOS", 20);
 
     for (let photoIndex = 0; photoIndex < service.photos.length; photoIndex++) {
-      if (yPosition > 180) {
+      if (yPosition > 150) { // Espaço reduzido para acomodar fotos menores
         doc.addPage();
         yPosition = 30;
       }
@@ -251,11 +283,15 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
         
         const processedImage = processImageForPDF(photoUrl);
         if (processedImage) {
-          // Adicionar imagem com dimensões controladas
-          const imgWidth = 160;
-          const imgHeight = 80;
-          doc.addImage(processedImage, 'JPEG', 25, yPosition, imgWidth, imgHeight);
-          console.log(`Foto ${photoIndex + 1} adicionada ao PDF com sucesso`);
+          // Calcular dimensões proporcionais
+          const { width, height } = calculateImageDimensions(processedImage);
+          
+          // Centralizar a imagem na página
+          const xPosition = (210 - width) / 2; // Centralizar horizontalmente
+          
+          doc.addImage(processedImage, 'JPEG', xPosition, yPosition, width, height);
+          console.log(`Foto ${photoIndex + 1} adicionada ao PDF (${width}x${height})`);
+          yPosition += height + 10; // Espaço menor após a foto
         } else {
           throw new Error('Imagem não pôde ser processada');
         }
@@ -263,13 +299,12 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
         console.error(`Erro ao processar foto ${photoIndex + 1}:`, error);
         // Placeholder para foto com erro
         doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-        doc.rect(25, yPosition, 160, 80);
+        doc.rect(55, yPosition, 100, 60); // Placeholder menor
         doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
         doc.setFontSize(10);
-        doc.text("Erro ao carregar foto", 105, yPosition + 40, { align: "center" });
+        doc.text("Erro ao carregar foto", 105, yPosition + 30, { align: "center" });
+        yPosition += 70;
       }
-
-      yPosition += 90;
     }
   }
 
@@ -348,7 +383,7 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     }
   }
 
-  // PÁGINA DE ASSINATURAS - MELHORADA
+  // PÁGINA DE ASSINATURAS - MELHORADA COM ESTILO DE CONTRATO
   doc.addPage();
   yPosition = addHeader("ASSINATURAS E APROVACOES", 20);
 
@@ -358,30 +393,40 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       yPosition = addSection("ASSINATURA DO CLIENTE", yPosition);
       
       addInfoLine("Cliente", service.client || "N/A", 20, yPosition);
-      addInfoLine("Data", formatDate(new Date().toISOString()), 20, yPosition + 10);
+      addInfoLine("Data", formatDate(new Date().toISOString()), 110, yPosition);
       yPosition += 25;
-      
-      // Área da assinatura
-      doc.setFillColor(colors.white[0], colors.white[1], colors.white[2]);
-      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-      doc.rect(20, yPosition, 170, 40, 'FD');
       
       try {
         const processedSignature = processImageForPDF(service.signatures.client);
         if (processedSignature) {
-          doc.addImage(processedSignature, 'PNG', 30, yPosition + 5, 150, 30);
+          // Dimensões menores e mais elegantes para assinaturas
+          const signatureWidth = 80;  // Reduzido de 150 para 80
+          const signatureHeight = 25; // Reduzido de 30 para 25
+          const xPosition = 30;       // Alinhamento à esquerda com margem
+          
+          doc.addImage(processedSignature, 'PNG', xPosition, yPosition, signatureWidth, signatureHeight);
           console.log("Assinatura do cliente adicionada ao PDF");
+          
+          // Linha para assinatura abaixo da imagem
+          doc.setDrawColor(colors.text[0], colors.text[1], colors.text[2]);
+          doc.setLineWidth(0.5);
+          doc.line(xPosition, yPosition + signatureHeight + 5, xPosition + signatureWidth, yPosition + signatureHeight + 5);
+          
+          yPosition += signatureHeight + 15;
         } else {
           throw new Error('Assinatura não pôde ser processada');
         }
       } catch (error) {
         console.error("Erro ao processar assinatura do cliente:", error);
+        // Linha para assinatura manual
+        doc.setDrawColor(colors.text[0], colors.text[1], colors.text[2]);
+        doc.setLineWidth(0.5);
+        doc.line(30, yPosition + 10, 110, yPosition + 10);
         doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-        doc.setFontSize(10);
-        doc.text("Erro ao carregar assinatura", 105, yPosition + 20, { align: "center" });
+        doc.setFontSize(8);
+        doc.text("Assinatura do Cliente", 30, yPosition + 20);
+        yPosition += 30;
       }
-      
-      yPosition += 50;
     }
 
     // Assinatura do Técnico
@@ -394,40 +439,51 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       yPosition = addSection("ASSINATURA DO TECNICO", yPosition);
       
       addInfoLine("Tecnico", service.technician?.name || "N/A", 20, yPosition);
-      addInfoLine("Data", formatDate(new Date().toISOString()), 20, yPosition + 10);
+      addInfoLine("Data", formatDate(new Date().toISOString()), 110, yPosition);
       yPosition += 25;
-      
-      // Área da assinatura
-      doc.setFillColor(colors.white[0], colors.white[1], colors.white[2]);
-      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-      doc.rect(20, yPosition, 170, 40, 'FD');
       
       try {
         const processedSignature = processImageForPDF(service.signatures.technician);
         if (processedSignature) {
-          doc.addImage(processedSignature, 'PNG', 30, yPosition + 5, 150, 30);
+          // Dimensões menores e mais elegantes para assinaturas
+          const signatureWidth = 80;  // Reduzido de 150 para 80
+          const signatureHeight = 25; // Reduzido de 30 para 25
+          const xPosition = 30;       // Alinhamento à esquerda com margem
+          
+          doc.addImage(processedSignature, 'PNG', xPosition, yPosition, signatureWidth, signatureHeight);
           console.log("Assinatura do técnico adicionada ao PDF");
+          
+          // Linha para assinatura abaixo da imagem
+          doc.setDrawColor(colors.text[0], colors.text[1], colors.text[2]);
+          doc.setLineWidth(0.5);
+          doc.line(xPosition, yPosition + signatureHeight + 5, xPosition + signatureWidth, yPosition + signatureHeight + 5);
+          
+          yPosition += signatureHeight + 15;
         } else {
           throw new Error('Assinatura não pôde ser processada');
         }
       } catch (error) {
         console.error("Erro ao processar assinatura do técnico:", error);
+        // Linha para assinatura manual
+        doc.setDrawColor(colors.text[0], colors.text[1], colors.text[2]);
+        doc.setLineWidth(0.5);
+        doc.line(30, yPosition + 10, 110, yPosition + 10);
         doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-        doc.setFontSize(10);
-        doc.text("Erro ao carregar assinatura", 105, yPosition + 20, { align: "center" });
+        doc.setFontSize(8);
+        doc.text("Assinatura do Técnico", 30, yPosition + 20);
+        yPosition += 30;
       }
-      
-      yPosition += 50;
     }
   } else {
-    // Áreas para assinaturas em branco
+    // Áreas para assinaturas em branco com estilo mais profissional
     yPosition = addSection("AREA PARA ASSINATURAS", yPosition);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
     doc.text("Cliente:", 20, yPosition);
-    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setDrawColor(colors.text[0], colors.text[1], colors.text[2]);
+    doc.setLineWidth(0.5);
     doc.line(45, yPosition, 100, yPosition);
     doc.text("Data:", 120, yPosition);
     doc.line(140, yPosition, 180, yPosition);
