@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ interface VirtualizedListProps<T> {
   renderItem: (item: T, index: number) => React.ReactNode;
   className?: string;
   overscan?: number;
+  width?: number | string;
 }
 
 export function VirtualizedList<T>({
@@ -18,9 +19,11 @@ export function VirtualizedList<T>({
   itemHeight,
   renderItem,
   className,
-  overscan = 5
+  overscan = 5,
+  width = '100%'
 }: VirtualizedListProps<T>) {
   const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const item = items[index];
@@ -37,17 +40,21 @@ export function VirtualizedList<T>({
       setIsScrolling(true);
     }
     
-    // Use a timeout to detect when scrolling stops
-    const timeoutId = setTimeout(() => {
+    // Clear existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    // Set new timeout to detect when scrolling stops
+    scrollTimeoutRef.current = setTimeout(() => {
       setIsScrolling(false);
     }, 150);
-
-    return () => clearTimeout(timeoutId);
   }, [isScrolling]);
 
   const memoizedList = useMemo(() => (
     <List
       height={height}
+      width={width}
       itemCount={items.length}
       itemSize={itemHeight}
       overscanCount={overscan}
@@ -56,7 +63,7 @@ export function VirtualizedList<T>({
     >
       {Row}
     </List>
-  ), [items.length, height, itemHeight, overscan, Row, className, handleScroll]);
+  ), [items.length, height, width, itemHeight, overscan, Row, className, handleScroll]);
 
   if (items.length === 0) {
     return (
