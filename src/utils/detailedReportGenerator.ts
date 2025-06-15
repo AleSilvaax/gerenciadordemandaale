@@ -21,10 +21,10 @@ export const generateDetailedServiceReport = (service: Service): void => {
     for (let i = 0; i < height; i++) {
       const alpha = 1 - (i / height) * 0.3;
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setGState(new doc.GState({ opacity: alpha }));
+      doc.setGlobalAlpha(alpha);
       doc.rect(0, y + i, 210, 1, 'F');
     }
-    doc.setGState(new doc.GState({ opacity: 1 }));
+    doc.setGlobalAlpha(1);
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
@@ -45,6 +45,19 @@ export const generateDetailedServiceReport = (service: Service): void => {
     
     doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     return content();
+  };
+
+  // Função para placeholder de foto (movida para antes do uso)
+  const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, url: string) => {
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setLineWidth(1);
+    doc.rect(x, y, w, h);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.text("📷 Imagem anexada", x + w/2, y + h/2 - 5, { align: "center" });
+    doc.setFontSize(8);
+    doc.text(url.substring(0, 50) + "...", x + 5, y + h/2 + 5);
   };
 
   // CAPA MODERNA
@@ -222,12 +235,14 @@ export const generateDetailedServiceReport = (service: Service): void => {
             // Criar canvas para converter a imagem
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx?.drawImage(img, 0, 0);
-            
-            const imgData = canvas.toDataURL('image/jpeg', 0.8);
-            doc.addImage(imgData, 'JPEG', 20, yPosition + 20, 170, 50);
+            if (ctx) {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0);
+              
+              const imgData = canvas.toDataURL('image/jpeg', 0.8);
+              doc.addImage(imgData, 'JPEG', 20, yPosition + 20, 170, 50);
+            }
           } catch (error) {
             console.error("Erro ao processar imagem:", error);
             // Fallback para placeholder
@@ -250,19 +265,6 @@ export const generateDetailedServiceReport = (service: Service): void => {
       photoIndex++;
     }
   }
-
-  // Função para placeholder de foto
-  const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, url: string) => {
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setLineWidth(1);
-    doc.rect(x, y, w, h);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text("📷 Imagem anexada", x + w/2, y + h/2 - 5, { align: "center" });
-    doc.setFontSize(8);
-    doc.text(url.substring(0, 50) + "...", x + 5, y + h/2 + 5);
-  };
 
   // PÁGINA DE ASSINATURAS
   doc.addPage();
@@ -290,8 +292,8 @@ export const generateDetailedServiceReport = (service: Service): void => {
         doc.roundedRect(20, currentY, 170, 40, 3, 3, 'FD');
         
         try {
-          if (service.signatures.client.startsWith('data:image')) {
-            doc.addImage(service.signatures.client, 'PNG', 25, currentY + 5, 160, 30);
+          if (service.signatures!.client!.startsWith('data:image')) {
+            doc.addImage(service.signatures!.client!, 'PNG', 25, currentY + 5, 160, 30);
           } else {
             doc.setFontSize(9);
             doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -325,8 +327,8 @@ export const generateDetailedServiceReport = (service: Service): void => {
         doc.roundedRect(20, currentY, 170, 40, 3, 3, 'FD');
         
         try {
-          if (service.signatures.technician.startsWith('data:image')) {
-            doc.addImage(service.signatures.technician, 'PNG', 25, currentY + 5, 160, 30);
+          if (service.signatures!.technician!.startsWith('data:image')) {
+            doc.addImage(service.signatures!.technician!, 'PNG', 25, currentY + 5, 160, 30);
           } else {
             doc.setFontSize(9);
             doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
