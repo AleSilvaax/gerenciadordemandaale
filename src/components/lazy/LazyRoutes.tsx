@@ -2,20 +2,45 @@
 import React, { Suspense } from 'react';
 import { PageLoader } from '@/components/common/PageLoader';
 
-// Lazy load all pages
-const Index = React.lazy(() => import('@/pages/Index'));
-const Demandas = React.lazy(() => import('@/pages/Demandas'));
-const ServiceDetail = React.lazy(() => import('@/pages/ServiceDetail'));
-const NewService = React.lazy(() => import('@/pages/NewService'));
-const Estatisticas = React.lazy(() => import('@/pages/Estatisticas'));
-const Equipe = React.lazy(() => import('@/pages/Equipe'));
-const Search = React.lazy(() => import('@/pages/Search'));
-const Settings = React.lazy(() => import('@/pages/Settings'));
-const Login = React.lazy(() => import('@/pages/Login'));
-const Register = React.lazy(() => import('@/pages/Register'));
-const NotFound = React.lazy(() => import('@/pages/NotFound'));
+// Função para criar lazy imports com retry automático
+const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
+  return React.lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.error(`Erro ao carregar ${componentName}:`, error);
+      
+      // Retry uma vez após um pequeno delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        return await importFn();
+      } catch (retryError) {
+        console.error(`Falha no retry para ${componentName}:`, retryError);
+        
+        // Se falhar novamente, força um reload da página
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
+        throw retryError;
+      }
+    }
+  });
+};
 
-// HOC for wrapping lazy components with Suspense
+// Lazy load all pages with retry mechanism
+const Index = createLazyComponent(() => import('@/pages/Index'), 'Index');
+const Demandas = createLazyComponent(() => import('@/pages/Demandas'), 'Demandas');
+const ServiceDetail = createLazyComponent(() => import('@/pages/ServiceDetail'), 'ServiceDetail');
+const NewService = createLazyComponent(() => import('@/pages/NewService'), 'NewService');
+const Estatisticas = createLazyComponent(() => import('@/pages/Estatisticas'), 'Estatisticas');
+const Equipe = createLazyComponent(() => import('@/pages/Equipe'), 'Equipe');
+const Search = createLazyComponent(() => import('@/pages/Search'), 'Search');
+const Settings = createLazyComponent(() => import('@/pages/Settings'), 'Settings');
+const Login = createLazyComponent(() => import('@/pages/Login'), 'Login');
+const Register = createLazyComponent(() => import('@/pages/Register'), 'Register');
+const NotFound = createLazyComponent(() => import('@/pages/NotFound'), 'NotFound');
+
+// HOC for wrapping lazy components with Suspense and error handling
 const withSuspense = (Component: React.ComponentType<any>) => {
   return (props: any) => (
     <Suspense fallback={<PageLoader />}>
