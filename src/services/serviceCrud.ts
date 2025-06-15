@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus, CustomField } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -15,46 +16,53 @@ interface ServiceMessageRow {
 
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
-    console.log('Fetching services from database');
+    console.log('[SERVICES] Iniciando busca de serviços...');
     
-    // Primeiro vamos testar se conseguimos buscar os serviços básicos
+    // Buscar serviços básicos primeiro
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
       .select('*');
 
+    console.log('[SERVICES] Query executada, resultado:', { servicesData, servicesError });
+
     if (servicesError) {
-      console.error('Error fetching services from Supabase:', servicesError);
+      console.error('[SERVICES] Erro ao buscar serviços:', servicesError);
       throw servicesError;
     }
 
-    console.log('Raw services data from Supabase:', servicesData);
-
     if (!servicesData || servicesData.length === 0) {
-      console.log('No services found in database');
+      console.log('[SERVICES] Nenhum serviço encontrado no banco');
       return [];
     }
 
-    // Buscar todos os técnicos atribuídos
-    const { data: technicianData, error: technicianError } = await supabase
-      .from('service_technicians')
-      .select(`
-        service_id,
-        technician_id,
-        profiles!service_technicians_technician_id_fkey (
-          id,
-          name,
-          avatar
-        )
-      `);
+    console.log('[SERVICES] Serviços encontrados no banco:', servicesData.length);
 
-    if (technicianError) {
-      console.error('Error fetching service technicians:', technicianError);
-      // Continuar sem técnicos se houver erro
+    // Buscar técnicos atribuídos
+    let technicianData: any[] = [];
+    try {
+      const { data: techData, error: techError } = await supabase
+        .from('service_technicians')
+        .select(`
+          service_id,
+          technician_id,
+          profiles!service_technicians_technician_id_fkey (
+            id,
+            name,
+            avatar
+          )
+        `);
+
+      if (techError) {
+        console.error('[SERVICES] Erro ao buscar técnicos:', techError);
+      } else {
+        technicianData = techData || [];
+        console.log('[SERVICES] Técnicos encontrados:', technicianData.length);
+      }
+    } catch (error) {
+      console.error('[SERVICES] Erro ao buscar técnicos:', error);
     }
 
-    console.log('Technician assignments data:', technicianData);
-
-    // Buscar mensagens de serviço (opcional)
+    // Buscar mensagens (opcional)
     let messagesData: ServiceMessageRow[] = [];
     try {
       const { data: msgs, error: messagesError } = await supabase
@@ -63,13 +71,16 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       
       if (!messagesError && msgs) {
         messagesData = msgs;
+        console.log('[SERVICES] Mensagens encontradas:', messagesData.length);
       }
     } catch (error) {
-      console.log('Could not fetch messages, continuing without them:', error);
+      console.log('[SERVICES] Não foi possível buscar mensagens:', error);
     }
 
-    // Transformar os dados para o formato esperado
+    // Transformar dados
     const services: Service[] = servicesData.map(service => {
+      console.log('[SERVICES] Processando serviço:', service.id);
+      
       // Encontrar técnico atribuído
       const techAssignment = technicianData?.find(t => t.service_id === service.id);
       
@@ -96,7 +107,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
           timestamp: m.timestamp
         }));
 
-      // Parse campos JSON seguros
+      // Parse seguro dos campos JSON
       let customFieldsParsed: any = undefined;
       if (service.custom_fields) {
         try {
@@ -140,7 +151,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         ? service.status as ServiceStatus
         : 'pendente' as ServiceStatus;
 
-      return {
+      const processedService = {
         id: service.id,
         title: service.title || 'Sem título',
         location: service.location || 'Local não informado',
@@ -165,12 +176,15 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         photoTitles: safePhotoTitles,
         date: service.date,
       };
+
+      console.log('[SERVICES] Serviço processado:', processedService.id, processedService.title);
+      return processedService;
     });
 
-    console.log('Processed services:', services);
+    console.log('[SERVICES] Total de serviços processados:', services.length);
     return services;
   } catch (error) {
-    console.error('Error in getServicesFromDatabase:', error);
+    console.error('[SERVICES] Erro geral:', error);
     toast.error(`Erro ao buscar demandas: ${error.message || 'Erro desconhecido'}`);
     return [];
   }
