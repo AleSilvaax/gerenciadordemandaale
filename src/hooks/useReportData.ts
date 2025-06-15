@@ -1,63 +1,64 @@
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { updateService } from "@/services/api";
-import { Service } from "@/types/serviceTypes";
+import { useState, useEffect } from "react";
+import { getServices } from "@/services/servicesDataService";
+
+interface ReportData {
+  totalServices: number;
+  completedServices: number;
+  pendingServices: number;
+  cancelledServices: number;
+}
 
 /**
- * Hook para lidar com a lógica de salvar dados do relatório (report_data).
- * Retorna um handler e estado de loading.
+ * Hook para carregar e processar dados de relatórios estatísticos
  */
-export function useReportData(service: Service | null, id: string | undefined, onUpdateLocalService: (mergedReportData: any) => void) {
-  const [saving, setSaving] = useState(false);
+export function useReportData(period: string, technician: string, serviceType: string) {
+  const [reportData, setReportData] = useState<ReportData>({
+    totalServices: 0,
+    completedServices: 0,
+    pendingServices: 0,
+    cancelledServices: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleSaveReportData = async (data: any) => {
-    if (!service || !id) return;
-    setSaving(true);
-    try {
-      const dbData: { [key: string]: any } = {
-        installation_date: data.installationDate,
-        model_number: data.modelNumber,
-        serial_number_new: data.serialNumberNew,
-        cable_gauge: data.cableGauge,
-        charger_circuit_breaker: data.chargerCircuitBreaker,
-        complies_with_nbr17019: data.compliesWithNBR17019 ? data.compliesWithNBR17019 === 'sim' : undefined,
-        homologated_installation: data.homologatedInstallation ? data.homologatedInstallation === 'sim' : undefined,
-        technical_comments: data.technicalComments,
-      };
+  useEffect(() => {
+    const loadReportData = async () => {
+      setLoading(true);
+      try {
+        const services = await getServices();
+        
+        // Calculate statistics based on filters
+        const filteredServices = services.filter(service => {
+          // Apply period filter (simplified)
+          const serviceDate = new Date(service.creationDate || service.date || '');
+          const now = new Date();
+          const periodDays = parseInt(period);
+          const cutoffDate = new Date(now.getTime() - (periodDays * 24 * 60 * 60 * 1000));
+          
+          const withinPeriod = serviceDate >= cutoffDate;
+          const matchesTechnician = technician === 'all' || service.technician?.name === technician;
+          const matchesServiceType = serviceType === 'all' || service.serviceType === serviceType;
+          
+          return withinPeriod && matchesTechnician && matchesServiceType;
+        });
 
-      Object.keys(dbData).forEach(key => (dbData[key] === undefined || dbData[key] === null) && delete dbData[key]);
+        const stats = {
+          totalServices: filteredServices.length,
+          completedServices: filteredServices.filter(s => s.status === 'concluido').length,
+          pendingServices: filteredServices.filter(s => s.status === 'pendente').length,
+          cancelledServices: filteredServices.filter(s => s.status === 'cancelado').length
+        };
 
-      if (Object.keys(dbData).length > 0) {
-        const { error } = await supabase
-          .from('report_data')
-          .update(dbData)
-          .eq('id', id);
-
-        if (error) {
-          const { error: insertError } = await supabase
-            .from('report_data')
-            .insert({ id, ...dbData });
-
-          if (insertError) {
-            console.error('Erro ao inserir dados do relatório:', insertError);
-            throw insertError;
-          }
-        }
+        setReportData(stats);
+      } catch (error) {
+        console.error('Error loading report data:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // Atualiza o estado local via callback prop vinda de ServiceDetail
-      const mergedReportData = { ...service.reportData, ...data };
-      onUpdateLocalService(mergedReportData);
-      toast.success('Dados do relatório salvos com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar relatório:', error);
-      toast.error('Erro ao salvar dados do relatório. Verifique os dados e a conexão.');
-    } finally {
-      setSaving(false);
-    }
-  };
+    loadReportData();
+  }, [period, technician, serviceType]);
 
-  return { saving, handleSaveReportData };
+  return { reportData, loading };
 }

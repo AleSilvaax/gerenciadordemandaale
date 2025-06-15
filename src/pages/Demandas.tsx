@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search, Filter, Plus, SortDesc, Calendar, MapPin, User, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -51,9 +50,9 @@ const Demandas: React.FC = () => {
         case "status":
           return a.status.localeCompare(b.status);
         case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return new Date(a.creationDate || a.date || '').getTime() - new Date(b.creationDate || b.date || '').getTime();
         default: // "recent"
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.creationDate || b.date || '').getTime() - new Date(a.creationDate || a.date || '').getTime();
       }
     });
 

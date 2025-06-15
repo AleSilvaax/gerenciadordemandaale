@@ -11,14 +11,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStatsCards } from "@/components/dashboard/DashboardStatsCards";
 import { AnimatedBarChart } from "@/components/dashboard/AnimatedBarChart";
 import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
-import { useReportData } from "@/hooks/useReportData";
 
 const Estatisticas: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("30");
   const [selectedTechnician, setSelectedTechnician] = useState("all");
   const [selectedServiceType, setSelectedServiceType] = useState("all");
-  
-  const { reportData, loading } = useReportData(selectedPeriod, selectedTechnician, selectedServiceType);
+  const [loading, setLoading] = useState(false);
+
+  // Mock data for charts
+  const pieChartData = [
+    { name: "Concluídas", value: 1, color: "#10b981" },
+    { name: "Pendentes", value: 14, color: "#f59e0b" },
+    { name: "Canceladas", value: 0, color: "#ef4444" }
+  ];
+
+  const barChartData = [
+    { name: "Baixa", value: 3, color: "#6b7280" },
+    { name: "Média", value: 8, color: "#3b82f6" },
+    { name: "Alta", value: 3, color: "#f59e0b" },
+    { name: "Urgente", value: 1, color: "#ef4444" }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -157,7 +169,7 @@ const Estatisticas: React.FC = () => {
                     <CardDescription className="text-left-force">Distribuição por status atual</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AnimatedPieChart />
+                    <AnimatedPieChart data={pieChartData} />
                   </CardContent>
                 </Card>
 
@@ -170,7 +182,7 @@ const Estatisticas: React.FC = () => {
                     <CardDescription className="text-left-force">Demandas por nível de prioridade</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AnimatedBarChart />
+                    <AnimatedBarChart data={barChartData} />
                   </CardContent>
                 </Card>
               </div>
