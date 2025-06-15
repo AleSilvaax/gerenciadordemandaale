@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Button } from "@/components/ui/button";
@@ -33,9 +34,12 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       const signatureData = initialSignature || initialValue;
       if (signatureData) {
         try {
+          // Limpar primeiro
+          sigCanvas.current.clear();
+          // Carregar a assinatura
           sigCanvas.current.fromDataURL(signatureData);
           setIsEmpty(false);
-          console.log("Assinatura carregada:", signatureData.substring(0, 50) + "...");
+          console.log("Assinatura carregada no SignatureCapture:", signatureData.substring(0, 50) + "...");
         } catch (error) {
           console.error("Erro ao carregar assinatura inicial:", error);
         }
@@ -51,6 +55,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       if (onChange) {
         onChange('');
       }
+      console.log("Assinatura limpa");
     }
   };
   
@@ -68,10 +73,11 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
           if (newIsEmpty) {
             onChange('');
           } else {
-            const dataURL = sigCanvas.current.toDataURL('image/png');
+            const dataURL = sigCanvas.current.toDataURL('image/png', 1.0);
             onChange(dataURL);
           }
         }
+        console.log("Assinatura desfeita");
       }
     }
   };
@@ -79,7 +85,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   const save = () => {
     if (sigCanvas.current && !isEmpty) {
       const dataURL = sigCanvas.current.toDataURL('image/png', 1.0); // Qualidade máxima
-      console.log("Salvando assinatura - tamanho:", dataURL.length);
+      console.log("Salvando assinatura manualmente - tamanho:", dataURL.length);
       if (onSave) {
         onSave(dataURL);
       }
@@ -97,7 +103,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       // Salvar automaticamente quando há mudança na assinatura
       if (onChange && !currentIsEmpty) {
         const dataURL = sigCanvas.current.toDataURL('image/png', 1.0); // Qualidade máxima
-        console.log("Assinatura capturada - tamanho:", dataURL.length);
+        console.log("Assinatura capturada automaticamente - tamanho:", dataURL.length);
         onChange(dataURL);
       } else if (onChange && currentIsEmpty) {
         onChange('');

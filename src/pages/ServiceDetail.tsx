@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, Trash2, Clock, CheckCircle, XCircle, Camera } from "lucide-react";
+import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, CheckCircle, XCircle, Clock, Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui-custom/Rating";
 import { Separator } from "@/components/ui/separator";
@@ -59,9 +59,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const fetchService = async (serviceId: string) => {
     setIsLoading(true);
     try {
+      console.log("Buscando serviço:", serviceId);
       const allServices = await getServices();
       const found = allServices.find(s => s.id === serviceId);
-      setService(found || null);
+      if (found) {
+        console.log("Serviço encontrado:", found);
+        setService(found);
+        // Carregar feedback existente se houver
+        if (found.feedback) {
+          setFeedback(found.feedback);
+        }
+      } else {
+        console.log("Serviço não encontrado");
+        setService(null);
+      }
     } catch (error) {
       console.error("Erro ao carregar serviço:", error);
       toast.error("Erro ao carregar detalhes do serviço");
@@ -74,6 +85,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service) return;
 
     try {
+      console.log("Atualizando status para:", newStatus);
       await updateService({ id: service.id, status: newStatus });
       toast.success("Status do serviço atualizado!");
       fetchService(id!);
@@ -87,13 +99,24 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service || !newMessage.trim() || !user) return;
 
     try {
+      console.log("Enviando mensagem:", newMessage);
       const messageData: ServiceMessage = {
         senderId: user.id,
         senderName: user.name || "Usuário",
         senderRole: user.role || "tecnico",
         message: newMessage,
+        timestamp: new Date().toISOString(),
       };
+      
       await addServiceMessage(service.id, messageData);
+      
+      // Atualizar o serviço localmente
+      const updatedMessages = [...(service.messages || []), messageData];
+      await updateService({ 
+        id: service.id, 
+        messages: updatedMessages 
+      });
+      
       setNewMessage("");
       toast.success("Mensagem enviada!");
       fetchService(id!);
@@ -107,12 +130,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service) return;
 
     try {
+      console.log("Salvando feedback:", feedback);
+      
+      // Salvar o feedback no serviço
+      await updateService({ 
+        id: service.id, 
+        feedback: feedback 
+      });
+      
       await addServiceFeedback(service.id, feedback);
-      toast.success("Feedback enviado!");
+      toast.success("Feedback salvo com sucesso!");
       fetchService(id!);
     } catch (error) {
-      console.error("Erro ao enviar feedback:", error);
-      toast.error("Erro ao enviar feedback");
+      console.error("Erro ao salvar feedback:", error);
+      toast.error("Erro ao salvar feedback");
     }
   };
 
@@ -120,13 +151,17 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service) return;
 
     try {
+      console.log("Salvando assinaturas:", signatures);
+      const updatedSignatures = {
+        ...service.signatures,
+        ...signatures
+      };
+      
       await updateService({ 
         id: service.id, 
-        signatures: {
-          ...service.signatures,
-          ...signatures
-        }
+        signatures: updatedSignatures
       });
+      
       toast.success("Assinaturas salvas com sucesso!");
       fetchService(id!);
     } catch (error) {
@@ -139,7 +174,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service) return;
     
     try {
+      console.log("Gerando relatório PDF para serviço:", service.id);
       await generateDetailedServiceReport(service);
+      toast.success("Relatório PDF gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
       toast.error("Erro ao gerar relatório PDF");
@@ -150,19 +187,25 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     if (!service) throw new Error("Service not found");
     
     try {
-      console.log("Adicionando foto:", { fileName: file.name, title });
+      console.log("Adicionando foto:", { fileName: file.name, title, size: file.size });
       
-      // Criar URL da imagem
-      const photoUrl = URL.createObjectURL(file);
+      // Converter arquivo para base64 para salvar
+      const reader = new FileReader();
+      const photoUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          console.log("Foto convertida para base64, tamanho:", result.length);
+          resolve(result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       // Atualizar arrays de fotos e títulos
       const updatedPhotos = [...(service.photos || []), photoUrl];
       const updatedTitles = [...(service.photoTitles || []), title];
       
-      console.log("Atualizando serviço com fotos:", { 
-        photosCount: updatedPhotos.length, 
-        titlesCount: updatedTitles.length 
-      });
+      console.log("Salvando foto no serviço - total de fotos:", updatedPhotos.length);
       
       // Salvar no serviço
       await updateService({ 
@@ -171,13 +214,15 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         photoTitles: updatedTitles
       });
       
+      toast.success("Foto adicionada com sucesso!");
+      
       // Recarregar dados do serviço
       await fetchService(service.id);
       
-      console.log("Foto adicionada com sucesso!");
       return photoUrl;
     } catch (error) {
       console.error("Erro ao adicionar foto:", error);
+      toast.error("Erro ao adicionar foto");
       throw error;
     }
   };
@@ -197,10 +242,11 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         photoTitles: updatedTitles
       });
       
+      toast.success("Foto removida com sucesso!");
       await fetchService(service.id);
-      console.log("Foto removida com sucesso!");
     } catch (error) {
       console.error("Erro ao remover foto:", error);
+      toast.error("Erro ao remover foto");
     }
   };
 
@@ -218,10 +264,11 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         photoTitles: updatedTitles
       });
       
+      toast.success("Título da foto atualizado!");
       await fetchService(service.id);
-      console.log("Título da foto atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar título da foto:", error);
+      toast.error("Erro ao atualizar título da foto");
     }
   };
 
@@ -536,7 +583,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium">{msg.senderName}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {format(new Date(msg.timestamp!), "dd/MM HH:mm", { locale: ptBR })}
+                                  {msg.timestamp ? format(new Date(msg.timestamp), "dd/MM HH:mm", { locale: ptBR }) : ""}
                                 </span>
                               </div>
                               <p className="text-sm text-muted-foreground">{msg.message}</p>
@@ -616,7 +663,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                     )}
                     
                     <Button onClick={handleSubmitFeedback} className="w-full">
-                      Enviar Feedback
+                      Salvar Feedback
                     </Button>
                   </div>
                 </CardContent>
