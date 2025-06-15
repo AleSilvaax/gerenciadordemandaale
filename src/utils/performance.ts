@@ -1,5 +1,5 @@
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { Service } from '@/types/serviceTypes';
 
 export interface ServiceFilters {
@@ -8,6 +8,31 @@ export interface ServiceFilters {
   serviceType: string;
   searchTerm: string;
 }
+
+// Hook para observar intersecção (usado no LazyImage)
+export const useIntersectionObserver = (
+  ref: React.RefObject<Element>,
+  options: IntersectionObserverInit = {}
+): boolean => {
+  const [isIntersecting, setIsIntersecting] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsIntersecting(entry.isIntersecting);
+    }, options);
+
+    observer.observe(element);
+
+    return () => {
+      observer.unobserve(element);
+    };
+  }, [ref, options]);
+
+  return isIntersecting;
+};
 
 // Hook para filtrar serviços de forma otimizada
 export const useFilteredServices = (
@@ -32,13 +57,13 @@ export const useFilteredServices = (
         return false;
       }
 
-      // Filtro de busca textual
+      // Filtro de busca textual - usando propriedades corretas do tipo Service
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch = 
           service.title.toLowerCase().includes(searchLower) ||
           service.description?.toLowerCase().includes(searchLower) ||
-          service.clientName?.toLowerCase().includes(searchLower) ||
+          service.client?.toLowerCase().includes(searchLower) || // Usando 'client' ao invés de 'clientName'
           service.location.toLowerCase().includes(searchLower);
         
         if (!matchesSearch) return false;

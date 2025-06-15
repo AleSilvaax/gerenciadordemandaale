@@ -1,6 +1,6 @@
 
 import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import { render, RenderOptions, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
@@ -31,9 +31,9 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>,
 ) => render(ui, { wrapper: AllTheProviders, ...options });
 
-// Re-export everything from @testing-library/react
+// Re-export everything from @testing-library/react including screen and fireEvent
 export * from '@testing-library/react';
-export { customRender as render };
+export { customRender as render, screen, fireEvent };
 
 // Mock data generators
 export const mockService = {
@@ -43,8 +43,7 @@ export const mockService = {
   status: 'pendente' as const,
   priority: 'media' as const,
   serviceType: 'Vistoria' as const,
-  clientName: 'Test Client',
-  clientContact: '(11) 99999-9999',
+  client: 'Test Client', // Usando 'client' ao invés de 'clientName'
   address: 'Test Address, 123',
   location: 'Test Location, 123',
   scheduledDate: new Date().toISOString(),
