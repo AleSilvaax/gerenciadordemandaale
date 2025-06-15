@@ -17,67 +17,67 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
     console.log('Fetching services from database');
     
-    // Get all services with all relevant fields
+    // Primeiro vamos testar se conseguimos buscar os serviços básicos
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
-      .select(`
-        *,
-        service_type,
-        service_type_id,
-        priority,
-        status,
-        due_date,
-        number,
-        description,
-        client,
-        address,
-        city,
-        notes,
-        estimated_hours,
-        photo_titles,
-        photos,
-        created_by
-      `);
+      .select('*');
 
     if (servicesError) {
       console.error('Error fetching services from Supabase:', servicesError);
       throw servicesError;
     }
 
-    // Get all service_technicians relationships
+    console.log('Raw services data from Supabase:', servicesData);
+
+    if (!servicesData || servicesData.length === 0) {
+      console.log('No services found in database');
+      return [];
+    }
+
+    // Buscar todos os técnicos atribuídos
     const { data: technicianData, error: technicianError } = await supabase
       .from('service_technicians')
-      .select('*, profiles:technician_id(*)');
+      .select(`
+        service_id,
+        technician_id,
+        profiles!service_technicians_technician_id_fkey (
+          id,
+          name,
+          avatar
+        )
+      `);
 
     if (technicianError) {
-      console.error('Error fetching service technicians from Supabase:', technicianError);
-      throw technicianError;
+      console.error('Error fetching service technicians:', technicianError);
+      // Continuar sem técnicos se houver erro
     }
 
-    // Get all service messages - Using a raw query approach to work around TypeScript limitations
-    const { data: messagesData, error: messagesError } = await supabase
-      .rpc('get_service_messages') as unknown as { 
-        data: ServiceMessageRow[] | null, 
-        error: any 
-      };
+    console.log('Technician assignments data:', technicianData);
 
-    if (messagesError) {
-      console.error('Error fetching service messages from Supabase:', messagesError);
-      // Continue without messages if there's an error
-      console.log('Continuing without messages due to error');
+    // Buscar mensagens de serviço (opcional)
+    let messagesData: ServiceMessageRow[] = [];
+    try {
+      const { data: msgs, error: messagesError } = await supabase
+        .from('service_messages')
+        .select('*');
+      
+      if (!messagesError && msgs) {
+        messagesData = msgs;
+      }
+    } catch (error) {
+      console.log('Could not fetch messages, continuing without them:', error);
     }
 
-    // Transform the data to match our Service type
+    // Transformar os dados para o formato esperado
     const services: Service[] = servicesData.map(service => {
-      // Find technician for this service
-      const techRelation = technicianData?.find(t => t.service_id === service.id);
-
-      // Get technician details or use a default
-      const technician: TeamMember = techRelation?.profiles ? {
-        id: techRelation.profiles.id,
-        name: techRelation.profiles.name || 'Desconhecido',
-        avatar: techRelation.profiles.avatar || '',
-        role: 'tecnico', // Default role
+      // Encontrar técnico atribuído
+      const techAssignment = technicianData?.find(t => t.service_id === service.id);
+      
+      const technician: TeamMember = techAssignment?.profiles ? {
+        id: techAssignment.profiles.id,
+        name: techAssignment.profiles.name || 'Técnico',
+        avatar: techAssignment.profiles.avatar || '',
+        role: 'tecnico',
       } : {
         id: '0',
         name: 'Não atribuído',
@@ -85,87 +85,93 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         role: 'tecnico',
       };
 
-      // Get messages for this service from our function result
-      const serviceMessages = Array.isArray(messagesData)
-        ? messagesData
-            .filter(m => m.service_id === service.id)
-            .map(m => ({
-              senderId: m.sender_id,
-              senderName: m.sender_name,
-              senderRole: m.sender_role,
-              message: m.message,
-              timestamp: m.timestamp
-            }))
-        : [];
-        
-      // Parse possible JSON fields
+      // Buscar mensagens para este serviço
+      const serviceMessages = messagesData
+        .filter(m => m.service_id === service.id)
+        .map(m => ({
+          senderId: m.sender_id,
+          senderName: m.sender_name,
+          senderRole: m.sender_role,
+          message: m.message,
+          timestamp: m.timestamp
+        }));
+
+      // Parse campos JSON seguros
       let customFieldsParsed: any = undefined;
       if (service.custom_fields) {
         try {
-          const parsed = typeof service.custom_fields === "string" ? JSON.parse(service.custom_fields) : service.custom_fields;
-          customFieldsParsed = Array.isArray(parsed) ? parsed : undefined;
-        } catch { customFieldsParsed = undefined; }
+          customFieldsParsed = typeof service.custom_fields === "string" 
+            ? JSON.parse(service.custom_fields) 
+            : service.custom_fields;
+        } catch { 
+          customFieldsParsed = undefined; 
+        }
       }
+
       let signaturesParsed: any = undefined;
       if (service.signatures) {
         try {
-          signaturesParsed = typeof service.signatures === "string" ? JSON.parse(service.signatures) : service.signatures;
-        } catch { signaturesParsed = undefined; }
+          signaturesParsed = typeof service.signatures === "string" 
+            ? JSON.parse(service.signatures) 
+            : service.signatures;
+        } catch { 
+          signaturesParsed = undefined; 
+        }
       }
 
       // Arrays seguros
-      const safePhotoTitles =
-        Array.isArray(service.photo_titles)
-          ? service.photo_titles.filter((x: any) => typeof x === 'string')
-          : undefined;
+      const safePhotoTitles = Array.isArray(service.photo_titles) 
+        ? service.photo_titles.filter((x: any) => typeof x === 'string')
+        : undefined;
 
-      const safePhotos =
-        Array.isArray(service.photos)
-          ? service.photos.filter((x: any) => typeof x === 'string')
-          : undefined;
+      const safePhotos = Array.isArray(service.photos) 
+        ? service.photos.filter((x: any) => typeof x === 'string')
+        : undefined;
 
-      // Helpers - type correction for priority and serviceType
+      // Validar priority
       const safePriority = typeof service.priority === 'string' &&
         ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
         ? service.priority as ServicePriority
-        : undefined;
+        : 'media' as ServicePriority;
 
-      const safeServiceType = typeof service.service_type === 'string'
-        ? service.service_type
-        : undefined;
+      // Validar status
+      const safeStatus = typeof service.status === 'string' &&
+        ['pendente', 'concluido', 'cancelado'].includes(service.status)
+        ? service.status as ServiceStatus
+        : 'pendente' as ServiceStatus;
 
-      // Return all relevant fields
       return {
         id: service.id,
-        title: service.title,
-        location: service.location,
-        status: service.status as ServiceStatus,
+        title: service.title || 'Sem título',
+        location: service.location || 'Local não informado',
+        status: safeStatus,
         technician: technician,
         creationDate: service.created_at,
-        dueDate: service.due_date ?? undefined,
+        dueDate: service.due_date,
         priority: safePriority,
-        serviceType: safeServiceType,
-        number: service.number ?? undefined,
-        description: service.description ?? undefined,
-        createdBy: service.created_by ?? undefined,
-        client: service.client ?? undefined,
-        address: service.address ?? undefined,
-        city: service.city ?? undefined,
-        notes: service.notes ?? undefined,
-        estimatedHours: service.estimated_hours ?? undefined,
+        serviceType: service.service_type || 'Vistoria',
+        number: service.number,
+        description: service.description,
+        createdBy: service.created_by,
+        client: service.client,
+        address: service.address,
+        city: service.city,
+        notes: service.notes,
+        estimatedHours: service.estimated_hours,
         customFields: customFieldsParsed,
         signatures: signaturesParsed,
         messages: serviceMessages,
         photos: safePhotos,
         photoTitles: safePhotoTitles,
-        date: service.date ?? undefined,
+        date: service.date,
       };
     });
 
-    console.log('Services fetched successfully:', services);
+    console.log('Processed services:', services);
     return services;
   } catch (error) {
     console.error('Error in getServicesFromDatabase:', error);
+    toast.error(`Erro ao buscar demandas: ${error.message || 'Erro desconhecido'}`);
     return [];
   }
 };

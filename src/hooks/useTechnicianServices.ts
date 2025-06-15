@@ -5,8 +5,7 @@ import { Service } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 
 /**
- * Busca todos os serviços VINCULADOS AO técnico logado,
- * sempre garantindo a presença do campo .technician.
+ * Busca todos os serviços VINCULADOS AO técnico logado
  */
 export function useTechnicianServices() {
   const { user } = useAuth();
@@ -19,46 +18,53 @@ export function useTechnicianServices() {
         return [];
       }
       
-      // Buscar todos os service_ids vinculados a este técnico
-      const { data: stData, error: stError } = await supabase
+      console.log("[useTechnicianServices] Buscando serviços para técnico:", user.id);
+      
+      // Buscar IDs dos serviços vinculados ao técnico
+      const { data: assignments, error: assignmentsError } = await supabase
         .from('service_technicians')
         .select('service_id')
         .eq('technician_id', user.id);
 
-      if (stError) {
-        console.error("[useTechnicianServices] Erro ao buscar vinculações de serviços do técnico:", stError);
-        throw new Error(stError.message);
+      if (assignmentsError) {
+        console.error("[useTechnicianServices] Erro ao buscar atribuições:", assignmentsError);
+        throw new Error(assignmentsError.message);
       }
 
-      const serviceIds = stData?.map((row: any) => row.service_id) ?? [];
-      console.log("[useTechnicianServices] service_technicians encontrados para técnico:", user.id, serviceIds);
+      const serviceIds = assignments?.map(a => a.service_id) || [];
+      console.log("[useTechnicianServices] Service IDs encontrados:", serviceIds);
 
       if (serviceIds.length === 0) {
-        console.warn("[useTechnicianServices] Nenhuma demanda vinculada ao técnico.");
+        console.log("[useTechnicianServices] Nenhuma demanda atribuída ao técnico.");
         return [];
       }
 
-      const { data: servicesData, error: servicesError } = await supabase
+      // Buscar os serviços completos
+      const { data: services, error: servicesError } = await supabase
         .from('services')
         .select('*')
         .in('id', serviceIds);
 
       if (servicesError) {
-        console.error("[useTechnicianServices] Erro ao buscar serviços vinculados ao técnico:", servicesError);
+        console.error("[useTechnicianServices] Erro ao buscar serviços:", servicesError);
         throw new Error(servicesError.message);
       }
 
-      console.log("[useTechnicianServices] Serviços retornados:", servicesData);
+      console.log("[useTechnicianServices] Serviços encontrados:", services);
 
-      // Adiciona manualmente os dados do técnico (que está logado)
-      return (servicesData ?? []).map((service: any) => ({
+      // Transformar para o formato esperado
+      return (services || []).map((service: any) => ({
         ...service,
         technician: {
           id: user.id,
           name: user.name,
           avatar: user.avatar || '',
           role: 'tecnico',
-        }
+        },
+        status: service.status || 'pendente',
+        priority: service.priority || 'media',
+        serviceType: service.service_type || 'Vistoria',
+        messages: [],
       })) as Service[];
     },
     enabled: !!user,
