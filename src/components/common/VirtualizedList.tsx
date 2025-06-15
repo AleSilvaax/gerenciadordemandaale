@@ -32,13 +32,18 @@ export function VirtualizedList<T>({
     );
   }, [items, renderItem, isScrolling]);
 
-  const handleScrollStart = useCallback(() => {
-    setIsScrolling(true);
-  }, []);
+  const handleScroll = useCallback(() => {
+    if (!isScrolling) {
+      setIsScrolling(true);
+    }
+    
+    // Use a timeout to detect when scrolling stops
+    const timeoutId = setTimeout(() => {
+      setIsScrolling(false);
+    }, 150);
 
-  const handleScrollStop = useCallback(() => {
-    setIsScrolling(false);
-  }, []);
+    return () => clearTimeout(timeoutId);
+  }, [isScrolling]);
 
   const memoizedList = useMemo(() => (
     <List
@@ -46,14 +51,12 @@ export function VirtualizedList<T>({
       itemCount={items.length}
       itemSize={itemHeight}
       overscanCount={overscan}
-      onItemsRendered={undefined}
-      onScroll={handleScrollStart}
-      onScrollStop={handleScrollStop}
+      onScroll={handleScroll}
       className={className}
     >
       {Row}
     </List>
-  ), [items.length, height, itemHeight, overscan, Row, className, handleScrollStart, handleScrollStop]);
+  ), [items.length, height, itemHeight, overscan, Row, className, handleScroll]);
 
   if (items.length === 0) {
     return (
