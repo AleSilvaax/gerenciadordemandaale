@@ -6,6 +6,22 @@ import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Limpar todos os estados de autenticação da Supabase (fix para limbo de sessão)
+export const cleanupAuthState = () => {
+  // Remove supabase padrões
+  localStorage.removeItem('supabase.auth.token');
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      localStorage.removeItem(key);
+    }
+  });
+  Object.keys(sessionStorage || {}).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,16 +102,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadUserProfile]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    cleanupAuthState();
+    try {
+      // Tenta fazer sign out global ANTES de sign in (ignora erro)
+      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
+    } catch {}
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Erro no login", { description: "Email ou senha inválidos." });
       return false;
     }
-    // onAuthStateChange will handle the rest
     return true;
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
+    cleanupAuthState();
+    try {
+      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
+    } catch {}
     const { error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -117,11 +141,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        toast.error("Erro ao sair", { description: error.message });
-    }
-    // onAuthStateChange will set user to null
+    cleanupAuthState();
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch {}
+    // Força um refresh de página para garantir "logout total"
+    window.location.href = "/login";
   };
   
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
