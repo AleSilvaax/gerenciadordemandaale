@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search, Filter, Plus, SortDesc, Calendar, MapPin, User, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -40,9 +39,12 @@ const Demandas: React.FC = () => {
     loadServices();
   }, []);
 
-  const handleDeleteService = (service: Service) => {
-    setServiceToDelete(service);
-    setDeleteDialogOpen(true);
+  const handleDeleteService = async (serviceId: string): Promise<void> => {
+    const service = services.find(s => s.id === serviceId);
+    if (service) {
+      setServiceToDelete(service);
+      setDeleteDialogOpen(true);
+    }
   };
 
   const confirmDelete = async () => {
