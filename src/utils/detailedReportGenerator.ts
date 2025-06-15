@@ -15,16 +15,15 @@ export const generateDetailedServiceReport = (service: Service): void => {
   const lightGray = [243, 244, 246]; // #F3F4F6
   const darkGray = [107, 114, 128]; // #6B7280
 
-  // Função para adicionar header gradiente
-  const addGradientHeader = (title: string, y: number, height: number = 15) => {
-    // Simulação de gradiente com retângulos
-    for (let i = 0; i < height; i++) {
-      const alpha = 1 - (i / height) * 0.3;
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setGlobalAlpha(alpha);
-      doc.rect(0, y + i, 210, 1, 'F');
-    }
-    doc.setGlobalAlpha(1);
+  // Função para adicionar header moderno
+  const addModernHeader = (title: string, y: number, height: number = 15) => {
+    // Header principal com cor sólida
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, y, 210, height, 'F');
+    
+    // Adicionar uma faixa decorativa
+    doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.rect(0, y + height - 2, 210, 2, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
@@ -47,7 +46,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
     return content();
   };
 
-  // Função para placeholder de foto (movida para antes do uso)
+  // Função para placeholder de foto
   const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, url: string) => {
     doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setLineWidth(1);
@@ -61,8 +60,8 @@ export const generateDetailedServiceReport = (service: Service): void => {
   };
 
   // CAPA MODERNA
-  // Cabeçalho com gradiente
-  addGradientHeader("RELATÓRIO DE DEMANDA", 30, 20);
+  // Cabeçalho moderno
+  addModernHeader("RELATÓRIO DE DEMANDA", 30, 20);
   
   // Card principal da capa
   doc.setFillColor(255, 255, 255);
@@ -109,7 +108,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
   doc.addPage();
   yPosition = 20;
 
-  addGradientHeader("INFORMAÇÕES DETALHADAS", yPosition, 12);
+  addModernHeader("INFORMAÇÕES DETALHADAS", yPosition, 12);
   yPosition += 25;
 
   // Seção de informações básicas
@@ -158,7 +157,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
     if (yPosition > 220) {
       doc.addPage();
       yPosition = 20;
-      addGradientHeader("CAMPOS PERSONALIZADOS", yPosition, 12);
+      addModernHeader("CAMPOS PERSONALIZADOS", yPosition, 12);
       yPosition += 25;
     }
 
@@ -204,7 +203,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
     doc.addPage();
     yPosition = 20;
 
-    addGradientHeader("ANEXOS FOTOGRÁFICOS", yPosition, 12);
+    addModernHeader("ANEXOS FOTOGRÁFICOS", yPosition, 12);
     yPosition += 25;
 
     let photoIndex = 0;
@@ -270,7 +269,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
   doc.addPage();
   yPosition = 20;
 
-  addGradientHeader("ASSINATURAS E APROVAÇÕES", yPosition, 12);
+  addModernHeader("ASSINATURAS E APROVAÇÕES", yPosition, 12);
   yPosition += 25;
 
   if (service.signatures?.client || service.signatures?.technician) {
