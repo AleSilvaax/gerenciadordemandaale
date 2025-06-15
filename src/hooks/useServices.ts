@@ -2,63 +2,56 @@
 import { useEffect } from 'react';
 import { useServiceStore } from '@/store/serviceStore';
 import { useUIStore } from '@/store/uiStore';
+import { useCachedData } from './useCachedData';
+import { getServices } from '@/services/servicesDataService';
+import { useOptimizedServices } from './useOptimizedServices';
 
 export const useServices = () => {
+  const { addNotification } = useUIStore();
+  const { services, setServices, setError, setLoading } = useServiceStore();
+
+  // Use cached data with automatic background revalidation
   const {
-    services,
+    data: cachedServices,
     isLoading,
     error,
-    filters,
-    loadServices,
-    setFilters,
-    clearError
-  } = useServiceStore();
+    mutate
+  } = useCachedData(
+    'services-list',
+    getServices,
+    {
+      ttl: 2 * 60 * 1000, // 2 minutes cache
+      staleWhileRevalidate: true
+    }
+  );
 
-  const { addNotification } = useUIStore();
-
+  // Update store when cached data changes
   useEffect(() => {
-    loadServices();
-  }, [loadServices]);
+    if (cachedServices) {
+      setServices(cachedServices);
+    }
+    setLoading(isLoading);
+    if (error) {
+      setError(error.message);
+    }
+  }, [cachedServices, isLoading, error, setServices, setLoading, setError]);
 
   useEffect(() => {
     if (error) {
       addNotification({
         title: 'Erro ao carregar dados',
-        message: error,
+        message: error.message,
         type: 'error'
       });
     }
   }, [error, addNotification]);
 
-  const filteredServices = services.filter(service => {
-    if (filters.status !== 'all' && service.status !== filters.status) {
-      return false;
-    }
-    if (filters.priority !== 'all' && service.priority !== filters.priority) {
-      return false;
-    }
-    if (filters.serviceType !== 'all' && service.serviceType !== filters.serviceType) {
-      return false;
-    }
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
-      return (
-        service.title.toLowerCase().includes(searchLower) ||
-        service.client?.toLowerCase().includes(searchLower) ||
-        service.location.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
+  // Use optimized services hook for filtering and performance
+  const optimizedServices = useOptimizedServices();
 
   return {
-    services: filteredServices,
-    allServices: services,
-    isLoading,
-    error,
-    filters,
-    setFilters,
-    clearError,
-    refreshServices: loadServices
+    ...optimizedServices,
+    refreshServices: () => mutate(), // Use mutate to refresh cache
+    isLoading
   };
 };

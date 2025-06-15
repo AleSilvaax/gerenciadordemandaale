@@ -7,31 +7,38 @@ import { Toaster } from "./components/ui/toaster";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import React from "react";
 
-// Pages
-import Index from "./pages/Index";
-import Demandas from "./pages/Demandas";
-import ServiceDetail from "./pages/ServiceDetail";
-import NewService from "./pages/NewService";
-import Estatisticas from "./pages/Estatisticas";
-import Equipe from "./pages/Equipe";
-import Search from "./pages/Search";
-import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+// Lazy loaded pages
+import {
+  LazyIndex,
+  LazyDemandas,
+  LazyServiceDetail,
+  LazyNewService,
+  LazyEstatisticas,
+  LazyEquipe,
+  LazySearch,
+  LazySettings,
+  LazyLogin,
+  LazyRegister,
+  LazyNotFound
+} from "./components/lazy/LazyRoutes";
 
 // Providers
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
 
-// Create a client with better defaults
+// Create a client with better defaults for performance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false, // Prevent unnecessary refetches
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 1,
     },
   },
 });
@@ -44,25 +51,25 @@ function App() {
           <AuthProvider>
             <Routes>
               {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<LazyLogin />} />
+              <Route path="/register" element={<LazyRegister />} />
               
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<AppLayout />}>
-                  <Route index element={<Index />} />
-                  <Route path="demandas" element={<Demandas />} />
-                  <Route path="demandas/:id" element={<ServiceDetail />} />
-                  <Route path="demandas/:id/edit" element={<ServiceDetail editMode={true} />} />
-                  <Route path="buscar" element={<Search />} />
-                  <Route path="settings" element={<Settings />} />
+                  <Route index element={<LazyIndex />} />
+                  <Route path="demandas" element={<LazyDemandas />} />
+                  <Route path="demandas/:id" element={<LazyServiceDetail />} />
+                  <Route path="demandas/:id/edit" element={<LazyServiceDetail editMode={true} />} />
+                  <Route path="buscar" element={<LazySearch />} />
+                  <Route path="settings" element={<LazySettings />} />
                   
                   {/* Routes with role-based access */}
-                  <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><NewService /></ProtectedRoute>} />
-                  <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><Estatisticas /></ProtectedRoute>} />
-                  <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><Equipe /></ProtectedRoute>} />
+                  <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><LazyNewService /></ProtectedRoute>} />
+                  <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><LazyEstatisticas /></ProtectedRoute>} />
+                  <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><LazyEquipe /></ProtectedRoute>} />
                   
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="*" element={<LazyNotFound />} />
                 </Route>
               </Route>
             </Routes>
