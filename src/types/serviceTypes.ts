@@ -46,9 +46,10 @@ export interface Service {
   creationDate?: string;
   createdBy?: string;
   serviceType?: ServiceType;
-  number?: string; // <-- Adicionado para corrigir erro!
+  number?: string;
   reportData?: ReportData;
   photos?: string[];
+  photoTitles?: string[];
   signatures?: {
     client?: string;
     technician?: string;
@@ -61,7 +62,6 @@ export interface Service {
   city?: string;
   notes?: string;
   estimatedHours?: number;
-  photoTitles?: string[];
   messages?: ServiceMessage[];
   feedback?: ServiceFeedback;
   customFields?: CustomField[];

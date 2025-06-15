@@ -10,10 +10,43 @@ export const generateDetailedServiceReport = (service: Service): void => {
   // Configurar fonte
   doc.setFontSize(12);
 
+  // CAPA DO RELATÓRIO
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text("RELATÓRIO DE SERVIÇO", 105, 60, { align: "center" });
+  
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Demanda #${service.number || service.id}`, 105, 80, { align: "center" });
+  
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text(service.title, 105, 100, { align: "center" });
+
+  // Logo/Header da empresa (placeholder)
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "normal");
+  doc.text("SISTEMA DE GESTÃO DE DEMANDAS", 105, 140, { align: "center" });
+  
+  // Informações da capa
+  doc.setFontSize(12);
+  doc.text(`Data de Geração: ${formatDate(new Date().toISOString())}`, 105, 200, { align: "center" });
+  doc.text(`Cliente: ${service.client || "N/A"}`, 105, 215, { align: "center" });
+  doc.text(`Técnico: ${service.technician?.name || "Não atribuído"}`, 105, 230, { align: "center" });
+  doc.text(`Status: ${getStatusText(service.status)}`, 105, 245, { align: "center" });
+
+  // Rodapé da capa
+  doc.setFontSize(10);
+  doc.text("Documento gerado automaticamente pelo sistema", 105, 270, { align: "center" });
+
+  // NOVA PÁGINA - DETALHES DO SERVIÇO
+  doc.addPage();
+  yPosition = 20;
+
   // Título principal
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("RELATÓRIO DETALHADO DE SERVIÇO", 105, yPosition, { align: "center" });
+  doc.text("DETALHES DA DEMANDA", 105, yPosition, { align: "center" });
   yPosition += 15;
 
   // Linha separadora
@@ -108,6 +141,44 @@ export const generateDetailedServiceReport = (service: Service): void => {
     });
   }
 
+  // Seção de Fotos
+  if (service.photos && service.photos.length > 0) {
+    doc.addPage();
+    yPosition = 20;
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ANEXOS FOTOGRÁFICOS", 105, yPosition, { align: "center" });
+    yPosition += 15;
+
+    doc.setLineWidth(0.5);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 15;
+
+    service.photos.forEach((photoUrl, index) => {
+      if (yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Título da foto
+      const photoTitle = service.photoTitles?.[index] || `Foto ${index + 1}`;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(photoTitle, 20, yPosition);
+      yPosition += 10;
+
+      // Placeholder para a imagem (em uma implementação real, você carregaria a imagem)
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.rect(20, yPosition, 170, 80);
+      doc.text("Imagem anexada ao relatório", 105, yPosition + 40, { align: "center" });
+      doc.text(`URL: ${photoUrl}`, 25, yPosition + 50);
+      
+      yPosition += 90;
+    });
+  }
+
   // Notas adicionais
   if (service.notes) {
     // Verificar se precisa de nova página
@@ -129,56 +200,81 @@ export const generateDetailedServiceReport = (service: Service): void => {
     yPosition += splitNotes.length * 5 + 10;
   }
 
+  // NOVA PÁGINA - ASSINATURAS
+  doc.addPage();
+  yPosition = 20;
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("ASSINATURAS E APROVAÇÕES", 105, yPosition, { align: "center" });
+  yPosition += 15;
+
+  doc.setLineWidth(0.5);
+  doc.line(20, yPosition, 190, yPosition);
+  yPosition += 20;
+
   // Seção de Assinaturas
   if (service.signatures?.client || service.signatures?.technician) {
-    // Verificar se precisa de nova página
-    if (yPosition > 200) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    yPosition += 10;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("ASSINATURAS", 20, yPosition);
-    yPosition += 10;
-
     // Assinatura do Cliente
     if (service.signatures.client) {
-      doc.setFontSize(10);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Assinatura do Cliente:", 20, yPosition);
-      yPosition += 6;
+      doc.text("ASSINATURA DO CLIENTE", 20, yPosition);
+      yPosition += 10;
+      
       doc.setFont("helvetica", "normal");
       doc.text(`Cliente: ${service.client || "N/A"}`, 20, yPosition);
-      yPosition += 6;
+      yPosition += 8;
+      doc.text(`Data: ${formatDate(new Date().toISOString())}`, 20, yPosition);
+      yPosition += 15;
       
-      // Placeholder para assinatura (seria a imagem da assinatura)
-      doc.rect(20, yPosition, 80, 25);
+      // Área para assinatura
+      doc.rect(20, yPosition, 80, 30);
       doc.setFontSize(8);
-      doc.text("Assinatura registrada no sistema", 25, yPosition + 15);
-      yPosition += 35;
+      doc.text("Assinatura registrada digitalmente", 25, yPosition + 20);
+      yPosition += 45;
     }
 
     // Assinatura do Técnico
     if (service.signatures.technician) {
-      doc.setFontSize(10);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Assinatura do Técnico:", 20, yPosition);
-      yPosition += 6;
+      doc.text("ASSINATURA DO TÉCNICO", 20, yPosition);
+      yPosition += 10;
+      
       doc.setFont("helvetica", "normal");
       doc.text(`Técnico: ${service.technician?.name || "N/A"}`, 20, yPosition);
-      yPosition += 6;
+      yPosition += 8;
+      doc.text(`Data: ${formatDate(new Date().toISOString())}`, 20, yPosition);
+      yPosition += 15;
       
-      // Placeholder para assinatura
-      doc.rect(20, yPosition, 80, 25);
+      // Área para assinatura
+      doc.rect(20, yPosition, 80, 30);
       doc.setFontSize(8);
-      doc.text("Assinatura registrada no sistema", 25, yPosition + 15);
-      yPosition += 35;
+      doc.text("Assinatura registrada digitalmente", 25, yPosition + 20);
+      yPosition += 45;
     }
+  } else {
+    // Áreas em branco para assinaturas manuais
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ÁREA PARA ASSINATURAS", 20, yPosition);
+    yPosition += 20;
+
+    doc.setFont("helvetica", "normal");
+    doc.text("Cliente:", 20, yPosition);
+    doc.line(40, yPosition, 100, yPosition);
+    doc.text("Data:", 120, yPosition);
+    doc.line(135, yPosition, 180, yPosition);
+    yPosition += 25;
+
+    doc.text("Técnico:", 20, yPosition);
+    doc.line(40, yPosition, 100, yPosition);
+    doc.text("Data:", 120, yPosition);
+    doc.line(135, yPosition, 180, yPosition);
   }
 
-  // Rodapé
+  // Rodapé em todas as páginas
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);

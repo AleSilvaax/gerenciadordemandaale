@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Send, ArrowLeft, Calendar, MapPin, User, FileText, MessageSquare, Star, Edit, Trash2, Clock, CheckCircle, XCircle, Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui-custom/Rating";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +35,7 @@ import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer"
 import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 
 interface ServiceDetailProps {
   editMode?: boolean;
@@ -143,6 +144,63 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
       toast.error("Erro ao gerar relatório PDF");
+    }
+  };
+
+  const handleAddPhoto = async (file: File, title: string): Promise<string> => {
+    if (!service) throw new Error("Service not found");
+    
+    // Simular upload de foto (em produção, usar Supabase Storage)
+    const photoUrl = URL.createObjectURL(file);
+    const updatedPhotos = [...(service.photos || []), photoUrl];
+    const updatedTitles = [...(service.photoTitles || []), title];
+    
+    try {
+      await updateService({ 
+        id: service.id, 
+        photos: updatedPhotos,
+        photoTitles: updatedTitles
+      });
+      fetchService(service.id);
+      return photoUrl;
+    } catch (error) {
+      console.error("Erro ao adicionar foto:", error);
+      throw error;
+    }
+  };
+
+  const handleRemovePhoto = async (index: number): Promise<void> => {
+    if (!service) return;
+    
+    const updatedPhotos = service.photos?.filter((_, i) => i !== index) || [];
+    const updatedTitles = service.photoTitles?.filter((_, i) => i !== index) || [];
+    
+    try {
+      await updateService({ 
+        id: service.id, 
+        photos: updatedPhotos,
+        photoTitles: updatedTitles
+      });
+      fetchService(service.id);
+    } catch (error) {
+      console.error("Erro ao remover foto:", error);
+    }
+  };
+
+  const handleUpdatePhotoTitle = async (index: number, title: string): Promise<void> => {
+    if (!service) return;
+    
+    const updatedTitles = [...(service.photoTitles || [])];
+    updatedTitles[index] = title;
+    
+    try {
+      await updateService({ 
+        id: service.id, 
+        photoTitles: updatedTitles
+      });
+      fetchService(service.id);
+    } catch (error) {
+      console.error("Erro ao atualizar título da foto:", error);
     }
   };
 
@@ -351,6 +409,33 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 </Card>
               </motion.div>
             )}
+
+            {/* Photos Section */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Camera className="w-5 h-5" />
+                    Fotos e Anexos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PhotoUploader
+                    photos={service?.photos?.map((url, index) => ({
+                      url,
+                      title: service.photoTitles?.[index] || `Foto ${index + 1}`
+                    })) || []}
+                    onAddPhoto={handleAddPhoto}
+                    onRemovePhoto={handleRemovePhoto}
+                    onUpdateTitle={handleUpdatePhotoTitle}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Action Buttons */}
             {!editMode && (
