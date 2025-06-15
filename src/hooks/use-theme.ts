@@ -2,41 +2,52 @@
 import { useState, useEffect } from 'react';
 
 export function useTheme() {
-  // Carrega do localStorage na montagem
+  // Load from localStorage on mount with better default handling
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    
     try {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light' || savedTheme === 'dark') {
         return savedTheme;
       }
     } catch {}
-    // Detecção automática: escuro ou claro
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    
+    // Default to dark theme as requested
+    return 'dark';
   });
 
   useEffect(() => {
     const root = window.document.documentElement;
-    // O padrão do Tailwind é "light", só precisa remover a classe dark
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    // Persistir preferência
-    localStorage.setItem('theme', theme);
+    
+    // Remove both classes first
+    root.classList.remove('light', 'dark');
+    
+    // Add the current theme class
+    root.classList.add(theme);
+    
+    // Persist preference
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {}
   }, [theme]);
 
-  // Certificar que ao inicializar, o tema visual corresponde ao salvo
+  // Initialize on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (!savedTheme) {
-      setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    }
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
   }, []);
 
   const setDarkMode = (isDark: boolean) => setTheme(isDark ? 'dark' : 'light');
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
-  return { theme, setTheme, isDarkMode: theme === 'dark', setDarkMode, toggleTheme };
+  return { 
+    theme, 
+    setTheme, 
+    isDarkMode: theme === 'dark', 
+    isLightMode: theme === 'light',
+    setDarkMode, 
+    toggleTheme 
+  };
 }
-

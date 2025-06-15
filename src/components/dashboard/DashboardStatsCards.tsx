@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/use-theme";
 
 const cardGradients: Record<string, string> = {
   "Total de Demandas": "from-blue-500 to-cyan-600",
@@ -75,6 +76,7 @@ interface CountUpCardProps extends Stat {
 
 const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, description, index }) => {
   const [displayValue, setDisplayValue] = React.useState(0);
+  const { theme } = useTheme();
 
   React.useEffect(() => {
     let raf: number;
@@ -105,6 +107,13 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
   }, [value]);
 
   const gradientClass = cardGradients[label] || "from-slate-500 to-slate-600";
+  
+  // Theme-aware card styling
+  const cardBaseClass = theme === 'light'
+    ? "bg-white/90 border-slate-200/50 shadow-lg hover:shadow-xl"
+    : "bg-slate-800/90 border-slate-700/50 shadow-xl hover:shadow-2xl";
+
+  const gradientOpacity = theme === 'light' ? "opacity-10 group-hover:opacity-15" : "opacity-5 group-hover:opacity-10";
 
   return (
     <motion.div
@@ -118,14 +127,15 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
       className="group cursor-pointer"
     >
       <Card className={cn(
-        "relative overflow-hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm",
-        "border border-white/20 shadow-lg hover:shadow-2xl",
+        "relative overflow-hidden backdrop-blur-sm",
+        cardBaseClass,
         "transition-all duration-300 group-hover:border-white/40"
       )}>
         {/* Gradiente de fundo animado */}
         <div className={cn(
-          "absolute inset-0 bg-gradient-to-br opacity-5 group-hover:opacity-10 transition-opacity duration-300",
-          gradientClass
+          "absolute inset-0 bg-gradient-to-br transition-opacity duration-300",
+          gradientClass,
+          gradientOpacity
         )} />
         
         {/* Barra lateral gradiente */}
@@ -179,7 +189,10 @@ const CountUpCard: React.FC<CountUpCardProps> = ({ label, value, icon, descripti
           </div>
           
           {/* Efeito de brilho no hover */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-r from-transparent to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000",
+            theme === 'light' ? "via-white/10" : "via-white/5"
+          )} />
         </CardContent>
       </Card>
     </motion.div>

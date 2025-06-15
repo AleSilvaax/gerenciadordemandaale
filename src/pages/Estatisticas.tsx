@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, BellDot, Filter, Calendar, TrendingUp, Users, BarChart3, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -23,6 +22,7 @@ import { DashboardStatsCards } from "@/components/dashboard/DashboardStatsCards"
 import { AnimatedBarChart } from "@/components/dashboard/AnimatedBarChart";
 import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const Estatisticas: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState("30days");
@@ -33,6 +33,7 @@ const Estatisticas: React.FC = () => {
   const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
   const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -168,9 +169,18 @@ const Estatisticas: React.FC = () => {
   
   const technicianProductivity = calculateTechnicianProductivity();
   
+  // Dynamic background classes based on theme
+  const backgroundClass = theme === 'light' 
+    ? "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" 
+    : "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900";
+    
+  const cardClass = theme === 'light'
+    ? "bg-white/80 border-slate-200/50 shadow-lg hover:shadow-xl"
+    : "bg-slate-800/80 border-slate-700/50 shadow-2xl hover:shadow-3xl";
+    
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6 flex justify-center items-center">
+      <div className={`${backgroundClass} p-6 flex justify-center items-center`}>
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -182,13 +192,13 @@ const Estatisticas: React.FC = () => {
   
   if (!services.length) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6 flex flex-col items-center justify-center">
+      <div className={`${backgroundClass} p-6 flex flex-col items-center justify-center`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-md"
         >
-          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
             <BarChart3 className="w-10 h-10 text-blue-600 dark:text-blue-400" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-4">
@@ -208,7 +218,7 @@ const Estatisticas: React.FC = () => {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6 pb-24">
+    <div className={`${backgroundClass} p-6 pb-24`}>
       {/* Header moderno */}
       <motion.div
         className="flex items-center justify-between mb-8"
@@ -218,7 +228,7 @@ const Estatisticas: React.FC = () => {
       >
         <Link 
           to="/" 
-          className="w-12 h-12 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          className={`w-12 h-12 rounded-xl ${cardClass} backdrop-blur-sm flex items-center justify-center transition-all duration-300 hover:scale-105`}
         >
           <ArrowLeft size={20} className="text-slate-700 dark:text-slate-300" />
         </Link>
@@ -232,14 +242,14 @@ const Estatisticas: React.FC = () => {
           </p>
         </div>
         
-        <button className="w-12 h-12 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+        <button className={`w-12 h-12 rounded-xl ${cardClass} backdrop-blur-sm flex items-center justify-center transition-all duration-300 hover:scale-105`}>
           <BellDot size={20} className="text-slate-700 dark:text-slate-300" />
         </button>
       </motion.div>
 
       {/* Filtros modernos */}
       <motion.div
-        className="mb-8 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl border border-white/20 p-6 shadow-xl"
+        className={`mb-8 ${cardClass} backdrop-blur-sm rounded-2xl p-6`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.6 }}
@@ -255,7 +265,7 @@ const Estatisticas: React.FC = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Período</label>
             <Select value={timeFilter} onValueChange={setTimeFilter}>
-              <SelectTrigger className="bg-white/80 dark:bg-slate-700/80 border-white/30 focus:border-blue-400">
+              <SelectTrigger className={theme === 'light' ? "bg-white border-slate-300" : "bg-slate-700/80 border-slate-600 focus:border-blue-400"}>
                 <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
@@ -272,7 +282,7 @@ const Estatisticas: React.FC = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Técnico</label>
             <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
-              <SelectTrigger className="bg-white/80 dark:bg-slate-700/80 border-white/30 focus:border-blue-400">
+              <SelectTrigger className={theme === 'light' ? "bg-white border-slate-300" : "bg-slate-700/80 border-slate-600 focus:border-blue-400"}>
                 <Users className="h-4 w-4 mr-2 text-blue-600" />
                 <SelectValue placeholder="Técnico" />
               </SelectTrigger>
@@ -293,7 +303,7 @@ const Estatisticas: React.FC = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Serviço</label>
             <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
-              <SelectTrigger className="bg-white/80 dark:bg-slate-700/80 border-white/30 focus:border-blue-400">
+              <SelectTrigger className={theme === 'light' ? "bg-white border-slate-300" : "bg-slate-700/80 border-slate-600 focus:border-blue-400"}>
                 <Activity className="h-4 w-4 mr-2 text-blue-600" />
                 <SelectValue placeholder="Tipo de serviço" />
               </SelectTrigger>
@@ -343,7 +353,7 @@ const Estatisticas: React.FC = () => {
       {/* Gráficos principais */}
       <MotionContainer className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-          <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <Card className={`${cardClass} backdrop-blur-sm hover:shadow-2xl transition-all duration-300`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center">
                 <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mr-3"></div>
@@ -364,7 +374,7 @@ const Estatisticas: React.FC = () => {
         </motion.div>
 
         <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-          <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <Card className={`${cardClass} backdrop-blur-sm hover:shadow-2xl transition-all duration-300`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center">
                 <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full mr-3"></div>
@@ -389,7 +399,7 @@ const Estatisticas: React.FC = () => {
       {/* Gráfico de tipos de serviço */}
       <MotionContainer className="mb-8">
         <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-          <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <Card className={`${cardClass} backdrop-blur-sm hover:shadow-2xl transition-all duration-300`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center">
                 <div className="w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mr-3"></div>
@@ -421,7 +431,7 @@ const Estatisticas: React.FC = () => {
       {/* Desempenho da equipe */}
       <MotionContainer>
         <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-          <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <Card className={`${cardClass} backdrop-blur-sm hover:shadow-2xl transition-all duration-300`}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200 flex items-center">
@@ -438,7 +448,7 @@ const Estatisticas: React.FC = () => {
                 {technicianProductivity.map((tech, index) => (
                   <motion.div 
                     key={tech.id} 
-                    className="flex items-center p-4 bg-white/40 dark:bg-slate-700/40 rounded-xl"
+                    className={`flex items-center p-4 ${theme === 'light' ? 'bg-slate-50' : 'bg-slate-700/40'} rounded-xl`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -455,7 +465,7 @@ const Estatisticas: React.FC = () => {
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{tech.name}</span>
                         <span className="text-lg font-bold text-blue-600">{tech.productivity}%</span>
                       </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-3 overflow-hidden">
+                      <div className={`w-full ${theme === 'light' ? 'bg-slate-200' : 'bg-slate-600'} rounded-full h-3 overflow-hidden`}>
                         <motion.div 
                           className="h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
                           initial={{ width: 0 }}
