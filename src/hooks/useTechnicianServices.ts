@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Service, TeamMember } from "@/types/serviceTypes";
+import { Service } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 
 /**
@@ -15,29 +15,39 @@ export function useTechnicianServices() {
     queryKey: ['technician-services', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      // Seleciona os campos do technician também
-      const { data, error } = await supabase
-        .from('services')
-        .select(`
-          *,
-          service_technicians!inner(technician_id),
-          technician:technicians(*)
-        `)
-        .eq('service_technicians.technician_id', user.id);
+      
+      // Primeiro, buscar todos os service_ids vinculados a este técnico
+      const { data: stData, error: stError } = await supabase
+        .from('service_technicians')
+        .select('service_id')
+        .eq('technician_id', user.id);
 
-      if (error) {
-        console.error("Erro ao buscar serviços do técnico:", error);
-        throw new Error(error.message);
+      if (stError) {
+        console.error("Erro ao buscar vinculações de serviços do técnico:", stError);
+        throw new Error(stError.message);
       }
 
-      // Pode ser necessário mapear caso o campo technician não venha como objeto
-      return (data || []).map((s: any) => ({
-        ...s,
-        // compatibilidade: corrige para garantir que .technician exista no resultado
-        technician: s.technician || {
+      const serviceIds = stData?.map((row: any) => row.service_id) ?? [];
+      if (serviceIds.length === 0) return [];
+
+      // Buscar os serviços completos
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .in('id', serviceIds);
+
+      if (servicesError) {
+        console.error("Erro ao buscar serviços vinculados ao técnico:", servicesError);
+        throw new Error(servicesError.message);
+      }
+
+      // Adiciona manualmente os dados do técnico (que está logado)
+      return (servicesData ?? []).map((service: any) => ({
+        ...service,
+        technician: {
           id: user.id,
           name: user.name,
-          avatar: user.avatar,
+          avatar: user.avatar || '',
           role: 'tecnico',
         }
       })) as Service[];
