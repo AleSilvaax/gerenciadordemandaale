@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import {
   updateService,
   addServiceMessage,
 } from "@/services/servicesDataService";
-import { Service, ServiceMessage, ServiceFeedback } from "@/types/serviceTypes";
+import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
@@ -23,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui-custom/Rating";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
-import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
+import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
