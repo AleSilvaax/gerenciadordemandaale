@@ -18,6 +18,9 @@ interface ServiceState {
 
 interface ServiceActions {
   loadServices: () => Promise<void>;
+  setServices: (services: Service[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   setSelectedService: (service: Service | null) => void;
   updateService: (updatedService: Service) => void;
   setFilters: (filters: Partial<ServiceState['filters']>) => void;
@@ -49,6 +52,18 @@ export const useServiceStore = create<ServiceState & ServiceActions>((set, get) 
         isLoading: false 
       });
     }
+  },
+
+  setServices: (services) => {
+    set({ services });
+  },
+
+  setLoading: (isLoading) => {
+    set({ isLoading });
+  },
+
+  setError: (error) => {
+    set({ error });
   },
 
   setSelectedService: (service) => {

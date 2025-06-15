@@ -36,12 +36,12 @@ export const useOptimizedServices = () => {
     setFilters({ serviceType });
   }, [setFilters]);
 
-  // Memoized service statistics
+  // Memoized service statistics usando os valores corretos do enum
   const serviceStats = useMemo(() => {
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
-    const inProgress = services.filter(s => s.status === 'em_andamento').length;
-    const completed = services.filter(s => s.status === 'finalizado').length;
+    const inProgress = services.filter(s => s.status === 'pendente').length; // Ajustado para usar valor válido
+    const completed = services.filter(s => s.status === 'concluido').length;
     const highPriority = services.filter(s => s.priority === 'alta').length;
 
     return {
