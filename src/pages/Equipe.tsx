@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Save, PlusCircle, Trash2, UserPlus, Upload, User, ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, PlusCircle, Trash2, UserPlus, Upload, User, Loader2, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Button } from "@/components/ui/button";
@@ -42,18 +43,11 @@ import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { useTheme } from "@/hooks/use-theme";
-
-interface Permission {
-  id: string;
-  title: string;
-  question: string;
-  roles: UserRole[];
-}
+import { useNavigate } from "react-router-dom";
 
 const Equipe: React.FC = () => {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const navigate = useNavigate();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMember, setNewMember] = useState({ 
@@ -67,34 +61,6 @@ const Equipe: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<UserRole | "todos">("todos");
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  // Permissions list
-  const [permissions, setPermissions] = useState<Permission[]>([
-    {
-      id: "view_all",
-      title: "Acessar a todos os chamados",
-      question: "Quem Pode Ter Acesso?",
-      roles: ["administrador", "gestor"]
-    },
-    {
-      id: "change_status",
-      title: "Modificar status dos chamados",
-      question: "Quem Pode Modificar?",
-      roles: ["tecnico", "administrador", "gestor"]
-    },
-    {
-      id: "add_members",
-      title: "Adicionar membros na equipe",
-      question: "Quem Pode Adicionar Novos Membros?",
-      roles: ["administrador", "gestor"]
-    },
-    {
-      id: "view_stats",
-      title: "Acessar as estatísticas",
-      question: "Quem Pode Acessar As Estatísticas?",
-      roles: ["administrador", "gestor"]
-    }
-  ]);
   
   // Load team members from API
   useEffect(() => {
@@ -110,17 +76,6 @@ const Equipe: React.FC = () => {
     };
     
     loadTeamMembers();
-    
-    // Load permissions from localStorage
-    const storedPermissions = localStorage.getItem('permissions');
-    if (storedPermissions) {
-      try {
-        const parsedPermissions = JSON.parse(storedPermissions);
-        setPermissions(parsedPermissions);
-      } catch (error) {
-        console.error("Error loading permissions:", error);
-      }
-    }
   }, []);
 
   const filteredTeam = team.filter(member => 
@@ -241,36 +196,27 @@ const Equipe: React.FC = () => {
     }
   };
 
-  const handleUpdatePermission = (permissionId: string, role: UserRole) => {
-    setPermissions(permissions.map(permission => {
-      if (permission.id === permissionId) {
-        if (permission.roles.includes(role)) {
-          return {
-            ...permission,
-            roles: permission.roles.filter(r => r !== role)
-          };
-        } else {
-          return {
-            ...permission,
-            roles: [...permission.roles, role]
-          };
-        }
-      }
-      return permission;
-    }));
+  const getRoleDisplayName = (role: UserRole) => {
+    switch (role) {
+      case "tecnico":
+        return "Técnico";
+      case "administrador":
+        return "Administrador";
+      case "gestor":
+        return "Gestor";
+      default:
+        return role;
+    }
   };
-  
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    
-    try {
-      localStorage.setItem("permissions", JSON.stringify(permissions));
-      toast.success("As permissões da equipe foram atualizadas com sucesso.");
-    } catch (error) {
-      console.error("Error saving permissions:", error);
-      toast.error("Falha ao salvar as permissões.");
-    } finally {
-      setIsSaving(false);
+
+  const getRoleColor = (role: UserRole) => {
+    switch (role) {
+      case "administrador":
+        return "bg-red-500/10 text-red-500 border-red-500/20";
+      case "gestor":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      default:
+        return "bg-green-500/10 text-green-500 border-green-500/20";
     }
   };
 
@@ -298,25 +244,36 @@ const Equipe: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-8"
+        className="container mx-auto p-6 pb-8 space-y-8"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex items-center gap-4 mb-8">
-          <Link 
-            to="/" 
-            className="h-12 w-12 rounded-xl flex items-center justify-center bg-card border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Minha Equipe
-            </h1>
-            <p className="text-muted-foreground mt-1">Gerencie membros e permissões da equipe</p>
+        <motion.div variants={itemVariants} className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/" 
+              className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
+            >
+              <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Minha Equipe
+              </h1>
+              <p className="text-muted-foreground mt-1">Gerencie membros da equipe</p>
+            </div>
           </div>
+          
+          <Button 
+            onClick={() => navigate("/settings")}
+            variant="outline"
+            className="bg-card/50 backdrop-blur-sm border-border/50"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Configurações e Permissões
+          </Button>
         </motion.div>
         
         {/* Team Management Section */}
@@ -325,35 +282,39 @@ const Equipe: React.FC = () => {
           className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
         >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Gerenciar Equipe</h2>
-            <Select
-              value={roleFilter}
-              onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
-            >
-              <SelectTrigger className="w-40 bg-background/50">
-                <SelectValue placeholder="Filtrar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="tecnico">Técnicos</SelectItem>
-                <SelectItem value="administrador">Admins</SelectItem>
-                <SelectItem value="gestor">Gestores</SelectItem>
-              </SelectContent>
-            </Select>
+            <h2 className="text-xl font-semibold">Membros da Equipe</h2>
+            <div className="flex gap-3">
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
+              >
+                <SelectTrigger className="w-40 bg-background/50">
+                  <SelectValue placeholder="Filtrar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="tecnico">Técnicos</SelectItem>
+                  <SelectItem value="administrador">Administradores</SelectItem>
+                  <SelectItem value="gestor">Gestores</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
-          <div className="flex space-x-4 overflow-x-auto scrollbar-none pb-2">
+          {/* Team Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {/* Add Member Card */}
             <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
               <DialogTrigger asChild>
                 <motion.div 
-                  className="flex flex-col items-center space-y-2 min-w-fit cursor-pointer group"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="flex flex-col items-center p-6 bg-background/30 border-2 border-dashed border-primary/30 rounded-xl cursor-pointer group hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <div className="h-16 w-16 rounded-xl flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary/30 group-hover:border-primary/50 group-hover:bg-primary/20 transition-all duration-200">
+                  <div className="h-16 w-16 rounded-full flex items-center justify-center bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
                     <UserPlus size={24} className="text-primary" />
                   </div>
-                  <span className="text-sm font-medium whitespace-nowrap">Adicionar</span>
+                  <span className="text-sm font-medium text-center">Adicionar Membro</span>
                 </motion.div>
               </DialogTrigger>
               <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
@@ -427,15 +388,17 @@ const Equipe: React.FC = () => {
               </DialogContent>
             </Dialog>
             
+            {/* Team Members */}
             {filteredTeam.map((member, index) => (
               <motion.div 
                 key={member.id} 
-                className="flex flex-col items-center space-y-2 min-w-fit"
+                className="flex flex-col items-center p-6 bg-background/30 border border-border/30 rounded-xl hover:bg-background/50 transition-all duration-200 group"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
               >
-                <div className="relative group">
+                <div className="relative mb-4">
                   <TeamMemberAvatar 
                     src={member.avatar} 
                     name={member.name} 
@@ -452,7 +415,7 @@ const Equipe: React.FC = () => {
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1.5 hover:bg-primary/90 transition-colors shadow-lg">
+                      <button className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1.5 hover:bg-primary/90 transition-colors shadow-lg opacity-0 group-hover:opacity-100">
                         {uploadingAvatar === member.id ? (
                           <Loader2 size={14} className="animate-spin" />
                         ) : (
@@ -475,100 +438,34 @@ const Equipe: React.FC = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-sm font-medium whitespace-nowrap">{member.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {member.role === "tecnico" && "Técnico"}
-                    {member.role === "administrador" && "Admin"}
-                    {member.role === "gestor" && "Gestor"}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-        
-        {/* Permissions Section */}
-        <motion.div 
-          variants={itemVariants}
-          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
-        >
-          <h2 className="text-xl font-semibold mb-6">Permissões do Sistema</h2>
-          
-          <div className="space-y-6">
-            {permissions.map((permission, index) => (
-              <motion.div 
-                key={permission.id} 
-                className="bg-background/30 rounded-xl p-4 border border-border/30"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">{permission.title}</h3>
-                <p className="text-base mb-4">{permission.question}</p>
                 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant={permission.roles.includes("tecnico") ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => handleUpdatePermission(permission.id, "tecnico")}
-                  >
-                    <User size={14} className="mr-1" />
-                    Técnico
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant={permission.roles.includes("administrador") ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => handleUpdatePermission(permission.id, "administrador")}
-                  >
-                    <ShieldCheck size={14} className="mr-1" />
-                    Administrador
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant={permission.roles.includes("gestor") ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => handleUpdatePermission(permission.id, "gestor")}
-                  >
-                    <ShieldCheck size={14} className="mr-1" />
-                    Gestor
-                  </Button>
+                <div className="text-center space-y-2">
+                  <h3 className="font-medium text-sm">{member.name}</h3>
+                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium border ${getRoleColor(member.role)}`}>
+                    {getRoleDisplayName(member.role)}
+                  </div>
                 </div>
               </motion.div>
             ))}
           </div>
-        </motion.div>
-      </motion.div>
-      
-      {/* Fixed Save Button */}
-      <motion.div 
-        className="fixed bottom-6 left-6 right-6 z-50"
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <Button 
-          className="w-full bg-primary/90 backdrop-blur-md hover:bg-primary shadow-lg border border-primary/20" 
-          onClick={handleSaveChanges} 
-          disabled={isSaving}
-          size="lg"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 size={20} className="mr-2 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save size={20} className="mr-2" />
-              Salvar Alterações
-            </>
+          
+          {filteredTeam.length === 0 && (
+            <motion.div 
+              className="text-center py-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhum membro encontrado</h3>
+              <p className="text-muted-foreground">
+                {roleFilter === "todos" 
+                  ? "Adicione o primeiro membro à sua equipe" 
+                  : `Nenhum membro com o papel "${getRoleDisplayName(roleFilter)}" encontrado`
+                }
+              </p>
+            </motion.div>
           )}
-        </Button>
+        </motion.div>
       </motion.div>
       
       <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
