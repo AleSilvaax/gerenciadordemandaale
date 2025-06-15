@@ -19,23 +19,23 @@ export const StatCard: React.FC<StatCardProps> = ({
   className 
 }) => {
   return (
-    <Card className={cn("overflow-hidden transition-all hover:scale-[1.02]", className)}>
-      <CardContent className="p-6">
+    <Card className={cn("overflow-hidden transition-all hover:scale-[1.02] bg-card/70 backdrop-blur-sm", className)}>
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+          <div className="flex flex-col flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 text-left-force text-no-wrap">
               {title}
             </p>
-            <div className="text-3xl font-bold">{value}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-left-force">{value}</div>
             {description && (
-              <p className="text-xs text-muted-foreground mt-2 max-w-40 line-clamp-2">
+              <p className="text-xs text-muted-foreground mt-2 text-left-force line-clamp-2">
                 {description}
               </p>
             )}
           </div>
           
           {icon && (
-            <div className="rounded-full bg-background/50 p-3 backdrop-blur-sm border border-white/10">
+            <div className="rounded-full bg-background/60 p-2 sm:p-3 backdrop-blur-sm border border-border/20 ml-3 flex-shrink-0">
               {icon}
             </div>
           )}

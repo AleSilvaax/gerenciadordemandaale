@@ -1,123 +1,66 @@
+
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Search, Filter, Plus, SortDesc, Calendar, MapPin, User, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { getServices, deleteService } from "@/services/servicesDataService";
-import { Service, ServiceStatus } from "@/types/serviceTypes";
-import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { FileText, Search as SearchIcon, Filter, X, Plus, Zap } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/AuthContext";
-import { useTechnicianServices } from "@/hooks/useTechnicianServices";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getServices } from "@/services/servicesDataService";
+import { Service } from "@/types/serviceTypes";
 import { motion } from "framer-motion";
-import { useTheme } from "@/hooks/use-theme";
 
 const Demandas: React.FC = () => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const { theme } = useTheme();
-  const { user, hasPermission, canAccessRoute } = useAuth();
-
-  // Adicionar hook para buscar demandas do técnico (caso seja técnico)
-  const { data: technicianServices, isLoading: techLoading, error: techError } = useTechnicianServices();
-  
   const [services, setServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("recent");
   const [loading, setLoading] = useState(true);
-  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-
-    // Se for técnico, usa o hook específico
-    if (user.role === "tecnico") {
-      setLoading(techLoading);
-      if (techError) {
-        toast.error("Erro ao carregar demandas do técnico");
-        setServices([]);
-      } else if (technicianServices) {
-        setServices(technicianServices);
-        console.log("[Demandas] Serviços carregados para técnico:", technicianServices.map(s => s.id));
-      }
-      return;
-    }
-
-    // Para admin/gestor, busca normalmente
-    const fetchServices = async () => {
+    const loadServices = async () => {
       try {
-        const data = await getServices();
-        setServices(data);
+        const fetchedServices = await getServices();
+        setServices(fetchedServices);
       } catch (error) {
-        console.error("Error fetching services:", error);
-        toast.error("Erro ao carregar demandas", {
-          description: "Não foi possível carregar as demandas. Tente novamente mais tarde.",
-        });
+        console.error("Error loading services:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchServices();
-  }, [user, technicianServices, techLoading, techError]);
+    loadServices();
+  }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!hasPermission('delete_services')) {
-      toast.error("Você não tem permissão para excluir demandas");
-      return;
-    }
-    setServiceToDelete(id);
-  };
-
-  const confirmDelete = async () => {
-    if (!serviceToDelete) return;
-
-    try {
-      await deleteService(serviceToDelete);
-      setServices(services.filter((service) => service.id !== serviceToDelete));
-      toast.success("Demanda excluída", {
-        description: "A demanda foi excluída com sucesso.",
-      });
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      toast.error("Erro ao excluir demanda", {
-        description: "Não foi possível excluir a demanda. Tente novamente mais tarde.",
-      });
-    } finally {
-      setServiceToDelete(null);
-    }
-  };
-
-  const filteredServices = services
-    .filter((service) => {
-      if (statusFilter !== "all" && service.status !== statusFilter) {
-        return false;
-      }
+  const filteredAndSortedServices = services
+    .filter(service => {
+      const matchesSearch = service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.location.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        service.id.toLowerCase().includes(searchLower) ||
-        service.title.toLowerCase().includes(searchLower) ||
-        service.location.toLowerCase().includes(searchLower) ||
-        service.technician.name.toLowerCase().includes(searchLower)
-      );
+      const matchesStatus = statusFilter === "all" || service.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Sort by date if available, newest first
-      if (a.date && b.date) {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      switch (sortBy) {
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "status":
+          return a.status.localeCompare(b.status);
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        default: // "recent"
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
-      return 0;
     });
 
-  // Group services by status
-  const pendingServices = services.filter((service) => service.status === "pendente");
-  const completedServices = services.filter((service) => service.status === "concluido");
-  const canceledServices = services.filter((service) => service.status === "cancelado");
+  const getStatusCount = (status: string) => {
+    if (status === "all") return services.length;
+    return services.filter(service => service.status === status).length;
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -140,384 +83,165 @@ const Demandas: React.FC = () => {
     }
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
       <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-8"
+        className="container mx-auto p-4 sm:p-6 pb-24 space-y-6 sm:space-y-8"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Gerenciar Demandas
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
+          <Link 
+            to="/" 
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
+          >
+            <ArrowLeft size={18} className="sm:w-5 sm:h-5 group-hover:-translate-x-0.5 transition-transform" />
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-left-force">
+              Todas as Demandas
             </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Visualize e gerencie todas as demandas do sistema
+            <p className="text-sm sm:text-base text-muted-foreground mt-1 text-left-force">
+              Gerencie todas as solicitações de serviço
             </p>
           </div>
-          {canAccessRoute && canAccessRoute('/nova-demanda') && (
-            <Button onClick={() => navigate("/nova-demanda")} size="lg" className="px-8">
-              <Plus className="mr-2 h-5 w-5" />
+          <Link to="/new-service">
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
               Nova Demanda
             </Button>
-          )}
+          </Link>
         </motion.div>
 
-        {/* Filters Section */}
-        <motion.div 
-          variants={itemVariants}
-          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
-        >
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input
-                placeholder="Buscar por ID, título, local ou técnico..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50"
-              />
-            </div>
-            <div className="w-full sm:w-64">
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
-              >
-                <SelectTrigger className="bg-background/50 border-border/50">
-                  <div className="flex items-center">
-                    <Filter size={16} className="mr-2" />
-                    <SelectValue placeholder="Filtrar por status" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {(searchTerm || statusFilter !== "all") && (
-              <Button variant="outline" onClick={clearFilters} className="bg-background/50">
-                <X size={16} className="mr-2" />
-                Limpar
-              </Button>
-            )}
+        {/* Filters and Stats */}
+        <motion.div variants={itemVariants} className="space-y-4 sm:space-y-6">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="card-enhanced hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-3 sm:p-4 text-center">
+                <FileText className="h-5 w-5 mx-auto mb-2 text-blue-500" />
+                <div className="text-lg sm:text-xl font-bold text-left-force">{getStatusCount("all")}</div>
+                <p className="text-xs text-muted-foreground text-left-force text-no-wrap">Total</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="card-enhanced hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-3 sm:p-4 text-center">
+                <Calendar className="h-5 w-5 mx-auto mb-2 text-yellow-500" />
+                <div className="text-lg sm:text-xl font-bold text-left-force">{getStatusCount("pendente")}</div>
+                <p className="text-xs text-muted-foreground text-left-force text-no-wrap">Pendentes</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="card-enhanced hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-3 sm:p-4 text-center">
+                <User className="h-5 w-5 mx-auto mb-2 text-green-500" />
+                <div className="text-lg sm:text-xl font-bold text-left-force">{getStatusCount("concluido")}</div>
+                <p className="text-xs text-muted-foreground text-left-force text-no-wrap">Concluídas</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="card-enhanced hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-3 sm:p-4 text-center">
+                <MapPin className="h-5 w-5 mx-auto mb-2 text-red-500" />
+                <div className="text-lg sm:text-xl font-bold text-left-force">{getStatusCount("cancelado")}</div>
+                <p className="text-xs text-muted-foreground text-left-force text-no-wrap">Canceladas</p>
+              </CardContent>
+            </Card>
           </div>
-        </motion.div>
 
-        {/* Quick Stats */}
-        <motion.div 
-          variants={itemVariants}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4"
-        >
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-foreground">{services.length}</div>
-            <div className="text-sm text-muted-foreground">Total</div>
-          </div>
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-amber-500">{pendingServices.length}</div>
-            <div className="text-sm text-muted-foreground">Pendentes</div>
-          </div>
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-green-500">{completedServices.length}</div>
-            <div className="text-sm text-muted-foreground">Concluídas</div>
-          </div>
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-red-500">{canceledServices.length}</div>
-            <div className="text-sm text-muted-foreground">Canceladas</div>
-          </div>
-        </motion.div>
-
-        {/* Services Content */}
-        <motion.div variants={itemVariants}>
-          {isMobile ? (
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
-              <Tabs defaultValue="all" className="w-full">
-                <div className="mb-6">
-                  <TabsList className="w-full grid grid-cols-4 h-auto p-1 bg-background/50">
-                    <TabsTrigger value="all" className="py-3 text-xs">Todos</TabsTrigger>
-                    <TabsTrigger value="pending" className="py-3 text-xs">Pendentes</TabsTrigger>
-                    <TabsTrigger value="completed" className="py-3 text-xs">Concluídos</TabsTrigger>
-                    <TabsTrigger value="canceled" className="py-3 text-xs">Cancelados</TabsTrigger>
-                  </TabsList>
+          {/* Search and Filters */}
+          <Card className="card-enhanced">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-left-force">
+                <Filter className="h-4 w-4 text-primary" />
+                Filtros e Busca
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Buscar por título, cliente ou localização..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-background/60 border-border/50"
+                  />
                 </div>
                 
-                <TabsContent value="all" className="mt-0 space-y-4">
-                  {loading ? (
-                    <div className="flex justify-center p-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  ) : filteredServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {filteredServices.map((service, index) => (
-                        <motion.div
-                          key={service.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <ServiceCard
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Zap className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                      <h3 className="text-xl font-medium mb-2">Nenhuma demanda encontrada</h3>
-                      <p className="text-muted-foreground">
-                        Não foram encontradas demandas com os filtros atuais.
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-48 bg-background/60 border-border/50">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="pendente">Pendentes</SelectItem>
+                    <SelectItem value="concluido">Concluídas</SelectItem>
+                    <SelectItem value="cancelado">Canceladas</SelectItem>
+                  </SelectContent>
+                </Select>
                 
-                <TabsContent value="pending" className="mt-6 space-y-4">
-                  {pendingServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {pendingServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas pendentes.</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="completed" className="mt-6 space-y-4">
-                  {completedServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {completedServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas concluídas.</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="canceled" className="mt-6 space-y-4">
-                  {canceledServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {canceledServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas canceladas.</p>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full sm:w-48 bg-background/60 border-border/50">
+                    <SortDesc className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Ordenar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Mais Recentes</SelectItem>
+                    <SelectItem value="oldest">Mais Antigas</SelectItem>
+                    <SelectItem value="title">Por Título</SelectItem>
+                    <SelectItem value="status">Por Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Services List */}
+        <motion.div variants={itemVariants}>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredAndSortedServices.length > 0 ? (
+            <div className="space-y-4">
+              {filteredAndSortedServices.map((service, index) => (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <ServiceCard service={service} />
+                </motion.div>
+              ))}
             </div>
           ) : (
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 bg-background/50">
-                  <TabsTrigger value="all">Todos ({services.length})</TabsTrigger>
-                  <TabsTrigger value="pending">Pendentes ({pendingServices.length})</TabsTrigger>
-                  <TabsTrigger value="completed">Concluídos ({completedServices.length})</TabsTrigger>
-                  <TabsTrigger value="canceled">Cancelados ({canceledServices.length})</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="all" className="mt-6 space-y-4">
-                  {loading ? (
-                    <div className="flex justify-center p-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  ) : filteredServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {filteredServices.map((service, index) => (
-                        <motion.div
-                          key={service.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <ServiceCard
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Zap className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                      <h3 className="text-xl font-medium mb-2">Nenhuma demanda encontrada</h3>
-                      <p className="text-muted-foreground">
-                        Não foram encontradas demandas com os filtros atuais.
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="pending" className="mt-6 space-y-4">
-                  {pendingServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {pendingServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas pendentes.</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="completed" className="mt-6 space-y-4">
-                  {completedServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {completedServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas concluídas.</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="canceled" className="mt-6 space-y-4">
-                  {canceledServices.length > 0 ? (
-                    <div className="space-y-4">
-                      {canceledServices
-                        .filter((service) => {
-                          const searchLower = searchTerm.toLowerCase();
-                          return (
-                            service.id.toLowerCase().includes(searchLower) ||
-                            service.title.toLowerCase().includes(searchLower) ||
-                            service.location.toLowerCase().includes(searchLower) ||
-                            service.technician.name.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((service) => (
-                          <ServiceCard
-                            key={service.id}
-                            service={service}
-                            onDelete={handleDelete}
-                          />
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Não há demandas canceladas.</p>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
+            <Card className="card-enhanced">
+              <CardContent className="py-12 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2 text-left-force">Nenhuma demanda encontrada</h3>
+                <p className="text-muted-foreground mb-4 text-left-force">
+                  {searchTerm || statusFilter !== "all" 
+                    ? "Tente ajustar os filtros de busca" 
+                    : "Comece criando sua primeira demanda"
+                  }
+                </p>
+                <Link to="/new-service">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeira Demanda
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           )}
         </motion.div>
       </motion.div>
-
-      <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>
-        <AlertDialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta demanda? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
