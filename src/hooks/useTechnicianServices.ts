@@ -1,12 +1,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Service } from "@/types/serviceTypes";
+import { Service, TeamMember } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 
 /**
- * Fetches services assigned to the currently logged-in technician.
- * Always does a join with service_technicians.
+ * Busca todos os serviços VINCULADOS AO técnico logado,
+ * sempre garantindo a presença do campo .technician.
  */
 export function useTechnicianServices() {
   const { user } = useAuth();
@@ -15,12 +15,13 @@ export function useTechnicianServices() {
     queryKey: ['technician-services', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      // Faz uma query que retorna todas as demandas em que o técnico está atribuído
+      // Seleciona os campos do technician também
       const { data, error } = await supabase
         .from('services')
         .select(`
           *,
-          service_technicians!inner(technician_id)
+          service_technicians!inner(technician_id),
+          technician:technicians(*)
         `)
         .eq('service_technicians.technician_id', user.id);
 
@@ -29,7 +30,17 @@ export function useTechnicianServices() {
         throw new Error(error.message);
       }
 
-      return data as Service[];
+      // Pode ser necessário mapear caso o campo technician não venha como objeto
+      return (data || []).map((s: any) => ({
+        ...s,
+        // compatibilidade: corrige para garantir que .technician exista no resultado
+        technician: s.technician || {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          role: 'tecnico',
+        }
+      })) as Service[];
     },
     enabled: !!user,
   });

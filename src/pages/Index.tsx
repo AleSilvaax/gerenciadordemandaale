@@ -88,13 +88,13 @@ const Index: React.FC = () => {
     })
     .slice(0, 3);
 
-  // Get technician-specific services if user is a technician
-  const technicianServices = user && user.role === 'tecnico'
-    ? services.filter(service => service.technician.id === user.id)
-    : [];
+  // Remover definição duplicada de technicianServices aqui!
+  // const technicianServices = user && user.role === 'tecnico'
+  //   ? services.filter(service => service.technician.id === user.id)
+  //   : [];
   
   const upcomingDueServices = user && user.role === 'tecnico'
-    ? technicianServices
+    ? services
         .filter(service => 
           service.status === 'pendente' && 
           service.dueDate && 
