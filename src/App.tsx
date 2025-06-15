@@ -64,7 +64,7 @@ function App() {
                   <Route path="buscar" element={<LazySearch />} />
                   <Route path="settings" element={<LazySettings />} />
                   
-                  {/* Routes with role-based access */}
+                  {/* Routes with role-based access - Fixed route path */}
                   <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><LazyNewService /></ProtectedRoute>} />
                   <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><LazyEstatisticas /></ProtectedRoute>} />
                   <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><LazyEquipe /></ProtectedRoute>} />
