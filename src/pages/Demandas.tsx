@@ -39,6 +39,7 @@ const Demandas: React.FC = () => {
         setServices([]);
       } else if (technicianServices) {
         setServices(technicianServices);
+        console.log("[Demandas] Serviços carregados para técnico:", technicianServices.map(s => s.id));
       }
       return;
     }
