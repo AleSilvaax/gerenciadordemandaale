@@ -282,6 +282,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           estimated_hours: number | null
+          feedback: Json | null
           id: string
           location: string
           notes: string | null
@@ -308,6 +309,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           estimated_hours?: number | null
+          feedback?: Json | null
           id?: string
           location: string
           notes?: string | null
@@ -334,6 +336,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           estimated_hours?: number | null
+          feedback?: Json | null
           id?: string
           location?: string
           notes?: string | null

@@ -130,6 +130,17 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         }
       }
 
+      let feedbackParsed: any = undefined;
+      if (service.feedback) {
+        try {
+          feedbackParsed = typeof service.feedback === "string" 
+            ? JSON.parse(service.feedback) 
+            : service.feedback;
+        } catch { 
+          feedbackParsed = undefined; 
+        }
+      }
+
       // Arrays seguros
       const safePhotoTitles = Array.isArray(service.photo_titles) 
         ? service.photo_titles.filter((x: any) => typeof x === 'string')
@@ -171,6 +182,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         estimatedHours: service.estimated_hours,
         customFields: customFieldsParsed,
         signatures: signaturesParsed,
+        feedback: feedbackParsed,
         messages: serviceMessages,
         photos: safePhotos,
         photoTitles: safePhotoTitles,
@@ -227,6 +239,7 @@ export const createServiceInDatabase = async (
       estimated_hours: service.estimatedHours ?? null,
       custom_fields: service.customFields ? JSON.stringify(service.customFields) : null,
       signatures: service.signatures ? JSON.stringify(service.signatures) : null,
+      feedback: service.feedback ? JSON.stringify(service.feedback) : null,
       photos: service.photos ?? null,
       photo_titles: service.photoTitles ?? null,
       date: service.date ?? null
@@ -291,6 +304,12 @@ export const createServiceInDatabase = async (
         signaturesParsed = typeof data.signatures === "string" ? JSON.parse(data.signatures) : data.signatures;
       } catch { signaturesParsed = undefined; }
     }
+    let feedbackParsed: any = undefined;
+    if (data.feedback) {
+      try {
+        feedbackParsed = typeof data.feedback === "string" ? JSON.parse(data.feedback) : data.feedback;
+      } catch { feedbackParsed = undefined; }
+    }
 
     // Arrays seguros
     const safePhotoTitles =
@@ -328,6 +347,7 @@ export const createServiceInDatabase = async (
         estimatedHours: data.estimated_hours ?? service.estimatedHours,
         customFields: customFieldsParsed,
         signatures: signaturesParsed,
+        feedback: feedbackParsed,
         messages: service.messages || [],
         photos: safePhotos,
         photoTitles: safePhotoTitles,
@@ -345,70 +365,132 @@ export const createServiceInDatabase = async (
   }
 };
 
-// Update existing service in Supabase
+// Update existing service in Supabase - CORRIGIDO PARA SALVAR TODOS OS CAMPOS
 export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
   try {
-    console.log('Updating service in database:', service);
+    console.log('Atualizando serviço no banco:', service);
     
-    // Update the main service record
+    // Preparar dados para atualização - incluindo TODOS os campos
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    // Campos básicos
+    if (service.title !== undefined) updateData.title = service.title;
+    if (service.location !== undefined) updateData.location = service.location;
+    if (service.status !== undefined) updateData.status = service.status;
+    if (service.priority !== undefined) updateData.priority = service.priority;
+    if (service.serviceType !== undefined) updateData.service_type = service.serviceType;
+    if (service.description !== undefined) updateData.description = service.description;
+    if (service.client !== undefined) updateData.client = service.client;
+    if (service.address !== undefined) updateData.address = service.address;
+    if (service.city !== undefined) updateData.city = service.city;
+    if (service.notes !== undefined) updateData.notes = service.notes;
+    if (service.estimatedHours !== undefined) updateData.estimated_hours = service.estimatedHours;
+    if (service.dueDate !== undefined) updateData.due_date = service.dueDate;
+    if (service.date !== undefined) updateData.date = service.date;
+
+    // Campos JSON - serializar corretamente
+    if (service.customFields !== undefined) {
+      updateData.custom_fields = service.customFields ? JSON.stringify(service.customFields) : null;
+    }
+    if (service.signatures !== undefined) {
+      updateData.signatures = service.signatures ? JSON.stringify(service.signatures) : null;
+      console.log('Salvando assinaturas no banco:', updateData.signatures);
+    }
+    if (service.feedback !== undefined) {
+      updateData.feedback = service.feedback ? JSON.stringify(service.feedback) : null;
+      console.log('Salvando feedback no banco:', updateData.feedback);
+    }
+
+    // Arrays de fotos
+    if (service.photos !== undefined) {
+      updateData.photos = service.photos;
+      console.log('Salvando fotos no banco:', service.photos?.length, 'fotos');
+    }
+    if (service.photoTitles !== undefined) {
+      updateData.photo_titles = service.photoTitles;
+      console.log('Salvando títulos das fotos no banco:', service.photoTitles?.length, 'títulos');
+    }
+
+    // Atualizar o serviço principal
     const { data, error } = await supabase
       .from('services')
-      .update({
-        title: service.title,
-        location: service.location,
-        status: service.status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', service.id)
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating service in Supabase:', error);
+      console.error('Erro ao atualizar serviço no Supabase:', error);
       throw error;
     }
     
-    console.log('Service updated successfully:', data);
+    console.log('Serviço atualizado com sucesso:', data);
 
-    // SEMPRE limpar relação anterior de técnico!
-    const { error: deleteError } = await supabase
-      .from('service_technicians')
-      .delete()
-      .eq('service_id', service.id);
-
-    if (deleteError) {
-      console.error('Erro ao remover técnico antigo:', deleteError);
-      // Não interrompe o resto do fluxo: só loga.
-    }
-
-    // Reatribuir, se houver técnico válido (não null/não '0')
-    if (
-      service.technician &&
-      service.technician.id &&
-      service.technician.id !== '0' &&
-      service.technician.id !== 'none'
-    ) {
-      const { error: insertError } = await supabase
+    // Gerenciar atribuição de técnico
+    if (service.technician !== undefined) {
+      // SEMPRE limpar relação anterior de técnico!
+      const { error: deleteError } = await supabase
         .from('service_technicians')
-        .insert({
-          service_id: service.id,
-          technician_id: service.technician.id
-        });
+        .delete()
+        .eq('service_id', service.id);
 
-      if (insertError) {
-        console.error('Erro ao atribuir novo técnico:', insertError);
-        toast.error(`Erro ao atribuir técnico: ${insertError.message || "erro desconhecido"}`);
-      } else {
-        toast.success("Técnico atribuído no banco com sucesso.");
+      if (deleteError) {
+        console.error('Erro ao remover técnico antigo:', deleteError);
+      }
+
+      // Reatribuir, se houver técnico válido (não null/não '0')
+      if (
+        service.technician &&
+        service.technician.id &&
+        service.technician.id !== '0' &&
+        service.technician.id !== 'none'
+      ) {
+        const { error: insertError } = await supabase
+          .from('service_technicians')
+          .insert({
+            service_id: service.id,
+            technician_id: service.technician.id
+          });
+
+        if (insertError) {
+          console.error('Erro ao atribuir novo técnico:', insertError);
+          toast.error(`Erro ao atribuir técnico: ${insertError.message || "erro desconhecido"}`);
+        } else {
+          console.log("Técnico atribuído no banco com sucesso.");
+        }
       }
     }
     
-    // Construct and return a properly typed Service object
+    // Parse dos campos JSON para retorno
+    let signaturesParsed: any = undefined;
+    if (data.signatures) {
+      try {
+        signaturesParsed = typeof data.signatures === "string" ? JSON.parse(data.signatures) : data.signatures;
+      } catch { signaturesParsed = undefined; }
+    }
+
+    let feedbackParsed: any = undefined;
+    if (data.feedback) {
+      try {
+        feedbackParsed = typeof data.feedback === "string" ? JSON.parse(data.feedback) : data.feedback;
+      } catch { feedbackParsed = undefined; }
+    }
+
+    let customFieldsParsed: any = undefined;
+    if (data.custom_fields) {
+      try {
+        customFieldsParsed = typeof data.custom_fields === "string" ? JSON.parse(data.custom_fields) : data.custom_fields;
+      } catch { customFieldsParsed = undefined; }
+    }
+    
+    // Construir e retornar objeto Service corretamente tipado
     return {
       id: data.id,
       title: data.title,
       location: data.location,
-      status: data.status as any,
+      status: data.status as ServiceStatus,
       technician: service.technician || {
         id: '0',
         name: 'Não atribuído',
@@ -416,12 +498,27 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         role: 'tecnico',
       },
       creationDate: data.created_at,
-      dueDate: service.dueDate,
-      priority: service.priority,
+      dueDate: data.due_date,
+      priority: data.priority as ServicePriority,
+      serviceType: data.service_type,
+      number: data.number,
+      description: data.description,
+      createdBy: data.created_by,
+      client: data.client,
+      address: data.address,
+      city: data.city,
+      notes: data.notes,
+      estimatedHours: data.estimated_hours,
+      customFields: customFieldsParsed,
+      signatures: signaturesParsed,
+      feedback: feedbackParsed,
       messages: service.messages || [],
+      photos: data.photos,
+      photoTitles: data.photo_titles,
+      date: data.date,
     };
   } catch (error) {
-    console.error('Error in updateServiceInDatabase:', error);
+    console.error('Erro em updateServiceInDatabase:', error);
     toast.error("Falha ao atualizar serviço no servidor");
     return null;
   }

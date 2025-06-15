@@ -108,17 +108,12 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         timestamp: new Date().toISOString(),
       };
       
+      // Usar apenas addServiceMessage - não duplicar no serviço
       await addServiceMessage(service.id, messageData);
-      
-      // Atualizar o serviço localmente
-      const updatedMessages = [...(service.messages || []), messageData];
-      await updateService({ 
-        id: service.id, 
-        messages: updatedMessages 
-      });
       
       setNewMessage("");
       toast.success("Mensagem enviada!");
+      // Recarregar dados do serviço para mostrar a nova mensagem
       fetchService(id!);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
@@ -132,13 +127,12 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     try {
       console.log("Salvando feedback:", feedback);
       
-      // Salvar o feedback no serviço
+      // Salvar o feedback diretamente no serviço
       await updateService({ 
         id: service.id, 
         feedback: feedback 
       });
       
-      await addServiceFeedback(service.id, feedback);
       toast.success("Feedback salvo com sucesso!");
       fetchService(id!);
     } catch (error) {
@@ -157,6 +151,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         ...signatures
       };
       
+      // Usar updateService que agora salva corretamente as assinaturas
       await updateService({ 
         id: service.id, 
         signatures: updatedSignatures
@@ -207,7 +202,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       
       console.log("Salvando foto no serviço - total de fotos:", updatedPhotos.length);
       
-      // Salvar no serviço
+      // Salvar no serviço usando updateService corrigido
       await updateService({ 
         id: service.id, 
         photos: updatedPhotos,

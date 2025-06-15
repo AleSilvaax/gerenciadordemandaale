@@ -21,24 +21,14 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     border: [209, 213, 219]      // Borda
   };
 
-  // Função para texto seguro (sem símbolos especiais)
+  // Função melhorada para texto seguro
   const safeText = (text: string): string => {
+    if (!text) return '';
     return text
-      .replace(/[àáâãäå]/g, 'a')
-      .replace(/[èéêë]/g, 'e')
-      .replace(/[ìíîï]/g, 'i')
-      .replace(/[òóôõö]/g, 'o')
-      .replace(/[ùúûü]/g, 'u')
-      .replace(/[ç]/g, 'c')
-      .replace(/[ñ]/g, 'n')
-      .replace(/[ÀÁÂÃÄÅ]/g, 'A')
-      .replace(/[ÈÉÊË]/g, 'E')
-      .replace(/[ÌÍÎÏ]/g, 'I')
-      .replace(/[ÒÓÔÕÖ]/g, 'O')
-      .replace(/[ÙÚÛÜ]/g, 'U')
-      .replace(/[Ç]/g, 'C')
-      .replace(/[Ñ]/g, 'N')
-      .replace(/[^\w\s\-.,()\/]/g, '');
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+      .replace(/[^\w\s\-.,()\/]/g, '') // Remove caracteres especiais
+      .trim();
   };
 
   // Função para adicionar cabeçalho
@@ -81,6 +71,33 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     const maxWidth = 80;
     const lines = doc.splitTextToSize(safeText(value), maxWidth);
     doc.text(lines, x + 35, y);
+  };
+
+  // Função para processar imagem base64
+  const processImageForPDF = (base64Url: string): string | null => {
+    try {
+      // Verificar se é uma string válida de base64
+      if (!base64Url || !base64Url.startsWith('data:image')) {
+        console.warn('URL de imagem inválida:', base64Url?.substring(0, 50));
+        return null;
+      }
+
+      // Extrair apenas a parte base64
+      const base64Data = base64Url.split(',')[1];
+      if (!base64Data) {
+        console.warn('Dados base64 não encontrados');
+        return null;
+      }
+
+      // Verificar o tipo de imagem
+      const imageType = base64Url.substring(5, base64Url.indexOf(';'));
+      console.log('Processando imagem tipo:', imageType, 'tamanho:', base64Data.length);
+
+      return base64Url;
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error);
+      return null;
+    }
   };
 
   // PÁGINA 1 - CAPA
@@ -212,7 +229,7 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     yPosition += 10;
   }
 
-  // PÁGINA DE FOTOS
+  // PÁGINA DE FOTOS - MELHORADA
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
     yPosition = addHeader("ANEXOS FOTOGRAFICOS", 20);
@@ -230,19 +247,17 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       yPosition = addSection(safeText("FOTO: " + photoTitle), yPosition);
 
       try {
-        console.log(`Processando foto ${photoIndex + 1} para PDF:`, photoUrl.substring(0, 50) + "...");
+        console.log(`Processando foto ${photoIndex + 1} para PDF:`, photoUrl?.substring(0, 50) + "...");
         
-        // Se é uma imagem base64, usar diretamente
-        if (photoUrl.startsWith('data:image')) {
-          doc.addImage(photoUrl, 'JPEG', 25, yPosition, 160, 80);
+        const processedImage = processImageForPDF(photoUrl);
+        if (processedImage) {
+          // Adicionar imagem com dimensões controladas
+          const imgWidth = 160;
+          const imgHeight = 80;
+          doc.addImage(processedImage, 'JPEG', 25, yPosition, imgWidth, imgHeight);
           console.log(`Foto ${photoIndex + 1} adicionada ao PDF com sucesso`);
         } else {
-          // Placeholder para fotos não base64
-          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          doc.rect(25, yPosition, 160, 80);
-          doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-          doc.setFontSize(10);
-          doc.text("Foto nao disponivel", 105, yPosition + 40, { align: "center" });
+          throw new Error('Imagem não pôde ser processada');
         }
       } catch (error) {
         console.error(`Erro ao processar foto ${photoIndex + 1}:`, error);
@@ -333,7 +348,7 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     }
   }
 
-  // PÁGINA DE ASSINATURAS
+  // PÁGINA DE ASSINATURAS - MELHORADA
   doc.addPage();
   yPosition = addHeader("ASSINATURAS E APROVACOES", 20);
 
@@ -352,9 +367,12 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       doc.rect(20, yPosition, 170, 40, 'FD');
       
       try {
-        if (service.signatures.client.startsWith('data:image')) {
-          doc.addImage(service.signatures.client, 'PNG', 30, yPosition + 5, 150, 30);
+        const processedSignature = processImageForPDF(service.signatures.client);
+        if (processedSignature) {
+          doc.addImage(processedSignature, 'PNG', 30, yPosition + 5, 150, 30);
           console.log("Assinatura do cliente adicionada ao PDF");
+        } else {
+          throw new Error('Assinatura não pôde ser processada');
         }
       } catch (error) {
         console.error("Erro ao processar assinatura do cliente:", error);
@@ -385,9 +403,12 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       doc.rect(20, yPosition, 170, 40, 'FD');
       
       try {
-        if (service.signatures.technician.startsWith('data:image')) {
-          doc.addImage(service.signatures.technician, 'PNG', 30, yPosition + 5, 150, 30);
+        const processedSignature = processImageForPDF(service.signatures.technician);
+        if (processedSignature) {
+          doc.addImage(processedSignature, 'PNG', 30, yPosition + 5, 150, 30);
           console.log("Assinatura do técnico adicionada ao PDF");
+        } else {
+          throw new Error('Assinatura não pôde ser processada');
         }
       } catch (error) {
         console.error("Erro ao processar assinatura do técnico:", error);
