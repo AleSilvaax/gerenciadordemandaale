@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -31,6 +30,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui-custom/Rating";
 import { Separator } from "@/components/ui/separator";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
+import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
+import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
+import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -110,6 +112,37 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     } catch (error) {
       console.error("Erro ao enviar feedback:", error);
       toast.error("Erro ao enviar feedback");
+    }
+  };
+
+  const handleUpdateSignatures = async (signatures: { client?: string; technician?: string }) => {
+    if (!service) return;
+
+    try {
+      await updateService({ 
+        id: service.id, 
+        signatures: {
+          ...service.signatures,
+          ...signatures
+        }
+      });
+      toast.success("Assinaturas salvas com sucesso!");
+      fetchService(id!);
+    } catch (error) {
+      console.error("Erro ao salvar assinaturas:", error);
+      toast.error("Erro ao salvar assinaturas");
+    }
+  };
+
+  const handleGenerateReport = () => {
+    if (!service) return;
+    
+    try {
+      generateDetailedServiceReport(service);
+      toast.success("Relatório PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error("Erro ao gerar relatório PDF");
     }
   };
 
@@ -298,6 +331,27 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </Card>
             </motion.div>
 
+            {/* Custom Fields */}
+            {service.customFields && service.customFields.length > 0 && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.15 }}
+              >
+                <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Campos Personalizados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CustomFieldRenderer 
+                      fields={service.customFields} 
+                      disabled={true}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {/* Action Buttons */}
             {!editMode && (
               <motion.div
@@ -345,7 +399,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             )}
           </div>
 
-          {/* Right Column - Messages and Feedback */}
+          {/* Right Column - Messages, Feedback and Signatures */}
           <div className="space-y-6">
             {/* Messages Section */}
             <motion.div
@@ -461,6 +515,19 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+
+            {/* Signatures and Report Section */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <ServiceSignatureSection
+                service={service}
+                onUpdateSignatures={handleUpdateSignatures}
+                onGenerateReport={handleGenerateReport}
+              />
             </motion.div>
           </div>
         </div>
