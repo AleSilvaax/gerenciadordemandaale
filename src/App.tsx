@@ -47,7 +47,7 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Router>
+        <Router basename="/">
           <AuthProvider>
             <Routes>
               {/* Public routes */}
@@ -68,10 +68,11 @@ function App() {
                   <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><LazyNewService /></ProtectedRoute>} />
                   <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><LazyEstatisticas /></ProtectedRoute>} />
                   <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><LazyEquipe /></ProtectedRoute>} />
-                  
-                  <Route path="*" element={<LazyNotFound />} />
                 </Route>
               </Route>
+              
+              {/* Catch all route - must be last */}
+              <Route path="*" element={<LazyNotFound />} />
             </Routes>
           </AuthProvider>
         </Router>
