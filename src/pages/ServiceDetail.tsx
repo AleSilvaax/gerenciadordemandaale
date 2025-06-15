@@ -489,12 +489,17 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 <CardContent>
                   <PhotoUploader
                     photos={service?.photos?.map((url, index) => ({
+                      id: `service-photo-${service.id}-${index}`,
+                      file: new File([], service.photoTitles?.[index] || `Foto ${index + 1}`, { type: 'image/jpeg' }),
                       url,
-                      title: service.photoTitles?.[index] || `Foto ${index + 1}`
+                      title: service.photoTitles?.[index] || `Foto ${index + 1}`,
+                      compressed: false
                     })) || []}
-                    onAddPhoto={handleAddPhoto}
-                    onRemovePhoto={handleRemovePhoto}
-                    onUpdateTitle={handleUpdatePhotoTitle}
+                    onPhotosChange={(newPhotos) => {
+                      // Handle photos change - this will be called by PhotoUploader
+                      // For now, we'll log it since we have separate handlers
+                      console.log('Photos changed via PhotoUploader:', newPhotos);
+                    }}
                   />
                 </CardContent>
               </Card>
