@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getServices } from "@/services/servicesDataService";
+import { DeleteConfirmationDialog } from "@/components/ui-custom/DeleteConfirmationDialog";
+import { getServices, deleteService } from "@/services/servicesDataService";
 import { Service } from "@/types/serviceTypes";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const Demandas: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -18,6 +20,9 @@ const Demandas: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadServices = async () => {
@@ -26,6 +31,7 @@ const Demandas: React.FC = () => {
         setServices(fetchedServices);
       } catch (error) {
         console.error("Error loading services:", error);
+        toast.error("Erro ao carregar demandas");
       } finally {
         setLoading(false);
       }
@@ -33,6 +39,33 @@ const Demandas: React.FC = () => {
 
     loadServices();
   }, []);
+
+  const handleDeleteService = (service: Service) => {
+    setServiceToDelete(service);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const success = await deleteService(serviceToDelete.id);
+      if (success) {
+        setServices(prev => prev.filter(s => s.id !== serviceToDelete.id));
+        toast.success("Demanda excluída com sucesso!");
+        setDeleteDialogOpen(false);
+        setServiceToDelete(null);
+      } else {
+        toast.error("Erro ao excluir demanda");
+      }
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      toast.error("Erro ao excluir demanda");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredAndSortedServices = services
     .filter(service => {
@@ -216,7 +249,7 @@ const Demandas: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ServiceCard service={service} />
+                  <ServiceCard service={service} onDelete={handleDeleteService} />
                 </motion.div>
               ))}
             </div>
@@ -242,6 +275,20 @@ const Demandas: React.FC = () => {
           )}
         </motion.div>
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Excluir Demanda"
+        description={
+          serviceToDelete 
+            ? `Tem certeza que deseja excluir a demanda "${serviceToDelete.title}"? Esta ação não pode ser desfeita.`
+            : ""
+        }
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

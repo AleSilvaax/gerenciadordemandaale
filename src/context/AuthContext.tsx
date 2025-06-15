@@ -207,3 +207,30 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
+const permissions: Record<string, string[]> = {
+  administrador: [
+    'view_services',
+    'create_services', 
+    'edit_services',
+    'delete_services',
+    'manage_team',
+    'view_statistics',
+    'export_reports',
+    'manage_service_types',
+    'manage_technical_fields'
+  ],
+  gestor: [
+    'view_services',
+    'create_services',
+    'edit_services',
+    'delete_services',
+    'view_statistics',
+    'export_reports'
+  ],
+  tecnico: [
+    'view_services',
+    'create_services',
+    'edit_services'
+  ]
+};
