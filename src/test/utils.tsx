@@ -31,6 +31,7 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>,
 ) => render(ui, { wrapper: AllTheProviders, ...options });
 
+// Re-export everything from @testing-library/react
 export * from '@testing-library/react';
 export { customRender as render };
 
@@ -45,7 +46,7 @@ export const mockService = {
   clientName: 'Test Client',
   clientContact: '(11) 99999-9999',
   address: 'Test Address, 123',
-  location: 'Test Location, 123', // Added missing location property
+  location: 'Test Location, 123',
   scheduledDate: new Date().toISOString(),
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
