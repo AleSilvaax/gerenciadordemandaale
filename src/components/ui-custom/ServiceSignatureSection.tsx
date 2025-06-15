@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SignatureCapture } from "@/components/ui-custom/SignatureCapture";
 import { PenTool, Download } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
+import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 
 interface ServiceSignatureSectionProps {
   service: Service;
@@ -19,12 +20,44 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
 }) => {
   const [clientSignature, setClientSignature] = useState(service.signatures?.client || "");
   const [technicianSignature, setTechnicianSignature] = useState(service.signatures?.technician || "");
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleSaveSignatures = () => {
-    onUpdateSignatures({
-      client: clientSignature,
-      technician: technicianSignature,
-    });
+  // Atualizar assinaturas quando o serviço mudar
+  useEffect(() => {
+    setClientSignature(service.signatures?.client || "");
+    setTechnicianSignature(service.signatures?.technician || "");
+  }, [service.signatures]);
+
+  const handleSaveSignatures = async () => {
+    try {
+      console.log("Salvando assinaturas:", { client: clientSignature, technician: technicianSignature });
+      await onUpdateSignatures({
+        client: clientSignature || undefined,
+        technician: technicianSignature || undefined,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar assinaturas:", error);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setIsGenerating(true);
+    try {
+      // Garantir que as assinaturas mais recentes estão no serviço
+      const updatedService = {
+        ...service,
+        signatures: {
+          client: clientSignature || undefined,
+          technician: technicianSignature || undefined,
+        }
+      };
+      
+      await generateDetailedServiceReport(updatedService);
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const hasSignatures = clientSignature || technicianSignature;
@@ -49,7 +82,10 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
           <div className="border rounded-md p-4 bg-background/30">
             <SignatureCapture
               initialSignature={clientSignature}
-              onChange={setClientSignature}
+              onChange={(signature) => {
+                console.log("Cliente assinatura mudou:", signature);
+                setClientSignature(signature);
+              }}
               label="Assinatura do Cliente"
             />
           </div>
@@ -66,7 +102,10 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
           <div className="border rounded-md p-4 bg-background/30">
             <SignatureCapture
               initialSignature={technicianSignature}
-              onChange={setTechnicianSignature}
+              onChange={(signature) => {
+                console.log("Técnico assinatura mudou:", signature);
+                setTechnicianSignature(signature);
+              }}
               label="Assinatura do Técnico"
             />
           </div>
@@ -84,13 +123,13 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
           </Button>
           
           <Button 
-            onClick={onGenerateReport}
+            onClick={handleGenerateReport}
             variant="outline"
             className="w-full"
-            disabled={!hasSignatures}
+            disabled={isGenerating}
           >
             <Download className="w-4 h-4 mr-2" />
-            Gerar Relatório PDF
+            {isGenerating ? "Gerando..." : "Gerar Relatório PDF"}
           </Button>
         </div>
       </CardContent>

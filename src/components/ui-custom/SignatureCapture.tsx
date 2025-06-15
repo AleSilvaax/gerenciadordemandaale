@@ -7,9 +7,9 @@ import { Undo2, Save, Trash2 } from "lucide-react";
 
 interface SignatureCaptureProps {
   onSave?: (signatureUrl: string) => void;
-  onChange?: (dataUrl: string) => void; // Add onChange prop
+  onChange?: (dataUrl: string) => void;
   initialSignature?: string;
-  initialValue?: string; // Add initialValue prop for compatibility
+  initialValue?: string;
   label?: string;
   width?: number;
   height?: number;
@@ -19,24 +19,31 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   onSave,
   onChange,
   initialSignature,
-  initialValue, // Support for initialValue prop
+  initialValue,
   label = "Assinatura",
   width = 300,
   height = 150
 }) => {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   // Initialize with initial signature if provided
   useEffect(() => {
-    if (sigCanvas.current) {
-      if (initialSignature || initialValue) {
-        const signatureData = initialSignature || initialValue;
-        sigCanvas.current.fromDataURL(signatureData);
-        setIsEmpty(false);
+    if (sigCanvas.current && !hasInitialized) {
+      const signatureData = initialSignature || initialValue;
+      if (signatureData) {
+        try {
+          sigCanvas.current.fromDataURL(signatureData);
+          setIsEmpty(false);
+          console.log("Assinatura carregada:", signatureData.substring(0, 50) + "...");
+        } catch (error) {
+          console.error("Erro ao carregar assinatura inicial:", error);
+        }
       }
+      setHasInitialized(true);
     }
-  }, [initialSignature, initialValue]);
+  }, [initialSignature, initialValue, hasInitialized]);
   
   const clear = () => {
     if (sigCanvas.current) {
@@ -54,13 +61,17 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       if (data.length > 0) {
         data.pop();
         sigCanvas.current.fromData(data);
-        setIsEmpty(data.length === 0);
+        const newIsEmpty = data.length === 0;
+        setIsEmpty(newIsEmpty);
         
         // Call onChange if provided
-        if (onChange && data.length === 0) {
-          onChange('');
-        } else if (onChange) {
-          onChange(sigCanvas.current.toDataURL('image/png'));
+        if (onChange) {
+          if (newIsEmpty) {
+            onChange('');
+          } else {
+            const dataURL = sigCanvas.current.toDataURL('image/png');
+            onChange(dataURL);
+          }
         }
       }
     }
@@ -69,6 +80,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   const save = () => {
     if (sigCanvas.current && !isEmpty) {
       const dataURL = sigCanvas.current.toDataURL('image/png');
+      console.log("Salvando assinatura:", dataURL.substring(0, 50) + "...");
       if (onSave) {
         onSave(dataURL);
       }
@@ -79,10 +91,16 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   };
   
   const handleEnd = () => {
-    setIsEmpty(sigCanvas.current?.isEmpty() || true);
-    // Call onChange whenever the signature changes
-    if (onChange && sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      onChange(sigCanvas.current.toDataURL('image/png'));
+    if (sigCanvas.current) {
+      const currentIsEmpty = sigCanvas.current.isEmpty();
+      setIsEmpty(currentIsEmpty);
+      
+      // Call onChange whenever the signature changes
+      if (onChange && !currentIsEmpty) {
+        const dataURL = sigCanvas.current.toDataURL('image/png');
+        console.log("Assinatura alterada:", dataURL.substring(0, 50) + "...");
+        onChange(dataURL);
+      }
     }
   };
   
@@ -100,6 +118,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
               className: "signature-canvas"
             }}
             onEnd={handleEnd}
+            backgroundColor="rgba(255,255,255,1)"
           />
         </div>
         <div className="flex gap-2">

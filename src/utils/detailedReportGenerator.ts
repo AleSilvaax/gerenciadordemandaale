@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import { Service, CustomField } from "@/types/serviceTypes";
 import { formatDate } from "./formatters";
 
-export const generateDetailedServiceReport = (service: Service): void => {
+export const generateDetailedServiceReport = async (service: Service): Promise<void> => {
   const doc = new jsPDF();
   let yPosition = 20;
   
@@ -46,21 +46,47 @@ export const generateDetailedServiceReport = (service: Service): void => {
     return content();
   };
 
+  // Função para carregar imagem como base64
+  const loadImageAsBase64 = (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(dataURL);
+          } else {
+            reject(new Error('Canvas context not available'));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = url;
+    });
+  };
+
   // Função para placeholder de foto
-  const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, url: string) => {
+  const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, title: string) => {
     doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setLineWidth(1);
     doc.rect(x, y, w, h);
     
     doc.setFontSize(10);
     doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text("📷 Imagem anexada", x + w/2, y + h/2 - 5, { align: "center" });
+    doc.text("📷 Imagem não disponível", x + w/2, y + h/2 - 5, { align: "center" });
     doc.setFontSize(8);
-    doc.text(url.substring(0, 50) + "...", x + 5, y + h/2 + 5);
+    doc.text(title, x + w/2, y + h/2 + 5, { align: "center" });
   };
 
   // CAPA MODERNA
-  // Cabeçalho moderno
   addModernHeader("RELATÓRIO DE DEMANDA", 30, 20);
   
   // Card principal da capa
@@ -74,7 +100,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text(service.title, 105, yPosition, { align: "center" });
+  doc.text(service.title || "Título da Demanda", 105, yPosition, { align: "center" });
   
   yPosition += 15;
   doc.setFontSize(14);
@@ -119,7 +145,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
 
     const basicInfo = [
       { label: "Número:", value: service.number || "N/A", icon: "🔢" },
-      { label: "Localização:", value: service.location, icon: "📍" },
+      { label: "Localização:", value: service.location || "N/A", icon: "📍" },
       { label: "Prioridade:", value: getPriorityText(service.priority), icon: "⚡" },
       { label: "Criação:", value: service.creationDate ? formatDate(service.creationDate) : "N/A", icon: "📅" },
       { label: "Vencimento:", value: service.dueDate ? formatDate(service.dueDate) : "N/A", icon: "⏰" },
@@ -198,7 +224,7 @@ export const generateDetailedServiceReport = (service: Service): void => {
     });
   }
 
-  // PÁGINA DE FOTOS
+  // PÁGINA DE FOTOS - Agora com carregamento assíncrono
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
     yPosition = 20;
@@ -206,15 +232,15 @@ export const generateDetailedServiceReport = (service: Service): void => {
     addModernHeader("ANEXOS FOTOGRÁFICOS", yPosition, 12);
     yPosition += 25;
 
-    let photoIndex = 0;
-    for (const photoUrl of service.photos) {
+    for (let photoIndex = 0; photoIndex < service.photos.length; photoIndex++) {
+      const photoUrl = service.photos[photoIndex];
+      const photoTitle = service.photoTitles?.[photoIndex] || `Foto ${photoIndex + 1}`;
+      
       if (yPosition > 200) {
         doc.addPage();
         yPosition = 20;
       }
 
-      const photoTitle = service.photoTitles?.[photoIndex] || `Foto ${photoIndex + 1}`;
-      
       // Card para a foto
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, yPosition, 180, 80, 3, 3, 'F');
@@ -226,42 +252,15 @@ export const generateDetailedServiceReport = (service: Service): void => {
       doc.text(`📸 ${photoTitle}`, 20, yPosition + 12);
 
       try {
-        // Tentar carregar e inserir a imagem real
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          try {
-            // Criar canvas para converter a imagem
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              canvas.width = img.width;
-              canvas.height = img.height;
-              ctx.drawImage(img, 0, 0);
-              
-              const imgData = canvas.toDataURL('image/jpeg', 0.8);
-              doc.addImage(imgData, 'JPEG', 20, yPosition + 20, 170, 50);
-            }
-          } catch (error) {
-            console.error("Erro ao processar imagem:", error);
-            // Fallback para placeholder
-            addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoUrl);
-          }
-        };
-        img.onerror = () => {
-          addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoUrl);
-        };
-        img.src = photoUrl;
-        
-        // Placeholder imediato enquanto carrega
-        addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoUrl);
-        
+        // Tentar carregar a imagem
+        const imageData = await loadImageAsBase64(photoUrl);
+        doc.addImage(imageData, 'JPEG', 20, yPosition + 20, 170, 50);
       } catch (error) {
-        addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoUrl);
+        console.error("Erro ao carregar imagem:", error);
+        addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoTitle);
       }
 
       yPosition += 90;
-      photoIndex++;
     }
   }
 
@@ -299,9 +298,10 @@ export const generateDetailedServiceReport = (service: Service): void => {
             doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
           }
         } catch (error) {
+          console.error("Erro ao processar assinatura do cliente:", error);
           doc.setFontSize(9);
           doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-          doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
+          doc.text("❌ Erro ao carregar assinatura", 25, currentY + 20);
         }
         
         return currentY + 50;
@@ -334,9 +334,10 @@ export const generateDetailedServiceReport = (service: Service): void => {
             doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
           }
         } catch (error) {
+          console.error("Erro ao processar assinatura do técnico:", error);
           doc.setFontSize(9);
           doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-          doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
+          doc.text("❌ Erro ao carregar assinatura", 25, currentY + 20);
         }
         
         return currentY + 50;

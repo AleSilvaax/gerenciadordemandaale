@@ -135,12 +135,11 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!service) return;
     
     try {
-      generateDetailedServiceReport(service);
-      toast.success("Relatório PDF gerado com sucesso!");
+      await generateDetailedServiceReport(service);
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
       toast.error("Erro ao gerar relatório PDF");
