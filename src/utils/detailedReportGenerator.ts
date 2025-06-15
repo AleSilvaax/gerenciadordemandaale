@@ -7,46 +7,74 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
   const doc = new jsPDF();
   let yPosition = 20;
   
-  // Cores do tema
-  const primaryColor = [75, 58, 172]; // #4B3AAC
-  const secondaryColor = [99, 102, 241]; // #6366F1
-  const accentColor = [168, 85, 247]; // #A855F7
-  const textColor = [31, 41, 55]; // #1F2937
-  const lightGray = [243, 244, 246]; // #F3F4F6
-  const darkGray = [107, 114, 128]; // #6B7280
-
-  // Função para adicionar header moderno
-  const addModernHeader = (title: string, y: number, height: number = 15) => {
-    // Header principal com cor sólida
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, y, 210, height, 'F');
-    
-    // Adicionar uma faixa decorativa
-    doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    doc.rect(0, y + height - 2, 210, 2, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(title, 105, y + 10, { align: "center" });
-    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+  // Configurar fonte padrão para evitar problemas de codificação
+  doc.setFont("helvetica");
+  
+  // Cores modernas
+  const colors = {
+    primary: [51, 65, 85],     // slate-700
+    secondary: [100, 116, 139], // slate-500
+    accent: [59, 130, 246],    // blue-500
+    success: [34, 197, 94],    // green-500
+    warning: [245, 158, 11],   // amber-500
+    error: [239, 68, 68],      // red-500
+    light: [248, 250, 252],    // slate-50
+    border: [203, 213, 225],   // slate-300
+    text: [15, 23, 42]         // slate-900
   };
 
-  // Função para adicionar seção com bordas arredondadas
-  const addSection = (title: string, y: number, content: () => number) => {
-    doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-    doc.roundedRect(15, y, 180, 20, 3, 3, 'F');
+  // Função para adicionar cabeçalho elegante
+  const addHeader = (title: string, y: number) => {
+    // Fundo do cabeçalho
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.rect(0, y, 210, 25, 'F');
     
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFontSize(12);
+    // Linha decorativa
+    doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+    doc.rect(0, y + 22, 210, 3, 'F');
+    
+    // Título
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text(title, 20, y + 12);
+    doc.text(title, 105, y + 15, { align: "center" });
     
-    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    return y + 35;
+  };
+
+  // Função para adicionar seção com card
+  const addCard = (title: string, y: number, content: () => number, icon = "") => {
+    // Card background
+    doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(15, y, 180, 20, 2, 2, 'FD');
+    
+    // Título da seção
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${icon} ${title}`, 20, y + 12);
+    
+    // Conteúdo
+    doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+    doc.setFont("helvetica", "normal");
     return content();
   };
 
-  // Função para carregar imagem como base64
+  // Função para adicionar linha de informação
+  const addInfoLine = (label: string, value: string, x: number, y: number, bold = false) => {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    doc.text(`${label}:`, x, y);
+    
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+    doc.text(value, x + 35, y);
+  };
+
+  // Função para converter imagem para base64
   const loadImageAsBase64 = (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -73,147 +101,124 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
     });
   };
 
-  // Função para placeholder de foto
-  const addPhotoPlaceholder = (x: number, y: number, w: number, h: number, title: string) => {
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setLineWidth(1);
-    doc.rect(x, y, w, h);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text("📷 Imagem não disponível", x + w/2, y + h/2 - 5, { align: "center" });
-    doc.setFontSize(8);
-    doc.text(title, x + w/2, y + h/2 + 5, { align: "center" });
-  };
-
-  // CAPA MODERNA
-  addModernHeader("RELATÓRIO DE DEMANDA", 30, 20);
+  // PÁGINA 1 - CAPA
+  yPosition = addHeader("RELATORIO DE DEMANDA", 30);
   
-  // Card principal da capa
+  // Card principal
   doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setLineWidth(2);
-  doc.roundedRect(30, 70, 150, 100, 5, 5, 'FD');
+  doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+  doc.setLineWidth(1);
+  doc.roundedRect(25, yPosition, 160, 120, 5, 5, 'FD');
 
-  // Informações principais da capa
-  yPosition = 85;
-  doc.setFontSize(20);
+  // Informações da capa
+  let cardY = yPosition + 20;
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text(service.title || "Título da Demanda", 105, yPosition, { align: "center" });
+  doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+  doc.text(service.title || "Demanda", 105, cardY, { align: "center" });
   
-  yPosition += 15;
-  doc.setFontSize(14);
+  cardY += 20;
+  doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-  doc.text(`Demanda #${service.number || service.id.slice(0, 8)}`, 105, yPosition, { align: "center" });
+  doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+  doc.text(`Numero: ${service.number || service.id.substring(0, 8)}`, 105, cardY, { align: "center" });
   
-  yPosition += 12;
+  cardY += 15;
   doc.setFontSize(11);
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.text(`Cliente: ${service.client || "N/A"}`, 105, yPosition, { align: "center" });
+  doc.text(`Cliente: ${service.client || "Nao informado"}`, 105, cardY, { align: "center" });
   
-  yPosition += 10;
-  doc.text(`Técnico: ${service.technician?.name || "Não atribuído"}`, 105, yPosition, { align: "center" });
+  cardY += 12;
+  doc.text(`Tecnico: ${service.technician?.name || "Nao atribuido"}`, 105, cardY, { align: "center" });
   
-  yPosition += 10;
-  const statusText = getStatusText(service.status);
-  const statusColor = getStatusColorRGB(service.status);
+  cardY += 12;
+  const statusText = service.status === "concluido" ? "Concluido" : 
+                    service.status === "cancelado" ? "Cancelado" : "Pendente";
+  const statusColor = service.status === "concluido" ? colors.success :
+                     service.status === "cancelado" ? colors.error : colors.warning;
   doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
   doc.setFont("helvetica", "bold");
-  doc.text(`Status: ${statusText}`, 105, yPosition, { align: "center" });
+  doc.text(`Status: ${statusText}`, 105, cardY, { align: "center" });
+  
+  cardY += 15;
+  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Criacao: ${service.creationDate ? formatDate(service.creationDate) : "N/A"}`, 105, cardY, { align: "center" });
 
   // Rodapé da capa
-  doc.setFontSize(10);
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+  doc.setFontSize(9);
   doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, 105, 260, { align: "center" });
-  doc.text("Sistema de Gestão de Demandas", 105, 270, { align: "center" });
+  doc.text("Sistema de Gestao de Demandas", 105, 270, { align: "center" });
 
   // PÁGINA 2 - DETALHES
   doc.addPage();
-  yPosition = 20;
+  yPosition = addHeader("INFORMACOES DETALHADAS", 20);
 
-  addModernHeader("INFORMAÇÕES DETALHADAS", yPosition, 12);
-  yPosition += 25;
-
-  // Seção de informações básicas
-  yPosition = addSection("📋 DADOS GERAIS", yPosition, () => {
-    let currentY = yPosition + 25;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-
-    const basicInfo = [
-      { label: "Número:", value: service.number || "N/A", icon: "🔢" },
-      { label: "Localização:", value: service.location || "N/A", icon: "📍" },
-      { label: "Prioridade:", value: getPriorityText(service.priority), icon: "⚡" },
-      { label: "Criação:", value: service.creationDate ? formatDate(service.creationDate) : "N/A", icon: "📅" },
-      { label: "Vencimento:", value: service.dueDate ? formatDate(service.dueDate) : "N/A", icon: "⏰" },
-      { label: "Tipo:", value: service.serviceType || "N/A", icon: "🔧" },
-    ];
-
-    basicInfo.forEach((info, index) => {
-      const x = index % 2 === 0 ? 20 : 110;
-      const y = currentY + Math.floor(index / 2) * 8;
-      
-      doc.setFont("helvetica", "bold");
-      doc.text(`${info.icon} ${info.label}`, x, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(info.value, x + 35, y);
-    });
-
-    return currentY + Math.ceil(basicInfo.length / 2) * 8 + 10;
-  });
+  // Dados Gerais
+  yPosition = addCard("DADOS GERAIS", yPosition, () => {
+    let currentY = yPosition + 30;
+    
+    addInfoLine("Numero", service.number || "N/A", 20, currentY);
+    addInfoLine("Prioridade", service.priority || "Media", 110, currentY);
+    currentY += 10;
+    
+    addInfoLine("Localizacao", service.location || "N/A", 20, currentY);
+    addInfoLine("Tipo", service.serviceType || "N/A", 110, currentY);
+    currentY += 10;
+    
+    addInfoLine("Criacao", service.creationDate ? formatDate(service.creationDate) : "N/A", 20, currentY);
+    addInfoLine("Vencimento", service.dueDate ? formatDate(service.dueDate) : "N/A", 110, currentY);
+    
+    return currentY + 20;
+  }, "📋");
 
   // Descrição
   if (service.description) {
-    yPosition = addSection("📝 DESCRIÇÃO", yPosition, () => {
-      let currentY = yPosition + 25;
+    yPosition = addCard("DESCRICAO", yPosition, () => {
+      let currentY = yPosition + 30;
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      
       const splitDescription = doc.splitTextToSize(service.description, 170);
       doc.text(splitDescription, 20, currentY);
-      return currentY + splitDescription.length * 5 + 10;
-    });
+      return currentY + splitDescription.length * 5 + 15;
+    }, "📝");
   }
 
   // Campos Personalizados
   if (service.customFields && service.customFields.length > 0) {
-    if (yPosition > 220) {
+    if (yPosition > 200) {
       doc.addPage();
-      yPosition = 20;
-      addModernHeader("CAMPOS PERSONALIZADOS", yPosition, 12);
-      yPosition += 25;
+      yPosition = addHeader("CAMPOS PERSONALIZADOS", 20);
     }
 
-    yPosition = addSection("⚙️ CAMPOS PERSONALIZADOS", yPosition, () => {
-      let currentY = yPosition + 25;
-      doc.setFontSize(10);
-
+    yPosition = addCard("CAMPOS PERSONALIZADOS", yPosition, () => {
+      let currentY = yPosition + 30;
+      
       service.customFields!.forEach((field: CustomField) => {
-        if (currentY > 270) {
+        if (currentY > 260) {
           doc.addPage();
-          currentY = 20;
+          currentY = 30;
         }
 
+        doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text(`🔹 ${field.label}:`, 20, currentY);
+        doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+        doc.text(`${field.label}:`, 20, currentY);
+        
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
         
         let valueText = "";
         if (field.type === 'boolean') {
-          valueText = field.value ? "✅ Sim" : "❌ Não";
+          valueText = field.value ? "Sim" : "Nao";
         } else {
           valueText = String(field.value || "N/A");
         }
 
-        if (field.type === 'textarea' && valueText.length > 60) {
+        if (field.type === 'textarea' && valueText.length > 50) {
           const splitText = doc.splitTextToSize(valueText, 150);
-          doc.text(splitText, 20, currentY + 6);
-          currentY += splitText.length * 5 + 8;
+          doc.text(splitText, 70, currentY);
+          currentY += splitText.length * 5 + 5;
         } else {
           doc.text(valueText, 70, currentY);
           currentY += 8;
@@ -221,211 +226,159 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       });
 
       return currentY + 10;
-    });
+    }, "⚙️");
   }
 
-  // PÁGINA DE FOTOS - Agora com carregamento assíncrono
+  // PÁGINA DE FOTOS
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
-    yPosition = 20;
-
-    addModernHeader("ANEXOS FOTOGRÁFICOS", yPosition, 12);
-    yPosition += 25;
+    yPosition = addHeader("ANEXOS FOTOGRAFICOS", 20);
 
     for (let photoIndex = 0; photoIndex < service.photos.length; photoIndex++) {
+      if (yPosition > 180) {
+        doc.addPage();
+        yPosition = 30;
+      }
+
       const photoUrl = service.photos[photoIndex];
       const photoTitle = service.photoTitles?.[photoIndex] || `Foto ${photoIndex + 1}`;
       
-      if (yPosition > 200) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      // Card para a foto
-      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      doc.roundedRect(15, yPosition, 180, 80, 3, 3, 'F');
+      // Card da foto
+      doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.roundedRect(15, yPosition, 180, 100, 3, 3, 'FD');
       
       // Título da foto
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`📸 ${photoTitle}`, 20, yPosition + 12);
+      doc.text(`📸 ${photoTitle}`, 20, yPosition + 15);
 
       try {
-        // Tentar carregar a imagem
+        console.log(`Carregando foto ${photoIndex + 1}:`, photoUrl);
         const imageData = await loadImageAsBase64(photoUrl);
-        doc.addImage(imageData, 'JPEG', 20, yPosition + 20, 170, 50);
+        doc.addImage(imageData, 'JPEG', 25, yPosition + 25, 160, 60);
+        console.log(`Foto ${photoIndex + 1} adicionada com sucesso`);
       } catch (error) {
-        console.error("Erro ao carregar imagem:", error);
-        addPhotoPlaceholder(20, yPosition + 20, 170, 50, photoTitle);
+        console.error(`Erro ao carregar foto ${photoIndex + 1}:`, error);
+        // Placeholder para foto não carregada
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+        doc.rect(25, yPosition + 25, 160, 60);
+        doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+        doc.setFontSize(10);
+        doc.text("Foto nao disponivel", 105, yPosition + 55, { align: "center" });
       }
 
-      yPosition += 90;
+      yPosition += 110;
     }
   }
 
   // PÁGINA DE ASSINATURAS
   doc.addPage();
-  yPosition = 20;
-
-  addModernHeader("ASSINATURAS E APROVAÇÕES", yPosition, 12);
-  yPosition += 25;
+  yPosition = addHeader("ASSINATURAS E APROVACOES", 20);
 
   if (service.signatures?.client || service.signatures?.technician) {
     // Assinatura do Cliente
     if (service.signatures.client) {
-      yPosition = addSection("✍️ ASSINATURA DO CLIENTE", yPosition, () => {
-        let currentY = yPosition + 25;
+      yPosition = addCard("ASSINATURA DO CLIENTE", yPosition, () => {
+        let currentY = yPosition + 30;
         
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Cliente: ${service.client || "N/A"}`, 20, currentY);
-        currentY += 8;
-        doc.text(`Data: ${formatDate(new Date().toISOString())}`, 20, currentY);
-        currentY += 15;
+        addInfoLine("Cliente", service.client || "N/A", 20, currentY);
+        addInfoLine("Data", formatDate(new Date().toISOString()), 20, currentY + 10);
+        currentY += 25;
         
         // Área da assinatura
         doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.roundedRect(20, currentY, 170, 40, 3, 3, 'FD');
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+        doc.roundedRect(20, currentY, 170, 50, 3, 3, 'FD');
         
         try {
           if (service.signatures!.client!.startsWith('data:image')) {
-            doc.addImage(service.signatures!.client!, 'PNG', 25, currentY + 5, 160, 30);
-          } else {
-            doc.setFontSize(9);
-            doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-            doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
+            doc.addImage(service.signatures!.client!, 'PNG', 30, currentY + 5, 150, 40);
+            console.log("Assinatura do cliente adicionada ao PDF");
           }
         } catch (error) {
           console.error("Erro ao processar assinatura do cliente:", error);
-          doc.setFontSize(9);
-          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-          doc.text("❌ Erro ao carregar assinatura", 25, currentY + 20);
+          doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+          doc.setFontSize(10);
+          doc.text("Erro ao carregar assinatura", 105, currentY + 25, { align: "center" });
         }
         
-        return currentY + 50;
-      });
+        return currentY + 60;
+      }, "✍️");
     }
 
     // Assinatura do Técnico
     if (service.signatures.technician) {
-      yPosition = addSection("🔧 ASSINATURA DO TÉCNICO", yPosition, () => {
-        let currentY = yPosition + 25;
+      yPosition = addCard("ASSINATURA DO TECNICO", yPosition, () => {
+        let currentY = yPosition + 30;
         
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Técnico: ${service.technician?.name || "N/A"}`, 20, currentY);
-        currentY += 8;
-        doc.text(`Data: ${formatDate(new Date().toISOString())}`, 20, currentY);
-        currentY += 15;
+        addInfoLine("Tecnico", service.technician?.name || "N/A", 20, currentY);
+        addInfoLine("Data", formatDate(new Date().toISOString()), 20, currentY + 10);
+        currentY += 25;
         
         // Área da assinatura
         doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.roundedRect(20, currentY, 170, 40, 3, 3, 'FD');
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+        doc.roundedRect(20, currentY, 170, 50, 3, 3, 'FD');
         
         try {
           if (service.signatures!.technician!.startsWith('data:image')) {
-            doc.addImage(service.signatures!.technician!, 'PNG', 25, currentY + 5, 160, 30);
-          } else {
-            doc.setFontSize(9);
-            doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-            doc.text("✅ Assinatura registrada digitalmente", 25, currentY + 20);
+            doc.addImage(service.signatures!.technician!, 'PNG', 30, currentY + 5, 150, 40);
+            console.log("Assinatura do técnico adicionada ao PDF");
           }
         } catch (error) {
           console.error("Erro ao processar assinatura do técnico:", error);
-          doc.setFontSize(9);
-          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-          doc.text("❌ Erro ao carregar assinatura", 25, currentY + 20);
+          doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+          doc.setFontSize(10);
+          doc.text("Erro ao carregar assinatura", 105, currentY + 25, { align: "center" });
         }
         
-        return currentY + 50;
-      });
+        return currentY + 60;
+      }, "🔧");
     }
   } else {
-    // Áreas em branco para assinaturas
-    yPosition = addSection("📝 ÁREA PARA ASSINATURAS", yPosition, () => {
-      let currentY = yPosition + 30;
+    // Áreas para assinaturas em branco
+    yPosition = addCard("AREA PARA ASSINATURAS", yPosition, () => {
+      let currentY = yPosition + 35;
 
       doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
       doc.text("Cliente:", 20, currentY);
-      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.line(40, currentY, 100, currentY);
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.line(45, currentY, 100, currentY);
       doc.text("Data:", 120, currentY);
-      doc.line(135, currentY, 180, currentY);
-      currentY += 25;
+      doc.line(140, currentY, 180, currentY);
+      currentY += 30;
 
-      doc.text("Técnico:", 20, currentY);
-      doc.line(40, currentY, 100, currentY);
+      doc.text("Tecnico:", 20, currentY);
+      doc.line(45, currentY, 100, currentY);
       doc.text("Data:", 120, currentY);
-      doc.line(135, currentY, 180, currentY);
+      doc.line(140, currentY, 180, currentY);
       
-      return currentY + 20;
-    });
+      return currentY + 25;
+    }, "📝");
   }
 
-  // Rodapé moderno em todas as páginas
+  // Adicionar numeração das páginas
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
-    // Linha decorativa no rodapé
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setLineWidth(0.5);
-    doc.line(20, 280, 190, 280);
+    // Linha no rodapé
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setLineWidth(0.3);
+    doc.line(20, 285, 190, 285);
     
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text(
-      `📄 Relatório gerado em: ${formatDate(new Date().toISOString())}`,
-      20,
-      285
-    );
-    doc.text(`Página ${i} de ${pageCount}`, 150, 285);
+    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, 20, 290);
+    doc.text(`Pagina ${i} de ${pageCount}`, 170, 290);
   }
 
   // Salvar o PDF
-  const fileName = `relatorio-demanda-${service.number || service.id.slice(0, 8)}.pdf`;
+  const fileName = `relatorio-demanda-${service.number || service.id.substring(0, 8)}.pdf`;
   doc.save(fileName);
-};
-
-const getStatusText = (status: string): string => {
-  switch (status) {
-    case "pendente":
-      return "Pendente";
-    case "concluido":
-      return "Concluído";
-    case "cancelado":
-      return "Cancelado";
-    default:
-      return status;
-  }
-};
-
-const getStatusColorRGB = (status: string): [number, number, number] => {
-  switch (status) {
-    case "concluido":
-      return [34, 197, 94]; // green-500
-    case "cancelado":
-      return [239, 68, 68]; // red-500
-    default:
-      return [249, 115, 22]; // orange-500
-  }
-};
-
-const getPriorityText = (priority?: string): string => {
-  switch (priority) {
-    case "baixa":
-      return "Baixa";
-    case "media":
-      return "Média";
-    case "alta":
-      return "Alta";
-    case "urgente":
-      return "Urgente";
-    default:
-      return "Média";
-  }
+  console.log("PDF gerado com sucesso:", fileName);
 };

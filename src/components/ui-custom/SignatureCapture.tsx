@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Button } from "@/components/ui/button";
@@ -79,8 +78,8 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   
   const save = () => {
     if (sigCanvas.current && !isEmpty) {
-      const dataURL = sigCanvas.current.toDataURL('image/png');
-      console.log("Salvando assinatura:", dataURL.substring(0, 50) + "...");
+      const dataURL = sigCanvas.current.toDataURL('image/png', 1.0); // Qualidade máxima
+      console.log("Salvando assinatura - tamanho:", dataURL.length);
       if (onSave) {
         onSave(dataURL);
       }
@@ -95,11 +94,13 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
       const currentIsEmpty = sigCanvas.current.isEmpty();
       setIsEmpty(currentIsEmpty);
       
-      // Call onChange whenever the signature changes
+      // Salvar automaticamente quando há mudança na assinatura
       if (onChange && !currentIsEmpty) {
-        const dataURL = sigCanvas.current.toDataURL('image/png');
-        console.log("Assinatura alterada:", dataURL.substring(0, 50) + "...");
+        const dataURL = sigCanvas.current.toDataURL('image/png', 1.0); // Qualidade máxima
+        console.log("Assinatura capturada - tamanho:", dataURL.length);
         onChange(dataURL);
+      } else if (onChange && currentIsEmpty) {
+        onChange('');
       }
     }
   };

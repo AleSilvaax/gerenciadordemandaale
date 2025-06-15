@@ -149,18 +149,32 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const handleAddPhoto = async (file: File, title: string): Promise<string> => {
     if (!service) throw new Error("Service not found");
     
-    // Simular upload de foto (em produção, usar Supabase Storage)
-    const photoUrl = URL.createObjectURL(file);
-    const updatedPhotos = [...(service.photos || []), photoUrl];
-    const updatedTitles = [...(service.photoTitles || []), title];
-    
     try {
+      console.log("Adicionando foto:", { fileName: file.name, title });
+      
+      // Criar URL da imagem
+      const photoUrl = URL.createObjectURL(file);
+      
+      // Atualizar arrays de fotos e títulos
+      const updatedPhotos = [...(service.photos || []), photoUrl];
+      const updatedTitles = [...(service.photoTitles || []), title];
+      
+      console.log("Atualizando serviço com fotos:", { 
+        photosCount: updatedPhotos.length, 
+        titlesCount: updatedTitles.length 
+      });
+      
+      // Salvar no serviço
       await updateService({ 
         id: service.id, 
         photos: updatedPhotos,
         photoTitles: updatedTitles
       });
-      fetchService(service.id);
+      
+      // Recarregar dados do serviço
+      await fetchService(service.id);
+      
+      console.log("Foto adicionada com sucesso!");
       return photoUrl;
     } catch (error) {
       console.error("Erro ao adicionar foto:", error);
@@ -171,16 +185,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const handleRemovePhoto = async (index: number): Promise<void> => {
     if (!service) return;
     
-    const updatedPhotos = service.photos?.filter((_, i) => i !== index) || [];
-    const updatedTitles = service.photoTitles?.filter((_, i) => i !== index) || [];
-    
     try {
+      console.log("Removendo foto no índice:", index);
+      
+      const updatedPhotos = service.photos?.filter((_, i) => i !== index) || [];
+      const updatedTitles = service.photoTitles?.filter((_, i) => i !== index) || [];
+      
       await updateService({ 
         id: service.id, 
         photos: updatedPhotos,
         photoTitles: updatedTitles
       });
-      fetchService(service.id);
+      
+      await fetchService(service.id);
+      console.log("Foto removida com sucesso!");
     } catch (error) {
       console.error("Erro ao remover foto:", error);
     }
@@ -189,15 +207,19 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const handleUpdatePhotoTitle = async (index: number, title: string): Promise<void> => {
     if (!service) return;
     
-    const updatedTitles = [...(service.photoTitles || [])];
-    updatedTitles[index] = title;
-    
     try {
+      console.log("Atualizando título da foto:", { index, title });
+      
+      const updatedTitles = [...(service.photoTitles || [])];
+      updatedTitles[index] = title;
+      
       await updateService({ 
         id: service.id, 
         photoTitles: updatedTitles
       });
-      fetchService(service.id);
+      
+      await fetchService(service.id);
+      console.log("Título da foto atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar título da foto:", error);
     }
