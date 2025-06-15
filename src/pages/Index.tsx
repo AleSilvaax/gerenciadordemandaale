@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Plus, Settings, Search, Filter, Calendar, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -72,7 +73,7 @@ const Index: React.FC = () => {
       }
 
       // Filtro de tipo de serviço
-      if (filters.serviceType !== 'all' && service.service_type !== filters.serviceType) {
+      if (filters.serviceType !== 'all' && service.serviceType !== filters.serviceType) {
         return false;
       }
 
@@ -92,7 +93,7 @@ const Index: React.FC = () => {
 
       // Filtro de data
       if (filters.dateFrom || filters.dateTo) {
-        const serviceDate = new Date(service.created_at);
+        const serviceDate = new Date(service.creationDate || service.date || new Date());
         
         if (filters.dateFrom && serviceDate < filters.dateFrom) return false;
         if (filters.dateTo && serviceDate > filters.dateTo) return false;

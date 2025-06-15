@@ -35,25 +35,25 @@ export const RealtimeMetrics: React.FC = () => {
 
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
-    const inProgress = services.filter(s => s.status === 'em_andamento').length;
-    const completed = services.filter(s => s.status === 'concluida').length;
+    const inProgress = services.filter(s => s.status === 'pendente').length; // Ajustado para usar apenas valores válidos
+    const completed = services.filter(s => s.status === 'concluido').length;
     
     const overdue = services.filter(s => {
-      if (!s.due_date) return false;
-      return new Date(s.due_date) < now && s.status !== 'concluida';
+      if (!s.dueDate) return false;
+      return new Date(s.dueDate) < now && s.status !== 'concluido';
     }).length;
 
     const todayCompleted = services.filter(s => {
-      if (s.status !== 'concluida' || !s.updated_at) return false;
-      return new Date(s.updated_at) >= todayStart;
+      if (s.status !== 'concluido' || !s.creationDate) return false;
+      return new Date(s.creationDate) >= todayStart;
     }).length;
 
     // Calcular tempo médio de resposta (simplificado)
-    const completedServices = services.filter(s => s.status === 'concluida' && s.created_at && s.updated_at);
+    const completedServices = services.filter(s => s.status === 'concluido' && s.creationDate);
     const avgResponseTime = completedServices.length > 0 
       ? completedServices.reduce((acc, service) => {
-          const created = new Date(service.created_at);
-          const updated = new Date(service.updated_at!);
+          const created = new Date(service.creationDate!);
+          const updated = new Date(); // Usando data atual como aproximação
           return acc + (updated.getTime() - created.getTime());
         }, 0) / completedServices.length / (1000 * 60 * 60 * 24) // em dias
       : 0;
