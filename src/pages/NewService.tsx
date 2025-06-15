@@ -100,7 +100,7 @@ const NewService: React.FC = () => {
           role: user.role || "tecnico",
           email: user.email,
           phone: user.phone,
-          signature: user.signature
+          signature: user.signature || ""
         };
       }
 
@@ -119,10 +119,10 @@ const NewService: React.FC = () => {
         priority: "media" as const,
         createdBy: user?.id,
         creationDate: new Date().toISOString(),
-        // Não incluir customFields na criação - serão preenchidos depois
       };
 
-      const newService = await createService(serviceData);
+      const result = await createService(serviceData);
+      const newService = result.created;
       console.log("Demanda criada:", newService);
       
       toast.success("Demanda criada com sucesso!");

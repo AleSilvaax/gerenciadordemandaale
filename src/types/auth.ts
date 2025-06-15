@@ -1,4 +1,3 @@
-
 export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
 
 export interface AuthUser {
@@ -10,6 +9,7 @@ export interface AuthUser {
   role: UserRole;
   permissions: string[];
   team_id?: string;
+  signature?: string;
 }
 
 export interface AuthContextType {
