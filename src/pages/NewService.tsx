@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TipoDemanda, PrioridadeDemanda, StatusDemanda } from "../models/service.enums";
 
 const NewService: React.FC = () => {
   const navigate = useNavigate();
@@ -30,28 +30,32 @@ const NewService: React.FC = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTechnician, setSelectedTechnician] = useState<TeamMember | null>(null);
-  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>("Vistoria");
   const [priority, setPriority] = useState("media");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [tipoDemandaId, setTipoDemandaId] = useState<number | undefined>(undefined);
-  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string | null>(null);
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log("Carregando dados para nova demanda...");
         const [members, types] = await Promise.all([
           getTeamMembers(),
-          getServiceTypesFromDatabase()   // Usar banco
+          getServiceTypesFromDatabase()
         ]);
+        
+        console.log("Dados carregados:", { membersCount: members.length, typesCount: types.length });
+        
         setTeamMembers(members);
-        setServiceTypes(types.filter((t) => !!t.name));
+        setServiceTypes(types.filter((t) => !!t.name && !!t.id));
+        
         // Default select first type if exists
-        if (types && types.length > 0) {
+        if (types && types.length > 0 && types[0].id) {
           setSelectedServiceTypeId(types[0].id);
+          console.log("Tipo padrão selecionado:", types[0].id);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Erro ao carregar dados");
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar dados necessários");
       }
     };
     fetchData();
@@ -60,8 +64,33 @@ const NewService: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !location.trim() || !selectedServiceTypeId || !user?.id) {
-      toast.error("Por favor, preencha todos os campos obrigatórios e garanta que está logado.");
+    console.log("Iniciando criação de demanda...");
+    console.log("Dados do formulário:", {
+      title: title.trim(),
+      location: location.trim(),
+      selectedServiceTypeId,
+      userId: user?.id,
+      selectedTechnician
+    });
+    
+    // Validações básicas
+    if (!title.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+    
+    if (!location.trim()) {
+      toast.error("O local é obrigatório");
+      return;
+    }
+    
+    if (!selectedServiceTypeId) {
+      toast.error("Selecione um tipo de serviço");
+      return;
+    }
+    
+    if (!user?.id) {
+      toast.error("Usuário não autenticado. Faça login novamente.");
       return;
     }
 
@@ -69,6 +98,12 @@ const NewService: React.FC = () => {
     
     try {
       const selectedTypeObj = serviceTypes.find((t) => t.id === selectedServiceTypeId);
+      
+      if (!selectedTypeObj) {
+        toast.error("Tipo de serviço inválido");
+        setIsLoading(false);
+        return;
+      }
 
       const serviceData = {
         title: title.trim(),
@@ -82,51 +117,56 @@ const NewService: React.FC = () => {
         },
         creationDate: new Date().toISOString(),
         messages: [],
-        serviceType: selectedTypeObj?.name ?? "",
+        serviceType: selectedTypeObj.name,
         serviceTypeId: selectedServiceTypeId,
         priority: priority as any,
         dueDate: dueDate?.toISOString(),
-        description,
-        createdBy: user.id as string, // sempre um string UUID
+        description: description.trim() || undefined,
+        createdBy: user.id,
       };
 
-      console.log("Criando demanda (dados):", serviceData);
+      console.log("Dados da demanda preparados:", serviceData);
       
       const result = await createService(serviceData);
+      console.log("Resultado da criação:", result);
 
       if (!result || !result.created || !result.created.id) {
-        toast.error("Erro ao criar demanda. Verifique se você tem permissão suficiente ou entre em contato com o administrador.");
+        console.error("Falha na criação - resultado inválido:", result);
+        toast.error("Erro ao criar demanda. Tente novamente.");
         return;
       }
+      
       if (result.technicianError) {
-        toast.success("Demanda criada, mas não foi possível atribuir o técnico.");
-        toast.info("Você poderá atribuir um técnico depois ao editar a demanda.");
+        toast.success("Demanda criada com sucesso!");
+        toast.info("Nota: Não foi possível atribuir o técnico automaticamente.");
       } else {
         toast.success("Demanda criada com sucesso!");
       }
+      
+      console.log("Demanda criada com sucesso, redirecionando...");
       navigate("/demandas");
+      
     } catch (error: any) {
-      let errMsg = "Erro ao criar demanda. Tente novamente.";
-      if (
-        typeof error?.message === "string" &&
-        error.message.toLowerCase().includes("permission denied")
-      ) {
-        errMsg = "Permissão negada ao criar demanda. Verifique suas permissões de acesso ou consulte o administrador.";
-      }
-      if (
-        typeof error?.message === "string" &&
-        error.message.toLowerCase().includes("nextval_for_service")
-      ) {
-        errMsg = "Falha ao gerar número da demanda (permissão ou configuração do banco).";
-      }
       console.error("Erro ao criar demanda:", error);
-      toast.error(errMsg);
+      
+      let errorMessage = "Erro ao criar demanda. Tente novamente.";
+      
+      if (error?.message) {
+        if (error.message.toLowerCase().includes("permission denied")) {
+          errorMessage = "Permissão negada. Verifique se você tem acesso para criar demandas.";
+        } else if (error.message.toLowerCase().includes("network")) {
+          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleTechnicianSelect = (technicianId: string) => {
+    console.log("Selecionando técnico:", technicianId);
     if (technicianId === "none") {
       setSelectedTechnician(null);
     } else {
@@ -168,20 +208,34 @@ const NewService: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="serviceType">Tipo de Serviço *</Label>
               <Select
-                value={selectedServiceTypeId ?? ""}
-                onValueChange={(value: string) => setSelectedServiceTypeId(value)}
+                value={selectedServiceTypeId}
+                onValueChange={setSelectedServiceTypeId}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo de serviço" />
                 </SelectTrigger>
                 <SelectContent>
-                  {serviceTypes
-                    .filter((type) => type && type.id && type.name)
-                    .map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name} {!!type.description && `- ${type.description}`}
-                      </SelectItem>
+                  {serviceTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name} {type.description && `- ${type.description}`}
+                    </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="priority">Prioridade</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -253,6 +307,7 @@ const NewService: React.FC = () => {
                 variant="outline"
                 onClick={() => navigate("/demandas")}
                 className="flex-1"
+                disabled={isLoading}
               >
                 Cancelar
               </Button>
