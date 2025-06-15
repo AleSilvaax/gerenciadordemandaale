@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Filter, TrendingUp, Calendar, Users, Activity, BarChart3, PieChart } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -8,29 +7,106 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DashboardStatsCards } from "@/components/dashboard/DashboardStatsCards";
+import { RealTimeStatsCards } from "@/components/dashboard/RealTimeStatsCards";
 import { AnimatedBarChart } from "@/components/dashboard/AnimatedBarChart";
 import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
+import { getServices, getTeamMembers } from "@/services/servicesDataService";
 
 const Estatisticas: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("30");
   const [selectedTechnician, setSelectedTechnician] = useState("all");
   const [selectedServiceType, setSelectedServiceType] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [chartData, setChartData] = useState({
+    pieChartData: [],
+    barChartData: [],
+    teamPerformance: [],
+    serviceTypes: []
+  });
 
-  // Mock data for charts
-  const pieChartData = [
-    { name: "Concluídas", value: 1, color: "#10b981" },
-    { name: "Pendentes", value: 14, color: "#f59e0b" },
-    { name: "Canceladas", value: 0, color: "#ef4444" }
-  ];
+  // Load real data for charts
+  useEffect(() => {
+    const loadChartData = async () => {
+      try {
+        setLoading(true);
+        const [services, teamMembers] = await Promise.all([
+          getServices(),
+          getTeamMembers()
+        ]);
 
-  const barChartData = [
-    { name: "Baixa", value: 3, color: "#6b7280" },
-    { name: "Média", value: 8, color: "#3b82f6" },
-    { name: "Alta", value: 3, color: "#f59e0b" },
-    { name: "Urgente", value: 1, color: "#ef4444" }
-  ];
+        // Status distribution
+        const statusCounts = services.reduce((acc, service) => {
+          acc[service.status] = (acc[service.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const pieChartData = [
+          { name: "Concluídas", value: statusCounts.concluido || 0, color: "#10b981" },
+          { name: "Pendentes", value: statusCounts.pendente || 0, color: "#f59e0b" },
+          { name: "Canceladas", value: statusCounts.cancelado || 0, color: "#ef4444" }
+        ];
+
+        // Priority distribution
+        const priorityCounts = services.reduce((acc, service) => {
+          acc[service.priority] = (acc[service.priority] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const barChartData = [
+          { name: "Baixa", value: priorityCounts.baixa || 0, color: "#6b7280" },
+          { name: "Média", value: priorityCounts.media || 0, color: "#3b82f6" },
+          { name: "Alta", value: priorityCounts.alta || 0, color: "#f59e0b" },
+          { name: "Urgente", value: priorityCounts.urgente || 0, color: "#ef4444" }
+        ];
+
+        // Team performance
+        const techPerformance = services.reduce((acc, service) => {
+          if (service.technician?.id) {
+            acc[service.technician.id] = (acc[service.technician.id] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
+        const teamPerformance = Object.entries(techPerformance)
+          .map(([techId, count]) => {
+            const tech = teamMembers.find(m => m.id === techId);
+            return {
+              name: tech?.name || 'Desconhecido',
+              completed: count
+            };
+          })
+          .sort((a, b) => b.completed - a.completed)
+          .slice(0, 5);
+
+        // Service types
+        const typeCounts = services.reduce((acc, service) => {
+          const type = service.serviceType || 'Outros';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const serviceTypes = Object.entries(typeCounts)
+          .map(([type, count]) => ({
+            name: type,
+            percentage: Math.round((count / services.length) * 100)
+          }))
+          .sort((a, b) => b.percentage - a.percentage);
+
+        setChartData({
+          pieChartData,
+          barChartData,
+          teamPerformance,
+          serviceTypes
+        });
+      } catch (error) {
+        console.error('Error loading chart data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChartData();
+  }, [selectedPeriod, selectedTechnician, selectedServiceType]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -73,7 +149,7 @@ const Estatisticas: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               Estatísticas
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1 text-left-force">Análise completa do desempenho</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1 text-left-force">Análise completa do desempenho em tempo real</p>
           </div>
         </motion.div>
 
@@ -128,9 +204,9 @@ const Estatisticas: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os tipos</SelectItem>
-                      <SelectItem value="inspection">Inspeção</SelectItem>
-                      <SelectItem value="maintenance">Manutenção</SelectItem>
-                      <SelectItem value="repair">Reparo</SelectItem>
+                      <SelectItem value="Vistoria">Vistoria</SelectItem>
+                      <SelectItem value="Instalação">Instalação</SelectItem>
+                      <SelectItem value="Manutenção">Manutenção</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -141,7 +217,7 @@ const Estatisticas: React.FC = () => {
 
         {/* Stats Cards */}
         <motion.div variants={itemVariants}>
-          <DashboardStatsCards />
+          <RealTimeStatsCards />
         </motion.div>
 
         {/* Charts Section */}
@@ -169,7 +245,13 @@ const Estatisticas: React.FC = () => {
                     <CardDescription className="text-left-force">Distribuição por status atual</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AnimatedPieChart data={pieChartData} />
+                    {loading ? (
+                      <div className="h-[220px] flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : (
+                      <AnimatedPieChart data={chartData.pieChartData} />
+                    )}
                   </CardContent>
                 </Card>
 
@@ -182,7 +264,13 @@ const Estatisticas: React.FC = () => {
                     <CardDescription className="text-left-force">Demandas por nível de prioridade</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <AnimatedBarChart data={barChartData} />
+                    {loading ? (
+                      <div className="h-[220px] flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : (
+                      <AnimatedBarChart data={chartData.barChartData} />
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -199,18 +287,15 @@ const Estatisticas: React.FC = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">João Silva</span>
-                        <Badge variant="secondary" className="text-compact">8 concluídas</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Maria Santos</span>
-                        <Badge variant="secondary" className="text-compact">6 concluídas</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Pedro Costa</span>
-                        <Badge variant="secondary" className="text-compact">4 concluídas</Badge>
-                      </div>
+                      {chartData.teamPerformance.map((member, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <span className="text-sm text-left-force text-no-wrap">{member.name}</span>
+                          <Badge variant="secondary" className="text-compact">{member.completed} concluídas</Badge>
+                        </div>
+                      ))}
+                      {chartData.teamPerformance.length === 0 && !loading && (
+                        <p className="text-sm text-muted-foreground text-center">Nenhum dado disponível</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -224,18 +309,15 @@ const Estatisticas: React.FC = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Inspeção</span>
-                        <Badge className="text-compact">45%</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Manutenção</span>
-                        <Badge className="text-compact">35%</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Reparo</span>
-                        <Badge className="text-compact">20%</Badge>
-                      </div>
+                      {chartData.serviceTypes.map((type, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <span className="text-sm text-left-force text-no-wrap">{type.name}</span>
+                          <Badge className="text-compact">{type.percentage}%</Badge>
+                        </div>
+                      ))}
+                      {chartData.serviceTypes.length === 0 && !loading && (
+                        <p className="text-sm text-muted-foreground text-center">Nenhum dado disponível</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -244,22 +326,22 @@ const Estatisticas: React.FC = () => {
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2 text-left-force">
                       <Calendar className="h-4 w-4 text-primary" />
-                      Tendências
+                      Métricas em Tempo Real
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Esta semana</span>
-                        <Badge variant="default" className="text-compact">+12%</Badge>
+                        <span className="text-sm text-left-force text-no-wrap">Atualizações</span>
+                        <Badge variant="default" className="text-compact animate-pulse">Em tempo real</Badge>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Este mês</span>
-                        <Badge variant="default" className="text-compact">+8%</Badge>
+                        <span className="text-sm text-left-force text-no-wrap">Última atualização</span>
+                        <Badge variant="secondary" className="text-compact">{new Date().toLocaleTimeString()}</Badge>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-left-force text-no-wrap">Média conclusão</span>
-                        <Badge variant="secondary" className="text-compact">2.3 dias</Badge>
+                        <span className="text-sm text-left-force text-no-wrap">Status do sistema</span>
+                        <Badge variant="default" className="text-compact bg-green-500">Online</Badge>
                       </div>
                     </div>
                   </CardContent>

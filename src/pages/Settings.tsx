@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ArrowLeft, Settings as SettingsIcon, Users, Shield, Palette, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -7,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { TechnicalSettingsTab } from "@/components/settings/TechnicalSettingsTab";
-import { VisualPreferencesTab } from "@/components/settings/VisualPreferencesTab";
+import { EnhancedVisualPreferencesTab } from "@/components/settings/EnhancedVisualPreferencesTab";
 import PermissionsTab from "@/components/settings/PermissionsTab";
 
 const Settings: React.FC = () => {
@@ -91,7 +90,7 @@ const Settings: React.FC = () => {
                 </TabsContent>
 
                 <TabsContent value="visual" className="mt-6">
-                  <VisualPreferencesTab />
+                  <EnhancedVisualPreferencesTab />
                 </TabsContent>
 
                 <TabsContent value="team" className="mt-6">
