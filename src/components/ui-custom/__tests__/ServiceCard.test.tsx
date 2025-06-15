@@ -1,12 +1,11 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@/test/utils';
 import { ServiceCard } from '../ServiceCard';
 import { mockService } from '@/test/utils';
 
 describe('ServiceCard', () => {
-  const mockOnEdit = vi.fn();
-  const mockOnView = vi.fn();
+  const mockOnDelete = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -16,55 +15,48 @@ describe('ServiceCard', () => {
     render(
       <ServiceCard
         service={mockService}
-        onEdit={mockOnEdit}
-        onView={mockOnView}
+        onDelete={mockOnDelete}
       />
     );
 
     expect(screen.getByText(mockService.title)).toBeInTheDocument();
-    expect(screen.getByText(mockService.clientName)).toBeInTheDocument();
-    expect(screen.getByText(mockService.address)).toBeInTheDocument();
+    expect(screen.getByText(mockService.location)).toBeInTheDocument();
   });
 
-  it('calls onView when view button is clicked', () => {
+  it('calls onDelete when delete button is clicked', () => {
     render(
       <ServiceCard
         service={mockService}
-        onEdit={mockOnEdit}
-        onView={mockOnView}
+        onDelete={mockOnDelete}
       />
     );
 
-    const viewButton = screen.getByText('Ver Detalhes');
-    fireEvent.click(viewButton);
+    const deleteButton = screen.getByText('Excluir');
+    fireEvent.click(deleteButton);
 
-    expect(mockOnView).toHaveBeenCalledWith(mockService.id);
-  });
-
-  it('calls onEdit when edit button is clicked', () => {
-    render(
-      <ServiceCard
-        service={mockService}
-        onEdit={mockOnEdit}
-        onView={mockOnView}
-      />
-    );
-
-    const editButton = screen.getByText('Editar');
-    fireEvent.click(editButton);
-
-    expect(mockOnEdit).toHaveBeenCalledWith(mockService.id);
+    expect(mockOnDelete).toHaveBeenCalledWith(mockService.id);
   });
 
   it('displays correct status badge', () => {
     render(
       <ServiceCard
         service={mockService}
-        onEdit={mockOnEdit}
-        onView={mockOnView}
+        onDelete={mockOnDelete}
       />
     );
 
     expect(screen.getByText('Pendente')).toBeInTheDocument();
+  });
+
+  it('renders in compact mode', () => {
+    render(
+      <ServiceCard
+        service={mockService}
+        onDelete={mockOnDelete}
+        compact={true}
+      />
+    );
+
+    expect(screen.getByText(mockService.title)).toBeInTheDocument();
   });
 });
