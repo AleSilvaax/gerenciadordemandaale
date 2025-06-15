@@ -1,11 +1,13 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { Service } from '@/types/serviceTypes';
+import { useUIStore } from '@/store/uiStore';
+import { useServiceStore } from '@/store/serviceStore';
 
 export const useRealtimeNotifications = () => {
-  const [isConnected, setIsConnected] = useState(false);
+  const { setConnectionStatus, addNotification } = useUIStore();
+  const { updateService, loadServices } = useServiceStore();
 
   useEffect(() => {
     console.log('[REALTIME] Iniciando escuta de notificações...');
@@ -22,9 +24,12 @@ export const useRealtimeNotifications = () => {
         (payload) => {
           console.log('[REALTIME] Nova demanda criada:', payload);
           const newService = payload.new as Service;
-          toast.success(`Nova demanda criada: ${newService.title}`, {
-            description: `Cliente: ${newService.client || 'N/A'}`
+          addNotification({
+            title: 'Nova demanda criada',
+            message: `${newService.title} - Cliente: ${newService.client || 'N/A'}`,
+            type: 'success'
           });
+          loadServices(); // Recarregar lista
         }
       )
       .on(
@@ -40,10 +45,14 @@ export const useRealtimeNotifications = () => {
           const oldService = payload.old as Service;
           
           if (oldService.status !== updatedService.status) {
-            toast.info(`Status atualizado: ${updatedService.title}`, {
-              description: `${oldService.status} → ${updatedService.status}`
+            addNotification({
+              title: 'Status atualizado',
+              message: `${updatedService.title}: ${oldService.status} → ${updatedService.status}`,
+              type: 'info'
             });
           }
+          
+          updateService(updatedService);
         }
       )
       .on(
@@ -56,28 +65,40 @@ export const useRealtimeNotifications = () => {
         (payload) => {
           console.log('[REALTIME] Nova mensagem:', payload);
           const newMessage = payload.new;
-          toast.info(`Nova mensagem de ${newMessage.sender_name}`, {
-            description: newMessage.message.substring(0, 50) + '...'
+          addNotification({
+            title: `Nova mensagem de ${newMessage.sender_name}`,
+            message: newMessage.message.substring(0, 50) + '...',
+            type: 'info'
           });
         }
       )
       .subscribe((status) => {
         console.log('[REALTIME] Status da conexão:', status);
-        setIsConnected(status === 'SUBSCRIBED');
+        const isConnected = status === 'SUBSCRIBED';
+        setConnectionStatus(isConnected);
         
-        if (status === 'SUBSCRIBED') {
-          toast.success('Notificações em tempo real ativadas');
+        if (isConnected) {
+          addNotification({
+            title: 'Conectado',
+            message: 'Notificações em tempo real ativadas',
+            type: 'success'
+          });
         } else if (status === 'CHANNEL_ERROR') {
-          toast.error('Erro na conexão em tempo real');
+          addNotification({
+            title: 'Erro de conexão',
+            message: 'Falha na conexão em tempo real',
+            type: 'error'
+          });
         }
       });
 
     return () => {
       console.log('[REALTIME] Desconectando...');
       supabase.removeChannel(channel);
-      setIsConnected(false);
+      setConnectionStatus(false);
     };
-  }, []);
+  }, [setConnectionStatus, addNotification, updateService, loadServices]);
 
+  const { isConnected } = useUIStore();
   return { isConnected };
 };

@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Toaster as SonnerToaster } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import React from "react";
 
 // Pages
@@ -24,12 +25,20 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
 
-// Create a client
-const queryClient = new QueryClient();
+// Create a client with better defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    },
+  },
+});
 
 function App() {
   return (
-    <>
+    <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
           <AuthProvider>
@@ -62,7 +71,7 @@ function App() {
       </QueryClientProvider>
       <SonnerToaster />
       <Toaster />
-    </>
+    </ErrorBoundary>
   );
 }
 
