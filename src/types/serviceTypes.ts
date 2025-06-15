@@ -1,3 +1,4 @@
+
 export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
@@ -30,7 +31,7 @@ export interface ServiceFeedback {
 export interface CustomField {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select';
+  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select' | 'date';
   value: string | number | boolean;
   options?: string[];
 }

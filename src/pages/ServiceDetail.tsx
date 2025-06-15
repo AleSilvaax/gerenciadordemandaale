@@ -622,7 +622,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                       <div>
                         <Label className="text-sm font-medium">Avaliação do Cliente</Label>
                         <div className="flex items-center gap-2 mt-1">
-                          <Rating value={service.feedback.clientRating} readOnly />
+                          <Rating value={service.feedback.clientRating} />
                           <span className="text-sm text-muted-foreground">
                             ({service.feedback.clientRating}/5)
                           </span>
