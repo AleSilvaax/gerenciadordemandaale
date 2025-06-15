@@ -9,14 +9,17 @@ import { Service, ServiceStatus } from "@/types/serviceTypes";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { FileText, Search as SearchIcon, Filter, X } from "lucide-react";
+import { FileText, Search as SearchIcon, Filter, X, Plus, Zap } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { useTechnicianServices } from "@/hooks/useTechnicianServices";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const Demandas: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   const { user, hasPermission, canAccessRoute } = useAuth();
 
   // Adicionar hook para buscar demandas do técnico (caso seja técnico)
@@ -116,292 +119,388 @@ const Demandas: React.FC = () => {
   const completedServices = services.filter((service) => service.status === "concluido");
   const canceledServices = services.filter((service) => service.status === "cancelado");
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.4
+      }
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+  };
+
   return (
-    <div className="container py-4 space-y-6 pb-24 md:pb-20">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-primary">Gerenciar Demandas</h1>
-        {canAccessRoute && canAccessRoute('/nova-demanda') && (
-          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
-        )}
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <motion.div 
+        className="container mx-auto p-6 pb-24 space-y-8"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Gerenciar Demandas
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Visualize e gerencie todas as demandas do sistema
+            </p>
+          </div>
+          {canAccessRoute && canAccessRoute('/nova-demanda') && (
+            <Button onClick={() => navigate("/nova-demanda")} size="lg" className="px-8">
+              <Plus className="mr-2 h-5 w-5" />
+              Nova Demanda
+            </Button>
+          )}
+        </motion.div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-          <Input
-            placeholder="Buscar demandas..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full"
-          />
-        </div>
-        <div className="w-full sm:w-64">
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
-          >
-            <SelectTrigger className="w-full">
-              <div className="flex items-center">
-                <Filter size={16} className="mr-2" />
-                <SelectValue placeholder="Filtrar por status" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="concluido">Concluído</SelectItem>
-              <SelectItem value="cancelado">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {isMobile ? (
-        <div className="overflow-x-auto pb-4">
-          <Tabs defaultValue="all" className="w-full">
-            <div className="mb-4">
-              <TabsList className="w-full grid grid-cols-4 h-auto p-1">
-                <TabsTrigger value="all" className="py-2 text-xs">Todos ({services.length})</TabsTrigger>
-                <TabsTrigger value="pending" className="py-2 text-xs">Pendentes ({pendingServices.length})</TabsTrigger>
-                <TabsTrigger value="completed" className="py-2 text-xs">Concluídos ({completedServices.length})</TabsTrigger>
-                <TabsTrigger value="canceled" className="py-2 text-xs">Cancelados ({canceledServices.length})</TabsTrigger>
-              </TabsList>
+        {/* Filters Section */}
+        <motion.div 
+          variants={itemVariants}
+          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
+        >
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+              <Input
+                placeholder="Buscar por ID, título, local ou técnico..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-background/50 border-border/50"
+              />
             </div>
-            
-            <TabsContent value="all" className="mt-2 space-y-4">
-              {loading ? (
-                <div className="flex justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : filteredServices.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredServices.map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">Nenhuma demanda encontrada</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Não foram encontradas demandas com os filtros atuais.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="pending" className="mt-2 space-y-4">
-              {pendingServices.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingServices
-                    .filter((service) => {
-                      const searchLower = searchTerm.toLowerCase();
-                      return (
-                        service.id.toLowerCase().includes(searchLower) ||
-                        service.title.toLowerCase().includes(searchLower) ||
-                        service.location.toLowerCase().includes(searchLower) ||
-                        service.technician.name.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((service) => (
-                      <ServiceCard
-                        key={service.id}
-                        service={service}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Não há demandas pendentes.</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed" className="mt-2 space-y-4">
-              {completedServices.length > 0 ? (
-                <div className="space-y-4">
-                  {completedServices
-                    .filter((service) => {
-                      const searchLower = searchTerm.toLowerCase();
-                      return (
-                        service.id.toLowerCase().includes(searchLower) ||
-                        service.title.toLowerCase().includes(searchLower) ||
-                        service.location.toLowerCase().includes(searchLower) ||
-                        service.technician.name.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((service) => (
-                      <ServiceCard
-                        key={service.id}
-                        service={service}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Não há demandas concluídas.</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="canceled" className="mt-2 space-y-4">
-              {canceledServices.length > 0 ? (
-                <div className="space-y-4">
-                  {canceledServices
-                    .filter((service) => {
-                      const searchLower = searchTerm.toLowerCase();
-                      return (
-                        service.id.toLowerCase().includes(searchLower) ||
-                        service.title.toLowerCase().includes(searchLower) ||
-                        service.location.toLowerCase().includes(searchLower) ||
-                        service.technician.name.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((service) => (
-                      <ServiceCard
-                        key={service.id}
-                        service={service}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Não há demandas canceladas.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      ) : (
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">Todos ({services.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pendentes ({pendingServices.length})</TabsTrigger>
-            <TabsTrigger value="completed">Concluídos ({completedServices.length})</TabsTrigger>
-            <TabsTrigger value="canceled">Cancelados ({canceledServices.length})</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all" className="mt-6 space-y-4">
-            {loading ? (
-              <div className="flex justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : filteredServices.length > 0 ? (
-              <div className="space-y-4 overflow-x-auto pb-4">
-                {filteredServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Nenhuma demanda encontrada</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Não foram encontradas demandas com os filtros atuais.
-                </p>
-              </div>
+            <div className="w-full sm:w-64">
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
+              >
+                <SelectTrigger className="bg-background/50 border-border/50">
+                  <div className="flex items-center">
+                    <Filter size={16} className="mr-2" />
+                    <SelectValue placeholder="Filtrar por status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="concluido">Concluído</SelectItem>
+                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(searchTerm || statusFilter !== "all") && (
+              <Button variant="outline" onClick={clearFilters} className="bg-background/50">
+                <X size={16} className="mr-2" />
+                Limpar
+              </Button>
             )}
-          </TabsContent>
-          
-          <TabsContent value="pending" className="mt-6 space-y-4">
-            {pendingServices.length > 0 ? (
-              <div className="space-y-4 overflow-x-auto pb-4">
-                {pendingServices
-                  .filter((service) => {
-                    const searchLower = searchTerm.toLowerCase();
-                    return (
-                      service.id.toLowerCase().includes(searchLower) ||
-                      service.title.toLowerCase().includes(searchLower) ||
-                      service.location.toLowerCase().includes(searchLower) ||
-                      service.technician.name.toLowerCase().includes(searchLower)
-                    );
-                  })
-                  .map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Não há demandas pendentes.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="completed" className="mt-6 space-y-4">
-            {completedServices.length > 0 ? (
-              <div className="space-y-4 overflow-x-auto pb-4">
-                {completedServices
-                  .filter((service) => {
-                    const searchLower = searchTerm.toLowerCase();
-                    return (
-                      service.id.toLowerCase().includes(searchLower) ||
-                      service.title.toLowerCase().includes(searchLower) ||
-                      service.location.toLowerCase().includes(searchLower) ||
-                      service.technician.name.toLowerCase().includes(searchLower)
-                    );
-                  })
-                  .map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Não há demandas concluídas.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="canceled" className="mt-6 space-y-4">
-            {canceledServices.length > 0 ? (
-              <div className="space-y-4 overflow-x-auto pb-4">
-                {canceledServices
-                  .filter((service) => {
-                    const searchLower = searchTerm.toLowerCase();
-                    return (
-                      service.id.toLowerCase().includes(searchLower) ||
-                      service.title.toLowerCase().includes(searchLower) ||
-                      service.location.toLowerCase().includes(searchLower) ||
-                      service.technician.name.toLowerCase().includes(searchLower)
-                    );
-                  })
-                  .map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Não há demandas canceladas.</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+          </div>
+        </motion.div>
+
+        {/* Quick Stats */}
+        <motion.div 
+          variants={itemVariants}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+        >
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-foreground">{services.length}</div>
+            <div className="text-sm text-muted-foreground">Total</div>
+          </div>
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-amber-500">{pendingServices.length}</div>
+            <div className="text-sm text-muted-foreground">Pendentes</div>
+          </div>
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-green-500">{completedServices.length}</div>
+            <div className="text-sm text-muted-foreground">Concluídas</div>
+          </div>
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-red-500">{canceledServices.length}</div>
+            <div className="text-sm text-muted-foreground">Canceladas</div>
+          </div>
+        </motion.div>
+
+        {/* Services Content */}
+        <motion.div variants={itemVariants}>
+          {isMobile ? (
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+              <Tabs defaultValue="all" className="w-full">
+                <div className="mb-6">
+                  <TabsList className="w-full grid grid-cols-4 h-auto p-1 bg-background/50">
+                    <TabsTrigger value="all" className="py-3 text-xs">Todos</TabsTrigger>
+                    <TabsTrigger value="pending" className="py-3 text-xs">Pendentes</TabsTrigger>
+                    <TabsTrigger value="completed" className="py-3 text-xs">Concluídos</TabsTrigger>
+                    <TabsTrigger value="canceled" className="py-3 text-xs">Cancelados</TabsTrigger>
+                  </TabsList>
+                </div>
+                
+                <TabsContent value="all" className="mt-0 space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center p-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : filteredServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredServices.map((service, index) => (
+                        <motion.div
+                          key={service.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <ServiceCard
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Zap className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-medium mb-2">Nenhuma demanda encontrada</h3>
+                      <p className="text-muted-foreground">
+                        Não foram encontradas demandas com os filtros atuais.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="pending" className="mt-6 space-y-4">
+                  {pendingServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {pendingServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas pendentes.</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="completed" className="mt-6 space-y-4">
+                  {completedServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {completedServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas concluídas.</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="canceled" className="mt-6 space-y-4">
+                  {canceledServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {canceledServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas canceladas.</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 bg-background/50">
+                  <TabsTrigger value="all">Todos ({services.length})</TabsTrigger>
+                  <TabsTrigger value="pending">Pendentes ({pendingServices.length})</TabsTrigger>
+                  <TabsTrigger value="completed">Concluídos ({completedServices.length})</TabsTrigger>
+                  <TabsTrigger value="canceled">Cancelados ({canceledServices.length})</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all" className="mt-6 space-y-4">
+                  {loading ? (
+                    <div className="flex justify-center p-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : filteredServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredServices.map((service, index) => (
+                        <motion.div
+                          key={service.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <ServiceCard
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Zap className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-medium mb-2">Nenhuma demanda encontrada</h3>
+                      <p className="text-muted-foreground">
+                        Não foram encontradas demandas com os filtros atuais.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="pending" className="mt-6 space-y-4">
+                  {pendingServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {pendingServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas pendentes.</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="completed" className="mt-6 space-y-4">
+                  {completedServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {completedServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas concluídas.</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="canceled" className="mt-6 space-y-4">
+                  {canceledServices.length > 0 ? (
+                    <div className="space-y-4">
+                      {canceledServices
+                        .filter((service) => {
+                          const searchLower = searchTerm.toLowerCase();
+                          return (
+                            service.id.toLowerCase().includes(searchLower) ||
+                            service.title.toLowerCase().includes(searchLower) ||
+                            service.location.toLowerCase().includes(searchLower) ||
+                            service.technician.name.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((service) => (
+                          <ServiceCard
+                            key={service.id}
+                            service={service}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Não há demandas canceladas.</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
 
       <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>

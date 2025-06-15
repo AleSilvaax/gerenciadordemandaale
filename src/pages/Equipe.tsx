@@ -41,6 +41,8 @@ import { toast } from "sonner";
 import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 interface Permission {
   id: string;
@@ -51,6 +53,7 @@ interface Permission {
 
 const Equipe: React.FC = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMember, setNewMember] = useState({ 
@@ -199,15 +202,12 @@ const Equipe: React.FC = () => {
           return;
         }
         
-        // Get the data URL from the file
         const photoUrl = event.target.result.toString();
         
         try {
-          // Update the team member with the new photo
           const success = await updateTeamMember(memberId, { avatar: photoUrl });
           
           if (success) {
-            // Update local state
             const updatedTeam = team.map(member => {
               if (member.id === memberId) {
                 return {
@@ -245,13 +245,11 @@ const Equipe: React.FC = () => {
     setPermissions(permissions.map(permission => {
       if (permission.id === permissionId) {
         if (permission.roles.includes(role)) {
-          // Remove role if it already exists
           return {
             ...permission,
             roles: permission.roles.filter(r => r !== role)
           };
         } else {
-          // Add role if it doesn't exist
           return {
             ...permission,
             roles: [...permission.roles, role]
@@ -266,9 +264,7 @@ const Equipe: React.FC = () => {
     setIsSaving(true);
     
     try {
-      // Save permissions to localStorage
       localStorage.setItem("permissions", JSON.stringify(permissions));
-      
       toast.success("As permissões da equipe foram atualizadas com sucesso.");
     } catch (error) {
       console.error("Error saving permissions:", error);
@@ -278,222 +274,305 @@ const Equipe: React.FC = () => {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.4
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen p-4 pb-20 page-transition">
-      <div className="flex items-center mb-6">
-        <Link to="/" className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary border border-white/10 mr-4">
-          <ArrowLeft size={18} />
-        </Link>
-        <h1 className="text-xl font-bold">Minha equipe</h1>
-      </div>
-      
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg">Gerenciar minha equipe</h2>
-        <Select
-          value={roleFilter}
-          onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <motion.div 
+        className="container mx-auto p-6 pb-24 space-y-8"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex items-center gap-4 mb-8">
+          <Link 
+            to="/" 
+            className="h-12 w-12 rounded-xl flex items-center justify-center bg-card border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
+          >
+            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Minha Equipe
+            </h1>
+            <p className="text-muted-foreground mt-1">Gerencie membros e permissões da equipe</p>
+          </div>
+        </motion.div>
+        
+        {/* Team Management Section */}
+        <motion.div 
+          variants={itemVariants}
+          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
         >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Filtrar por" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="tecnico">Técnicos</SelectItem>
-            <SelectItem value="administrador">Admins</SelectItem>
-            <SelectItem value="gestor">Gestores</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex space-x-4 overflow-x-auto scrollbar-none pb-2">
-        <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
-          <DialogTrigger asChild>
-            <div className="flex flex-col items-center space-y-1">
-              <button className="h-14 w-14 rounded-full flex items-center justify-center bg-secondary border border-white/20">
-                <UserPlus size={20} />
-              </button>
-              <span className="text-xs whitespace-nowrap">Adicionar</span>
-            </div>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar novo membro</DialogTitle>
-              <DialogDescription>
-                Preencha as informações para adicionar um novo membro à equipe.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  placeholder="Nome do membro"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@exemplo.com"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone (opcional)</Label>
-                <Input
-                  id="phone"
-                  placeholder="(00) 00000-0000"
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="role">Função</Label>
-                <Select
-                  value={newMember.role}
-                  onValueChange={(value) => setNewMember({ ...newMember, role: value as UserRole })}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Gerenciar Equipe</h2>
+            <Select
+              value={roleFilter}
+              onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
+            >
+              <SelectTrigger className="w-40 bg-background/50">
+                <SelectValue placeholder="Filtrar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="tecnico">Técnicos</SelectItem>
+                <SelectItem value="administrador">Admins</SelectItem>
+                <SelectItem value="gestor">Gestores</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex space-x-4 overflow-x-auto scrollbar-none pb-2">
+            <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
+              <DialogTrigger asChild>
+                <motion.div 
+                  className="flex flex-col items-center space-y-2 min-w-fit cursor-pointer group"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a função" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="administrador">Administrador</SelectItem>
-                    <SelectItem value="gestor">Gestor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  <div className="h-16 w-16 rounded-xl flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary/30 group-hover:border-primary/50 group-hover:bg-primary/20 transition-all duration-200">
+                    <UserPlus size={24} className="text-primary" />
+                  </div>
+                  <span className="text-sm font-medium whitespace-nowrap">Adicionar</span>
+                </motion.div>
+              </DialogTrigger>
+              <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
+                <DialogHeader>
+                  <DialogTitle>Adicionar novo membro</DialogTitle>
+                  <DialogDescription>
+                    Preencha as informações para adicionar um novo membro à equipe.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome</Label>
+                    <Input
+                      id="name"
+                      placeholder="Nome do membro"
+                      value={newMember.name}
+                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="email@exemplo.com"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone (opcional)</Label>
+                    <Input
+                      id="phone"
+                      placeholder="(00) 00000-0000"
+                      value={newMember.phone}
+                      onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Função</Label>
+                    <Select
+                      value={newMember.role}
+                      onValueChange={(value) => setNewMember({ ...newMember, role: value as UserRole })}
+                    >
+                      <SelectTrigger className="bg-background/50">
+                        <SelectValue placeholder="Selecione a função" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tecnico">Técnico</SelectItem>
+                        <SelectItem value="administrador">Administrador</SelectItem>
+                        <SelectItem value="gestor">Gestor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddingMember(false)}>Cancelar</Button>
+                  <Button onClick={handleAddMember} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Adicionar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddingMember(false)}>Cancelar</Button>
-              <Button onClick={handleAddMember}>Adicionar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            {filteredTeam.map((member, index) => (
+              <motion.div 
+                key={member.id} 
+                className="flex flex-col items-center space-y-2 min-w-fit"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="relative group">
+                  <TeamMemberAvatar 
+                    src={member.avatar} 
+                    name={member.name} 
+                    size="lg"
+                    className="ring-2 ring-border/20 group-hover:ring-primary/30 transition-all duration-200"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={(el) => fileInputRefs.current[member.id] = el}
+                    onChange={(e) => handleFileChange(member.id, e)}
+                    className="hidden"
+                  />
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1.5 hover:bg-primary/90 transition-colors shadow-lg">
+                        {uploadingAvatar === member.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <PlusCircle size={14} />
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-md border border-border/50">
+                      <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
+                        <Upload size={16} className="mr-2" />
+                        Trocar foto
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Remover
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-sm font-medium whitespace-nowrap">{member.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {member.role === "tecnico" && "Técnico"}
+                    {member.role === "administrador" && "Admin"}
+                    {member.role === "gestor" && "Gestor"}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
         
-        {filteredTeam.map(member => (
-          <div key={member.id} className="flex flex-col items-center space-y-1">
-            <div className="relative">
-              <TeamMemberAvatar 
-                src={member.avatar} 
-                name={member.name} 
-                size="lg" 
-              />
-              <input
-                type="file"
-                accept="image/*"
-                ref={(el) => fileInputRefs.current[member.id] = el}
-                onChange={(e) => handleFileChange(member.id, e)}
-                className="hidden"
-              />
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="absolute -bottom-1 -right-1 bg-secondary border border-white/20 rounded-full p-1 hover:bg-primary/90 transition-colors">
-                    {uploadingAvatar === member.id ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <PlusCircle size={14} />
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
-                    <Upload size={16} className="mr-2" />
-                    Trocar foto
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handleDeleteMember(member.id)}
-                    className="text-destructive focus:text-destructive"
+        {/* Permissions Section */}
+        <motion.div 
+          variants={itemVariants}
+          className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
+        >
+          <h2 className="text-xl font-semibold mb-6">Permissões do Sistema</h2>
+          
+          <div className="space-y-6">
+            {permissions.map((permission, index) => (
+              <motion.div 
+                key={permission.id} 
+                className="bg-background/30 rounded-xl p-4 border border-border/30"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{permission.title}</h3>
+                <p className="text-base mb-4">{permission.question}</p>
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={permission.roles.includes("tecnico") ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => handleUpdatePermission(permission.id, "tecnico")}
                   >
-                    <Trash2 size={16} className="mr-2" />
-                    Remover
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-xs whitespace-nowrap">{member.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {member.role === "tecnico" && "Técnico"}
-                {member.role === "administrador" && "Admin"}
-                {member.role === "gestor" && "Gestor"}
-              </span>
-            </div>
+                    <User size={14} className="mr-1" />
+                    Técnico
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant={permission.roles.includes("administrador") ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => handleUpdatePermission(permission.id, "administrador")}
+                  >
+                    <ShieldCheck size={14} className="mr-1" />
+                    Administrador
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant={permission.roles.includes("gestor") ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => handleUpdatePermission(permission.id, "gestor")}
+                  >
+                    <ShieldCheck size={14} className="mr-1" />
+                    Gestor
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
           </div>
-        ))}
-      </div>
+        </motion.div>
+      </motion.div>
       
-      <div className="mt-8 space-y-6">
-        <h2 className="text-lg mb-2">Permissões do sistema</h2>
-        
-        {permissions.map((permission) => (
-          <div key={permission.id} className="space-y-2">
-            <h3 className="text-sm text-muted-foreground">{permission.title}</h3>
-            <p className="text-base">{permission.question}</p>
-            
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button
-                size="sm"
-                variant={permission.roles.includes("tecnico") ? "default" : "outline"}
-                className="rounded-full"
-                onClick={() => handleUpdatePermission(permission.id, "tecnico")}
-              >
-                <User size={14} className="mr-1" />
-                Técnico
-              </Button>
-              
-              <Button
-                size="sm"
-                variant={permission.roles.includes("administrador") ? "default" : "outline"}
-                className="rounded-full"
-                onClick={() => handleUpdatePermission(permission.id, "administrador")}
-              >
-                <ShieldCheck size={14} className="mr-1" />
-                Administrador
-              </Button>
-              
-              <Button
-                size="sm"
-                variant={permission.roles.includes("gestor") ? "default" : "outline"}
-                className="rounded-full"
-                onClick={() => handleUpdatePermission(permission.id, "gestor")}
-              >
-                <ShieldCheck size={14} className="mr-1" />
-                Gestor
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-white/10 p-4 z-10">
-        <Button className="w-full" onClick={handleSaveChanges} disabled={isSaving}>
+      {/* Fixed Save Button */}
+      <motion.div 
+        className="fixed bottom-6 left-6 right-6 z-50"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <Button 
+          className="w-full bg-primary/90 backdrop-blur-md hover:bg-primary shadow-lg border border-primary/20" 
+          onClick={handleSaveChanges} 
+          disabled={isSaving}
+          size="lg"
+        >
           {isSaving ? (
             <>
-              <Loader2 size={18} className="mr-2 animate-spin" />
+              <Loader2 size={20} className="mr-2 animate-spin" />
               Salvando...
             </>
           ) : (
             <>
-              <Save size={18} className="mr-2" />
-              Salvar
+              <Save size={20} className="mr-2" />
+              Salvar Alterações
             </>
           )}
         </Button>
-      </div>
+      </motion.div>
       
       <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
           <AlertDialogHeader>
             <AlertDialogTitle>Remover membro</AlertDialogTitle>
             <AlertDialogDescription>

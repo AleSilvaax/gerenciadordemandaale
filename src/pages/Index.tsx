@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle } from "lucide-react";
+import { FileText, BarChart2, Users, Download, Calendar, AlertTriangle, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { getServices, getTeamMembers } from "@/services/servicesDataService";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { Separator } from "@/components/ui/separator";
@@ -13,16 +14,18 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useTechnicianServices } from "@/hooks/useTechnicianServices";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [services, setServices] = useState<Service[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
   const { user, hasPermission, canAccessRoute } = useAuth();
 
-  // Novo: useTechnicianServices
   const { data: technicianServices, isLoading: techLoading, error: techError } = useTechnicianServices();
 
   useEffect(() => {
@@ -34,11 +37,9 @@ const Index: React.FC = () => {
       } else if (technicianServices) {
         setServices(technicianServices);
       }
-      // Não chama fetchData
       return;
     }
 
-    // Para admin/gestor continua o fetch padrão
     const fetchData = async () => {
       try {
         console.log('Fetching dashboard data...');
@@ -73,13 +74,11 @@ const Index: React.FC = () => {
   
   const technicians = [...new Set(services.map((service) => service.technician.id))].length;
   
-  // Get overdue services
   const overdueServices = services.filter(service => {
     if (service.status !== "pendente" || !service.dueDate) return false;
     return new Date(service.dueDate) < new Date();
   }).length;
   
-  // Get 3 most recent services
   const recentServices = [...services]
     .sort((a, b) => {
       const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
@@ -87,11 +86,6 @@ const Index: React.FC = () => {
       return dateB - dateA;
     })
     .slice(0, 3);
-
-  // Remover definição duplicada de technicianServices aqui!
-  // const technicianServices = user && user.role === 'tecnico'
-  //   ? services.filter(service => service.technician.id === user.id)
-  //   : [];
   
   const upcomingDueServices = user && user.role === 'tecnico'
     ? services
@@ -99,7 +93,7 @@ const Index: React.FC = () => {
           service.status === 'pendente' && 
           service.dueDate && 
           new Date(service.dueDate) >= new Date() &&
-          new Date(service.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Next 7 days
+          new Date(service.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         )
         .sort((a, b) => {
           const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
@@ -108,7 +102,6 @@ const Index: React.FC = () => {
         })
     : [];
 
-  // Handle report export (placeholder)
   const handleExportReport = (format: 'pdf' | 'excel') => {
     const message = format === 'pdf' ? 'Exportando relatório em PDF...' : 'Exportando relatório em Excel...';
     toast(message);
@@ -116,157 +109,285 @@ const Index: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="container py-4 space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">Sistema de Gestão de Demandas</h1>
-          <p className="text-muted-foreground mb-6">Faça login para acessar o sistema</p>
-          <Button onClick={() => navigate("/login")}>Fazer Login</Button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <motion.div 
+          className="text-center max-w-md mx-auto p-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4">
+            Sistema de Gestão de Demandas
+          </h1>
+          <p className="text-muted-foreground mb-8 text-lg">Faça login para acessar o sistema</p>
+          <Button onClick={() => navigate("/login")} size="lg" className="px-8">
+            Fazer Login
+          </Button>
+        </motion.div>
       </div>
     );
   }
 
-  return (
-    <div className="container py-4 space-y-6 pb-24">
-      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
-        <h1 className="text-3xl font-bold text-foreground">
-          Olá, {user.name.split(' ')[0]}!
-        </h1>
-        
-        {canAccessRoute && canAccessRoute('/nova-demanda') && (
-          <Button onClick={() => navigate("/nova-demanda")}>Nova demanda</Button>
-        )}
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Demandas Pendentes"
-          value={pendingServices}
-          icon={<FileText className="h-5 w-5" />}
-          description="Total de demandas aguardando conclusão"
-          className="border-yellow-600/20 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20"
-        />
-        
-        <StatCard
-          title="Demandas Concluídas"
-          value={completedServices}
-          icon={<BarChart2 className="h-5 w-5" />}
-          description="Total de demandas finalizadas"
-          className="border-green-600/20 bg-gradient-to-br from-green-500/20 to-green-600/20"
-        />
-        
-        <StatCard
-          title="Técnicos"
-          value={technicians}
-          icon={<Users className="h-5 w-5" />}
-          description="Total de técnicos ativos"
-          className="border-blue-600/20 bg-gradient-to-br from-blue-500/20 to-blue-600/20"
-        />
-        
-        <StatCard
-          title="Demandas Atrasadas"
-          value={overdueServices}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          description="Demandas com prazo vencido"
-          className="border-red-600/20 bg-gradient-to-br from-red-500/20 to-red-600/20"
-        />
-      </div>
-      
-      {hasPermission('view_stats') && (
-        <>
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Exportar Relatórios</h2>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => handleExportReport('excel')}>
-                <Download className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleExportReport('pdf')}>
-                <Download className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-            </div>
-          </div>
-          
-          <Separator className="my-6" />
-        </>
-      )}
-      
-      {/* Technician upcoming deadlines section */}
-      {user?.role === 'tecnico' && upcomingDueServices.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold flex items-center">
-              <Calendar className="mr-2 h-5 w-5 text-primary" />
-              Prazos Próximos
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingDueServices.map((service) => (
-              <ServiceCard key={service.id} service={service} compact={true} />
-            ))}
-          </div>
-          
-          <Separator className="my-6" />
-        </div>
-      )}
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
 
-      {/* Equipe section */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Equipe</h2>
-          {hasPermission('manage_team') && (
-            <Button variant="outline" onClick={() => navigate("/equipe")}>
-              Ver todos
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.4
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <motion.div 
+        className="container mx-auto p-6 pb-24 space-y-8"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        {/* Header */}
+        <motion.div 
+          variants={itemVariants}
+          className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}
+        >
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Olá, {user.name.split(' ')[0]}! 👋
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Bem-vindo de volta ao seu painel de controle
+            </p>
+          </div>
+          
+          {canAccessRoute && canAccessRoute('/nova-demanda') && (
+            <Button onClick={() => navigate("/nova-demanda")} size="lg" className="px-8">
+              <FileText className="mr-2 h-5 w-5" />
+              Nova Demanda
             </Button>
           )}
-        </div>
+        </motion.div>
         
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {teamMembers.slice(0, 5).map((member) => (
-            <div 
-              key={member.id} 
-              className="flex flex-col items-center p-2 min-w-[100px] text-center"
-              onClick={() => hasPermission('manage_team') && navigate(`/equipe#${member.id}`)}
-            >
-              <TeamMemberAvatar 
-                src={member.avatar} 
-                name={member.name} 
-                size="lg"
-                className={`mb-2 ${hasPermission('manage_team') ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
-              />
-              <span className="text-sm font-medium line-clamp-1">{member.name}</span>
-              <span className="text-xs text-muted-foreground line-clamp-1">
-                {member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}
-              </span>
+        {/* Stats Cards */}
+        <motion.div 
+          variants={itemVariants}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.2 }}
+          >
+            <StatCard
+              title="Demandas Pendentes"
+              value={pendingServices}
+              icon={<Clock className="h-6 w-6" />}
+              description="Aguardando conclusão"
+              className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border-amber-500/20 hover:border-amber-500/30"
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.2 }}
+          >
+            <StatCard
+              title="Demandas Concluídas"
+              value={completedServices}
+              icon={<CheckCircle className="h-6 w-6" />}
+              description="Finalizadas com sucesso"
+              className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 border-green-500/20 hover:border-green-500/30"
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.2 }}
+          >
+            <StatCard
+              title="Técnicos Ativos"
+              value={technicians}
+              icon={<Users className="h-6 w-6" />}
+              description="Membros da equipe"
+              className="bg-gradient-to-br from-blue-500/10 to-cyan-600/10 border-blue-500/20 hover:border-blue-500/30"
+            />
+          </motion.div>
+          
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.2 }}
+          >
+            <StatCard
+              title="Demandas Atrasadas"
+              value={overdueServices}
+              icon={<AlertTriangle className="h-6 w-6" />}
+              description="Prazo vencido"
+              className="bg-gradient-to-br from-red-500/10 to-pink-600/10 border-red-500/20 hover:border-red-500/30"
+            />
+          </motion.div>
+        </motion.div>
+        
+        {/* Export Reports Section */}
+        {hasPermission('view_stats') && (
+          <motion.div 
+            variants={itemVariants}
+            className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Exportar Relatórios</h2>
+                <p className="text-muted-foreground">Gere relatórios detalhados das demandas</p>
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExportReport('excel')}
+                  className="bg-background/50 hover:bg-background/80"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExportReport('pdf')}
+                  className="bg-background/50 hover:bg-background/80"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator className="my-6" />
-      
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Demandas Recentes</h2>
-          <Button variant="outline" onClick={() => navigate("/demandas")}>
-            Ver todas
-          </Button>
-        </div>
+          </motion.div>
+        )}
         
-        <div className="grid grid-cols-1 gap-4">
-          {isLoading ? (
-            <p>Carregando demandas...</p>
-          ) : recentServices.length > 0 ? (
-            recentServices.map((service) => (
-              <ServiceCard key={service.id} service={service} />
-            ))
-          ) : (
-            <p>Nenhuma demanda encontrada.</p>
-          )}
-        </div>
-      </div>
+        {/* Technician upcoming deadlines section */}
+        {user?.role === 'tecnico' && upcomingDueServices.length > 0 && (
+          <motion.div variants={itemVariants} className="space-y-4">
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold flex items-center">
+                    <Calendar className="mr-3 h-6 w-6 text-primary" />
+                    Prazos Próximos
+                  </h2>
+                  <p className="text-muted-foreground mt-1">Demandas com vencimento nos próximos 7 dias</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingDueServices.map((service, index) => (
+                  <motion.div
+                    key={service.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <ServiceCard service={service} compact={true} />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Team Section */}
+        <motion.div variants={itemVariants} className="space-y-4">
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">Nossa Equipe</h2>
+                <p className="text-muted-foreground mt-1">Membros ativos da equipe</p>
+              </div>
+              {hasPermission('manage_team') && (
+                <Button variant="outline" onClick={() => navigate("/equipe")} className="bg-background/50">
+                  Ver todos
+                </Button>
+              )}
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+              {teamMembers.slice(0, 5).map((member, index) => (
+                <motion.div 
+                  key={member.id} 
+                  className="flex flex-col items-center p-4 min-w-[120px] text-center rounded-xl bg-background/30 border border-border/30 hover:bg-background/50 transition-all duration-200 cursor-pointer group"
+                  onClick={() => hasPermission('manage_team') && navigate(`/equipe#${member.id}`)}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <TeamMemberAvatar 
+                    src={member.avatar} 
+                    name={member.name} 
+                    size="lg"
+                    className="mb-3 ring-2 ring-border/20 group-hover:ring-primary/30 transition-all duration-200"
+                  />
+                  <span className="text-sm font-medium line-clamp-1">{member.name}</span>
+                  <span className="text-xs text-muted-foreground line-clamp-1 mt-1">
+                    {member.role === 'tecnico' ? 'Técnico' : member.role === 'administrador' ? 'Administrador' : 'Gestor'}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Recent Services */}
+        <motion.div variants={itemVariants} className="space-y-4">
+          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">Demandas Recentes</h2>
+                <p className="text-muted-foreground mt-1">Últimas demandas criadas</p>
+              </div>
+              <Button variant="outline" onClick={() => navigate("/demandas")} className="bg-background/50">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Ver todas
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="flex justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : recentServices.length > 0 ? (
+                recentServices.map((service, index) => (
+                  <motion.div
+                    key={service.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <ServiceCard service={service} />
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div 
+                  className="text-center py-12"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Nenhuma demanda encontrada</h3>
+                  <p className="text-muted-foreground">Crie sua primeira demanda para começar</p>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
