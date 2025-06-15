@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface AuditLogEntry {
   id: string;
@@ -42,7 +41,8 @@ export const useAuditLog = () => {
     if (!user) return;
 
     try {
-      const logEntry = {
+      const logEntry: AuditLogEntry = {
+        id: crypto.randomUUID(),
         user_id: user.id,
         user_name: user.name,
         action,
@@ -61,13 +61,6 @@ export const useAuditLog = () => {
       const updatedLogs = [logEntry, ...existingLogs].slice(0, 1000); // Keep last 1000 entries
       localStorage.setItem('audit_logs', JSON.stringify(updatedLogs));
 
-      // Also store in database if available
-      try {
-        await supabase.from('audit_logs').insert([logEntry]);
-      } catch (dbError) {
-        console.warn('Could not store audit log in database:', dbError);
-      }
-
       console.log(`[AUDIT] ${action} on ${resourceType}:${resourceId} by ${user.name}`);
     } catch (error) {
       console.error('Error logging audit action:', error);
@@ -77,42 +70,8 @@ export const useAuditLog = () => {
   const getLogs = async (options: AuditLogOptions = {}) => {
     setIsLoading(true);
     try {
-      // First try to get from database
-      let query = supabase
-        .from('audit_logs')
-        .select('*')
-        .order('timestamp', { ascending: options.orderBy === 'asc' });
-
-      if (options.resourceType) {
-        query = query.eq('resource_type', options.resourceType);
-      }
-      if (options.resourceId) {
-        query = query.eq('resource_id', options.resourceId);
-      }
-      if (options.userId) {
-        query = query.eq('user_id', options.userId);
-      }
-      if (options.limit) {
-        query = query.limit(options.limit);
-      }
-
-      const { data: dbLogs, error } = await query;
-
-      if (error) {
-        throw error;
-      }
-
-      if (dbLogs && dbLogs.length > 0) {
-        setLogs(dbLogs);
-        return dbLogs;
-      }
-    } catch (error) {
-      console.warn('Could not fetch logs from database, using localStorage:', error);
-    }
-
-    // Fallback to localStorage
-    try {
-      const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+      // Get from localStorage
+      const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]') as AuditLogEntry[];
       let filteredLogs = localLogs;
 
       if (options.resourceType) {

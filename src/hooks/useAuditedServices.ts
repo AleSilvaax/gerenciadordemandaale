@@ -25,9 +25,12 @@ export const useAuditedServices = () => {
     }
   );
 
-  const createServiceWithAudit = useCallback(async (serviceData: Partial<Service>) => {
+  const createServiceWithAudit = useCallback(async (serviceData: Omit<Service, 'id'>) => {
     try {
-      const newService = await createService(serviceData);
+      const result = await createService(serviceData);
+      
+      // Handle the response structure from createService
+      const newService = 'created' in result ? result.created : result;
       
       // Log the action
       await logAction(
@@ -35,7 +38,7 @@ export const useAuditedServices = () => {
         RESOURCE_TYPES.SERVICE,
         newService.id,
         undefined,
-        serviceData,
+        extractRelevantFields(serviceData),
         { source: 'web_app' }
       );
 
@@ -157,6 +160,6 @@ const extractRelevantFields = (service: Partial<Service>) => {
     description: service.description,
     serviceType: service.serviceType,
     date: service.date,
-    dueDate: service.due_date
+    dueDate: service.dueDate
   };
 };
