@@ -1,175 +1,256 @@
 
-import React, { useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { X, Camera, Image, Edit2 } from "lucide-react";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import React, { useState, useCallback, useRef } from 'react';
+import { Upload, X, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { compressImage, isImageFile } from '@/utils/imageCompression';
+import { toast } from 'sonner';
 
-interface PhotoDetails {
+interface Photo {
+  id: string;
+  file: File;
   url: string;
   title: string;
+  compressed?: boolean;
+  originalSize?: number;
+  compressedSize?: number;
 }
 
 interface PhotoUploaderProps {
-  photos: PhotoDetails[];
-  onAddPhoto: (file: File, title: string) => Promise<string>;
-  onRemovePhoto: (index: number) => Promise<void>;
-  onUpdateTitle: (index: number, title: string) => Promise<void>;
-  className?: string;
+  photos: Photo[];
+  onPhotosChange: (photos: Photo[]) => void;
+  maxPhotos?: number;
+  acceptedFormats?: string[];
 }
 
 export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   photos,
-  onAddPhoto,
-  onRemovePhoto,
-  onUpdateTitle,
-  className = "",
+  onPhotosChange,
+  maxPhotos = 10,
+  acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 }) => {
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [photoTitle, setPhotoTitle] = useState("");
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editTitle, setEditTitle] = useState("");
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    if (!file.type.startsWith('image/')) {
-      alert("Por favor, selecione um arquivo de imagem válido");
+  const handleFileSelect = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = maxPhotos - photos.length;
+    if (remainingSlots <= 0) {
+      toast.error(`Máximo de ${maxPhotos} fotos permitido`);
       return;
     }
-    setIsUploading(true);
+
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    const invalidFiles = filesToProcess.filter(file => !isImageFile(file) || !acceptedFormats.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      toast.error(`Formatos aceitos: ${acceptedFormats.join(', ')}`);
+      return;
+    }
+
+    setIsCompressing(true);
+    const newPhotos: Photo[] = [];
+
     try {
-      await onAddPhoto(file, photoTitle || `Foto ${photos.length + 1}`);
-      setPhotoTitle("");
+      for (const file of filesToProcess) {
+        const originalSize = file.size;
+        
+        // Comprimir imagem automaticamente
+        const compressedFile = await compressImage(file, {
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 0.8,
+          maxSizeKB: 500
+        });
+
+        const photo: Photo = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          file: compressedFile,
+          url: URL.createObjectURL(compressedFile),
+          title: file.name.replace(/\.[^/.]+$/, ""), // Remove extensão
+          compressed: compressedFile.size < originalSize,
+          originalSize,
+          compressedSize: compressedFile.size
+        };
+
+        newPhotos.push(photo);
+
+        // Mostrar feedback de compressão
+        if (photo.compressed) {
+          const savings = ((originalSize - compressedFile.size) / originalSize * 100).toFixed(1);
+          toast.success(`${file.name} comprimida (${savings}% menor)`);
+        }
+      }
+
+      onPhotosChange([...photos, ...newPhotos]);
+      
     } catch (error) {
-      console.error("Erro ao fazer upload da foto:", error);
+      console.error('Erro ao processar fotos:', error);
+      toast.error('Erro ao processar algumas fotos');
     } finally {
-      setIsUploading(false);
+      setIsCompressing(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
-  };
+  }, [photos, maxPhotos, acceptedFormats, onPhotosChange]);
 
-  const handleEditTitle = (index: number) => {
-    setEditingIndex(index);
-    setEditTitle(photos[index].title);
-  };
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    handleFileSelect(e.dataTransfer.files);
+  }, [handleFileSelect]);
 
-  const saveTitle = async (index: number) => {
-    try {
-      await onUpdateTitle(index, editTitle);
-      setEditingIndex(null);
-    } catch (error) {
-      console.error("Erro ao atualizar título:", error);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const removePhoto = (photoId: string) => {
+    const photoToRemove = photos.find(p => p.id === photoId);
+    if (photoToRemove) {
+      URL.revokeObjectURL(photoToRemove.url);
     }
+    onPhotosChange(photos.filter(p => p.id !== photoId));
+  };
+
+  const updatePhotoTitle = (photoId: string, title: string) => {
+    onPhotosChange(
+      photos.map(photo =>
+        photo.id === photoId ? { ...photo, title } : photo
+      )
+    );
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   return (
-    <div className={className}>
-      <div className="space-y-4">
-        <div className="flex flex-col space-y-2">
-          <Label htmlFor="photoTitle">Título da foto</Label>
-          <Input
-            id="photoTitle"
-            placeholder="Ex: Painel elétrico"
-            value={photoTitle}
-            onChange={(e) => setPhotoTitle(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-full"
-          >
-            {isUploading ? (
-              <div className="flex items-center">
-                <div className="animate-spin mr-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="10" />
-                  </svg>
-                </div>
-                Enviando...
+    <div className="space-y-4">
+      {/* Upload Area */}
+      <Card 
+        className={`border-2 border-dashed transition-colors ${
+          isCompressing ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
+        <CardContent className="p-6">
+          <div className="text-center">
+            {isCompressing ? (
+              <div className="space-y-2">
+                <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Comprimindo imagens...</p>
               </div>
             ) : (
               <>
-                <Camera size={16} className="mr-2" />
-                Adicionar Foto
+                <div className="flex justify-center space-x-2 mb-4">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <Camera className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Adicionar Fotos</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Arraste e solte fotos aqui ou clique para selecionar<br />
+                  <span className="text-xs">
+                    Máximo: {maxPhotos} fotos • Formatos: JPG, PNG, WebP • Compressão automática
+                  </span>
+                </p>
+                <div className="flex justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={photos.length >= maxPhotos}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Selecionar Fotos
+                  </Button>
+                </div>
               </>
             )}
-          </Button>
-        </div>
-      </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={acceptedFormats.join(',')}
+            onChange={(e) => handleFileSelect(e.target.files)}
+            className="hidden"
+          />
+        </CardContent>
+      </Card>
 
+      {/* Photos Grid */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-          {photos.map((photo, index) => (
-            <div key={index} className="relative border rounded-lg overflow-hidden group">
-              <div className="relative">
-                <AspectRatio ratio={4/3}>
-                  <img 
-                    src={photo.url} 
-                    alt={photo.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </AspectRatio>
-                <button
-                  type="button"
-                  onClick={() => onRemovePhoto(index)}
-                  className="absolute top-2 right-2 bg-black/70 rounded-full p-1 hover:bg-black/90"
-                >
-                  <X size={16} className="text-white" />
-                </button>
-              </div>
-              
-              <div className="p-2 bg-gray-50 border-t dark:bg-gray-800 dark:border-gray-700">
-                {editingIndex === index ? (
-                  <div className="flex">
-                    <Input
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="text-sm h-8 mr-2"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="default"
-                      onClick={() => saveTitle(index)}
-                      className="h-8"
-                    >
-                      Salvar
-                    </Button>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">
+              Fotos Adicionadas ({photos.length}/{maxPhotos})
+            </h4>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {photos.map((photo) => (
+              <Card key={photo.id} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex space-x-4">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={photo.url}
+                        alt={photo.title}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                        onClick={() => removePhoto(photo.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <Label htmlFor={`title-${photo.id}`} className="text-xs">
+                          Título da Foto
+                        </Label>
+                        <Input
+                          id={`title-${photo.id}`}
+                          value={photo.title}
+                          onChange={(e) => updatePhotoTitle(photo.id, e.target.value)}
+                          placeholder="Digite um título..."
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {photo.compressed && (
+                          <Badge variant="secondary" className="text-xs">
+                            Comprimida
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(photo.compressedSize || photo.file.size)}
+                          {photo.compressed && photo.originalSize && (
+                            <span className="text-green-600 ml-1">
+                              (↓{((photo.originalSize - photo.file.size) / photo.originalSize * 100).toFixed(0)}%)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm font-medium truncate">{photo.title}</p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEditTitle(index)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit2 size={14} />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>
