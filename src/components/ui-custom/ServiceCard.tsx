@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -27,18 +28,28 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
     <Link to={`/demandas/${id}`} className="block">
       <Card className={`transition-all duration-300 hover:border-primary/30 ${completed ? 'bg-muted/30' : ''} ${compact ? 'p-2' : ''}`}>
         <CardContent className={`${compact ? 'pt-2 px-3' : 'pt-4'}`}>
-          <div className="flex justify-between items-start gap-2 mb-3">
-            <div>
-              {/* Exibir número da demanda */}
+          <div className="flex justify-between items-start gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              {/* Número da demanda com estilo mais harmonioso */}
               {number && (
-                <span className="block text-xs text-muted-foreground mb-1">
-                  Nº {number}
-                </span>
+                <div className="flex items-center mb-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                    Nº {number}
+                  </span>
+                </div>
               )}
-              <h3 className={`font-medium line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>{title}</h3>
-              <p className={`text-muted-foreground line-clamp-1 ${compact ? 'text-xs' : 'text-sm'}`}>{location}</p>
+              {/* Título alinhado à esquerda com quebra de linha controlada */}
+              <h3 className={`font-medium text-left leading-tight mb-1 ${compact ? 'text-sm' : 'text-base'}`}>
+                {title}
+              </h3>
+              {/* Localização alinhada à esquerda */}
+              <p className={`text-muted-foreground text-left leading-tight ${compact ? 'text-xs' : 'text-sm'}`}>
+                {location}
+              </p>
             </div>
-            <StatusBadge status={status} small={compact} />
+            <div className="flex-shrink-0">
+              <StatusBadge status={status} small={compact} />
+            </div>
           </div>
           
           <DeadlineManager 
@@ -59,13 +70,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
                   name={technician?.name}
                   size="sm"
                 />
-                <span className="text-sm">{technician?.name}</span>
+                <span className="text-sm text-left">{technician?.name}</span>
               </div>
               
               {onDelete && canDelete && (
                 <button 
                   onClick={handleDelete}
-                  className="text-xs text-destructive hover:underline"
+                  className="text-xs text-destructive hover:underline flex-shrink-0"
                 >
                   Excluir
                 </button>
