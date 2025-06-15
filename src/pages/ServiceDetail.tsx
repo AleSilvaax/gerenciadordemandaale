@@ -26,7 +26,7 @@ import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { CustomFieldRenderer } from "@/components/ui-custom/CustomFieldRenderer";
-import { generateDetailedServiceReport } from "@/utils/detailedServiceReport";
+import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
