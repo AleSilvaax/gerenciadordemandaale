@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Plus, Settings, Search, Filter, Calendar, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -144,7 +143,7 @@ const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
       <motion.div 
-        className="container mx-auto p-4 sm:p-6 pb-24 space-y-6 sm:space-y-8"
+        className="container mx-auto p-4 pb-24 space-y-6"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -201,8 +200,8 @@ const Index: React.FC = () => {
         <motion.div variants={itemVariants}>
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 bg-card/60 backdrop-blur-sm border border-border/50">
-              <TabsTrigger value="overview" className="text-compact">Visão Geral</TabsTrigger>
-              <TabsTrigger value="recent" className="text-compact">
+              <TabsTrigger value="overview" className="text-sm">Visão Geral</TabsTrigger>
+              <TabsTrigger value="recent" className="text-sm">
                 Recentes 
                 {filteredServices.length !== services.length && (
                   <Badge variant="secondary" className="ml-1 text-xs">
@@ -210,50 +209,50 @@ const Index: React.FC = () => {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="quick-actions" className="text-compact">Ações Rápidas</TabsTrigger>
+              <TabsTrigger value="quick-actions" className="text-sm">Ações Rápidas</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-left-force">
-                      <Calendar className="h-4 w-4 text-primary" />
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
+                      <Calendar className="h-5 w-5 text-primary" />
                       Agenda Hoje
                     </CardTitle>
                     <CardDescription className="text-left-force">Demandas agendadas para hoje</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-primary text-left-force">3</div>
-                    <p className="text-xs text-muted-foreground mt-1 text-left-force">demandas pendentes</p>
+                    <div className="text-3xl font-bold text-primary text-left-force">3</div>
+                    <p className="text-sm text-muted-foreground mt-2 text-left-force">demandas pendentes</p>
                   </CardContent>
                 </Card>
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-left-force">
-                      <Filter className="h-4 w-4 text-primary" />
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
+                      <Filter className="h-5 w-5 text-primary" />
                       Em Andamento
                     </CardTitle>
                     <CardDescription className="text-left-force">Serviços sendo executados</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600 text-left-force">5</div>
-                    <p className="text-xs text-muted-foreground mt-1 text-left-force">em progresso</p>
+                    <div className="text-3xl font-bold text-yellow-600 text-left-force">5</div>
+                    <p className="text-sm text-muted-foreground mt-2 text-left-force">em progresso</p>
                   </CardContent>
                 </Card>
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-left-force">
-                      <ChevronRight className="h-4 w-4 text-primary" />
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
+                      <ChevronRight className="h-5 w-5 text-primary" />
                       Próximas
                     </CardTitle>
                     <CardDescription className="text-left-force">Demandas da próxima semana</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600 text-left-force">8</div>
-                    <p className="text-xs text-muted-foreground mt-1 text-left-force">agendadas</p>
+                    <div className="text-3xl font-bold text-blue-600 text-left-force">8</div>
+                    <p className="text-sm text-muted-foreground mt-2 text-left-force">agendadas</p>
                   </CardContent>
                 </Card>
               </div>
@@ -268,7 +267,7 @@ const Index: React.FC = () => {
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Link to="/demandas">
-                        <Button variant="outline" size="sm" className="text-compact">
+                        <Button variant="outline" size="sm" className="text-sm">
                           Ver Todas ({services.length})
                         </Button>
                       </Link>
@@ -303,11 +302,11 @@ const Index: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="quick-actions" className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/new-service" className="block">
-                    <CardContent className="p-6 text-center">
-                      <Plus className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
+                    <CardContent className="p-8 text-center">
+                      <Plus className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
                       <h3 className="font-semibold mb-2 text-left-force">Nova Demanda</h3>
                       <p className="text-sm text-muted-foreground text-left-force">Criar uma nova solicitação de serviço</p>
                     </CardContent>
@@ -316,8 +315,8 @@ const Index: React.FC = () => {
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/estatisticas" className="block">
-                    <CardContent className="p-6 text-center">
-                      <Search className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
+                    <CardContent className="p-8 text-center">
+                      <Search className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
                       <h3 className="font-semibold mb-2 text-left-force">Relatórios</h3>
                       <p className="text-sm text-muted-foreground text-left-force">Visualizar estatísticas e dados</p>
                     </CardContent>
@@ -326,8 +325,8 @@ const Index: React.FC = () => {
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/equipe" className="block">
-                    <CardContent className="p-6 text-center">
-                      <Settings className="h-8 w-8 mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
+                    <CardContent className="p-8 text-center">
+                      <Settings className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
                       <h3 className="font-semibold mb-2 text-left-force">Gerenciar Equipe</h3>
                       <p className="text-sm text-muted-foreground text-left-force">Configurar membros e permissões</p>
                     </CardContent>

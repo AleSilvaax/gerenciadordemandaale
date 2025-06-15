@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, FileText, BarChart2, Users, Settings, LogOut } from "lucide-react";
@@ -25,25 +24,25 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-secondary/90 backdrop-blur-md border-t border-white/10 z-10 h-16 md:h-14">
+    <nav className="fixed bottom-0 left-0 right-0 bg-secondary/95 backdrop-blur-md border-t border-white/10 z-10 h-20 md:h-16">
       {isMobile ? (
         <ScrollArea className="w-full h-full">
-          <div className="flex justify-between items-center py-2 px-4 w-max min-w-full h-full">
-            <div className="flex items-center space-x-6">
+          <div className="flex justify-between items-center py-3 px-4 w-max min-w-full h-full">
+            <div className="flex items-center space-x-8">
               <Link 
                 to="/" 
                 className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/") ? "text-primary" : "text-muted-foreground"}`}
               >
-                <Home size={18} />
-                <span className="text-xs">Home</span>
+                <Home size={20} />
+                <span className="text-xs font-medium">Home</span>
               </Link>
               
               <Link 
                 to="/demandas" 
                 className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/demandas") ? "text-primary" : "text-muted-foreground"}`}
               >
-                <FileText size={18} />
-                <span className="text-xs">Demandas</span>
+                <FileText size={20} />
+                <span className="text-xs font-medium">Demandas</span>
               </Link>
               
               {hasPermission('view_stats') && (
@@ -51,8 +50,8 @@ export const Navbar: React.FC = () => {
                   to="/estatisticas" 
                   className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/estatisticas") ? "text-primary" : "text-muted-foreground"}`}
                 >
-                  <BarChart2 size={18} />
-                  <span className="text-xs">Estatísticas</span>
+                  <BarChart2 size={20} />
+                  <span className="text-xs font-medium">Estatísticas</span>
                 </Link>
               )}
               
@@ -61,15 +60,15 @@ export const Navbar: React.FC = () => {
                   to="/equipe" 
                   className={`flex flex-col items-center space-y-1 transition-all duration-300 ${isActive("/equipe") ? "text-primary" : "text-muted-foreground"}`}
                 >
-                  <Users size={18} />
-                  <span className="text-xs">Equipe</span>
+                  <Users size={20} />
+                  <span className="text-xs font-medium">Equipe</span>
                 </Link>
               )}
             </div>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-1">
+                <button className="flex items-center space-x-1 p-1">
                   <TeamMemberAvatar 
                     src={user?.avatar || ""} 
                     name={user?.name || ""}
@@ -80,7 +79,7 @@ export const Navbar: React.FC = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span>{user?.name}</span>
+                    <span className="font-medium">{user?.name}</span>
                     <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
                   </div>
                 </DropdownMenuLabel>
