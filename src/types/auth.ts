@@ -1,5 +1,5 @@
 
-export type UserRole = 'tecnico' | 'gestor' | 'administrador';
+export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
 
 export interface AuthUser {
   id: string;

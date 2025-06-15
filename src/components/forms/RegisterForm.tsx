@@ -1,4 +1,3 @@
-// src/components/forms/RegisterForm.tsx - VERSÃO FINAL CORRIGIDA
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { LogIn, Loader2, UserPlus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserRole } from '@/types/serviceTypes';
+import { UserRole } from '@/types/auth';
 import { useAuth } from '@/context/AuthContext';
 import { RegisterFormData } from '@/types/auth';
 import { toast } from 'sonner';
@@ -30,8 +29,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('tecnico');
-  const [teamId, setTeamId] = useState<string>(''); // <<< ADICIONADO
-  const [teams, setTeams] = useState<Team[]>([]);   // <<< ADICIONADO
+  const [teamId, setTeamId] = useState<string>(''); 
+  const [teams, setTeams] = useState<Team[]>([]);   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register } = useAuth();
@@ -40,31 +39,36 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   // Busca as equipes disponíveis quando o componente carrega
   useEffect(() => {
     const fetchTeams = async () => {
-    // Log 1: Avisa que a busca começou
-    console.log("Buscando equipes do Supabase..."); 
+      console.log("Buscando equipes do Supabase..."); 
 
-    const { data, error } = await supabase.from('teams').select('id, name');
+      const { data, error } = await supabase.from('teams').select('id, name');
 
-    // Log 2: Mostra o resultado completo que o Supabase retornou
-    console.log("Resultado da busca por equipes:", { data, error });
+      console.log("Resultado da busca por equipes:", { data, error });
 
-    if (error) {
-      toast.error('Erro ao carregar equipes', { description: error.message });
-    } else if (data) {
-      // Log 3: Mostra quantas equipes foram encontradas
-      console.log(`Encontradas ${data.length} equipes.`); 
-      setTeams(data);
-    }
-  };
-  fetchTeams();
-}, []);
+      if (error) {
+        toast.error('Erro ao carregar equipes', { description: error.message });
+      } else if (data) {
+        console.log(`Encontradas ${data.length} equipes.`); 
+        setTeams(data);
+      }
+    };
+    fetchTeams();
+  }, []);
 
   const validateForm = () => {
     setError(null);
-    if (!name || !email || !password || !confirmPassword || !role || !teamId) {
+    
+    // Se for requisitor, não precisa de equipe
+    if (role !== 'requisitor' && (!name || !email || !password || !confirmPassword || !role || !teamId)) {
       setError('Todos os campos, incluindo a equipe, são obrigatórios');
       return false;
     }
+    
+    if (role === 'requisitor' && (!name || !email || !password || !confirmPassword || !role)) {
+      setError('Todos os campos são obrigatórios');
+      return false;
+    }
+    
     if (password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres');
       return false;
@@ -88,7 +92,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         email,
         role,
         password,
-        team_id: teamId, // <<< ADICIONADO
+        team_id: role === 'requisitor' ? '' : teamId, // Para requisitor, team_id vazio
       };
       
       const success = await register(userData);
@@ -144,22 +148,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
                 <SelectItem value="tecnico">Técnico</SelectItem>
                 <SelectItem value="gestor">Gestor</SelectItem>
                 <SelectItem value="administrador">Administrador</SelectItem>
+                <SelectItem value="requisitor">Requisitor</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* CAMPO DE EQUIPE ADICIONADO */}
-          <div className="space-y-2">
-            <Label htmlFor="team">Equipe *</Label>
-            <Select value={teamId} onValueChange={setTeamId} disabled={isSubmitting || teams.length === 0}>
-              <SelectTrigger id="team"><SelectValue placeholder="Selecione uma equipe" /></SelectTrigger>
-              <SelectContent>
-                {teams.map(team => (
-                  <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* CAMPO DE EQUIPE - só mostrar se não for requisitor */}
+          {role !== 'requisitor' && (
+            <div className="space-y-2">
+              <Label htmlFor="team">Equipe *</Label>
+              <Select value={teamId} onValueChange={setTeamId} disabled={isSubmitting || teams.length === 0}>
+                <SelectTrigger id="team"><SelectValue placeholder="Selecione uma equipe" /></SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-3">

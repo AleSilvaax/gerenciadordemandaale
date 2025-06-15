@@ -4,7 +4,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
-  requiredRole?: 'tecnico' | 'gestor' | 'administrador';
+  requiredRole?: 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
   requiredPermission?: string;
   children?: React.ReactNode;
 }
@@ -35,6 +35,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requiredRole) {
     const roleHierarchy = {
       'tecnico': 1,
+      'requisitor': 1,
       'gestor': 2,
       'administrador': 3
     };
@@ -57,6 +58,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           return ['view_services', 'create_services', 'manage_team', 'view_stats', 'add_members'].includes(requiredPermission);
         case 'tecnico':
           return ['view_services', 'update_services'].includes(requiredPermission);
+        case 'requisitor':
+          return ['view_services', 'create_services'].includes(requiredPermission);
         default:
           return false;
       }

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { User, ShieldCheck, Loader2, Save } from "lucide-react";
-import { UserRole } from "@/types/serviceTypes";
+import { UserRole } from "@/types/auth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -139,6 +139,16 @@ const PermissionsTab: React.FC = () => {
               >
                 <ShieldCheck size={14} className="mr-1" />
                 Gestor
+              </Button>
+              
+              <Button
+                size="sm"
+                variant={permission.roles.includes("requisitor") ? "default" : "outline"}
+                className="rounded-full"
+                onClick={() => handleUpdatePermission(permission.id, "requisitor")}
+              >
+                <User size={14} className="mr-1" />
+                Requisitor
               </Button>
             </div>
           </motion.div>
