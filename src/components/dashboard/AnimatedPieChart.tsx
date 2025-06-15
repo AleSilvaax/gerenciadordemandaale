@@ -106,10 +106,10 @@ export const AnimatedPieChart: React.FC<AnimatedPieChartProps> = ({ data, height
                     {payload[0]?.name}
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                    {payload[0]?.value}
+                    {payload[0]?.value || 0}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">
-                    {total > 0 ? `${Math.round((payload[0]?.value / total) * 100)}%` : '0%'} do total
+                    {total > 0 && payload[0]?.value ? `${Math.round((Number(payload[0].value) / total) * 100)}%` : '0%'} do total
                   </div>
                 </motion.div>
               ) : null
