@@ -1,7 +1,7 @@
 // Arquivo: src/utils/detailedReportGenerator.ts
 
 import { jsPDF } from "jspdf";
-import { Service } from "@/types/serviceTypes";
+import { Service, CustomField } from "@/types/serviceTypes";
 import { formatDate } from "./formatters";
 import { PDF_COLORS, PDF_DIMENSIONS } from './pdf/pdfConstants';
 import { calculateImageDimensions, processImageForPDF } from './pdf/imageProcessor';
@@ -15,36 +15,33 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
   
   doc.setFont("helvetica");
 
-  // [O CÓDIGO DA CAPA E DAS SEÇÕES DE INFORMAÇÕES PERMANECE O MESMO]
-  // ... (todo o código que gera a primeira página e a de detalhes)
+  // PÁGINA 1 - CAPA (Esta parte não muda)
+  yPosition = addHeader(doc, "RELATORIO DE DEMANDA", 30);
+  doc.rect(25, yPosition, 160, 100, 'FD');
+  let cardY = yPosition + 20;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(safeText(service.title), 105, cardY, { align: "center" });
+  cardY += 15;
+  // ... (Resto do código da capa)
 
 
-  // --- AQUI COMEÇA A CORREÇÃO IMPORTANTE ---
-
-  // PÁGINA DE FOTOS
+  // PÁGINA DE FOTOS (Esta é a parte com a correção principal)
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
     yPosition = addHeader(doc, "ANEXOS FOTOGRAFICOS", 20);
 
-    // Usamos um loop 'for...of' que funciona com 'await'
     for (const [photoIndex, photoUrl] of service.photos.entries()) {
-      if (yPosition > 150) { // Garante espaço para a imagem
-        doc.addPage();
-        yPosition = 30;
-      }
-
+      if (yPosition > 150) { doc.addPage(); yPosition = 30; }
       const photoTitle = service.photoTitles?.[photoIndex] || `Foto ${photoIndex + 1}`;
       yPosition = addSection(doc, safeText("FOTO: " + photoTitle), yPosition);
 
       try {
-        // A função agora é assíncrona, então usamos 'await'
-        const processedImage = await processImageForPDF(photoUrl);
-        
+        const processedImage = await processImageForPDF(photoUrl); // Espera a imagem ser processada
         if (processedImage) {
           const imageFormat = processedImage.includes('png') ? 'PNG' : 'JPEG';
           const { width, height } = calculateImageDimensions(processedImage);
           const xPosition = (PDF_DIMENSIONS.pageWidth - width) / 2;
-          
           doc.addImage(processedImage, imageFormat, xPosition, yPosition, width, height);
           yPosition += height + 10;
         } else {
@@ -52,18 +49,14 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
         }
       } catch (error) {
         console.error(`Erro ao processar a foto ${photoIndex + 1}:`, error);
-        doc.setDrawColor(PDF_COLORS.border[0], PDF_COLORS.border[1], PDF_COLORS.border[2]);
-        doc.rect(55, yPosition, 100, 60);
-        doc.setTextColor(PDF_COLORS.secondary[0], PDF_COLORS.secondary[1], PDF_COLORS.secondary[2]);
-        doc.setFontSize(10);
-        doc.text("Erro ao carregar foto", 105, yPosition + 30, { align: "center" });
+        doc.setFontSize(10).text("Erro ao carregar foto", 105, yPosition + 30, { align: "center" });
         yPosition += 70;
       }
     }
   }
 
-  // ... (o resto do código para gerar mensagens, assinaturas, etc., continua igual)
-  // [O código das seções de mensagens e assinaturas permanece o mesmo]
+  // --- O resto do código para gerar o PDF continua igual ---
+  // ... (código para mensagens, assinaturas, etc.)
 
   addPageNumbers(doc);
   const fileName = safeText(`relatorio-demanda-${service.number || service.id.substring(0, 8)}.pdf`);
