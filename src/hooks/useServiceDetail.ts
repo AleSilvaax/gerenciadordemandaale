@@ -36,17 +36,18 @@ export const useServiceDetail = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (service) {
-      const uploaderPhotos = (service.photos || []).map((photoUrl, index) => ({
-        id: `service-photo-${index}`,
-        file: new File([], service.photoTitles?.[index] || `photo-${index}`, { type: 'image/jpeg' }),
-        url: photoUrl,
-        title: service.photoTitles?.[index] || `Foto ${index + 1}`,
-      }));
-      setPhotos(uploaderPhotos);
-    }
-  }, [service]);
+useEffect(() => {
+  if (service) {
+    const uploaderPhotos = (service.photos || []).map((photoUrl, index) => ({
+      id: `service-photo-${index}`,
+      // Não criamos mais um ficheiro falso. O ficheiro só existe ao fazer upload.
+      file: undefined, 
+      url: photoUrl, // A URL permanente vinda do Supabase
+      title: service.photoTitles?.[index] || `Foto ${index + 1}`,
+    }));
+    setPhotos(uploaderPhotos);
+  }
+}, [service]);
 
   const fetchService = async (serviceId: string) => {
     setIsLoading(true);
