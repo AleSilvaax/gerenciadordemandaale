@@ -573,3 +573,39 @@ async function assignTechnician(serviceId: string, technicianId: string): Promis
     throw error;
   }
 }
+
+// Adicione este código ao final de src/services/serviceCrud.ts
+
+/**
+ * Faz o upload de um arquivo de imagem para o Supabase Storage.
+ * @param file O arquivo da imagem a ser enviado.
+ * @returns A URL pública e permanente da imagem.
+ */
+export const uploadServicePhoto = async (file: File): Promise<string> => {
+  // Cria um nome de arquivo único para evitar conflitos
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+  const filePath = `public/${fileName}`; // É uma boa prática usar uma pasta 'public'
+
+  // Faz o upload para o bucket 'service-photos'
+  const { error: uploadError } = await supabase.storage
+    .from('service-photos') // <- Nome do seu bucket que já existe
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error('Erro no upload da imagem:', uploadError);
+    throw uploadError;
+  }
+
+  // Se o upload for bem-sucedido, obtemos a URL pública
+  const { data: publicUrlData } = supabase.storage
+    .from('service-photos')
+    .getPublicUrl(filePath);
+
+  if (!publicUrlData) {
+    throw new Error("Não foi possível obter a URL pública da imagem.");
+  }
+  
+  console.log('Imagem enviada com sucesso para:', publicUrlData.publicUrl);
+  return publicUrlData.publicUrl;
+};
