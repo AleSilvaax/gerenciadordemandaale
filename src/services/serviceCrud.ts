@@ -589,7 +589,7 @@ export const uploadServicePhoto = async (file: File): Promise<string> => {
 
   // Faz o upload para o bucket 'service-photos'
   const { error: uploadError } = await supabase.storage
-    .from('service-photos') // <- Nome do seu bucket que já existe
+    .from('service_photos') // <- Nome do seu bucket que já existe
     .upload(filePath, file);
 
   if (uploadError) {
