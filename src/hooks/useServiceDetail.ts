@@ -1,4 +1,4 @@
-// Arquivo: src/hooks/useServiceDetail.ts
+// Copie e cole este código completo para o arquivo: src/hooks/useServiceDetail.ts
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -7,7 +7,7 @@ import {
   getServices,
   updateService,
   addServiceMessage,
-  uploadServicePhoto, // 1. Importe a função de upload que você adicionou
+  uploadServicePhoto, // 1. Importando a função de upload que você adicionou
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
@@ -58,6 +58,8 @@ export const useServiceDetail = () => {
         if (found.feedback) setFeedback(found.feedback);
       } else {
         setService(null);
+        toast.error("Demanda não encontrada.");
+        navigate("/demandas");
       }
     } catch (error) {
       toast.error("Erro ao carregar detalhes do serviço");
@@ -66,7 +68,7 @@ export const useServiceDetail = () => {
     }
   };
 
-  // 2. Substitua a função handlePhotosChange inteira por esta nova versão
+  // 2. Esta é a função CORRIGIDA que usa o uploadServicePhoto
   const handlePhotosChange = async (newPhotos: UploaderPhoto[]) => {
     if (!service) return;
 
@@ -75,22 +77,28 @@ export const useServiceDetail = () => {
       setIsLoading(true);
 
       const uploadPromises = newPhotos.map(async (photo) => {
+        // Se a URL já é pública (http), é uma foto antiga. Apenas a mantenha.
         if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
           return { url: photo.url, title: photo.title };
         }
         
+        // Se for um novo arquivo (identificado pela presença do objeto File), faz o upload.
         if (photo.file instanceof File) {
             const publicUrl = await uploadServicePhoto(photo.file);
             return { url: publicUrl, title: photo.title };
         }
+
+        // Se não for nenhum dos casos acima, ignora.
         return null;
       });
 
+      // Aguarda todos os uploads terminarem e filtra resultados nulos
       const resolvedPhotos = (await Promise.all(uploadPromises)).filter(p => p !== null);
 
       const photoUrls = resolvedPhotos.map(p => p!.url);
       const photoTitles = resolvedPhotos.map(p => p!.title);
       
+      // Atualiza a demanda no banco com as URLs permanentes
       await updateService({ 
         id: service.id, 
         photos: photoUrls,
@@ -98,11 +106,11 @@ export const useServiceDetail = () => {
       });
       
       toast.success("Fotos salvas com sucesso no sistema!");
-      await fetchService(service.id);
+      await fetchService(service.id); // Recarrega os dados para exibir as novas imagens
 
     } catch (error) {
       console.error("Erro ao atualizar fotos:", error);
-      toast.error("Ocorreu um erro ao salvar as fotos.");
+      toast.error("Ocorreu um erro ao salvar as fotos. Verifique o console para mais detalhes.");
     } finally {
       setIsLoading(false);
     }
@@ -187,6 +195,6 @@ export const useServiceDetail = () => {
     handleSubmitFeedback,
     handleUpdateSignatures,
     handleUpdateCustomFields,
-    handlePhotosChange,
+    handlePhotosChange, // <- A função corrigida está aqui
   };
 };
