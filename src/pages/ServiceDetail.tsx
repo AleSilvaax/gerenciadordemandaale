@@ -20,6 +20,27 @@ import { useServiceDetail } from "@/hooks/useServiceDetail";
 interface ServiceDetailProps {
   editMode?: boolean;
 }
+// No ficheiro: src/pages/ServiceDetail.tsx
+
+// ... (todas as importações no topo)
+
+interface ServiceDetailProps {
+  editMode?: boolean;
+}
+
+const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
+  
+  // --- ADICIONE ESTA LINHA ---
+  console.log('[TESTE DE ATUALIZAÇÃO] O ficheiro ServiceDetail.tsx foi recarregado.');
+  // -------------------------
+
+  const {
+    service,
+    isLoading,
+    // ... (resto do seu código)
+  } = useServiceDetail();
+
+  // ... (resto do ficheiro)
 
 const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const {
