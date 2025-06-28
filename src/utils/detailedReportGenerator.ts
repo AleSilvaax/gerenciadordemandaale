@@ -26,10 +26,12 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
   // ... (Resto do código da capa)
 
 
-  // PÁGINA DE FOTOS (Esta é a parte com a correção principal)
+// ... (início da função generateDetailedServiceReport)
+
+  // PÁGINA DE FOTOS (a parte corrigida)
   if (service.photos && service.photos.length > 0) {
     doc.addPage();
-    yPosition = addHeader(doc, "ANEXOS FOTOGRAFICOS", 20);
+    let yPosition = addHeader(doc, "ANEXOS FOTOGRAFICOS", 20);
 
     for (const [photoIndex, photoUrl] of service.photos.entries()) {
       if (yPosition > 150) { doc.addPage(); yPosition = 30; }
@@ -37,23 +39,22 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
       yPosition = addSection(doc, safeText("FOTO: " + photoTitle), yPosition);
 
       try {
-        const processedImage = await processImageForPDF(photoUrl); // Espera a imagem ser processada
+        const processedImage = await processImageForPDF(photoUrl);
         if (processedImage) {
           const imageFormat = processedImage.includes('png') ? 'PNG' : 'JPEG';
           const { width, height } = calculateImageDimensions(processedImage);
           const xPosition = (PDF_DIMENSIONS.pageWidth - width) / 2;
           doc.addImage(processedImage, imageFormat, xPosition, yPosition, width, height);
           yPosition += height + 10;
-        } else {
-          throw new Error('A imagem não pôde ser processada ou a URL é inválida');
-        }
+        } else { throw new Error('Imagem nula ou URL inválida'); }
       } catch (error) {
-        console.error(`Erro ao processar a foto ${photoIndex + 1}:`, error);
-        doc.setFontSize(10).text("Erro ao carregar foto", 105, yPosition + 30, { align: "center" });
+        doc.text("Erro ao carregar foto", 105, yPosition + 30, { align: "center" });
         yPosition += 70;
       }
     }
   }
+
+// ... (resto do ficheiro)
 
   // --- O resto do código para gerar o PDF continua igual ---
   // ... (código para mensagens, assinaturas, etc.)
