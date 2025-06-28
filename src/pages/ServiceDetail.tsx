@@ -1,3 +1,4 @@
+// Copie este código completo para o seu ficheiro: src/pages/ServiceDetail.tsx
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +9,9 @@ import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom"; // useNavigate é necessário aqui
 
-// Import new components
+// Importe os componentes de detalhe do serviço
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
 import { ServiceActions } from "@/components/service-detail/ServiceActions";
@@ -20,29 +22,11 @@ import { useServiceDetail } from "@/hooks/useServiceDetail";
 interface ServiceDetailProps {
   editMode?: boolean;
 }
-// No ficheiro: src/pages/ServiceDetail.tsx
-
-// ... (todas as importações no topo)
-
-interface ServiceDetailProps {
-  editMode?: boolean;
-}
 
 const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
-  
-  // --- ADICIONE ESTA LINHA ---
+  // Linha de teste para verificar se o ficheiro está a ser carregado corretamente
   console.log('[TESTE DE ATUALIZAÇÃO] O ficheiro ServiceDetail.tsx foi recarregado.');
-  // -------------------------
 
-  const {
-    service,
-    isLoading,
-    // ... (resto do seu código)
-  } = useServiceDetail();
-
-  // ... (resto do ficheiro)
-
-const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   const {
     service,
     isLoading,
