@@ -1,5 +1,3 @@
-// Arquivo: src/utils/pdf/imageProcessor.ts
-
 import { PDF_DIMENSIONS } from './pdfConstants';
 
 export interface ImageDimensions { width: number; height: number; }
@@ -16,7 +14,6 @@ const getImageAsBase64 = async (url: string): Promise<string | null> => {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error(`Erro ao converter imagem da URL: ${url}`, error);
     return null;
   }
 };
@@ -25,7 +22,6 @@ export const processImageForPDF = async (url: string): Promise<string | null> =>
   if (!url) return null;
   if (url.startsWith('data:image')) return url;
   if (url.startsWith('http')) return await getImageAsBase64(url);
-  console.warn('URL de imagem com formato não suportado:', url.substring(0, 50));
   return null;
 };
 
