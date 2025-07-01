@@ -4,22 +4,21 @@ import { PDF_COLORS, PDF_DIMENSIONS } from './pdfConstants';
 import { processImageForPDF } from './imageProcessor';
 import { addSection, addInfoLine } from './pdfFormatters';
 import { safeText } from './textUtils';
-import { Service } from "@/types/serviceTypes";
 
-export const addSignatureSection = async (doc: jsPDF, service: Service, yPosition: number): Promise<number> => {
+export const addSignatureSection = async (doc: jsPDF, signatures: { client?: string; technician?: string }, yPosition: number): Promise<number> => {
   let currentY = yPosition;
 
-  if (service.signatures?.client || service.signatures?.technician) {
+  if (signatures?.client || signatures?.technician) {
     // Assinatura do Cliente
-    if (service.signatures.client) {
+    if (signatures.client) {
       currentY = addSection(doc, "ASSINATURA DO CLIENTE", currentY);
       
-      addInfoLine(doc, "Cliente", service.client || "N/A", 20, currentY);
-      addInfoLine(doc, "Data", new Date().toLocaleDateString(), 110, currentY);
-      currentY += 25;
+      currentY = addInfoLine(doc, "Cliente", "N/A", currentY);
+      currentY = addInfoLine(doc, "Data", new Date().toLocaleDateString(), currentY);
+      currentY += 10;
       
       try {
-        const processedSignature = await processImageForPDF(service.signatures.client);
+        const processedSignature = await processImageForPDF(signatures.client);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;
@@ -51,7 +50,7 @@ export const addSignatureSection = async (doc: jsPDF, service: Service, yPositio
     }
 
     // Assinatura do Técnico
-    if (service.signatures.technician) {
+    if (signatures.technician) {
       if (currentY > 200) {
         doc.addPage();
         currentY = 30;
@@ -59,12 +58,12 @@ export const addSignatureSection = async (doc: jsPDF, service: Service, yPositio
       
       currentY = addSection(doc, "ASSINATURA DO TECNICO", currentY);
       
-      addInfoLine(doc, "Tecnico", service.technician?.name || "N/A", 20, currentY);
-      addInfoLine(doc, "Data", new Date().toLocaleDateString(), 110, currentY);
-      currentY += 25;
+      currentY = addInfoLine(doc, "Tecnico", "N/A", currentY);
+      currentY = addInfoLine(doc, "Data", new Date().toLocaleDateString(), currentY);
+      currentY += 10;
       
       try {
-        const processedSignature = await processImageForPDF(service.signatures.technician);
+        const processedSignature = await processImageForPDF(signatures.technician);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;
@@ -113,6 +112,7 @@ export const addSignatureSection = async (doc: jsPDF, service: Service, yPositio
     doc.line(45, currentY, 100, currentY);
     doc.text("Data:", 120, currentY);
     doc.line(140, currentY, 180, currentY);
+    currentY += 25;
   }
 
   return currentY;

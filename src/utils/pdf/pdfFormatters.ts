@@ -29,17 +29,20 @@ export const addSection = (doc: jsPDF, title: string, y: number): number => {
   return y + 20;
 };
 
-export const addInfoLine = (doc: jsPDF, label: string, value: string, x: number, y: number): void => {
+export const addInfoLine = (doc: jsPDF, label: string, value: string, y: number): number => {
+  const x = 20; // Default x position
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(PDF_COLORS.secondary[0], PDF_COLORS.secondary[1], PDF_COLORS.secondary[2]);
-  doc.text(safeText(label + ":"), x, y);
+  doc.text(safeText(label), x, y);
   
   doc.setFont("helvetica", "normal");
   doc.setTextColor(PDF_COLORS.text[0], PDF_COLORS.text[1], PDF_COLORS.text[2]);
   const maxWidth = 80;
   const lines = doc.splitTextToSize(safeText(value), maxWidth);
   doc.text(lines, x + 35, y);
+  
+  return y + (lines.length * 5) + 5; // Return updated y position
 };
 
 export const addPageNumbers = (doc: jsPDF): void => {
