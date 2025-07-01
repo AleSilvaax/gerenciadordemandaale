@@ -6,7 +6,7 @@ import { addSection, addInfoLine } from './pdfFormatters';
 import { safeText } from './textUtils';
 import { Service } from "@/types/serviceTypes";
 
-export const addSignatureSection = (doc: jsPDF, service: Service, yPosition: number): number => {
+export const addSignatureSection = async (doc: jsPDF, service: Service, yPosition: number): Promise<number> => {
   let currentY = yPosition;
 
   if (service.signatures?.client || service.signatures?.technician) {
@@ -19,7 +19,7 @@ export const addSignatureSection = (doc: jsPDF, service: Service, yPosition: num
       currentY += 25;
       
       try {
-        const processedSignature = processImageForPDF(service.signatures.client);
+        const processedSignature = await processImageForPDF(service.signatures.client);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;
@@ -64,7 +64,7 @@ export const addSignatureSection = (doc: jsPDF, service: Service, yPosition: num
       currentY += 25;
       
       try {
-        const processedSignature = processImageForPDF(service.signatures.technician);
+        const processedSignature = await processImageForPDF(service.signatures.technician);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;

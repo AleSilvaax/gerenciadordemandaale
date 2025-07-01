@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
-import { LazyRoutes } from "./components/lazy/LazyRoutes";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import Index from "./pages/Index";
 import EnhancedIndex from "./pages/EnhancedIndex";
@@ -15,7 +14,6 @@ import ServiceDetail from "./pages/ServiceDetail";
 import Demandas from "./pages/Demandas";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
-import Team from "./pages/Team";
 import "./App.css";
 
 const queryClient = new QueryClient({
@@ -90,11 +88,10 @@ function App() {
                     path="/equipe"
                     element={
                       <ProtectedRoute>
-                        <Team />
+                        <Settings />
                       </ProtectedRoute>
                     }
                   />
-                  <Route path="*" element={<LazyRoutes />} />
                 </Routes>
               </AuthProvider>
             </BrowserRouter>

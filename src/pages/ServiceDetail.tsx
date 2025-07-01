@@ -112,8 +112,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               >
                 <TechnicalFieldsManager
                   serviceType={service.serviceType}
-                  values={service.customFields || []}
-                  onUpdate={handleUpdateCustomFields}
+                  currentFields={service.customFields || []}
+                  onFieldsUpdate={handleUpdateCustomFields}
                 />
               </motion.div>
             )}
@@ -164,9 +164,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               transition={{ delay: 0.5 }}
             >
               <ServiceMessages
-                messages={service.messages || []}
+                service={service}
                 newMessage={newMessage}
-                onMessageChange={setNewMessage}
+                setNewMessage={setNewMessage}
                 onSendMessage={handleSendMessage}
               />
             </motion.div>
@@ -177,9 +177,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               transition={{ delay: 0.6 }}
             >
               <ServiceFeedback
+                service={service}
                 feedback={feedback}
-                onFeedbackChange={setFeedback}
-                onSubmit={handleSubmitFeedback}
+                setFeedback={setFeedback}
+                onSubmitFeedback={handleSubmitFeedback}
               />
             </motion.div>
 
@@ -189,8 +190,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               transition={{ delay: 0.7 }}
             >
               <ServiceSignatureSection
-                signatures={service.signatures}
-                onUpdate={handleUpdateSignatures}
+                service={service}
+                onUpdateSignatures={handleUpdateSignatures}
+                onGenerateReport={handleGenerateReport}
               />
             </motion.div>
           </div>
