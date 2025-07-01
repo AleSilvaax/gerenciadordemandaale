@@ -7,6 +7,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { AppLayout } from "./components/layout/AppLayout";
 import Index from "./pages/Index";
 import EnhancedIndex from "./pages/EnhancedIndex";
 import NewService from "./pages/NewService";
@@ -37,58 +38,10 @@ function App() {
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route
-                    path="/"
+                    path="/*"
                     element={
                       <ProtectedRoute>
-                        <EnhancedIndex />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Index />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/nova-demanda"
-                    element={
-                      <ProtectedRoute>
-                        <NewService />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/demandas"
-                    element={
-                      <ProtectedRoute>
-                        <Demandas />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/demandas/:id"
-                    element={
-                      <ProtectedRoute>
-                        <ServiceDetail />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/configuracoes"
-                    element={
-                      <ProtectedRoute>
-                        <Settings />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/equipe"
-                    element={
-                      <ProtectedRoute>
-                        <Settings />
+                        <AppLayout />
                       </ProtectedRoute>
                     }
                   />

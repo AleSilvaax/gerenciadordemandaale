@@ -55,6 +55,7 @@ export const useServiceDetail = () => {
       
       if (foundService) {
         console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
+        console.log('[useServiceDetail] Fotos no serviço:', foundService.photos?.length || 0);
         setService(foundService);
       } else {
         toast.error("Serviço não encontrado");
@@ -98,6 +99,7 @@ export const useServiceDetail = () => {
       const photoTitles = resolvedPhotos.map(p => p!.title);
       
       console.log('[useServiceDetail] Salvando no banco:', photoUrls.length, 'URLs');
+      console.log('[useServiceDetail] URLs das fotos:', photoUrls);
       
       const updatedService = await updateService({ 
         id: service.id, 
@@ -106,7 +108,16 @@ export const useServiceDetail = () => {
       });
 
       if (updatedService) {
+        console.log('[useServiceDetail] Serviço atualizado com fotos:', updatedService.photos?.length || 0);
         setService(updatedService);
+        // Atualizar o estado local das fotos também
+        const newUploaderPhotos = photoUrls.map((url, index) => ({
+          id: `service-photo-${index}`,
+          file: undefined,
+          url: url,
+          title: photoTitles[index] || `Foto ${index + 1}`,
+        }));
+        setPhotos(newUploaderPhotos);
         toast.success("Fotos salvas com sucesso!");
       } else {
         throw new Error("Falha ao atualizar serviço");

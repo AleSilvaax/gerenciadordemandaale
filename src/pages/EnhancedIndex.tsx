@@ -15,7 +15,6 @@ import { AdvancedSearch, SearchFilters } from "@/components/search/AdvancedSearc
 import { RealtimeMetrics } from "@/components/dashboard/RealtimeMetrics";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useAuditedServices } from "@/hooks/useAuditedServices";
-import { EnhancedNavbar } from "@/components/layout/EnhancedNavbar";
 import { OptimizedImage } from "@/components/common/OptimizedImage";
 
 const EnhancedIndex: React.FC = () => {
@@ -132,8 +131,6 @@ const EnhancedIndex: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
-      <EnhancedNavbar />
-      
       <motion.div
         className="container mx-auto p-2 sm:p-4 pb-24 space-y-6"
         initial="hidden"
@@ -176,13 +173,13 @@ const EnhancedIndex: React.FC = () => {
               </span>
             </Button>
             
-            <Link to="/settings">
+            <Link to="/configuracoes">
               <Button variant="outline" size="sm" className="card-enhanced">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Configurações</span>
               </Button>
             </Link>
-            <Link to="/new-service">
+            <Link to="/nova-demanda">
               <Button size="sm" className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Nova Demanda</span>
@@ -246,7 +243,9 @@ const EnhancedIndex: React.FC = () => {
                     <CardDescription className="text-left-force">Demandas agendadas para hoje</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-primary text-left-force">3</div>
+                    <div className="text-3xl font-bold text-primary text-left-force">
+                      {services.filter(s => s.status === 'pendente').length}
+                    </div>
                     <p className="text-sm text-muted-foreground mt-2 text-left-force">demandas pendentes</p>
                   </CardContent>
                 </Card>
@@ -260,7 +259,9 @@ const EnhancedIndex: React.FC = () => {
                     <CardDescription className="text-left-force">Serviços sendo executados</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-yellow-600 text-left-force">5</div>
+                    <div className="text-3xl font-bold text-yellow-600 text-left-force">
+                      {services.filter(s => s.status === 'em_andamento').length}
+                    </div>
                     <p className="text-sm text-muted-foreground mt-2 text-left-force">em progresso</p>
                   </CardContent>
                 </Card>
@@ -269,13 +270,15 @@ const EnhancedIndex: React.FC = () => {
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2 text-left-force">
                       <ChevronRight className="h-5 w-5 text-primary" />
-                      Próximas
+                      Concluídas
                     </CardTitle>
-                    <CardDescription className="text-left-force">Demandas da próxima semana</CardDescription>
+                    <CardDescription className="text-left-force">Demandas finalizadas</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-blue-600 text-left-force">8</div>
-                    <p className="text-sm text-muted-foreground mt-2 text-left-force">agendadas</p>
+                    <div className="text-3xl font-bold text-green-600 text-left-force">
+                      {services.filter(s => s.status === 'concluido').length}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2 text-left-force">finalizadas</p>
                   </CardContent>
                 </Card>
               </div>
@@ -327,7 +330,7 @@ const EnhancedIndex: React.FC = () => {
             <TabsContent value="quick-actions" className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/new-service" className="block">
+                  <Link to="/nova-demanda" className="block">
                     <CardContent className="p-8 text-center">
                       <Plus className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
                       <h3 className="font-semibold mb-2 text-left-force">Nova Demanda</h3>
@@ -337,21 +340,21 @@ const EnhancedIndex: React.FC = () => {
                 </Card>
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/estatisticas" className="block">
+                  <Link to="/demandas" className="block">
                     <CardContent className="p-8 text-center">
                       <Search className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="font-semibold mb-2 text-left-force">Relatórios</h3>
-                      <p className="text-sm text-muted-foreground text-left-force">Visualizar estatísticas e dados</p>
+                      <h3 className="font-semibold mb-2 text-left-force">Ver Demandas</h3>
+                      <p className="text-sm text-muted-foreground text-left-force">Visualizar todas as demandas</p>
                     </CardContent>
                   </Link>
                 </Card>
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/equipe" className="block">
+                  <Link to="/configuracoes" className="block">
                     <CardContent className="p-8 text-center">
                       <Settings className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="font-semibold mb-2 text-left-force">Gerenciar Equipe</h3>
-                      <p className="text-sm text-muted-foreground text-left-force">Configurar membros e permissões</p>
+                      <h3 className="font-semibold mb-2 text-left-force">Configurações</h3>
+                      <p className="text-sm text-muted-foreground text-left-force">Configurar sistema e equipe</p>
                     </CardContent>
                   </Link>
                 </Card>

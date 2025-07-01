@@ -1,10 +1,16 @@
 
 import React from "react";
+import { Routes, Route } from "react-router-dom";
 import { Navbar } from "./Navbar";
-import { Outlet } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import EnhancedIndex from "@/pages/EnhancedIndex";
+import Index from "@/pages/Index";
+import NewService from "@/pages/NewService";
+import ServiceDetail from "@/pages/ServiceDetail";
+import Demandas from "@/pages/Demandas";
+import Settings from "@/pages/Settings";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
@@ -22,7 +28,15 @@ export const AppLayout: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
       <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-16'} overflow-y-auto overflow-x-hidden scrollbar-none`}>
         <div className="pt-2 min-w-full">
-          <Outlet />
+          <Routes>
+            <Route path="/" element={<EnhancedIndex />} />
+            <Route path="/dashboard" element={<Index />} />
+            <Route path="/nova-demanda" element={<NewService />} />
+            <Route path="/demandas" element={<Demandas />} />
+            <Route path="/demandas/:id" element={<ServiceDetail />} />
+            <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/equipe" element={<Settings />} />
+          </Routes>
         </div>
       </main>
       <Navbar />
