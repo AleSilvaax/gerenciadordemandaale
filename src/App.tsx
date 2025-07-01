@@ -1,43 +1,27 @@
 
-import "./App.css";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AppLayout } from "./components/layout/AppLayout";
-import { Toaster as SonnerToaster } from "./components/ui/sonner";
-import { Toaster } from "./components/ui/toaster";
-import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import React from "react";
-
-// Lazy loaded pages
-import {
-  LazyIndex,
-  LazyDemandas,
-  LazyServiceDetail,
-  LazyNewService,
-  LazyEstatisticas,
-  LazyEquipe,
-  LazySearch,
-  LazySettings,
-  LazyLogin,
-  LazyRegister,
-  LazyNotFound
-} from "./components/lazy/LazyRoutes";
-
-// Providers
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "next-themes";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
+import { LazyRoutes } from "./components/lazy/LazyRoutes";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import Index from "./pages/Index";
+import EnhancedIndex from "./pages/EnhancedIndex";
+import NewService from "./pages/NewService";
+import ServiceDetail from "./pages/ServiceDetail";
+import Demandas from "./pages/Demandas";
+import Login from "./pages/Login";
+import Settings from "./pages/Settings";
+import Team from "./pages/Team";
+import "./App.css";
 
-// Create a client with better defaults for performance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      refetchOnWindowFocus: false, // Prevent unnecessary refetches
-      refetchOnReconnect: true,
-    },
-    mutations: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 1,
     },
   },
@@ -47,38 +31,76 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LazyLogin />} />
-              <Route path="/register" element={<LazyRegister />} />
-              
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<AppLayout />}>
-                  <Route index element={<LazyIndex />} />
-                  <Route path="demandas" element={<LazyDemandas />} />
-                  <Route path="demandas/:id" element={<LazyServiceDetail />} />
-                  <Route path="demandas/:id/edit" element={<LazyServiceDetail editMode={true} />} />
-                  <Route path="buscar" element={<LazySearch />} />
-                  <Route path="settings" element={<LazySettings />} />
-                  
-                  {/* Routes with role-based access - Fixed route path */}
-                  <Route path="nova-demanda" element={<ProtectedRoute requiredRole="gestor"><LazyNewService /></ProtectedRoute>} />
-                  <Route path="estatisticas" element={<ProtectedRoute requiredRole="gestor"><LazyEstatisticas /></ProtectedRoute>} />
-                  <Route path="equipe" element={<ProtectedRoute requiredRole="gestor"><LazyEquipe /></ProtectedRoute>} />
-                </Route>
-              </Route>
-              
-              {/* Catch all route - must be last */}
-              <Route path="*" element={<LazyNotFound />} />
-            </Routes>
-          </AuthProvider>
-        </Router>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            <Toaster />
+            <BrowserRouter>
+              <AuthProvider>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <EnhancedIndex />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Index />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/nova-demanda"
+                    element={
+                      <ProtectedRoute>
+                        <NewService />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/demandas"
+                    element={
+                      <ProtectedRoute>
+                        <Demandas />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/demandas/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ServiceDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/configuracoes"
+                    element={
+                      <ProtectedRoute>
+                        <Settings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/equipe"
+                    element={
+                      <ProtectedRoute>
+                        <Team />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<LazyRoutes />} />
+                </Routes>
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
       </QueryClientProvider>
-      <SonnerToaster />
-      <Toaster />
     </ErrorBoundary>
   );
 }

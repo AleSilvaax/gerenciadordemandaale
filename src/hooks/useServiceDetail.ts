@@ -1,4 +1,3 @@
-// Copie este código completo para o ficheiro: src/hooks/useServiceDetail.ts
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -7,7 +6,7 @@ import {
   getServices,
   updateService,
   addServiceMessage,
-  uploadServicePhoto, // 1. Importa a função de upload correta
+  uploadServicePhoto,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
@@ -35,33 +34,59 @@ export const useServiceDetail = () => {
     }
   }, [id]);
 
-  // 2. CORREÇÃO PARA O BUG "0 BYTES"
   useEffect(() => {
     if (service) {
+      console.log('[useServiceDetail] Carregando fotos do serviço:', service.photos?.length || 0);
       const uploaderPhotos = (service.photos || []).map((photoUrl, index) => ({
         id: `service-photo-${index}`,
-        file: undefined, // Não criamos mais um ficheiro falso ao carregar
-        url: photoUrl,   // Usamos a URL permanente que veio do banco de dados
+        file: undefined,
+        url: photoUrl,
         title: service.photoTitles?.[index] || `Foto ${index + 1}`,
       }));
       setPhotos(uploaderPhotos);
     }
   }, [service]);
 
-  const fetchService = async (serviceId: string) => { /* ... (esta função não precisa de alteração) ... */ };
-
-  // 3. FUNÇÃO CORRIGIDA QUE USA A LÓGICA DE UPLOAD
-  const handlePhotosChange = async (newPhotos: UploaderPhoto[]) => {
-    if (!service) return;
+  const fetchService = async (serviceId: string) => {
     try {
-      toast.info("A processar e a salvar as fotos...");
+      setIsLoading(true);
+      const services = await getServices();
+      const foundService = services.find(s => s.id === serviceId);
+      
+      if (foundService) {
+        console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
+        setService(foundService);
+      } else {
+        toast.error("Serviço não encontrado");
+        navigate("/demandas");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar serviço:", error);
+      toast.error("Erro ao carregar serviço");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhotosChange = async (newPhotos: UploaderPhoto[]) => {
+    if (!service) {
+      console.log('[useServiceDetail] Serviço não encontrado para salvar fotos');
+      return;
+    }
+
+    try {
+      console.log('[useServiceDetail] Processando', newPhotos.length, 'fotos');
+      toast.info("Processando e salvando as fotos...");
       setIsLoading(true);
 
       const uploadPromises = newPhotos.map(async (photo) => {
+        // Se tem arquivo, é uma nova foto para upload
         if (photo.file instanceof File) {
+          console.log('[useServiceDetail] Fazendo upload da foto:', photo.title);
           const publicUrl = await uploadServicePhoto(photo.file);
           return { url: publicUrl, title: photo.title };
         }
+        // Se tem URL HTTP, é uma foto já salva
         if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
           return { url: photo.url, title: photo.title };
         }
@@ -72,25 +97,124 @@ export const useServiceDetail = () => {
       const photoUrls = resolvedPhotos.map(p => p!.url);
       const photoTitles = resolvedPhotos.map(p => p!.title);
       
-      await updateService({ id: service.id, photos: photoUrls, photoTitles: photoTitles });
-      toast.success("Fotos salvas com sucesso!");
-      await fetchService(service.id);
+      console.log('[useServiceDetail] Salvando no banco:', photoUrls.length, 'URLs');
+      
+      const updatedService = await updateService(service.id, { 
+        photos: photoUrls, 
+        photoTitles: photoTitles 
+      });
+
+      if (updatedService) {
+        setService(updatedService);
+        toast.success("Fotos salvas com sucesso!");
+      } else {
+        throw new Error("Falha ao atualizar serviço");
+      }
     } catch (error) {
+      console.error('[useServiceDetail] Erro ao salvar fotos:', error);
       toast.error("Ocorreu um erro ao salvar as fotos.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- Funções restantes do hook (não precisam de alteração) ---
-  const handleStatusChange = async (newStatus: Service["status"]) => { /* ... */ };
-  const handleSendMessage = async () => { /* ... */ };
-  const handleSubmitFeedback = async () => { /* ... */ };
-  const handleUpdateSignatures = async (signatures: { client?: string; technician?: string }) => { /* ... */ };
-  const handleUpdateCustomFields = async (fields: CustomField[]) => { /* ... */ };
+  const handleStatusChange = async (newStatus: Service["status"]) => {
+    if (!service) return;
+    
+    try {
+      const updatedService = await updateService(service.id, { status: newStatus });
+      if (updatedService) {
+        setService(updatedService);
+        toast.success("Status atualizado com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!service || !newMessage.trim() || !user) return;
+    
+    try {
+      const messageData: ServiceMessage = {
+        senderId: user.id,
+        senderName: user.name || "Usuário",
+        senderRole: user.role || "tecnico",
+        message: newMessage.trim(),
+        timestamp: new Date().toISOString()
+      };
+      
+      await addServiceMessage(service.id, messageData);
+      await fetchService(service.id);
+      setNewMessage("");
+      toast.success("Mensagem enviada!");
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
+      toast.error("Erro ao enviar mensagem");
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!service) return;
+    
+    try {
+      const updatedService = await updateService(service.id, { feedback });
+      if (updatedService) {
+        setService(updatedService);
+        toast.success("Feedback salvo com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar feedback:", error);
+      toast.error("Erro ao salvar feedback");
+    }
+  };
+
+  const handleUpdateSignatures = async (signatures: { client?: string; technician?: string }) => {
+    if (!service) return;
+    
+    try {
+      const updatedService = await updateService(service.id, { signatures });
+      if (updatedService) {
+        setService(updatedService);
+        toast.success("Assinaturas atualizadas com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar assinaturas:", error);
+      toast.error("Erro ao atualizar assinaturas");
+    }
+  };
+
+  const handleUpdateCustomFields = async (fields: CustomField[]) => {
+    if (!service) return;
+    
+    try {
+      const updatedService = await updateService(service.id, { customFields: fields });
+      if (updatedService) {
+        setService(updatedService);
+        toast.success("Campos técnicos atualizados com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar campos técnicos:", error);
+      toast.error("Erro ao atualizar campos técnicos");
+    }
+  };
 
   return {
-    service, isLoading, newMessage, setNewMessage, feedback, setFeedback, photos, navigate,
-    fetchService, handleStatusChange, handleSendMessage, handleSubmitFeedback, handleUpdateSignatures, handleUpdateCustomFields, handlePhotosChange,
+    service,
+    isLoading,
+    newMessage,
+    setNewMessage,
+    feedback,
+    setFeedback,
+    photos,
+    navigate,
+    fetchService,
+    handleStatusChange,
+    handleSendMessage,
+    handleSubmitFeedback,
+    handleUpdateSignatures,
+    handleUpdateCustomFields,
+    handlePhotosChange,
   };
 };

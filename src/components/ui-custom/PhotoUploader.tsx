@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 interface Photo {
   id: string;
-  file: File;
+  file?: File;
   url: string;
   title: string;
   compressed?: boolean;
@@ -38,6 +38,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    console.log('[PhotoUploader] Arquivos selecionados:', files.length);
+
     const remainingSlots = maxPhotos - photos.length;
     if (remainingSlots <= 0) {
       toast.error(`Máximo de ${maxPhotos} fotos permitido`);
@@ -57,6 +59,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
     try {
       for (const file of filesToProcess) {
+        console.log('[PhotoUploader] Processando arquivo:', file.name);
         const originalSize = file.size;
         
         // Comprimir imagem automaticamente
@@ -71,13 +74,14 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           file: compressedFile,
           url: URL.createObjectURL(compressedFile),
-          title: file.name.replace(/\.[^/.]+$/, ""), // Remove extensão
+          title: file.name.replace(/\.[^/.]+$/, ""),
           compressed: compressedFile.size < originalSize,
           originalSize,
           compressedSize: compressedFile.size
         };
 
         newPhotos.push(photo);
+        console.log('[PhotoUploader] Foto processada:', photo.title);
 
         // Mostrar feedback de compressão
         if (photo.compressed) {
@@ -86,7 +90,9 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         }
       }
 
-      onPhotosChange([...photos, ...newPhotos]);
+      const updatedPhotos = [...photos, ...newPhotos];
+      console.log('[PhotoUploader] Chamando onPhotosChange com', updatedPhotos.length, 'fotos');
+      onPhotosChange(updatedPhotos);
       
     } catch (error) {
       console.error('Erro ao processar fotos:', error);
@@ -109,19 +115,21 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   }, []);
 
   const removePhoto = (photoId: string) => {
+    console.log('[PhotoUploader] Removendo foto:', photoId);
     const photoToRemove = photos.find(p => p.id === photoId);
-    if (photoToRemove) {
+    if (photoToRemove && photoToRemove.url.startsWith('blob:')) {
       URL.revokeObjectURL(photoToRemove.url);
     }
-    onPhotosChange(photos.filter(p => p.id !== photoId));
+    const updatedPhotos = photos.filter(p => p.id !== photoId);
+    onPhotosChange(updatedPhotos);
   };
 
   const updatePhotoTitle = (photoId: string, title: string) => {
-    onPhotosChange(
-      photos.map(photo =>
-        photo.id === photoId ? { ...photo, title } : photo
-      )
+    console.log('[PhotoUploader] Atualizando título da foto:', photoId, title);
+    const updatedPhotos = photos.map(photo =>
+      photo.id === photoId ? { ...photo, title } : photo
     );
+    onPhotosChange(updatedPhotos);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -237,10 +245,10 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          {formatFileSize(photo.compressedSize || photo.file.size)}
+                          {formatFileSize(photo.compressedSize || photo.file?.size || 0)}
                           {photo.compressed && photo.originalSize && (
                             <span className="text-green-600 ml-1">
-                              (↓{((photo.originalSize - photo.file.size) / photo.originalSize * 100).toFixed(0)}%)
+                              (↓{((photo.originalSize - (photo.file?.size || 0)) / photo.originalSize * 100).toFixed(0)}%)
                             </span>
                           )}
                         </span>

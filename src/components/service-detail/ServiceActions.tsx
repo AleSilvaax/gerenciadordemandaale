@@ -1,105 +1,113 @@
 
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { FileText, CheckCircle, Clock, X, Download } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
-import { CheckCircle, XCircle, Edit, Trash2 } from "lucide-react";
-import { DeleteConfirmationDialog } from "@/components/ui-custom/DeleteConfirmationDialog";
-import { deleteService } from "@/services/servicesDataService";
-import { toast } from "sonner";
 
 interface ServiceActionsProps {
   service: Service;
   onStatusChange: (status: Service["status"]) => void;
   editMode?: boolean;
+  onGenerateReport?: () => void;
 }
 
-export const ServiceActions: React.FC<ServiceActionsProps> = ({ service, onStatusChange, editMode = false }) => {
-  const navigate = useNavigate();
-  const { hasPermission } = useAuth();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleDeleteService = async () => {
-    setIsDeleting(true);
-    try {
-      const success = await deleteService(service.id);
-      if (success) {
-        toast.success("Demanda excluída com sucesso!");
-        navigate("/demandas");
-      } else {
-        toast.error("Erro ao excluir demanda");
-      }
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      toast.error("Erro ao excluir demanda");
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
+export const ServiceActions: React.FC<ServiceActionsProps> = ({
+  service,
+  onStatusChange,
+  editMode = false,
+  onGenerateReport
+}) => {
+  const getStatusIcon = (status: Service["status"]) => {
+    switch (status) {
+      case "concluido":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "cancelado":
+        return <X className="w-4 h-4 text-red-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-yellow-500" />;
     }
   };
 
-  if (editMode) return null;
+  const getStatusBadgeVariant = (status: Service["status"]) => {
+    switch (status) {
+      case "concluido":
+        return "default";
+      case "cancelado":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
 
   return (
-    <>
-      <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3">
-            {service.status !== "concluido" && (
-              <Button
-                onClick={() => onStatusChange("concluido")}
-                className="bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30"
-                variant="outline"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Marcar como Concluído
-              </Button>
-            )}
-            {service.status !== "cancelado" && (
-              <Button
-                onClick={() => onStatusChange("cancelado")}
-                className="bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30"
-                variant="outline"
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Cancelar Demanda
-              </Button>
-            )}
-            {hasPermission("edit_services") && (
-              <Button
-                onClick={() => navigate(`/demandas/${service.id}/edit`)}
-                className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
-                variant="outline"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar Demanda
-              </Button>
-            )}
-            {hasPermission("delete_services") && (
-              <Button
-                onClick={() => setDeleteDialogOpen(true)}
-                className="bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30"
-                variant="outline"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Excluir Demanda
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Ações da Demanda
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Status Atual */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Status Atual:</span>
+          <Badge variant={getStatusBadgeVariant(service.status)} className="flex items-center gap-1">
+            {getStatusIcon(service.status)}
+            {service.status === "pendente" ? "Pendente" : 
+             service.status === "concluido" ? "Concluído" : "Cancelado"}
+          </Badge>
+        </div>
 
-      <DeleteConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteService}
-        title="Excluir Demanda"
-        description={`Tem certeza que deseja excluir a demanda "${service.title}"? Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.`}
-        isLoading={isDeleting}
-      />
-    </>
+        {/* Alteração de Status */}
+        {!editMode && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Alterar Status:</label>
+            <Select onValueChange={onStatusChange} value={service.status}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pendente">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    Pendente
+                  </div>
+                </SelectItem>
+                <SelectItem value="concluido">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Concluído
+                  </div>
+                </SelectItem>
+                <SelectItem value="cancelado">
+                  <div className="flex items-center gap-2">
+                    <X className="w-4 h-4 text-red-500" />
+                    Cancelado
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Gerar Relatório */}
+        <div className="pt-4 border-t">
+          <Button 
+            onClick={onGenerateReport} 
+            className="w-full"
+            variant="outline"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Gerar Relatório PDF
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Inclui todas as informações, fotos e assinaturas
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

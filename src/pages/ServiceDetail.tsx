@@ -1,4 +1,3 @@
-// Copie este código completo para o seu ficheiro: src/pages/ServiceDetail.tsx
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignature
 import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
+import { Camera, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom"; 
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
@@ -16,6 +15,7 @@ import { ServiceActions } from "@/components/service-detail/ServiceActions";
 import { ServiceMessages } from "@/components/service-detail/ServiceMessages";
 import { ServiceFeedback } from "@/components/service-detail/ServiceFeedback";
 import { useServiceDetail } from "@/hooks/useServiceDetail";
+import { Button } from "@/components/ui/button";
 
 interface ServiceDetailProps {
   editMode?: boolean;
@@ -37,24 +37,52 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handleSubmitFeedback,
     handleUpdateSignatures,
     handleUpdateCustomFields,
-    handlePhotosChange // A função original do hook
+    handlePhotosChange
   } = useServiceDetail();
 
-  // --- FUNÇÃO DE DEPURAÇÃO ---
-  // Esta nova função irá "embrulhar" a original e adicionar um log.
-  // É isto que vamos passar para o PhotoUploader.
-  const handlePhotosChangeWithDebug = (newPhotos: any[]) => {
-    console.log('[DEBUG-SERVICE-DETAIL] O evento onPhotosChange foi recebido!');
-    console.log('[DEBUG-SERVICE-DETAIL] A chamar a função handlePhotosChange do hook...');
-    // Agora chamamos a função original que está no hook
-    handlePhotosChange(newPhotos); 
+  const handleGenerateReport = async () => {
+    if (!service) {
+      toast.error("Serviço não encontrado");
+      return;
+    }
+
+    try {
+      console.log('[ServiceDetail] Gerando relatório para:', service.title);
+      console.log('[ServiceDetail] Serviço possui', service.photos?.length || 0, 'fotos');
+      
+      toast.info("Gerando relatório...");
+      await generateDetailedServiceReport(service);
+      toast.success("Relatório gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error("Erro ao gerar relatório");
+    }
   };
-  // -------------------------
 
-  const handleGenerateReport = async () => { /* ... (sem alterações) ... */ };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando demanda...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (isLoading) { /* ... (sem alterações) ... */ }
-  if (!service) { /* ... (sem alterações) ... */ }
+  if (!service) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Demanda não encontrada</h2>
+          <p className="text-muted-foreground mb-4">A demanda solicitada não existe ou foi removida.</p>
+          <Link to="/demandas">
+            <Button>Voltar às Demandas</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -65,48 +93,105 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         transition={{ duration: 0.5 }}
       >
         <ServiceDetailHeader />
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <motion.div /* ... */ >
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
               <ServiceDetailCard service={service} onServiceUpdate={() => fetchService(service.id)} />
             </motion.div>
+
             {service.serviceType && (
-              <motion.div /* ... */ >
-                <TechnicalFieldsManager /* ... */ />
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <TechnicalFieldsManager
+                  serviceType={service.serviceType}
+                  values={service.customFields || []}
+                  onUpdate={handleUpdateCustomFields}
+                />
               </motion.div>
             )}
-            <motion.div /* ... */ >
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Camera className="w-5 h-5" />
                     Fotos e Anexos
+                    {service.photos?.length > 0 && (
+                      <span className="text-sm text-muted-foreground">({service.photos.length} fotos)</span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* --- A CORREÇÃO FINAL ESTÁ AQUI --- */}
                   <PhotoUploader
                     photos={photos}
-                    onPhotosChange={handlePhotosChangeWithDebug} // Passamos a nossa nova função de depuração
+                    onPhotosChange={handlePhotosChange}
                     maxPhotos={10}
                   />
-                  {/* ------------------------------------- */}
                 </CardContent>
               </Card>
             </motion.div>
-            <motion.div /* ... */ >
-              <ServiceActions service={service} onStatusChange={handleStatusChange} editMode={editMode} />
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <ServiceActions 
+                service={service} 
+                onStatusChange={handleStatusChange} 
+                editMode={editMode}
+                onGenerateReport={handleGenerateReport}
+              />
             </motion.div>
           </div>
+
           <div className="space-y-6">
-            <motion.div /* ... */ >
-              <ServiceMessages /* ... */ />
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <ServiceMessages
+                messages={service.messages || []}
+                newMessage={newMessage}
+                onMessageChange={setNewMessage}
+                onSendMessage={handleSendMessage}
+              />
             </motion.div>
-            <motion.div /* ... */ >
-              <ServiceFeedback /* ... */ />
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              <ServiceFeedback
+                feedback={feedback}
+                onFeedbackChange={setFeedback}
+                onSubmit={handleSubmitFeedback}
+              />
             </motion.div>
-            <motion.div /* ... */ >
-              <ServiceSignatureSection /* ... */ />
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.7 }}
+            >
+              <ServiceSignatureSection
+                signatures={service.signatures}
+                onUpdate={handleUpdateSignatures}
+              />
             </motion.div>
           </div>
         </div>
@@ -115,5 +200,4 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   );
 };
 
-export default ServiceDetail;
 export default ServiceDetail;

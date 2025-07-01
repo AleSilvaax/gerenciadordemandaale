@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Filter, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ interface AdvancedSearchProps {
   filters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onClearFilters: () => void;
+  serviceTypes?: string[];
+  technicians?: Array<{ id: string; name: string }>;
   className?: string;
 }
 
@@ -35,11 +38,14 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   filters,
   onFiltersChange,
   onClearFilters,
+  serviceTypes = ['Vistoria', 'Instalação', 'Manutenção'],
+  technicians = [],
   className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const updateFilter = (key: keyof SearchFilters, value: any) => {
+    console.log('[AdvancedSearch] Atualizando filtro:', key, value);
     onFiltersChange({
       ...filters,
       [key]: value
@@ -139,9 +145,9 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Tipos</SelectItem>
-              <SelectItem value="Vistoria">Vistoria</SelectItem>
-              <SelectItem value="Instalação">Instalação</SelectItem>
-              <SelectItem value="Manutenção">Manutenção</SelectItem>
+              {serviceTypes.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -161,6 +167,21 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 onChange={(e) => updateFilter('location', e.target.value)}
               />
             </div>
+
+            {/* Seletor de Técnico */}
+            {technicians.length > 0 && (
+              <Select value={filters.technician} onValueChange={(value) => updateFilter('technician', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Técnico Responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Técnicos</SelectItem>
+                  {technicians.map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
