@@ -99,7 +99,8 @@ export const useServiceDetail = () => {
       
       console.log('[useServiceDetail] Salvando no banco:', photoUrls.length, 'URLs');
       
-      const updatedService = await updateService(service.id, { 
+      const updatedService = await updateService({ 
+        id: service.id, 
         photos: photoUrls, 
         photoTitles: photoTitles 
       });
@@ -122,7 +123,7 @@ export const useServiceDetail = () => {
     if (!service) return;
     
     try {
-      const updatedService = await updateService(service.id, { status: newStatus });
+      const updatedService = await updateService({ id: service.id, status: newStatus });
       if (updatedService) {
         setService(updatedService);
         toast.success("Status atualizado com sucesso!");
@@ -159,7 +160,7 @@ export const useServiceDetail = () => {
     if (!service) return;
     
     try {
-      const updatedService = await updateService(service.id, { feedback });
+      const updatedService = await updateService({ id: service.id, feedback });
       if (updatedService) {
         setService(updatedService);
         toast.success("Feedback salvo com sucesso!");
@@ -174,7 +175,7 @@ export const useServiceDetail = () => {
     if (!service) return;
     
     try {
-      const updatedService = await updateService(service.id, { signatures });
+      const updatedService = await updateService({ id: service.id, signatures });
       if (updatedService) {
         setService(updatedService);
         toast.success("Assinaturas atualizadas com sucesso!");
@@ -189,7 +190,7 @@ export const useServiceDetail = () => {
     if (!service) return;
     
     try {
-      const updatedService = await updateService(service.id, { customFields: fields });
+      const updatedService = await updateService({ id: service.id, customFields: fields });
       if (updatedService) {
         setService(updatedService);
         toast.success("Campos técnicos atualizados com sucesso!");

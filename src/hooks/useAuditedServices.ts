@@ -59,7 +59,7 @@ export const useAuditedServices = () => {
     oldService?: Service
   ) => {
     try {
-      const updatedService = await updateService(serviceId, updates);
+      const updatedService = await updateService({ id: serviceId, ...updates });
       
       // Log the action with before/after values
       await logAction(
