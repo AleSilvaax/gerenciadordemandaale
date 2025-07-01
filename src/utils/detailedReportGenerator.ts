@@ -140,7 +140,7 @@ export const generateDetailedServiceReport = async (service: Service): Promise<v
   // ASSINATURAS
   if (service.signatures) {
     doc.addPage();
-    yPosition = addSignatureSection(doc, service.signatures, 20);
+    yPosition = await addSignatureSection(doc, service.signatures, 20);
   }
 
   // FEEDBACK

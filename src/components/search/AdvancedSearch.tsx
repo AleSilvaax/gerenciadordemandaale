@@ -9,8 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
-import { useServiceTypes } from '@/hooks/useServiceTypes';
 
 export interface SearchFilters {
   searchTerm: string;
@@ -28,6 +26,8 @@ interface AdvancedSearchProps {
   filters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onClearFilters: () => void;
+  serviceTypes?: string[];
+  technicians?: { id: string; name: string }[];
   className?: string;
 }
 
@@ -35,11 +35,11 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   filters,
   onFiltersChange,
   onClearFilters,
+  serviceTypes = [],
+  technicians = [],
   className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { teamMembers } = useTeamMembers();
-  const { serviceTypes } = useServiceTypes();
 
   const handleFilterChange = useCallback((key: keyof SearchFilters, value: any) => {
     onFiltersChange({
@@ -163,7 +163,7 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Técnicos</SelectItem>
-                {teamMembers.map((member) => (
+                {technicians.map((member) => (
                   <SelectItem key={member.id} value={member.id}>
                     {member.name}
                   </SelectItem>
@@ -186,8 +186,8 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   <SelectContent>
                     <SelectItem value="all">Todos os Tipos</SelectItem>
                     {serviceTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.name}>
-                        {type.name}
+                      <SelectItem key={type} value={type}>
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
