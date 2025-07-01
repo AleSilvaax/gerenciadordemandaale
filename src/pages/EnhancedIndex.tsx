@@ -260,7 +260,7 @@ const EnhancedIndex: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-yellow-600 text-left-force">
-                      {services.filter(s => s.status === 'em_andamento').length}
+                      {services.filter(s => s.status === 'pendente').length}
                     </div>
                     <p className="text-sm text-muted-foreground mt-2 text-left-force">em progresso</p>
                   </CardContent>
