@@ -11,6 +11,7 @@ import NewService from "@/pages/NewService";
 import ServiceDetail from "@/pages/ServiceDetail";
 import Demandas from "@/pages/Demandas";
 import Settings from "@/pages/Settings";
+import Statistics from "@/pages/Statistics";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
@@ -34,6 +35,7 @@ export const AppLayout: React.FC = () => {
             <Route path="/nova-demanda" element={<NewService />} />
             <Route path="/demandas" element={<Demandas />} />
             <Route path="/demandas/:id" element={<ServiceDetail />} />
+            <Route path="/estatisticas" element={<Statistics />} />
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="/equipe" element={<Settings />} />
           </Routes>

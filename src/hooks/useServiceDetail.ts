@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -101,6 +100,7 @@ export const useServiceDetail = () => {
       console.log('[useServiceDetail] Salvando no banco:', photoUrls.length, 'URLs');
       console.log('[useServiceDetail] URLs das fotos:', photoUrls);
       
+      // Atualizar diretamente no banco de dados
       const updatedService = await updateService({ 
         id: service.id, 
         photos: photoUrls, 
@@ -110,14 +110,8 @@ export const useServiceDetail = () => {
       if (updatedService) {
         console.log('[useServiceDetail] Serviço atualizado com fotos:', updatedService.photos?.length || 0);
         setService(updatedService);
-        // Atualizar o estado local das fotos também
-        const newUploaderPhotos = photoUrls.map((url, index) => ({
-          id: `service-photo-${index}`,
-          file: undefined,
-          url: url,
-          title: photoTitles[index] || `Foto ${index + 1}`,
-        }));
-        setPhotos(newUploaderPhotos);
+        // Recarregar o serviço para garantir que os dados estão atualizados
+        await fetchService(service.id);
         toast.success("Fotos salvas com sucesso!");
       } else {
         throw new Error("Falha ao atualizar serviço");

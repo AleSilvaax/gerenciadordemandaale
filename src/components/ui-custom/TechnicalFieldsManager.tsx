@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { getServiceTypesFromDatabase } from "@/services/servicesDataService";
 import { ServiceTypeConfig, TechnicalField, CustomField } from "@/types/serviceTypes";
-import { CheckCircle, Circle, Save } from "lucide-react";
+import { CheckCircle, Circle, Save, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface TechnicalFieldsManagerProps {
   serviceType: string;
@@ -36,12 +37,9 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
         const types = await getServiceTypesFromDatabase();
         setServiceTypes(types);
         
-        // Encontrar o tipo de serviço atual e seus campos
         const currentType = types.find(type => type.name === serviceType);
         if (currentType && currentType.fields.length > 0) {
-          // Criar campos personalizados baseados nos campos técnicos do tipo
           const technicalFields: CustomField[] = currentType.fields.map(field => {
-            // Verificar se já existe um valor salvo para este campo
             const existingField = currentFields.find(cf => cf.id === field.id);
             
             return {
@@ -55,7 +53,6 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
           
           setFields(technicalFields);
           
-          // Marcar campos que já estão preenchidos
           const completed = new Set<string>();
           technicalFields.forEach(field => {
             if (isFieldCompleted(field)) {
@@ -85,7 +82,7 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
   };
 
   const isFieldCompleted = (field: CustomField): boolean => {
-    if (field.type === 'boolean') return true; // Boolean sempre considerado completo
+    if (field.type === 'boolean') return true;
     if (field.type === 'number') return (field.value as number) > 0;
     return String(field.value).trim().length > 0;
   };
@@ -96,7 +93,6 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
     );
     setFields(updatedFields);
 
-    // Atualizar campos completos
     const newCompletedFields = new Set(completedFields);
     const field = updatedFields.find(f => f.id === fieldId);
     if (field && isFieldCompleted(field)) {
@@ -130,7 +126,8 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             value={field.value as string}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             disabled={disabled}
-            className="bg-background/50"
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+            placeholder="Digite aqui..."
           />
         );
 
@@ -141,7 +138,8 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             value={field.value as number}
             onChange={(e) => handleFieldChange(field.id, parseFloat(e.target.value) || 0)}
             disabled={disabled}
-            className="bg-background/50"
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+            placeholder="0"
           />
         );
 
@@ -152,19 +150,23 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             disabled={disabled}
             rows={3}
-            className="bg-background/50"
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary/20 resize-none"
+            placeholder="Digite suas observações..."
           />
         );
 
       case 'boolean':
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border border-border/50">
             <Checkbox
               checked={field.value as boolean}
               onCheckedChange={(checked) => handleFieldChange(field.id, !!checked)}
               disabled={disabled}
+              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
-            <span className="text-sm">{field.value ? 'Sim' : 'Não'}</span>
+            <span className={`text-sm font-medium ${field.value ? 'text-primary' : 'text-muted-foreground'}`}>
+              {field.value ? 'Sim' : 'Não'}
+            </span>
           </div>
         );
 
@@ -175,7 +177,7 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             onValueChange={(value) => handleFieldChange(field.id, value)}
             disabled={disabled}
           >
-            <SelectTrigger className="bg-background/50">
+            <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
               <SelectValue placeholder="Selecione uma opção" />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +197,7 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             value={field.value as string}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             disabled={disabled}
-            className="bg-background/50"
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
           />
         );
 
@@ -205,7 +207,8 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             value={field.value as string}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             disabled={disabled}
-            className="bg-background/50"
+            className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+            placeholder="Digite aqui..."
           />
         );
     }
@@ -213,9 +216,11 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
 
   if (!fields || fields.length === 0) {
     return (
-      <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <p>Nenhum campo técnico configurado para este tipo de serviço</p>
+      <Card className="bg-gradient-to-br from-card/50 to-card/80 backdrop-blur-sm border border-border/50 shadow-lg">
+        <CardContent className="py-12 text-center">
+          <Settings className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground text-lg">Nenhum campo técnico configurado</p>
+          <p className="text-sm text-muted-foreground mt-2">Configure os campos técnicos para este tipo de serviço</p>
         </CardContent>
       </Card>
     );
@@ -224,61 +229,93 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
   const completionPercentage = Math.round((completedFields.size / fields.length) * 100);
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-      <CardHeader className="pb-3">
+    <Card className="bg-gradient-to-br from-card/50 to-card/80 backdrop-blur-sm border border-border/50 shadow-lg">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Checklist Técnico</CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Settings className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Checklist Técnico</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Preencha todos os campos obrigatórios
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Badge variant={completionPercentage === 100 ? "default" : "secondary"} className="text-sm px-3 py-1">
               {completedFields.size}/{fields.length} concluídos
-            </span>
-            <div className="text-sm font-medium text-primary">
-              {completionPercentage}%
+            </Badge>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-primary">
+                {completionPercentage}%
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Concluído
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Barra de progresso */}
-        <div className="w-full bg-secondary rounded-full h-2">
+        <div className="w-full bg-secondary/50 rounded-full h-3 mt-4">
           <div 
-            className="bg-primary h-2 rounded-full transition-all duration-300"
+            className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${completionPercentage}%` }}
           />
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        {fields.map((field) => {
-          const isCompleted = completedFields.has(field.id);
-          
-          return (
-            <div key={field.id} className="space-y-2">
-              <div className="flex items-center gap-2">
-                {isCompleted ? (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
-                  <Circle className="w-5 h-5 text-muted-foreground" />
-                )}
-                <Label htmlFor={field.id} className="font-medium">
-                  {field.label}
-                </Label>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 gap-6">
+          {fields.map((field) => {
+            const isCompleted = completedFields.has(field.id);
+            
+            return (
+              <div key={field.id} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {isCompleted ? (
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                    ) : (
+                      <Circle className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor={field.id} className="text-base font-medium">
+                      {field.label}
+                    </Label>
+                    {field.type === 'boolean' && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Marque se aplicável
+                      </p>
+                    )}
+                  </div>
+                  {isCompleted && (
+                    <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                      Completo
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="ml-9">
+                  {renderField(field)}
+                </div>
               </div>
-              
-              <div className="ml-7">
-                {renderField(field)}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         
         {!disabled && (
-          <div className="pt-4 border-t">
+          <div className="pt-6 border-t border-border/50">
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="w-full"
+              className="w-full h-12 text-base font-medium"
+              size="lg"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-5 h-5 mr-2" />
               {saving ? "Salvando..." : "Salvar Campos Técnicos"}
             </Button>
           </div>

@@ -1,17 +1,16 @@
 
-import React, { useState } from 'react';
-import { Search, Filter, X, Calendar as CalendarIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Search, Filter, X, Calendar, MapPin, User, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useServiceTypes } from '@/hooks/useServiceTypes';
 
 export interface SearchFilters {
   searchTerm: string;
@@ -29,8 +28,6 @@ interface AdvancedSearchProps {
   filters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onClearFilters: () => void;
-  serviceTypes?: string[];
-  technicians?: Array<{ id: string; name: string }>;
   className?: string;
 }
 
@@ -38,21 +35,20 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   filters,
   onFiltersChange,
   onClearFilters,
-  serviceTypes = ['Vistoria', 'Instalação', 'Manutenção'],
-  technicians = [],
   className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { teamMembers } = useTeamMembers();
+  const { serviceTypes } = useServiceTypes();
 
-  const updateFilter = (key: keyof SearchFilters, value: any) => {
-    console.log('[AdvancedSearch] Atualizando filtro:', key, value);
+  const handleFilterChange = useCallback((key: keyof SearchFilters, value: any) => {
     onFiltersChange({
       ...filters,
       [key]: value
     });
-  };
+  }, [filters, onFiltersChange]);
 
-  const getActiveFiltersCount = () => {
+  const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.searchTerm) count++;
     if (filters.status !== 'all') count++;
@@ -64,168 +60,213 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
     if (filters.dateTo) count++;
     if (filters.technician !== 'all') count++;
     return count;
-  };
+  }, [filters]);
 
-  const activeFiltersCount = getActiveFiltersCount();
+  const hasActiveFilters = activeFiltersCount > 0;
 
   return (
-    <Card className={cn("card-enhanced", className)}>
+    <Card className={cn("bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Busca Avançada
-            {activeFiltersCount > 0 && (
+          <div className="flex items-center gap-2">
+            <Search className="w-5 h-5 text-primary" />
+            <CardTitle className="text-lg">Busca e Filtros</CardTitle>
+            {hasActiveFilters && (
               <Badge variant="secondary" className="ml-2">
-                {activeFiltersCount} filtros ativos
+                {activeFiltersCount} {activeFiltersCount === 1 ? 'filtro' : 'filtros'} ativo{activeFiltersCount === 1 ? '' : 's'}
               </Badge>
             )}
-          </CardTitle>
+          </div>
           <div className="flex items-center gap-2">
-            {activeFiltersCount > 0 && (
-              <Button variant="outline" size="sm" onClick={onClearFilters}>
-                <X className="h-4 w-4 mr-1" />
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearFilters}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4 mr-1" />
                 Limpar
               </Button>
             )}
             <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-1" />
-                  {isExpanded ? 'Ocultar Filtros' : 'Mais Filtros'}
+                <Button variant="ghost" size="sm">
+                  <Filter className="w-4 h-4 mr-1" />
+                  {isExpanded ? 'Menos' : 'Mais'} Filtros
                 </Button>
               </CollapsibleTrigger>
             </Collapsible>
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Busca Principal */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título, cliente, local..."
+            placeholder="Buscar por título, cliente, localização..."
             value={filters.searchTerm}
-            onChange={(e) => updateFilter('searchTerm', e.target.value)}
-            className="pl-10"
+            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            className="pl-10 h-12 text-base"
           />
         </div>
 
         {/* Filtros Rápidos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="concluido">Concluído</SelectItem>
-              <SelectItem value="cancelado">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Status
+            </label>
+            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="concluido">Concluído</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={filters.priority} onValueChange={(value) => updateFilter('priority', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Prioridades</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Prioridade
+            </label>
+            <Select value={filters.priority} onValueChange={(value) => handleFilterChange('priority', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Prioridades</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="urgente">Urgente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={filters.serviceType} onValueChange={(value) => updateFilter('serviceType', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo de Serviço" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Tipos</SelectItem>
-              {serviceTypes.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Técnico
+            </label>
+            <Select value={filters.technician} onValueChange={(value) => handleFilterChange('technician', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Técnicos</SelectItem>
+                {teamMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Filtros Avançados */}
+        {/* Filtros Expandidos */}
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CollapsibleContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                placeholder="Cliente"
-                value={filters.client}
-                onChange={(e) => updateFilter('client', e.target.value)}
-              />
-              <Input
-                placeholder="Local"
-                value={filters.location}
-                onChange={(e) => updateFilter('location', e.target.value)}
-              />
-            </div>
-
-            {/* Seletor de Técnico */}
-            {technicians.length > 0 && (
-              <Select value={filters.technician} onValueChange={(value) => updateFilter('technician', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Técnico Responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Técnicos</SelectItem>
-                  {technicians.map(tech => (
-                    <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Data de Início</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateFrom ? format(filters.dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={filters.dateFrom || undefined}
-                      onSelect={(date) => updateFilter('dateFrom', date || null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <label className="text-sm font-medium">Tipo de Serviço</label>
+                <Select value={filters.serviceType} onValueChange={(value) => handleFilterChange('serviceType', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Tipos</SelectItem>
+                    {serviceTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.name}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Data de Fim</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateTo ? format(filters.dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={filters.dateTo || undefined}
-                      onSelect={(date) => updateFilter('dateTo', date || null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Localização
+                </label>
+                <Input
+                  placeholder="Filtrar por localização..."
+                  value={filters.location}
+                  onChange={(e) => handleFilterChange('location', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cliente</label>
+                <Input
+                  placeholder="Filtrar por cliente..."
+                  value={filters.client}
+                  onChange={(e) => handleFilterChange('client', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Período
+                </label>
+                <div className="flex gap-2">
+                  <DatePicker
+                    date={filters.dateFrom}
+                    onDateChange={(date) => handleFilterChange('dateFrom', date)}
+                    placeholder="Data inicial"
+                  />
+                  <DatePicker
+                    date={filters.dateTo}
+                    onDateChange={(date) => handleFilterChange('dateTo', date)}
+                    placeholder="Data final"
+                  />
+                </div>
               </div>
             </div>
           </CollapsibleContent>
         </Collapsible>
+
+        {/* Filtros Ativos */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+            <span className="text-sm text-muted-foreground">Filtros ativos:</span>
+            {filters.searchTerm && (
+              <Badge variant="secondary" className="gap-1">
+                Busca: "{filters.searchTerm}"
+                <X className="w-3 h-3 cursor-pointer" onClick={() => handleFilterChange('searchTerm', '')} />
+              </Badge>
+            )}
+            {filters.status !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                Status: {filters.status}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => handleFilterChange('status', 'all')} />
+              </Badge>
+            )}
+            {filters.priority !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                Prioridade: {filters.priority}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => handleFilterChange('priority', 'all')} />
+              </Badge>
+            )}
+            {filters.client && (
+              <Badge variant="secondary" className="gap-1">
+                Cliente: {filters.client}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => handleFilterChange('client', '')} />
+              </Badge>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
