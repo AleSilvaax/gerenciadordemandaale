@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, Filter, Download, RefreshCw } from "lucide-react";
@@ -13,17 +14,15 @@ import { useOptimizedServices } from "@/hooks/useOptimizedServices";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-interface SearchFilters {
+interface LocalSearchFilters {
   status: string;
   priority: string;
   serviceType: string;
   client: string;
   location: string;
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
-  technician: string;
+  searchTerm: string;
+  dateFrom: string;
+  dateTo: string;
 }
 
 const Demandas = () => {
@@ -39,14 +38,15 @@ const Demandas = () => {
   } = useOptimizedServices();
 
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+  const [searchFilters, setSearchFilters] = useState<LocalSearchFilters>({
     status: 'all',
     priority: 'all',
     serviceType: 'all',
     client: '',
     location: '',
-    dateRange: { from: undefined, to: undefined },
-    technician: ''
+    searchTerm: '',
+    dateFrom: '',
+    dateTo: ''
   });
 
   // Handler otimizado para busca
@@ -84,6 +84,25 @@ const Demandas = () => {
     // Implementar export se necessário
     toast.info("Funcionalidade de export em desenvolvimento");
   }, []);
+
+  // Handler para filtros avançados
+  const handleAdvancedFiltersChange = useCallback((newFilters: LocalSearchFilters) => {
+    setSearchFilters(newFilters);
+  }, []);
+
+  const handleClearAdvancedFilters = useCallback(() => {
+    setSearchFilters({
+      status: 'all',
+      priority: 'all',
+      serviceType: 'all',
+      client: '',
+      location: '',
+      searchTerm: '',
+      dateFrom: '',
+      dateTo: ''
+    });
+    actions.clearFilters();
+  }, [actions]);
 
   if (error) {
     return (
@@ -245,19 +264,8 @@ const Demandas = () => {
           >
             <AdvancedSearch
               filters={searchFilters}
-              onFiltersChange={setSearchFilters}
-              onClearFilters={() => {
-                setSearchFilters({
-                  status: 'all',
-                  priority: 'all',
-                  serviceType: 'all',
-                  client: '',
-                  location: '',
-                  dateRange: { from: undefined, to: undefined },
-                  technician: ''
-                });
-                actions.clearFilters();
-              }}
+              onFiltersChange={handleAdvancedFiltersChange}
+              onClearFilters={handleClearAdvancedFilters}
               serviceTypes={filterOptions.serviceTypes}
               technicians={[]} // Mock data - implementar se necessário
             />
