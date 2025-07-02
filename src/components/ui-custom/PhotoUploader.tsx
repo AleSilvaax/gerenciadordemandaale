@@ -1,15 +1,16 @@
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, X, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Camera, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { compressImage, isImageFile } from '@/utils/imageCompression';
+import { photoService } from '@/services/photoService';
 import { toast } from 'sonner';
 
-interface Photo {
+export interface Photo {
   id: string;
   file?: File;
   url: string;
@@ -17,6 +18,8 @@ interface Photo {
   compressed?: boolean;
   originalSize?: number;
   compressedSize?: number;
+  uploading?: boolean;
+  error?: string;
 }
 
 interface PhotoUploaderProps {
@@ -24,19 +27,22 @@ interface PhotoUploaderProps {
   onPhotosChange: (photos: Photo[]) => void;
   maxPhotos?: number;
   acceptedFormats?: string[];
+  disabled?: boolean;
 }
 
 export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   photos,
   onPhotosChange,
   maxPhotos = 10,
-  acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  disabled = false
 }) => {
-  const [isCompressing, setIsCompressing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || disabled) return;
 
     console.log('[PhotoUploader] Arquivos selecionados:', files.length);
 
@@ -54,56 +60,74 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       return;
     }
 
-    setIsCompressing(true);
-    const newPhotos: Photo[] = [];
+    setIsUploading(true);
+    setUploadProgress({ completed: 0, total: filesToProcess.length });
 
     try {
-      for (const file of filesToProcess) {
+      const newPhotos: Photo[] = [];
+
+      // Processar arquivos um por vez
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
         console.log('[PhotoUploader] Processando arquivo:', file.name);
-        const originalSize = file.size;
         
-        // Comprimir imagem automaticamente
-        const compressedFile = await compressImage(file, {
-          maxWidth: 1920,
-          maxHeight: 1080,
-          quality: 0.8,
-          maxSizeKB: 500
-        });
+        try {
+          const originalSize = file.size;
+          
+          // Comprimir imagem automaticamente
+          const compressedFile = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.8,
+            maxSizeKB: 500
+          });
 
-        const photo: Photo = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          file: compressedFile,
-          url: URL.createObjectURL(compressedFile),
-          title: file.name.replace(/\.[^/.]+$/, ""),
-          compressed: compressedFile.size < originalSize,
-          originalSize,
-          compressedSize: compressedFile.size
-        };
+          const photo: Photo = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            file: compressedFile,
+            url: URL.createObjectURL(compressedFile),
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            compressed: compressedFile.size < originalSize,
+            originalSize,
+            compressedSize: compressedFile.size,
+            uploading: false
+          };
 
-        newPhotos.push(photo);
-        console.log('[PhotoUploader] Foto processada:', photo.title);
+          newPhotos.push(photo);
+          
+          // Atualizar progresso
+          setUploadProgress({ completed: i + 1, total: filesToProcess.length });
 
-        // Mostrar feedback de compressão
-        if (photo.compressed) {
-          const savings = ((originalSize - compressedFile.size) / originalSize * 100).toFixed(1);
-          toast.success(`${file.name} comprimida (${savings}% menor)`);
+          // Mostrar feedback de compressão
+          if (photo.compressed) {
+            const savings = ((originalSize - compressedFile.size) / originalSize * 100).toFixed(1);
+            console.log(`[PhotoUploader] ${file.name} comprimida (${savings}% menor)`);
+          }
+
+        } catch (error) {
+          console.error(`[PhotoUploader] Erro ao processar ${file.name}:`, error);
+          toast.error(`Erro ao processar ${file.name}`);
         }
       }
 
-      const updatedPhotos = [...photos, ...newPhotos];
-      console.log('[PhotoUploader] Chamando onPhotosChange com', updatedPhotos.length, 'fotos');
-      onPhotosChange(updatedPhotos);
-      
+      if (newPhotos.length > 0) {
+        const updatedPhotos = [...photos, ...newPhotos];
+        console.log('[PhotoUploader] Adicionando', newPhotos.length, 'fotos. Total:', updatedPhotos.length);
+        onPhotosChange(updatedPhotos);
+        toast.success(`${newPhotos.length} foto(s) adicionada(s) com sucesso!`);
+      }
+
     } catch (error) {
-      console.error('Erro ao processar fotos:', error);
-      toast.error('Erro ao processar algumas fotos');
+      console.error('[PhotoUploader] Erro geral:', error);
+      toast.error('Erro ao processar fotos');
     } finally {
-      setIsCompressing(false);
+      setIsUploading(false);
+      setUploadProgress(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
-  }, [photos, maxPhotos, acceptedFormats, onPhotosChange]);
+  }, [photos, maxPhotos, acceptedFormats, onPhotosChange, disabled]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -114,23 +138,31 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     e.preventDefault();
   }, []);
 
-  const removePhoto = (photoId: string) => {
+  const removePhoto = useCallback((photoId: string) => {
+    if (disabled) return;
+    
     console.log('[PhotoUploader] Removendo foto:', photoId);
     const photoToRemove = photos.find(p => p.id === photoId);
+    
+    // Revogar URL blob se necessário
     if (photoToRemove && photoToRemove.url.startsWith('blob:')) {
       URL.revokeObjectURL(photoToRemove.url);
     }
+    
     const updatedPhotos = photos.filter(p => p.id !== photoId);
     onPhotosChange(updatedPhotos);
-  };
+    toast.success('Foto removida');
+  }, [photos, onPhotosChange, disabled]);
 
-  const updatePhotoTitle = (photoId: string, title: string) => {
+  const updatePhotoTitle = useCallback((photoId: string, title: string) => {
+    if (disabled) return;
+    
     console.log('[PhotoUploader] Atualizando título da foto:', photoId, title);
     const updatedPhotos = photos.map(photo =>
       photo.id === photoId ? { ...photo, title } : photo
     );
     onPhotosChange(updatedPhotos);
-  };
+  }, [photos, onPhotosChange, disabled]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -145,36 +177,61 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       {/* Upload Area */}
       <Card 
         className={`border-2 border-dashed transition-colors ${
-          isCompressing ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+          disabled 
+            ? 'border-muted-foreground/10 bg-muted/20' 
+            : isUploading 
+              ? 'border-primary bg-primary/5' 
+              : 'border-muted-foreground/25 hover:border-primary/50'
         }`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
+        onDrop={disabled ? undefined : handleDrop}
+        onDragOver={disabled ? undefined : handleDragOver}
       >
         <CardContent className="p-6">
           <div className="text-center">
-            {isCompressing ? (
-              <div className="space-y-2">
+            {isUploading ? (
+              <div className="space-y-3">
                 <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Comprimindo imagens...</p>
+                <p className="text-sm text-muted-foreground">Processando imagens...</p>
+                {uploadProgress && (
+                  <div className="space-y-2">
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {uploadProgress.completed} de {uploadProgress.total} fotos processadas
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <>
                 <div className="flex justify-center space-x-2 mb-4">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <Camera className="h-8 w-8 text-muted-foreground" />
+                  <Upload className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
+                  <Camera className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Adicionar Fotos</h3>
+                <h3 className={`text-lg font-semibold mb-2 ${disabled ? 'text-muted-foreground' : ''}`}>
+                  Adicionar Fotos
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Arraste e solte fotos aqui ou clique para selecionar<br />
-                  <span className="text-xs">
-                    Máximo: {maxPhotos} fotos • Formatos: JPG, PNG, WebP • Compressão automática
-                  </span>
+                  {disabled ? (
+                    'Upload de fotos desabilitado'
+                  ) : (
+                    <>
+                      Arraste e solte fotos aqui ou clique para selecionar<br />
+                      <span className="text-xs">
+                        Máximo: {maxPhotos} fotos • Formatos: JPG, PNG, WebP • Compressão automática
+                      </span>
+                    </>
+                  )}
                 </p>
                 <div className="flex justify-center space-x-2">
                   <Button
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={photos.length >= maxPhotos}
+                    disabled={disabled || photos.length >= maxPhotos}
                   >
                     <ImageIcon className="h-4 w-4 mr-2" />
                     Selecionar Fotos
@@ -190,6 +247,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             accept={acceptedFormats.join(',')}
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
+            disabled={disabled}
           />
         </CardContent>
       </Card>
@@ -205,20 +263,38 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {photos.map((photo) => (
-              <Card key={photo.id} className="overflow-hidden">
+              <Card key={photo.id} className={`overflow-hidden ${photo.error ? 'border-destructive' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex space-x-4">
                     <div className="relative flex-shrink-0">
                       <img
                         src={photo.url}
                         alt={photo.title}
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className={`w-20 h-20 object-cover rounded-lg ${photo.uploading ? 'opacity-50' : ''}`}
+                        onError={(e) => {
+                          console.error('[PhotoUploader] Erro ao carregar imagem:', photo.url);
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
                       />
+                      
+                      {photo.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                          <Loader2 className="h-4 w-4 animate-spin text-white" />
+                        </div>
+                      )}
+                      
+                      {photo.error && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-destructive/20 rounded-lg">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                        </div>
+                      )}
+                      
                       <Button
                         variant="destructive"
                         size="sm"
                         className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
                         onClick={() => removePhoto(photo.id)}
+                        disabled={disabled || photo.uploading}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -235,13 +311,24 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                           onChange={(e) => updatePhotoTitle(photo.id, e.target.value)}
                           placeholder="Digite um título..."
                           className="mt-1"
+                          disabled={disabled || photo.uploading}
                         />
                       </div>
                       
-                      <div className="flex items-center space-x-2">
-                        {photo.compressed && (
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        {photo.uploading && (
+                          <Badge variant="outline" className="text-xs">
+                            Enviando...
+                          </Badge>
+                        )}
+                        {photo.compressed && !photo.uploading && (
                           <Badge variant="secondary" className="text-xs">
                             Comprimida
+                          </Badge>
+                        )}
+                        {photo.error && (
+                          <Badge variant="destructive" className="text-xs">
+                            Erro
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">
@@ -253,6 +340,10 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                           )}
                         </span>
                       </div>
+                      
+                      {photo.error && (
+                        <p className="text-xs text-destructive">{photo.error}</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>

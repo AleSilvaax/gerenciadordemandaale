@@ -76,51 +76,71 @@ export const useServiceDetail = () => {
 
     try {
       console.log('[useServiceDetail] Processando', newPhotos.length, 'fotos');
-      toast.info("Processando e salvando as fotos...");
+      
+      const processedPhotos: string[] = [];
+      const processedTitles: string[] = [];
+      let hasNewUploads = false;
 
-      const processedPhotos = [];
-      const processedTitles = [];
-
+      // Separar fotos existentes das novas
       for (const photo of newPhotos) {
         if (photo.file instanceof File) {
-          // Nova foto para upload
-          console.log('[useServiceDetail] Fazendo upload da foto:', photo.title);
+          // Nova foto que precisa ser enviada
+          hasNewUploads = true;
+          console.log('[useServiceDetail] Nova foto detectada:', photo.title);
+          
           try {
+            toast.info(`Enviando foto: ${photo.title}...`);
             const publicUrl = await uploadServicePhoto(photo.file);
             processedPhotos.push(publicUrl);
             processedTitles.push(photo.title);
             console.log('[useServiceDetail] Upload concluído:', publicUrl);
           } catch (error) {
             console.error('[useServiceDetail] Erro no upload:', error);
-            toast.error(`Erro ao fazer upload da foto: ${photo.title}`);
+            toast.error(`Erro ao enviar ${photo.title}`);
+            // Continua com as outras fotos
           }
         } else if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
-          // Foto já existente
+          // Foto já existente no servidor
           processedPhotos.push(photo.url);
           processedTitles.push(photo.title);
+        } else if (typeof photo.url === 'string' && photo.url.startsWith('blob:')) {
+          // Foto local que ainda não foi enviada - isso é um erro, deve ser enviada primeiro
+          console.warn('[useServiceDetail] Foto blob detectada, isso não deveria acontecer:', photo.url);
         }
       }
       
-      console.log('[useServiceDetail] Salvando no banco:', processedPhotos.length, 'URLs');
-      console.log('[useServiceDetail] URLs das fotos:', processedPhotos);
+      console.log('[useServiceDetail] Total de fotos válidas:', processedPhotos.length);
       
-      // Atualizar no banco de dados
-      const updatedService = await updateService({ 
-        id: service.id, 
-        photos: processedPhotos, 
-        photoTitles: processedTitles 
-      });
+      // Só atualizar o banco se houver mudanças
+      if (hasNewUploads || processedPhotos.length !== (service.photos?.length || 0)) {
+        console.log('[useServiceDetail] Atualizando banco de dados...');
+        
+        const updatedService = await updateService({ 
+          id: service.id, 
+          photos: processedPhotos, 
+          photoTitles: processedTitles 
+        });
 
-      if (updatedService) {
-        console.log('[useServiceDetail] Serviço atualizado com fotos:', updatedService.photos?.length || 0);
-        setService(updatedService);
-        toast.success("Fotos salvas com sucesso!");
+        if (updatedService) {
+          console.log('[useServiceDetail] Serviço atualizado com', updatedService.photos?.length || 0, 'fotos');
+          setService(updatedService);
+          
+          if (hasNewUploads) {
+            const newCount = processedPhotos.length - (service.photos?.length || 0);
+            toast.success(`${newCount} foto(s) salva(s) com sucesso!`);
+          } else {
+            toast.success("Fotos atualizadas com sucesso!");
+          }
+        } else {
+          throw new Error("Falha ao atualizar serviço no banco");
+        }
       } else {
-        throw new Error("Falha ao atualizar serviço");
+        console.log('[useServiceDetail] Nenhuma mudança detectada nas fotos');
       }
+
     } catch (error) {
-      console.error('[useServiceDetail] Erro ao salvar fotos:', error);
-      toast.error("Erro ao salvar as fotos. Tente novamente.");
+      console.error('[useServiceDetail] Erro ao processar fotos:', error);
+      toast.error("Erro ao salvar fotos. Tente novamente.");
     }
   };
 

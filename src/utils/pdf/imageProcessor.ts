@@ -4,24 +4,62 @@ export interface ImageDimensions { width: number; height: number; }
 
 const getImageAsBase64 = async (url: string): Promise<string | null> => {
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Falha ao buscar imagem: ${response.statusText}`);
+    console.log('[imageProcessor] Buscando imagem:', url);
+    
+    const response = await fetch(url, {
+      mode: 'cors',
+      headers: {
+        'Accept': 'image/*'
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('[imageProcessor] Erro na resposta:', response.status, response.statusText);
+      throw new Error(`Falha ao buscar imagem: ${response.statusText}`);
+    }
+    
     const blob = await response.blob();
+    console.log('[imageProcessor] Blob obtido, tamanho:', blob.size, 'tipo:', blob.type);
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onloadend = () => {
+        console.log('[imageProcessor] Conversão para base64 concluída');
+        resolve(reader.result as string);
+      };
+      reader.onerror = (error) => {
+        console.error('[imageProcessor] Erro na conversão:', error);
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
   } catch (error) {
+    console.error('[imageProcessor] Erro ao buscar imagem:', error);
     return null;
   }
 };
 
 export const processImageForPDF = async (url: string): Promise<string | null> => {
-  if (!url) return null;
-  if (url.startsWith('data:image')) return url;
-  if (url.startsWith('http')) return await getImageAsBase64(url);
+  if (!url) {
+    console.log('[imageProcessor] URL vazia fornecida');
+    return null;
+  }
+  
+  if (url.startsWith('data:image')) {
+    console.log('[imageProcessor] Imagem já em base64');
+    return url;
+  }
+  
+  if (url.startsWith('http')) {
+    console.log('[imageProcessor] Processando URL externa:', url);
+    const base64 = await getImageAsBase64(url);
+    if (!base64) {
+      console.error('[imageProcessor] Falha ao converter para base64:', url);
+    }
+    return base64;
+  }
+  
+  console.warn('[imageProcessor] Formato de URL não suportado:', url);
   return null;
 };
 
