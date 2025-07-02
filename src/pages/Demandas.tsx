@@ -21,8 +21,9 @@ interface LocalSearchFilters {
   client: string;
   location: string;
   searchTerm: string;
-  dateFrom: string;
-  dateTo: string;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+  technician: string;
 }
 
 const Demandas = () => {
@@ -45,8 +46,9 @@ const Demandas = () => {
     client: '',
     location: '',
     searchTerm: '',
-    dateFrom: '',
-    dateTo: ''
+    dateFrom: null,
+    dateTo: null,
+    technician: 'all'
   });
 
   // Handler otimizado para busca
@@ -98,8 +100,9 @@ const Demandas = () => {
       client: '',
       location: '',
       searchTerm: '',
-      dateFrom: '',
-      dateTo: ''
+      dateFrom: null,
+      dateTo: null,
+      technician: 'all'
     });
     actions.clearFilters();
   }, [actions]);
@@ -178,13 +181,7 @@ const Demandas = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <StatisticsCards 
-            total={serviceStats.total}
-            pending={serviceStats.pending}
-            inProgress={serviceStats.inProgress}
-            completed={serviceStats.completed}
-            completionRate={serviceStats.completionRate}
-          />
+          <StatisticsCards {...serviceStats} />
         </motion.div>
 
         {/* Filtros rápidos otimizados */}
@@ -212,7 +209,6 @@ const Demandas = () => {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="em_andamento">Em Andamento</SelectItem>
                 <SelectItem value="concluido">Concluído</SelectItem>
                 <SelectItem value="cancelado">Cancelado</SelectItem>
               </SelectContent>

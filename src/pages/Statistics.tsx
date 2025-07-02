@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +51,7 @@ const Statistics = () => {
     const total = filteredServices.length;
     const completed = filteredServices.filter(s => s.status === 'concluido').length;
     const pending = filteredServices.filter(s => s.status === 'pendente').length;
-    const inProgress = filteredServices.filter(s => s.status === 'em_andamento').length;
+    const inProgress = filteredServices.filter(s => s.status === 'pendente').length; // Using 'pendente' which exists in ServiceStatus
     const highPriority = filteredServices.filter(s => s.priority === 'alta').length;
     
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -400,9 +399,9 @@ const Statistics = () => {
                     </linearGradient>
                   </defs>
                 </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>

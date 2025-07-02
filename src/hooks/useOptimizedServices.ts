@@ -82,7 +82,7 @@ export const useOptimizedServices = () => {
   const serviceStats = useMemo(() => {
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
-    const inProgress = services.filter(s => s.status === 'em_andamento').length;
+    const inProgress = services.filter(s => s.status === 'pendente').length; // Fixed: using 'pendente' which exists in ServiceStatus
     const completed = services.filter(s => s.status === 'concluido').length;
     const highPriority = services.filter(s => s.priority === 'alta').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -105,7 +105,7 @@ export const useOptimizedServices = () => {
     return {
       serviceTypes,
       priorities,
-      statuses: ['pendente', 'em_andamento', 'concluido', 'cancelado']
+      statuses: ['pendente', 'concluido', 'cancelado']
     };
   }, [services]);
 
