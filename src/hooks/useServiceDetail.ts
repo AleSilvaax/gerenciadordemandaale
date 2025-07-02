@@ -77,50 +77,50 @@ export const useServiceDetail = () => {
     try {
       console.log('[useServiceDetail] Processando', newPhotos.length, 'fotos');
       toast.info("Processando e salvando as fotos...");
-      setIsLoading(true);
 
-      const uploadPromises = newPhotos.map(async (photo) => {
-        // Se tem arquivo, é uma nova foto para upload
+      const processedPhotos = [];
+      const processedTitles = [];
+
+      for (const photo of newPhotos) {
         if (photo.file instanceof File) {
+          // Nova foto para upload
           console.log('[useServiceDetail] Fazendo upload da foto:', photo.title);
-          const publicUrl = await uploadServicePhoto(photo.file);
-          return { url: publicUrl, title: photo.title };
+          try {
+            const publicUrl = await uploadServicePhoto(photo.file);
+            processedPhotos.push(publicUrl);
+            processedTitles.push(photo.title);
+            console.log('[useServiceDetail] Upload concluído:', publicUrl);
+          } catch (error) {
+            console.error('[useServiceDetail] Erro no upload:', error);
+            toast.error(`Erro ao fazer upload da foto: ${photo.title}`);
+          }
+        } else if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
+          // Foto já existente
+          processedPhotos.push(photo.url);
+          processedTitles.push(photo.title);
         }
-        // Se tem URL HTTP, é uma foto já salva
-        if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
-          return { url: photo.url, title: photo.title };
-        }
-        return null;
-      });
-
-      const resolvedPhotos = (await Promise.all(uploadPromises)).filter(p => p !== null);
-      const photoUrls = resolvedPhotos.map(p => p!.url);
-      const photoTitles = resolvedPhotos.map(p => p!.title);
+      }
       
-      console.log('[useServiceDetail] Salvando no banco:', photoUrls.length, 'URLs');
-      console.log('[useServiceDetail] URLs das fotos:', photoUrls);
+      console.log('[useServiceDetail] Salvando no banco:', processedPhotos.length, 'URLs');
+      console.log('[useServiceDetail] URLs das fotos:', processedPhotos);
       
-      // Atualizar diretamente no banco de dados
+      // Atualizar no banco de dados
       const updatedService = await updateService({ 
         id: service.id, 
-        photos: photoUrls, 
-        photoTitles: photoTitles 
+        photos: processedPhotos, 
+        photoTitles: processedTitles 
       });
 
       if (updatedService) {
         console.log('[useServiceDetail] Serviço atualizado com fotos:', updatedService.photos?.length || 0);
         setService(updatedService);
-        // Recarregar o serviço para garantir que os dados estão atualizados
-        await fetchService(service.id);
         toast.success("Fotos salvas com sucesso!");
       } else {
         throw new Error("Falha ao atualizar serviço");
       }
     } catch (error) {
       console.error('[useServiceDetail] Erro ao salvar fotos:', error);
-      toast.error("Ocorreu um erro ao salvar as fotos.");
-    } finally {
-      setIsLoading(false);
+      toast.error("Erro ao salvar as fotos. Tente novamente.");
     }
   };
 

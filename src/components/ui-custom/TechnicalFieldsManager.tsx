@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { getServiceTypesFromDatabase } from "@/services/servicesDataService";
 import { ServiceTypeConfig, TechnicalField, CustomField } from "@/types/serviceTypes";
-import { CheckCircle, Circle, Save, Settings } from "lucide-react";
+import { Save, Settings, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -157,16 +157,25 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
 
       case 'boolean':
         return (
-          <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-            <Checkbox
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/50">
+            <div className="flex items-center space-x-3">
+              {field.value ? (
+                <ToggleRight className="w-6 h-6 text-green-600" />
+              ) : (
+                <ToggleLeft className="w-6 h-6 text-gray-400" />
+              )}
+              <span className={`text-sm font-medium transition-colors ${
+                field.value ? 'text-green-700' : 'text-gray-500'
+              }`}>
+                {field.value ? 'Sim' : 'Não'}
+              </span>
+            </div>
+            <Switch
               checked={field.value as boolean}
-              onCheckedChange={(checked) => handleFieldChange(field.id, !!checked)}
+              onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
               disabled={disabled}
-              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              className="data-[state=checked]:bg-green-600"
             />
-            <span className={`text-sm font-medium ${field.value ? 'text-primary' : 'text-muted-foreground'}`}>
-              {field.value ? 'Sim' : 'Não'}
-            </span>
           </div>
         );
 
@@ -275,20 +284,13 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
             return (
               <div key={field.id} className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0">
-                    {isCompleted ? (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
-                    ) : (
-                      <Circle className="w-6 h-6 text-muted-foreground" />
-                    )}
-                  </div>
                   <div className="flex-1">
                     <Label htmlFor={field.id} className="text-base font-medium">
                       {field.label}
                     </Label>
                     {field.type === 'boolean' && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        Marque se aplicável
+                        Use o switch para marcar sim ou não
                       </p>
                     )}
                   </div>
@@ -299,7 +301,7 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
                   )}
                 </div>
                 
-                <div className="ml-9">
+                <div>
                   {renderField(field)}
                 </div>
               </div>

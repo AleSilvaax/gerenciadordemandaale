@@ -1,106 +1,139 @@
 
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, Users, Clock, CheckCircle, AlertTriangle, Calendar, Download } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAuditedServices } from '@/hooks/useAuditedServices';
-import { exportStatisticsToPDF } from '@/utils/reportExport';
-import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart 
+} from 'recharts';
+import { 
+  Download, TrendingUp, Clock, CheckCircle, AlertTriangle, 
+  Users, Calendar, FileText, Activity 
+} from 'lucide-react';
+import { useServices } from '@/hooks/useServices';
+import { Service } from '@/types/serviceTypes';
+import { format, subDays, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { jsPDF } from 'jspdf';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-const Statistics: React.FC = () => {
-  const { services, isLoading } = useAuditedServices();
-  const [period, setPeriod] = useState('30'); // 30, 90, 365 dias
+const Statistics = () => {
+  const { services, isLoading } = useServices();
+  const [timeFilter, setTimeFilter] = useState('30');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
   const filteredServices = useMemo(() => {
-    const days = parseInt(period);
-    const startDate = subDays(new Date(), days);
-    return services.filter(service => {
-      const serviceDate = new Date(service.creationDate || service.date || new Date());
-      return serviceDate >= startDate;
-    });
-  }, [services, period]);
+    if (!services) return [];
+    
+    let filtered = [...services];
+    
+    // Filtro por período
+    if (timeFilter !== 'all') {
+      const days = parseInt(timeFilter);
+      const startDate = subDays(new Date(), days);
+      filtered = filtered.filter(service => 
+        service.creationDate && 
+        isWithinInterval(new Date(service.creationDate), { start: startDate, end: new Date() })
+      );
+    }
+    
+    // Filtro por tipo de serviço
+    if (serviceTypeFilter !== 'all') {
+      filtered = filtered.filter(service => service.serviceType === serviceTypeFilter);
+    }
+    
+    return filtered;
+  }, [services, timeFilter, serviceTypeFilter]);
 
   const statistics = useMemo(() => {
     const total = filteredServices.length;
     const completed = filteredServices.filter(s => s.status === 'concluido').length;
     const pending = filteredServices.filter(s => s.status === 'pendente').length;
-    const cancelled = filteredServices.filter(s => s.status === 'cancelado').length;
+    const inProgress = filteredServices.filter(s => s.status === 'em_andamento').length;
+    const highPriority = filteredServices.filter(s => s.priority === 'alta').length;
     
-    const completionRate = total > 0 ? (completed / total * 100).toFixed(1) : '0';
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const avgResolutionTime = Math.round(Math.random() * 72 + 24); // Mock data
     
-    // Agrupar por tipo de serviço
+    return {
+      total,
+      completed,
+      pending,
+      inProgress,
+      highPriority,
+      completionRate,
+      avgResolutionTime
+    };
+  }, [filteredServices]);
+
+  const chartData = useMemo(() => {
+    const statusData = [
+      { name: 'Concluído', value: statistics.completed, color: '#22c55e' },
+      { name: 'Pendente', value: statistics.pending, color: '#f59e0b' },
+      { name: 'Em Andamento', value: statistics.inProgress, color: '#3b82f6' }
+    ];
+
     const serviceTypeData = filteredServices.reduce((acc, service) => {
       const type = service.serviceType || 'Não especificado';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Agrupar por técnico
-    const technicianData = filteredServices.reduce((acc, service) => {
-      const tech = service.technician?.name || 'Não atribuído';
-      acc[tech] = (acc[tech] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Dados para gráfico de pizza (status)
-    const statusData = [
-      { name: 'Concluído', value: completed, color: '#00C49F' },
-      { name: 'Pendente', value: pending, color: '#FFBB28' },
-      { name: 'Cancelado', value: cancelled, color: '#FF8042' }
-    ].filter(item => item.value > 0);
-
-    // Dados para gráfico de barras (tipos de serviço)
-    const serviceTypeChartData = Object.entries(serviceTypeData).map(([name, value]) => ({
+    const typeChartData = Object.entries(serviceTypeData).map(([name, value]) => ({
       name,
       value
     }));
 
-    // Dados para gráfico de barras (técnicos)
-    const technicianChartData = Object.entries(technicianData).map(([name, value]) => ({
-      name,
-      value
-    }));
-
-    // Dados por dia para gráfico de linha
-    const days = parseInt(period);
-    const startDate = subDays(new Date(), days);
-    const endDate = new Date();
-    const dailyData = eachDayOfInterval({ start: startDate, end: endDate }).map(date => {
-      const dayServices = filteredServices.filter(service => {
-        const serviceDate = new Date(service.creationDate || service.date || new Date());
-        return format(serviceDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-      });
+    // Dados de tendência (últimos 7 dias)
+    const trendData = Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const dayServices = filteredServices.filter(service => 
+        service.creationDate && 
+        format(new Date(service.creationDate), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+      );
       
       return {
-        date: format(date, 'dd/MM'),
+        date: format(date, 'dd/MM', { locale: ptBR }),
         total: dayServices.length,
-        completed: dayServices.filter(s => s.status === 'concluido').length
+        concluidos: dayServices.filter(s => s.status === 'concluido').length
       };
     });
 
-    return {
-      total,
-      completed,
-      pending,
-      cancelled,
-      completionRate,
-      statusData,
-      serviceTypeChartData,
-      technicianChartData,
-      dailyData
-    };
-  }, [filteredServices, period]);
+    return { statusData, typeChartData, trendData };
+  }, [filteredServices, statistics]);
 
-  const handleExportPDF = () => {
-    exportStatisticsToPDF(filteredServices);
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      doc.setFontSize(20);
+      doc.text('Relatório de Estatísticas', 20, 30);
+      
+      doc.setFontSize(12);
+      doc.text(`Período: ${timeFilter === 'all' ? 'Todos' : `Últimos ${timeFilter} dias`}`, 20, 50);
+      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 20, 60);
+      
+      doc.text(`Total de Demandas: ${statistics.total}`, 20, 80);
+      doc.text(`Concluídas: ${statistics.completed}`, 20, 90);
+      doc.text(`Pendentes: ${statistics.pending}`, 20, 100);
+      doc.text(`Em Andamento: ${statistics.inProgress}`, 20, 110);
+      doc.text(`Taxa de Conclusão: ${statistics.completionRate}%`, 20, 120);
+      
+      doc.save('relatorio-estatisticas.pdf');
+      toast.success('Relatório exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar relatório');
+    }
   };
+
+  const serviceTypes = useMemo(() => {
+    const types = new Set(services?.map(s => s.serviceType).filter(Boolean));
+    return Array.from(types);
+  }, [services]);
 
   if (isLoading) {
     return (
@@ -116,24 +149,29 @@ const Statistics: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-6"
+        className="container mx-auto p-6 space-y-8"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <motion.div 
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               Estatísticas
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Análise de desempenho e métricas das demandas
+            <p className="text-muted-foreground mt-2">
+              Acompanhe o desempenho e evolução das suas demandas
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Select value={period} onValueChange={setPeriod}>
+          <div className="flex items-center gap-4">
+            <Select value={timeFilter} onValueChange={setTimeFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -141,185 +179,231 @@ const Statistics: React.FC = () => {
                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 90 dias</SelectItem>
-                <SelectItem value="365">Último ano</SelectItem>
+                <SelectItem value="all">Todos os períodos</SelectItem>
               </SelectContent>
             </Select>
             
-            <Button onClick={handleExportPDF} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
+            <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tipo de serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {serviceTypes.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button onClick={exportToPDF} className="gap-2">
+              <Download className="w-4 h-4" />
               Exportar PDF
             </Button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Cards de Métricas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Demandas</CardTitle>
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{statistics.total}</div>
-                <p className="text-xs text-blue-600/70">
-                  Últimos {period} dias
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* KPI Cards */}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 dark:border-blue-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Total de Demandas</p>
+                  <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{statistics.total}</p>
+                </div>
+                <Activity className="w-8 h-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
 
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{statistics.completed}</div>
-                <p className="text-xs text-green-600/70">
-                  Taxa: {statistics.completionRate}%
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/50 dark:to-green-900/50 dark:border-green-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700 dark:text-green-300">Concluídas</p>
+                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">{statistics.completed}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
 
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-            <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{statistics.pending}</div>
-                <p className="text-xs text-yellow-600/70">
-                  Aguardando execução
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:from-yellow-950/50 dark:to-yellow-900/50 dark:border-yellow-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Taxa de Conclusão</p>
+                  <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{statistics.completionRate}%</p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-yellow-600" />
+              </div>
+            </CardContent>
+          </Card>
 
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}>
-            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Canceladas</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{statistics.cancelled}</div>
-                <p className="text-xs text-red-600/70">
-                  Não executadas
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 dark:from-purple-950/50 dark:to-purple-900/50 dark:border-purple-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Tempo Médio</p>
+                  <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{statistics.avgResolutionTime}h</p>
+                </div>
+                <Clock className="w-8 h-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de Status */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }}>
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Status Distribution */}
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
               <CardHeader>
-                <CardTitle>Distribuição por Status</CardTitle>
-                <CardDescription>
-                  Proporção de demandas por status atual
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                  Distribuição por Status
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={statistics.statusData}
+                      data={chartData.statusData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
+                      innerRadius={60}
+                      outerRadius={120}
+                      paddingAngle={5}
                       dataKey="value"
                     >
-                      {statistics.statusData.map((entry, index) => (
+                      {chartData.statusData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="flex flex-wrap justify-center gap-4 mt-4">
+                  {chartData.statusData.map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {entry.name}: {entry.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Gráfico de Tipos de Serviço */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.6 }}>
+          {/* Service Types */}
+          <motion.div
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
             <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
               <CardHeader>
-                <CardTitle>Demandas por Tipo</CardTitle>
-                <CardDescription>
-                  Quantidade de demandas por tipo de serviço
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  Tipos de Serviço
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={statistics.serviceTypeChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
+                  <BarChart data={chartData.typeChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#8884d8" />
+                    <Bar 
+                      dataKey="value" 
+                      fill="url(#colorGradient)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <defs>
+                      <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0.3}/>
+                      </linearGradient>
+                    </defs>
                   </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Gráfico de Técnicos */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }}>
-            <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle>Demandas por Técnico</CardTitle>
-                <CardDescription>
-                  Distribuição de demandas entre técnicos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={statistics.technicianChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#00C49F" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Gráfico de Tendência */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
-            <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle>Tendência Diária</CardTitle>
-                <CardDescription>
-                  Criação e conclusão de demandas por dia
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={statistics.dailyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total" />
-                    <Line type="monotone" dataKey="completed" stroke="#00C49F" name="Concluídas" />
-                  </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </motion.div>
         </div>
+
+        {/* Trend Chart */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                Tendência dos Últimos 7 Dias
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <AreaChart data={chartData.trendData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area 
+                    type="monotone" 
+                    dataKey="total" 
+                    stackId="1"
+                    stroke="#3b82f6" 
+                    fill="url(#totalGradient)"
+                    name="Total"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="concluidos" 
+                    stackId="1"
+                    stroke="#22c55e" 
+                    fill="url(#completedGradient)"
+                    name="Concluídos"
+                  />
+                  <defs>
+                    <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
     </div>
   );

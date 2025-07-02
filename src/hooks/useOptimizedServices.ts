@@ -1,48 +1,91 @@
 
-import { useMemo, useCallback } from 'react';
-import { useServiceStore } from '@/store/serviceStore';
-import { useFilteredServices, useDebounce } from '@/utils/performance';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getServices } from '@/services/servicesDataService';
 import { Service } from '@/types/serviceTypes';
+import { useDebounce } from '@/utils/performance';
+
+interface ServiceFilters {
+  status: string;
+  priority: string;
+  serviceType: string;
+  searchTerm: string;
+}
+
+const SERVICES_QUERY_KEY = ['services'];
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+const STALE_TIME = 2 * 60 * 1000; // 2 minutes
 
 export const useOptimizedServices = () => {
+  const [filters, setFilters] = useState<ServiceFilters>({
+    status: 'all',
+    priority: 'all',
+    serviceType: 'all',
+    searchTerm: '',
+  });
+
+  const queryClient = useQueryClient();
+
+  // React Query para cache inteligente
   const {
-    services,
+    data: services = [],
     isLoading,
     error,
-    filters,
-    setFilters,
-    loadServices,
-    clearError
-  } = useServiceStore();
+    refetch
+  } = useQuery({
+    queryKey: SERVICES_QUERY_KEY,
+    queryFn: getServices,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
 
-  // Memoized filtered services
-  const filteredServices = useFilteredServices(services, filters, filters.searchTerm);
+  // Debounced search para otimizar performance
+  const debouncedSearchTerm = useDebounce(filters.searchTerm, 300);
 
-  // Debounced search to avoid excessive filtering
-  const debouncedSetSearchTerm = useDebounce((searchTerm: string) => {
-    setFilters({ searchTerm });
-  }, 300);
+  // Filtros memoizados para evitar recálculos desnecessários
+  const filteredServices = useMemo(() => {
+    let filtered = [...services];
 
-  // Memoized filter handlers
-  const handleStatusFilter = useCallback((status: string) => {
-    setFilters({ status });
-  }, [setFilters]);
+    // Filtro de status
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(service => service.status === filters.status);
+    }
 
-  const handlePriorityFilter = useCallback((priority: string) => {
-    setFilters({ priority });
-  }, [setFilters]);
+    // Filtro de prioridade
+    if (filters.priority !== 'all') {
+      filtered = filtered.filter(service => service.priority === filters.priority);
+    }
 
-  const handleServiceTypeFilter = useCallback((serviceType: string) => {
-    setFilters({ serviceType });
-  }, [setFilters]);
+    // Filtro de tipo de serviço
+    if (filters.serviceType !== 'all') {
+      filtered = filtered.filter(service => service.serviceType === filters.serviceType);
+    }
 
-  // Memoized service statistics usando os valores corretos do enum
+    // Filtro de busca textual (debounced)
+    if (debouncedSearchTerm.trim()) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(service => 
+        service.title.toLowerCase().includes(searchLower) ||
+        service.description?.toLowerCase().includes(searchLower) ||
+        service.client?.toLowerCase().includes(searchLower) ||
+        service.location.toLowerCase().includes(searchLower) ||
+        service.number.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [services, filters.status, filters.priority, filters.serviceType, debouncedSearchTerm]);
+
+  // Estatísticas calculadas de forma otimizada
   const serviceStats = useMemo(() => {
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
-    const inProgress = services.filter(s => s.status === 'pendente').length; // Ajustado para usar valor válido
+    const inProgress = services.filter(s => s.status === 'em_andamento').length;
     const completed = services.filter(s => s.status === 'concluido').length;
     const highPriority = services.filter(s => s.priority === 'alta').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return {
       total,
@@ -50,21 +93,76 @@ export const useOptimizedServices = () => {
       inProgress,
       completed,
       highPriority,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
+      completionRate,
     };
   }, [services]);
 
-  // Memoized grouped services (for dashboard)
-  const groupedServices = useMemo(() => {
-    const groups = services.reduce((acc, service) => {
-      const key = service.status;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(service);
-      return acc;
-    }, {} as Record<string, Service[]>);
-
-    return groups;
+  // Opções de filtro extraídas dos dados reais
+  const filterOptions = useMemo(() => {
+    const serviceTypes = [...new Set(services.map(s => s.serviceType).filter(Boolean))];
+    const priorities = [...new Set(services.map(s => s.priority).filter(Boolean))];
+    
+    return {
+      serviceTypes,
+      priorities,
+      statuses: ['pendente', 'em_andamento', 'concluido', 'cancelado']
+    };
   }, [services]);
+
+  // Funções de ação otimizadas
+  const actions = {
+    loadServices: () => {
+      return refetch();
+    },
+    
+    setSearchTerm: (term: string) => {
+      setFilters(prev => ({ ...prev, searchTerm: term }));
+    },
+    
+    setStatusFilter: (status: string) => {
+      setFilters(prev => ({ ...prev, status }));
+    },
+    
+    setPriorityFilter: (priority: string) => {
+      setFilters(prev => ({ ...prev, priority }));
+    },
+    
+    setServiceTypeFilter: (serviceType: string) => {
+      setFilters(prev => ({ ...prev, serviceType }));
+    },
+    
+    clearFilters: () => {
+      setFilters({
+        status: 'all',
+        priority: 'all',
+        serviceType: 'all',
+        searchTerm: '',
+      });
+    },
+
+    // Invalidar cache quando necessário
+    invalidateCache: () => {
+      queryClient.invalidateQueries({ queryKey: SERVICES_QUERY_KEY });
+    },
+
+    // Atualização otimista do cache
+    updateServiceInCache: (updatedService: Service) => {
+      queryClient.setQueryData(SERVICES_QUERY_KEY, (oldData: Service[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(service => 
+          service.id === updatedService.id ? updatedService : service
+        );
+      });
+    },
+
+    // Adicionar novo serviço ao cache
+    addServiceToCache: (newService: Service) => {
+      queryClient.setQueryData(SERVICES_QUERY_KEY, (oldData: Service[] | undefined) => {
+        if (!oldData) return [newService];
+        return [newService, ...oldData];
+      });
+    }
+  };
 
   return {
     services: filteredServices,
@@ -73,14 +171,25 @@ export const useOptimizedServices = () => {
     error,
     filters,
     serviceStats,
-    groupedServices,
-    actions: {
-      loadServices,
-      clearError,
-      setSearchTerm: debouncedSetSearchTerm,
-      setStatusFilter: handleStatusFilter,
-      setPriorityFilter: handlePriorityFilter,
-      setServiceTypeFilter: handleServiceTypeFilter
-    }
+    filterOptions,
+    actions,
   };
+};
+
+// Hook específico para performance de busca
+export const useServiceSearch = (searchTerm: string, services: Service[]) => {
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  
+  return useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return services;
+    
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return services.filter(service => 
+      service.title.toLowerCase().includes(searchLower) ||
+      service.description?.toLowerCase().includes(searchLower) ||
+      service.client?.toLowerCase().includes(searchLower) ||
+      service.location.toLowerCase().includes(searchLower) ||
+      service.number.toLowerCase().includes(searchLower)
+    );
+  }, [services, debouncedSearchTerm]);
 };

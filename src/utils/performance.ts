@@ -9,6 +9,9 @@ export interface ServiceFilters {
   searchTerm: string;
 }
 
+// Re-export do hook de debounce
+export { useDebounce, useDebouncedCallback, useThrottle } from './useDebounce';
+
 // Hook para observar intersecção (usado no LazyImage)
 export const useIntersectionObserver = (
   ref: React.RefObject<Element>,
@@ -63,8 +66,9 @@ export const useFilteredServices = (
         const matchesSearch = 
           service.title.toLowerCase().includes(searchLower) ||
           service.description?.toLowerCase().includes(searchLower) ||
-          service.client?.toLowerCase().includes(searchLower) || // Usando 'client' ao invés de 'clientName'
-          service.location.toLowerCase().includes(searchLower);
+          service.client?.toLowerCase().includes(searchLower) ||
+          service.location.toLowerCase().includes(searchLower) ||
+          service.number.toLowerCase().includes(searchLower);
         
         if (!matchesSearch) return false;
       }
@@ -72,23 +76,6 @@ export const useFilteredServices = (
       return true;
     });
   }, [services, filters, searchTerm]);
-};
-
-// Hook de debounce para otimizar performance
-export const useDebounce = <T extends (...args: any[]) => any>(
-  callback: T,
-  delay: number
-): T => {
-  const debouncedCallback = useMemo(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    return ((...args: Parameters<T>) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => callback(...args), delay);
-    }) as T;
-  }, [callback, delay]);
-
-  return debouncedCallback;
 };
 
 // Utility para memoização de cálculos pesados
@@ -114,4 +101,28 @@ export const measurePerformance = (name: string, fn: () => void) => {
   fn();
   const end = performance.now();
   console.log(`${name} took ${end - start} milliseconds`);
+};
+
+// Hook para cache local otimizado
+export const useLocalCache = <T>(key: string, initialValue: T) => {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn(`Erro ao carregar cache local para ${key}:`, error);
+      return initialValue;
+    }
+  });
+
+  const setCachedValue = (newValue: T) => {
+    try {
+      setValue(newValue);
+      localStorage.setItem(key, JSON.stringify(newValue));
+    } catch (error) {
+      console.warn(`Erro ao salvar cache local para ${key}:`, error);
+    }
+  };
+
+  return [value, setCachedValue] as const;
 };
