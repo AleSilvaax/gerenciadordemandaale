@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
-import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
+import { generateModernServiceReport } from "@/utils/pdf/modernPdfReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera, FileText } from "lucide-react";
@@ -51,7 +51,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       console.log('[ServiceDetail] Serviço possui', service.photos?.length || 0, 'fotos');
       
       toast.info("Gerando relatório...");
-      await generateDetailedServiceReport(service);
+      await generateModernServiceReport(service);
       toast.success("Relatório gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);

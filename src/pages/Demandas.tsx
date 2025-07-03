@@ -312,7 +312,7 @@ const Demandas = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
               {services.map((service, index) => (
                 <motion.div
                   key={service.id}
@@ -320,7 +320,7 @@ const Demandas = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ServiceCard service={service} />
+                  <ServiceCard service={service} variant="list" />
                 </motion.div>
               ))}
             </div>

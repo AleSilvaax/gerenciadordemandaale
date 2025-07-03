@@ -12,6 +12,7 @@ import ServiceDetail from "@/pages/ServiceDetail";
 import Demandas from "@/pages/Demandas";
 import Settings from "@/pages/Settings";
 import Statistics from "@/pages/Statistics";
+import Equipe from "@/pages/Equipe";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
@@ -37,7 +38,7 @@ export const AppLayout: React.FC = () => {
             <Route path="/demandas/:id" element={<ServiceDetail />} />
             <Route path="/estatisticas" element={<Statistics />} />
             <Route path="/configuracoes" element={<Settings />} />
-            <Route path="/equipe" element={<Settings />} />
+            <Route path="/equipe" element={<Equipe />} />
           </Routes>
         </div>
       </main>

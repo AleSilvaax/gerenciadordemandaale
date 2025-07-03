@@ -82,10 +82,14 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             maxSizeKB: 500
           });
 
+          // Upload imediatamente para Supabase
+          console.log('[PhotoUploader] Fazendo upload para Supabase:', file.name);
+          const uploadResult = await photoService.uploadPhoto(compressedFile);
+          
           const photo: Photo = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
             file: compressedFile,
-            url: URL.createObjectURL(compressedFile),
+            url: uploadResult.url, // URL já do Supabase
             title: file.name.replace(/\.[^/.]+$/, ""),
             compressed: compressedFile.size < originalSize,
             originalSize,

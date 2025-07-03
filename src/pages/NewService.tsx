@@ -113,7 +113,7 @@ const NewService: React.FC = () => {
         city: data.city,
         description: data.description,
         notes: data.notes,
-        dueDate: data.dueDate || undefined,
+        dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
         technician: selectedTechnician,
         status: "pendente" as const,
         priority: "media" as const,
@@ -302,7 +302,7 @@ const NewService: React.FC = () => {
                       )}
                     />
 
-                    {/* Data de Vencimento */}
+                     {/* Data de Vencimento */}
                     <FormField
                       control={form.control}
                       name="dueDate"
@@ -317,6 +317,17 @@ const NewService: React.FC = () => {
                               {...field} 
                               type="date"
                               className="bg-background/50"
+                              onChange={(e) => {
+                                // Corrigir timezone: usar data exata sem conversão UTC
+                                const selectedDate = e.target.value;
+                                if (selectedDate) {
+                                  // Manter a data exata sem conversão de timezone
+                                  const localDate = new Date(selectedDate + 'T00:00:00');
+                                  field.onChange(localDate.toISOString().split('T')[0]);
+                                } else {
+                                  field.onChange('');
+                                }
+                              }}
                             />
                           </FormControl>
                         </FormItem>

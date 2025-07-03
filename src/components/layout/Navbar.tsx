@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, Plus, BarChart3, Settings } from "lucide-react";
+import { Home, FileText, Plus, BarChart3, Settings, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -9,6 +9,7 @@ const navItems = [
   { icon: Home, label: "Home", href: "/" },
   { icon: FileText, label: "Demandas", href: "/demandas" },
   { icon: Plus, label: "Nova", href: "/nova-demanda" },
+  { icon: Users, label: "Equipe", href: "/equipe" },
   { icon: BarChart3, label: "Estatísticas", href: "/estatisticas" },
   { icon: Settings, label: "Config", href: "/configuracoes" },
 ];

@@ -111,31 +111,21 @@ export const useServiceDetail = () => {
       
       console.log('[useServiceDetail] Total de fotos válidas:', processedPhotos.length);
       
-      // Só atualizar o banco se houver mudanças
-      if (hasNewUploads || processedPhotos.length !== (service.photos?.length || 0)) {
-        console.log('[useServiceDetail] Atualizando banco de dados...');
-        
-        const updatedService = await updateService({ 
-          id: service.id, 
-          photos: processedPhotos, 
-          photoTitles: processedTitles 
-        });
+      // Sempre atualizar o banco com as fotos processadas
+      console.log('[useServiceDetail] Atualizando banco de dados com', processedPhotos.length, 'fotos');
+      
+      const updatedService = await updateService({ 
+        id: service.id, 
+        photos: processedPhotos, 
+        photoTitles: processedTitles 
+      });
 
-        if (updatedService) {
-          console.log('[useServiceDetail] Serviço atualizado com', updatedService.photos?.length || 0, 'fotos');
-          setService(updatedService);
-          
-          if (hasNewUploads) {
-            const newCount = processedPhotos.length - (service.photos?.length || 0);
-            toast.success(`${newCount} foto(s) salva(s) com sucesso!`);
-          } else {
-            toast.success("Fotos atualizadas com sucesso!");
-          }
-        } else {
-          throw new Error("Falha ao atualizar serviço no banco");
-        }
+      if (updatedService) {
+        console.log('[useServiceDetail] Serviço atualizado com sucesso');
+        setService(updatedService);
+        toast.success("Fotos salvas com sucesso!");
       } else {
-        console.log('[useServiceDetail] Nenhuma mudança detectada nas fotos');
+        throw new Error("Falha ao atualizar serviço no banco");
       }
 
     } catch (error) {
