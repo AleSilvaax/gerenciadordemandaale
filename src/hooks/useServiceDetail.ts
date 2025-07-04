@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -5,14 +6,14 @@ import {
   getServices,
   updateService,
   addServiceMessage,
-  uploadServicePhoto,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
+import { photoService } from "@/services/photoService";
 
-interface UploaderPhoto {
+interface Photo {
   id: string;
-  file?: File;
+  file: File;
   url: string;
   title: string;
 }
@@ -22,7 +23,7 @@ export const useServiceDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
-  const [photos, setPhotos] = useState<UploaderPhoto[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const { id } = useParams<{ id?: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -36,13 +37,14 @@ export const useServiceDetail = () => {
   useEffect(() => {
     if (service) {
       console.log('[useServiceDetail] Carregando fotos do serviço:', service.photos?.length || 0);
-      const uploaderPhotos = (service.photos || []).map((photoUrl, index) => ({
-        id: `service-photo-${index}`,
-        file: undefined,
+      // Converter fotos existentes para o formato local
+      const existingPhotos: Photo[] = (service.photos || []).map((photoUrl, index) => ({
+        id: `existing-${index}`,
+        file: new File([], 'existing-photo'), // Placeholder file para fotos existentes
         url: photoUrl,
         title: service.photoTitles?.[index] || `Foto ${index + 1}`,
       }));
-      setPhotos(uploaderPhotos);
+      setPhotos(existingPhotos);
     }
   }, [service]);
 
@@ -68,7 +70,7 @@ export const useServiceDetail = () => {
     }
   };
 
-  const handlePhotosChange = async (newPhotos: UploaderPhoto[]) => {
+  const handlePhotosChange = async (newPhotos: Photo[]) => {
     if (!service) {
       console.log('[useServiceDetail] Serviço não encontrado para salvar fotos');
       return;
@@ -79,41 +81,33 @@ export const useServiceDetail = () => {
       
       const processedPhotos: string[] = [];
       const processedTitles: string[] = [];
-      let hasNewUploads = false;
 
-      // Separar fotos existentes das novas
+      // Processar cada foto
       for (const photo of newPhotos) {
-        if (photo.file instanceof File) {
+        if (photo.id.startsWith('existing-')) {
+          // Foto já existente no servidor
+          processedPhotos.push(photo.url);
+          processedTitles.push(photo.title);
+        } else if (photo.file.size > 0) {
           // Nova foto que precisa ser enviada
-          hasNewUploads = true;
-          console.log('[useServiceDetail] Nova foto detectada:', photo.title);
-          
           try {
+            console.log('[useServiceDetail] Fazendo upload:', photo.title);
             toast.info(`Enviando foto: ${photo.title}...`);
-            const publicUrl = await uploadServicePhoto(photo.file);
-            processedPhotos.push(publicUrl);
+            const uploadResult = await photoService.uploadPhoto(photo.file);
+            processedPhotos.push(uploadResult.url);
             processedTitles.push(photo.title);
-            console.log('[useServiceDetail] Upload concluído:', publicUrl);
+            console.log('[useServiceDetail] Upload concluído:', uploadResult.url);
           } catch (error) {
             console.error('[useServiceDetail] Erro no upload:', error);
             toast.error(`Erro ao enviar ${photo.title}`);
             // Continua com as outras fotos
           }
-        } else if (typeof photo.url === 'string' && photo.url.startsWith('http')) {
-          // Foto já existente no servidor
-          processedPhotos.push(photo.url);
-          processedTitles.push(photo.title);
-        } else if (typeof photo.url === 'string' && photo.url.startsWith('blob:')) {
-          // Foto local que ainda não foi enviada - isso é um erro, deve ser enviada primeiro
-          console.warn('[useServiceDetail] Foto blob detectada, isso não deveria acontecer:', photo.url);
         }
       }
       
       console.log('[useServiceDetail] Total de fotos válidas:', processedPhotos.length);
       
-      // Sempre atualizar o banco com as fotos processadas
-      console.log('[useServiceDetail] Atualizando banco de dados com', processedPhotos.length, 'fotos');
-      
+      // Atualizar o banco com as fotos processadas
       const updatedService = await updateService({ 
         id: service.id, 
         photos: processedPhotos, 

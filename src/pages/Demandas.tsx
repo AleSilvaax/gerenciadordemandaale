@@ -83,7 +83,6 @@ const Demandas = () => {
 
   // Export handler
   const handleExport = useCallback(() => {
-    // Implementar export se necessário
     toast.info("Funcionalidade de export em desenvolvimento");
   }, []);
 
@@ -127,7 +126,7 @@ const Demandas = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header otimizado */}
+        {/* Header */}
         <motion.div 
           className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
           initial={{ y: -20, opacity: 0 }}
@@ -175,7 +174,7 @@ const Demandas = () => {
           </div>
         </motion.div>
 
-        {/* Estatísticas otimizadas */}
+        {/* Estatísticas */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -184,7 +183,7 @@ const Demandas = () => {
           <StatisticsCards {...serviceStats} />
         </motion.div>
 
-        {/* Filtros rápidos otimizados */}
+        {/* Filtros rápidos */}
         <motion.div 
           className="flex flex-col lg:flex-row gap-4"
           initial={{ y: 20, opacity: 0 }}
@@ -263,19 +262,19 @@ const Demandas = () => {
               onFiltersChange={handleAdvancedFiltersChange}
               onClearFilters={handleClearAdvancedFilters}
               serviceTypes={filterOptions.serviceTypes}
-              technicians={[]} // Mock data - implementar se necessário
+              technicians={[]}
             />
           </motion.div>
         )}
 
-        {/* Lista de demandas otimizada */}
+        {/* Lista de demandas em cards verticais */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
               {Array.from({ length: 6 }).map((_, index) => (
                 <Card key={index} className="animate-pulse">
                   <CardHeader>
@@ -320,7 +319,7 @@ const Demandas = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ServiceCard service={service} variant="list" />
+                  <ServiceCard service={service} />
                 </motion.div>
               ))}
             </div>
