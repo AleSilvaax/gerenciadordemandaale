@@ -81,10 +81,55 @@ const Demandas = () => {
     }
   }, [actions]);
 
-  // Export handler
+  // Export handler funcional
   const handleExport = useCallback(() => {
-    toast.info("Funcionalidade de export em desenvolvimento");
-  }, []);
+    try {
+      // Preparar dados para exportação
+      const dataToExport = services.map(service => ({
+        Numero: service.number,
+        Titulo: service.title,
+        Cliente: service.client || '',
+        Local: service.location,
+        Cidade: service.city || '',
+        Status: service.status,
+        Prioridade: service.priority || '',
+        'Tipo de Servico': service.serviceType || '',
+        'Data de Criacao': service.creationDate ? new Date(service.creationDate).toLocaleDateString('pt-BR') : '',
+        'Data de Vencimento': service.dueDate ? new Date(service.dueDate).toLocaleDateString('pt-BR') : '',
+        Descricao: service.description || '',
+        Observacoes: service.notes || ''
+      }));
+
+      // Converter para CSV
+      const headers = Object.keys(dataToExport[0] || {});
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row] || '';
+            // Escapar aspas e quebras de linha
+            return `"${value.toString().replace(/"/g, '""')}"`;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Criar e baixar arquivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `demandas_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Exportadas ${services.length} demandas para CSV`);
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      toast.error("Erro ao exportar demandas");
+    }
+  }, [services]);
 
   // Handler para filtros avançados
   const handleAdvancedFiltersChange = useCallback((newFilters: LocalSearchFilters) => {
@@ -108,10 +153,10 @@ const Demandas = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Erro ao carregar demandas</h2>
-          <p className="text-muted-foreground mb-4">Ocorreu um erro ao buscar as demandas.</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4">Erro ao carregar demandas</h2>
+          <p className="text-muted-foreground mb-4 text-sm">Ocorreu um erro ao buscar as demandas.</p>
           <Button onClick={handleRefresh}>Tentar novamente</Button>
         </div>
       </div>
@@ -121,34 +166,34 @@ const Demandas = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-6 space-y-6"
+        className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header */}
+        {/* Header - Mobile Responsivo */}
         <motion.div 
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
+          className="flex flex-col space-y-4"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               Demandas
             </h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Gerencie e acompanhe todas as demandas de serviço
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Button 
               variant="outline" 
               size="sm"
               onClick={handleRefresh}
               disabled={isLoading}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               Atualizar
@@ -158,15 +203,16 @@ const Demandas = () => {
               variant="outline" 
               size="sm"
               onClick={handleExport}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
+              disabled={services.length === 0}
             >
               <Download className="w-4 h-4" />
-              Exportar
+              Exportar CSV
             </Button>
             
             <Button 
               onClick={() => navigate("/nova-demanda")}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-none"
             >
               <Plus className="w-4 h-4" />
               Nova Demanda
@@ -183,14 +229,14 @@ const Demandas = () => {
           <StatisticsCards {...serviceStats} />
         </motion.div>
 
-        {/* Filtros rápidos */}
+        {/* Filtros rápidos - Mobile Responsivo */}
         <motion.div 
-          className="flex flex-col lg:flex-row gap-4"
+          className="flex flex-col space-y-3"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="relative flex-1">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Buscar demandas..."
@@ -200,9 +246,9 @@ const Demandas = () => {
             />
           </div>
           
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -214,7 +260,7 @@ const Demandas = () => {
             </Select>
 
             <Select value={filters.priority} onValueChange={(value) => handleFilterChange('priority', value)}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger>
                 <SelectValue placeholder="Prioridade" />
               </SelectTrigger>
               <SelectContent>
@@ -226,7 +272,7 @@ const Demandas = () => {
             </Select>
 
             <Select value={filters.serviceType} onValueChange={(value) => handleFilterChange('serviceType', value)}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger>
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -267,7 +313,7 @@ const Demandas = () => {
           </motion.div>
         )}
 
-        {/* Lista de demandas em cards verticais */}
+        {/* Lista de demandas - Mobile Otimizado */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -277,7 +323,7 @@ const Demandas = () => {
             <div className="space-y-4">
               {Array.from({ length: 6 }).map((_, index) => (
                 <Card key={index} className="animate-pulse">
-                  <CardHeader>
+                  <CardHeader className="pb-2">
                     <div className="h-4 bg-muted rounded w-3/4"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
                   </CardHeader>
@@ -295,10 +341,10 @@ const Demandas = () => {
               ))}
             </div>
           ) : services.length === 0 ? (
-            <Card className="text-center py-12">
+            <Card className="text-center py-8 sm:py-12">
               <CardContent>
-                <p className="text-lg font-medium mb-2">Nenhuma demanda encontrada</p>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-base sm:text-lg font-medium mb-2">Nenhuma demanda encontrada</p>
+                <p className="text-muted-foreground mb-4 text-sm">
                   {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all' || filters.serviceType !== 'all' 
                     ? "Tente ajustar os filtros de busca" 
                     : "Crie sua primeira demanda para começar"
@@ -311,7 +357,7 @@ const Demandas = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {services.map((service, index) => (
                 <motion.div
                   key={service.id}
@@ -329,12 +375,12 @@ const Demandas = () => {
         {/* Informações de resultados */}
         {!isLoading && services.length > 0 && (
           <motion.div 
-            className="flex justify-center"
+            className="flex justify-center pb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <Badge variant="outline" className="px-4 py-2">
+            <Badge variant="outline" className="px-4 py-2 text-xs sm:text-sm">
               Mostrando {services.length} de {serviceStats.total} demandas
             </Badge>
           </motion.div>

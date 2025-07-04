@@ -1,121 +1,19 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
-
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 220 13% 13%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 13% 13%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 13%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 13% 13%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 13% 45%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 13% 13%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 85%;
-    --input: 220 13% 88%;
-    --ring: 217 91% 60%;
-    --radius: 0.75rem;
-  }
-
-  .dark {
-    --background: 222 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 224 20% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 20% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 224 20% 8%;
-    --secondary: 220 13% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 13% 12%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 220 13% 12%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 18%;
-    --input: 220 13% 18%;
-    --ring: 217 91% 60%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
-  }
-}
-
-/* Improved Light theme for better contrast */
-.light {
-  --background: 0 0% 100%;
-  --foreground: 215 25% 15%;
-  --card: 0 0% 98%;
-  --card-foreground: 215 25% 15%;
-  --popover: 0 0% 98%;
-  --popover-foreground: 215 25% 15%;
-  --primary: 217 91% 55%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 92%;
-  --secondary-foreground: 215 25% 15%;
-  --muted: 210 40% 94%;
-  --muted-foreground: 215 25% 40%;
-  --accent: 210 40% 92%;
-  --accent-foreground: 215 25% 15%;
-  --destructive: 0 84% 50%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 210 40% 80%;
-  --input: 210 40% 85%;
-  --ring: 217 91% 55%;
-}
-
-/* Improved Dark theme - darker and more elegant */
-.dark {
-  --background: 220 27% 4%;
-  --foreground: 210 40% 98%;
-  --card: 220 27% 6%;
-  --card-foreground: 210 40% 98%;
-  --popover: 220 27% 6%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 220 27% 4%;
-  --secondary: 220 27% 10%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 220 27% 10%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 220 27% 10%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 63% 45%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 220 27% 15%;
-  --input: 220 27% 15%;
-  --ring: 217 91% 60%;
-}
-
-/* Dark theme for statistics page - even darker */
-.dark .stats-page {
-  --background: 215 35% 2%;
-  --card: 215 35% 5%;
-  --secondary: 215 35% 8%;
-  --muted: 215 35% 8%;
-  --accent: 215 35% 8%;
-  --border: 215 35% 12%;
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Custom scrollbar */
@@ -128,37 +26,159 @@
   display: none;
 }
 
-/* Smooth transitions */
+/* Safe area para mobile */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Modo compacto */
+.compact-mode {
+  --spacing: 0.75rem;
+}
+
+.compact-mode .space-y-4 > * + * {
+  margin-top: var(--spacing);
+}
+
+.compact-mode .space-y-6 > * + * {
+  margin-top: calc(var(--spacing) * 1.5);
+}
+
+.compact-mode .p-6 {
+  padding: var(--spacing);
+}
+
+.compact-mode .p-4 {
+  padding: calc(var(--spacing) * 0.75);
+}
+
+/* Alto contraste */
+.high-contrast {
+  --contrast-multiplier: 1.5;
+}
+
+.high-contrast .text-muted-foreground {
+  opacity: 0.8;
+}
+
+.high-contrast .border {
+  border-width: 2px;
+}
+
+.high-contrast .shadow-sm {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Redução de movimento */
+.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Mobile como tablet - força largura mínima */
+@media (max-width: 768px) {
+  .container {
+    min-width: 100vw;
+    overflow-x: auto;
+  }
+  
+  /* Força scroll horizontal quando necessário */
+  .min-w-tablet {
+    min-width: 768px;
+  }
+}
+
+/* Otimizações para mobile */
+@media (max-width: 640px) {
+  .text-4xl {
+    font-size: 2rem;
+    line-height: 2.25rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.75rem;
+    line-height: 2rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+  }
+  
+  .text-xl {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+  
+  /* Cards mais compactos em mobile */
+  .card-mobile {
+    padding: 0.75rem;
+  }
+  
+  /* Botões full-width em mobile quando necessário */
+  .btn-mobile-full {
+    width: 100%;
+  }
+}
+
+/* Melhorias de performance */
 * {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  box-sizing: border-box;
 }
 
-/* Text alignment utilities */
-.text-left-force {
-  text-align: left !important;
+img {
+  max-width: 100%;
+  height: auto;
 }
 
-/* Prevent text overflow and line breaks */
-.text-no-wrap {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Animações otimizadas */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-.text-compact {
-  line-height: 1.2;
-  font-size: 0.875rem;
+/* Suporte a dark mode melhorado */
+.dark {
+  color-scheme: dark;
 }
 
-/* Better card styling for both themes */
-.card-enhanced {
-  @apply border-2 shadow-lg;
+.light {
+  color-scheme: light;
 }
 
-.light .card-enhanced {
-  @apply border-gray-200 bg-white/90 shadow-gray-200/50;
+@layer components {
+  /* Componentes personalizados */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.02];
+  }
+  
+  .glass-morphism {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
 }
 
-.dark .card-enhanced {
-  @apply border-gray-700/50 bg-card/80 shadow-black/20;
+@layer utilities {
+  /* Utilities personalizados */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent;
+  }
+  
+  .container-fluid {
+    @apply w-full max-w-full px-4 mx-auto;
+  }
+  
+  .aspect-photo {
+    aspect-ratio: 4/3;
+  }
 }

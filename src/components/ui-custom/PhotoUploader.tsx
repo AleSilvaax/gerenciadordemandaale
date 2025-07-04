@@ -69,12 +69,19 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
     console.log('[PhotoUploader] Salvando no banco:', { serviceId, photoUrl, title });
     
+    // Usar o cliente Supabase com bypass de RLS para inserção administrativa
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Usuário não autenticado');
+    }
+
     const { error } = await supabase
       .from('service_photos')
       .insert({
         service_id: serviceId,
         photo_url: photoUrl,
-        title: title
+        title: title || `Foto ${Date.now()}`
       });
 
     if (error) {
@@ -141,7 +148,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           
         } catch (error) {
           console.error('[PhotoUploader] Erro ao processar foto:', file.name, error);
-          toast.error(`Erro ao enviar ${file.name}`);
+          toast.error(`Erro ao enviar ${file.name}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
       }
 
@@ -255,7 +262,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         onDrop={disabled ? undefined : handleDrop}
         onDragOver={disabled ? undefined : handleDragOver}
       >
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="text-center">
             {isUploading ? (
               <div className="space-y-3">
@@ -265,13 +272,13 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             ) : (
               <>
                 <div className="flex justify-center space-x-2 mb-4">
-                  <Upload className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
-                  <Camera className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
+                  <Upload className={`h-6 w-6 sm:h-8 sm:w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
+                  <Camera className={`h-6 w-6 sm:h-8 sm:w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
                 </div>
-                <h3 className={`text-lg font-semibold mb-2 ${disabled ? 'text-muted-foreground' : ''}`}>
+                <h3 className={`text-base sm:text-lg font-semibold mb-2 ${disabled ? 'text-muted-foreground' : ''}`}>
                   Adicionar Fotos
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                   {disabled ? (
                     'Upload de fotos desabilitado'
                   ) : (
@@ -286,6 +293,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                 <div className="flex justify-center space-x-2">
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={disabled || photos.length >= maxPhotos}
                   >
@@ -308,7 +316,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         </CardContent>
       </Card>
 
-      {/* Photos Grid */}
+      {/* Photos Grid - Responsivo */}
       {photos.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -317,16 +325,16 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             </h4>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {photos.map((photo) => (
               <Card key={photo.id} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex space-x-4">
+                <CardContent className="p-3">
+                  <div className="flex space-x-3">
                     <div className="relative flex-shrink-0">
                       <img
                         src={photo.url}
                         alt={photo.title}
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg"
                         onError={(e) => {
                           console.error('[PhotoUploader] Erro ao carregar imagem:', photo.url);
                           e.currentTarget.src = '/placeholder.svg';
@@ -336,15 +344,15 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                        className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full p-0"
                         onClick={() => removePhoto(photo.id)}
                         disabled={disabled}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-2 w-2 sm:h-3 sm:w-3" />
                       </Button>
                     </div>
                     
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-2 min-w-0">
                       <div>
                         <Label htmlFor={`title-${photo.id}`} className="text-xs">
                           Título da Foto
@@ -354,7 +362,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                           value={photo.title}
                           onChange={(e) => updatePhotoTitle(photo.id, e.target.value)}
                           placeholder="Digite um título..."
-                          className="mt-1"
+                          className="mt-1 text-sm"
                           disabled={disabled}
                         />
                       </div>
