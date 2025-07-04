@@ -1,221 +1,220 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Monitor, Moon, Sun, Palette, Eye, Type, Layout } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Moon, Sun, Monitor, Palette, Layers, RotateCw, Gauge } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
-import { toast } from "sonner";
+
+interface ColorScheme {
+  id: string;
+  name: string;
+  value: string;
+  preview: string;
+}
+
+interface AnimationSetting {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+const colorSchemes: ColorScheme[] = [
+  { id: "default", name: "Padrão", value: "default", preview: "bg-primary" },
+  { id: "blue", name: "Azul", value: "blue", preview: "bg-blue-500" },
+  { id: "green", name: "Verde", value: "green", preview: "bg-green-500" },
+  { id: "purple", name: "Roxo", value: "purple", preview: "bg-purple-500" },
+  { id: "orange", name: "Laranja", value: "orange", preview: "bg-orange-500" },
+];
+
+const layoutOptions = [
+  { id: "compact", name: "Compacto", description: "Layout mais denso com menor espaçamento" },
+  { id: "balanced", name: "Equilibrado", description: "Espaçamento padrão (recomendado)" },
+  { id: "spacious", name: "Espaçoso", description: "Layout com maior respiro visual" },
+];
 
 const EnhancedVisualPreferencesTab = () => {
-  const { theme, setTheme, isDarkMode } = useTheme();
-  const [fontSize, setFontSize] = useState([16]);
-  const [compactMode, setCompactMode] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-  const [animations, setAnimations] = useState(true);
+  const { isDarkMode, setDarkMode, theme, setTheme } = useTheme();
+  const [colorScheme, setColorScheme] = React.useState<string>("default");
+  const [layout, setLayout] = React.useState<string>("balanced");
+  const [animationLevel, setAnimationLevel] = React.useState<number>(50);
+  const [animations, setAnimations] = React.useState<AnimationSetting[]>([
+    { id: "transitions", name: "Transições de página", enabled: true },
+    { id: "hover", name: "Efeitos ao passar o mouse", enabled: true },
+    { id: "loading", name: "Animações de carregamento", enabled: true },
+    { id: "cards", name: "Efeitos em cartões", enabled: true },
+  ]);
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
-    toast.success(`Tema alterado para ${newTheme === 'dark' ? 'escuro' : 'claro'}`);
+  // Função para alternar uma animação
+  const toggleAnimation = (id: string) => {
+    setAnimations(prev => 
+      prev.map(anim => 
+        anim.id === id ? { ...anim, enabled: !anim.enabled } : anim
+      )
+    );
   };
 
-  const handleFontSizeChange = (value: number[]) => {
-    setFontSize(value);
-    document.documentElement.style.fontSize = `${value[0]}px`;
-    toast.success(`Tamanho da fonte alterado para ${value[0]}px`);
-  };
+  // Carrega preferências salvas ao abrir
+  React.useEffect(() => {
+    const savedPrefs = localStorage.getItem('visualPreferences');
+    if (savedPrefs) {
+      try {
+        const prefs = JSON.parse(savedPrefs);
+        setColorScheme(prefs.colorScheme || "default");
+        setLayout(prefs.layout || "balanced");
+        setAnimationLevel(prefs.animationLevel || 50);
+        if (prefs.animations) {
+          setAnimations(prev =>
+            prev.map(anim => ({
+              ...anim,
+              enabled: prefs.animations[anim.id] !== undefined ? prefs.animations[anim.id] : anim.enabled
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Erro ao carregar preferências visuais:", e);
+      }
+    }
+  }, []);
 
-  const handleCompactModeChange = (enabled: boolean) => {
-    setCompactMode(enabled);
-    document.documentElement.classList.toggle('compact-mode', enabled);
-    toast.success(`Modo compacto ${enabled ? 'ativado' : 'desativado'}`);
-  };
-
-  const handleHighContrastChange = (enabled: boolean) => {
-    setHighContrast(enabled);
-    document.documentElement.classList.toggle('high-contrast', enabled);
-    toast.success(`Alto contraste ${enabled ? 'ativado' : 'desativado'}`);
-  };
-
-  const handleAnimationsChange = (enabled: boolean) => {
-    setAnimations(enabled);
-    document.documentElement.classList.toggle('reduce-motion', !enabled);
-    toast.success(`Animações ${enabled ? 'ativadas' : 'desativadas'}`);
-  };
+  // Salva preferências ao alterar qualquer coisa
+  React.useEffect(() => {
+    const preferences = {
+      colorScheme, layout, animationLevel,
+      animations: animations.reduce((acc, curr) => ({ ...acc, [curr.id]: curr.enabled }), {})
+    };
+    localStorage.setItem('visualPreferences', JSON.stringify(preferences));
+    document.documentElement.setAttribute('data-color-scheme', colorScheme);
+    document.documentElement.setAttribute('data-layout', layout);
+    document.documentElement.style.setProperty('--animation-speed-factor', `${animationLevel / 50}`);
+  }, [colorScheme, layout, animationLevel, animations]);
 
   const resetToDefaults = () => {
-    setTheme('light');
-    setFontSize([16]);
-    setCompactMode(false);
-    setHighContrast(false);
-    setAnimations(true);
-    
-    document.documentElement.style.fontSize = '16px';
-    document.documentElement.classList.remove('compact-mode', 'high-contrast', 'reduce-motion');
-    
-    toast.success('Configurações visuais restauradas para o padrão');
+    setColorScheme("default");
+    setLayout("balanced");
+    setAnimationLevel(50);
+    setAnimations(prev => prev.map(anim => ({ ...anim, enabled: true })));
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Preferências Visuais</h3>
-        <p className="text-muted-foreground">
-          Personalize a aparência e comportamento visual do sistema.
-        </p>
-      </div>
-
-      {/* Tema */}
-      <Card className="bg-background/30 border border-border/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            Tema da Interface
-          </CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>Aparência</CardTitle>
           <CardDescription>
-            Escolha entre tema claro ou escuro
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-3">
-            <Button
-              variant={theme === 'light' ? 'default' : 'outline'}
-              onClick={() => handleThemeChange('light')}
-              className="flex items-center gap-2 flex-1"
-            >
-              <Sun className="w-4 h-4" />
-              Claro
-            </Button>
-            <Button
-              variant={theme === 'dark' ? 'default' : 'outline'}
-              onClick={() => handleThemeChange('dark')}
-              className="flex items-center gap-2 flex-1"
-            >
-              <Moon className="w-4 h-4" />
-              Escuro
-            </Button>
-          </div>
-          <div className="flex items-center justify-center p-3 rounded-lg border bg-muted/30">
-            <span className="text-sm text-muted-foreground">
-              Tema atual: <Badge variant="secondary">{isDarkMode ? 'Escuro' : 'Claro'}</Badge>
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tamanho da Fonte */}
-      <Card className="bg-background/30 border border-border/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            Tamanho da Fonte
-          </CardTitle>
-          <CardDescription>
-            Ajuste o tamanho do texto para melhor legibilidade
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Pequeno</span>
-              <span className="text-sm font-medium">{fontSize[0]}px</span>
-              <span className="text-sm">Grande</span>
-            </div>
-            <Slider
-              value={fontSize}
-              onValueChange={handleFontSizeChange}
-              min={12}
-              max={24}
-              step={1}
-              className="w-full"
-            />
-          </div>
-          <div className="p-3 rounded-lg border bg-muted/30">
-            <p className="text-sm" style={{ fontSize: `${fontSize[0]}px` }}>
-              Exemplo de texto com o tamanho selecionado
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Opções de Layout */}
-      <Card className="bg-background/30 border border-border/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Layout className="w-4 h-4" />
-            Layout e Experiência
-          </CardTitle>
-          <CardDescription>
-            Configure a disposição e comportamento dos elementos
+            Personalize o visual do sistema de acordo com suas preferências
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Modo Compacto</Label>
-              <p className="text-xs text-muted-foreground">
-                Reduz espaçamentos para mostrar mais conteúdo
-              </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Tema</Label>
+                <p className="text-sm text-muted-foreground">
+                  Escolha entre modo claro ou escuro
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Sun className="h-5 w-5 text-muted-foreground" />
+                <Switch
+                  checked={isDarkMode}
+                  onCheckedChange={setDarkMode}
+                  aria-label="Alternar tema"
+                />
+                <Moon className="h-5 w-5 text-muted-foreground" />
+              </div>
             </div>
-            <Switch
-              checked={compactMode}
-              onCheckedChange={handleCompactModeChange}
-            />
           </div>
 
           <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Alto Contraste</Label>
-              <p className="text-xs text-muted-foreground">
-                Aumenta o contraste para melhor visibilidade
-              </p>
+          <div className="space-y-2">
+            <Label>Esquema de cores</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Selecione um esquema de cores para o sistema
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+              {colorSchemes.map((scheme) => (
+                <button
+                  key={scheme.id}
+                  className={`flex flex-col items-center p-2 rounded-md border transition-all ${
+                    colorScheme === scheme.value
+                      ? "border-primary bg-accent"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => setColorScheme(scheme.value)}
+                >
+                  <div className={`w-full h-6 rounded-sm mb-2 ${scheme.preview}`} />
+                  <span className="text-xs">{scheme.name}</span>
+                </button>
+              ))}
             </div>
-            <Switch
-              checked={highContrast}
-              onCheckedChange={handleHighContrastChange}
-            />
           </div>
 
           <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Animações</Label>
-              <p className="text-xs text-muted-foreground">
-                Habilita transições e animações suaves
-              </p>
-            </div>
-            <Switch
-              checked={animations}
-              onCheckedChange={handleAnimationsChange}
-            />
+          <div className="space-y-2">
+            <Label>Densidade do layout</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Ajuste o espaçamento entre os elementos
+            </p>
+            <RadioGroup value={layout} onValueChange={setLayout} className="gap-2">
+              {layoutOptions.map((option) => (
+                <div key={option.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option.id} id={`layout-${option.id}`} />
+                  <Label htmlFor={`layout-${option.id}`} className="flex flex-col">
+                    <span>{option.name}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Ações */}
-      <Card className="bg-background/30 border border-border/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Redefinir Configurações</CardTitle>
-          <CardDescription>
-            Restaurar todas as configurações visuais para o padrão
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            variant="outline" 
-            onClick={resetToDefaults}
-            className="w-full"
-          >
-            Restaurar Padrões
-          </Button>
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>Animações</Label>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm">Intensidade das animações</span>
+                  <span className="text-sm text-muted-foreground">{animationLevel}%</span>
+                </div>
+                <Slider
+                  value={[animationLevel]}
+                  min={0}
+                  max={100}
+                  step={10}
+                  onValueChange={(v) => setAnimationLevel(v[0])}
+                  aria-label="Intensidade das animações"
+                />
+              </div>
+
+              {animations.map((animation) => (
+                <div key={animation.id} className="flex items-center justify-between">
+                  <Label htmlFor={`animation-${animation.id}`}>{animation.name}</Label>
+                  <Switch
+                    id={`animation-${animation.id}`}
+                    checked={animation.enabled}
+                    onCheckedChange={() => toggleAnimation(animation.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end">
+            <Button variant="outline" onClick={resetToDefaults}>
+              <RotateCw className="mr-2 h-4 w-4" />
+              Restaurar padrões
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

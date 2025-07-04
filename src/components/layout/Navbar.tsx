@@ -106,7 +106,7 @@ const Navbar = () => {
       </nav>
 
       {/* Mobile Navigation - Fixed Bottom */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border/50 safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border/50">
         <div className="px-2 py-2">
           <div className="flex items-center justify-around">
             {navItems.map((item) => {

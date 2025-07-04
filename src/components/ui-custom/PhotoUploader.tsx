@@ -69,13 +69,6 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
     console.log('[PhotoUploader] Salvando no banco:', { serviceId, photoUrl, title });
     
-    // Usar o cliente Supabase com bypass de RLS para inserção administrativa
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('Usuário não autenticado');
-    }
-
     const { error } = await supabase
       .from('service_photos')
       .insert({
