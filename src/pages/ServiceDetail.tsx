@@ -50,7 +50,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       console.log('[ServiceDetail] Gerando relatório para:', service.title);
       console.log('[ServiceDetail] Serviço possui', photos.length, 'fotos');
       
-      toast.info("Gerando relatório profissional...");
+      toast.info("Gerando relatório...");
       await generateModernServiceReport(service);
       toast.success("Relatório gerado com sucesso!");
     } catch (error) {
@@ -61,7 +61,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando demanda...</p>
@@ -72,10 +72,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
 
   if (!service) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4">Demanda não encontrada</h2>
-          <p className="text-muted-foreground mb-4 text-sm">A demanda solicitada não existe ou foi removida.</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Demanda não encontrada</h2>
+          <p className="text-muted-foreground mb-4">A demanda solicitada não existe ou foi removida.</p>
           <Link to="/demandas">
             <Button>Voltar às Demandas</Button>
           </Link>
@@ -87,17 +87,15 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6"
-        style={{ maxWidth: '1400px' }} // Força largura tipo tablet em mobile
+        className="container mx-auto p-6 pb-24 space-y-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
         <ServiceDetailHeader />
         
-        {/* Layout otimizado para mobile como tablet */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-          <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -127,11 +125,11 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             >
               <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Camera className="w-5 h-5" />
                     Fotos e Anexos
                     {photos.length > 0 && (
-                      <span className="text-xs sm:text-sm text-muted-foreground">({photos.length} fotos)</span>
+                      <span className="text-sm text-muted-foreground">({photos.length} fotos)</span>
                     )}
                   </CardTitle>
                 </CardHeader>
@@ -160,8 +158,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
 
-          {/* Sidebar responsiva */}
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}

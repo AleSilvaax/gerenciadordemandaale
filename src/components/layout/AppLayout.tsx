@@ -27,10 +27,9 @@ export const AppLayout: React.FC = () => {
   }
   
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-none ${isMobile ? 'pb-20' : 'pb-4'}`}>
-        <div className="min-w-full">
+    <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
+      <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-16'} overflow-y-auto overflow-x-hidden scrollbar-none`}>
+        <div className="pt-2 min-w-full">
           <Routes>
             <Route path="/" element={<EnhancedIndex />} />
             <Route path="/dashboard" element={<Index />} />
@@ -43,6 +42,7 @@ export const AppLayout: React.FC = () => {
           </Routes>
         </div>
       </main>
+      <Navbar />
     </div>
   );
 };
