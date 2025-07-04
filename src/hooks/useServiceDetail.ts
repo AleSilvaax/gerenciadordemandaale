@@ -9,7 +9,7 @@ import {
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
-import { photoService } from "@/services/photoService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Photo {
   id: string;
@@ -34,30 +34,58 @@ export const useServiceDetail = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (service) {
-      console.log('[useServiceDetail] Carregando fotos do serviço:', service.photos?.length || 0);
-      // Converter fotos existentes para o formato local
-      const existingPhotos: Photo[] = (service.photos || []).map((photoUrl, index) => ({
-        id: `existing-${index}`,
-        file: new File([], 'existing-photo'), // Placeholder file para fotos existentes
-        url: photoUrl,
-        title: service.photoTitles?.[index] || `Foto ${index + 1}`,
-      }));
-      setPhotos(existingPhotos);
+  const loadPhotosFromDatabase = async (serviceId: string) => {
+    try {
+      console.log('[useServiceDetail] Carregando fotos do banco para o serviço:', serviceId);
+      
+      const { data: photosData, error } = await supabase
+        .from('service_photos')
+        .select('*')
+        .eq('service_id', serviceId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('[useServiceDetail] Erro ao carregar fotos:', error);
+        return [];
+      }
+
+      console.log('[useServiceDetail] Fotos encontradas no banco:', photosData?.length || 0);
+
+      if (photosData && photosData.length > 0) {
+        const loadedPhotos: Photo[] = photosData.map((photoData, index) => ({
+          id: `db-${photoData.id}`,
+          file: new File([], 'existing-photo'), // Placeholder para fotos do banco
+          url: photoData.photo_url,
+          title: photoData.title || `Foto ${index + 1}`,
+        }));
+
+        console.log('[useServiceDetail] Fotos processadas:', loadedPhotos.length);
+        return loadedPhotos;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('[useServiceDetail] Erro ao carregar fotos:', error);
+      return [];
     }
-  }, [service]);
+  };
 
   const fetchService = async (serviceId: string) => {
     try {
       setIsLoading(true);
+      console.log('[useServiceDetail] Buscando serviço:', serviceId);
+      
       const services = await getServices();
       const foundService = services.find(s => s.id === serviceId);
       
       if (foundService) {
         console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
-        console.log('[useServiceDetail] Fotos no serviço:', foundService.photos?.length || 0);
         setService(foundService);
+        
+        // Carregar fotos do banco de dados
+        const loadedPhotos = await loadPhotosFromDatabase(serviceId);
+        setPhotos(loadedPhotos);
+        
       } else {
         toast.error("Serviço não encontrado");
         navigate("/demandas");
@@ -71,61 +99,11 @@ export const useServiceDetail = () => {
   };
 
   const handlePhotosChange = async (newPhotos: Photo[]) => {
-    if (!service) {
-      console.log('[useServiceDetail] Serviço não encontrado para salvar fotos');
-      return;
-    }
-
-    try {
-      console.log('[useServiceDetail] Processando', newPhotos.length, 'fotos');
-      
-      const processedPhotos: string[] = [];
-      const processedTitles: string[] = [];
-
-      // Processar cada foto
-      for (const photo of newPhotos) {
-        if (photo.id.startsWith('existing-')) {
-          // Foto já existente no servidor
-          processedPhotos.push(photo.url);
-          processedTitles.push(photo.title);
-        } else if (photo.file.size > 0) {
-          // Nova foto que precisa ser enviada
-          try {
-            console.log('[useServiceDetail] Fazendo upload:', photo.title);
-            toast.info(`Enviando foto: ${photo.title}...`);
-            const uploadResult = await photoService.uploadPhoto(photo.file);
-            processedPhotos.push(uploadResult.url);
-            processedTitles.push(photo.title);
-            console.log('[useServiceDetail] Upload concluído:', uploadResult.url);
-          } catch (error) {
-            console.error('[useServiceDetail] Erro no upload:', error);
-            toast.error(`Erro ao enviar ${photo.title}`);
-            // Continua com as outras fotos
-          }
-        }
-      }
-      
-      console.log('[useServiceDetail] Total de fotos válidas:', processedPhotos.length);
-      
-      // Atualizar o banco com as fotos processadas
-      const updatedService = await updateService({ 
-        id: service.id, 
-        photos: processedPhotos, 
-        photoTitles: processedTitles 
-      });
-
-      if (updatedService) {
-        console.log('[useServiceDetail] Serviço atualizado com sucesso');
-        setService(updatedService);
-        toast.success("Fotos salvas com sucesso!");
-      } else {
-        throw new Error("Falha ao atualizar serviço no banco");
-      }
-
-    } catch (error) {
-      console.error('[useServiceDetail] Erro ao processar fotos:', error);
-      toast.error("Erro ao salvar fotos. Tente novamente.");
-    }
+    console.log('[useServiceDetail] Atualizando fotos localmente:', newPhotos.length);
+    setPhotos(newPhotos);
+    
+    // Não precisamos fazer upload aqui pois o PhotoUploader já faz
+    // Apenas atualizamos o estado local
   };
 
   const handleStatusChange = async (newStatus: Service["status"]) => {

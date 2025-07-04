@@ -1,11 +1,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowLeft, PlusCircle, Trash2, UserPlus, Upload, User, Loader2, Settings } from "lucide-react";
+import { ArrowLeft, PlusCircle, Trash2, UserPlus, Upload, User, Loader2, Settings, Edit, Mail, Phone, Shield, Calendar, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -38,28 +40,41 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Equipe: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [teamStats, setTeamStats] = useState({
+    total: 0,
+    admins: 0,
+    gestores: 0,
+    tecnicos: 0,
+    activeServices: 0
+  });
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [newMember, setNewMember] = useState({ 
     name: "", 
     role: "tecnico" as UserRole,
     email: "",
-    phone: ""
+    phone: "",
+    bio: ""
   });
   const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole | "todos">("todos");
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   
   // Load team members from API
@@ -69,6 +84,7 @@ const Equipe: React.FC = () => {
         const members = await getTeamMembers();
         if (members && members.length > 0) {
           setTeam(members);
+          calculateTeamStats(members);
         }
       } catch (error) {
         console.error("Error loading team members:", error);
@@ -77,6 +93,30 @@ const Equipe: React.FC = () => {
     
     loadTeamMembers();
   }, []);
+
+  const calculateTeamStats = async (members: TeamMember[]) => {
+    const stats = {
+      total: members.length,
+      admins: members.filter(m => m.role === 'administrador').length,
+      gestores: members.filter(m => m.role === 'gestor').length,
+      tecnicos: members.filter(m => m.role === 'tecnico').length,
+      activeServices: 0
+    };
+
+    // Buscar serviços ativos dos técnicos
+    try {
+      const { data: activeServices } = await supabase
+        .from('services')
+        .select('id')
+        .eq('status', 'pendente');
+      
+      stats.activeServices = activeServices?.length || 0;
+    } catch (error) {
+      console.error('Erro ao buscar serviços ativos:', error);
+    }
+
+    setTeamStats(stats);
+  };
 
   const filteredTeam = team.filter(member => 
     roleFilter === "todos" || member.role === roleFilter
@@ -93,8 +133,10 @@ const Equipe: React.FC = () => {
           avatar: ""
         });
         
-        setTeam([...team, newTeamMember]);
-        setNewMember({ name: "", role: "tecnico", email: "", phone: "" });
+        const updatedTeam = [...team, newTeamMember];
+        setTeam(updatedTeam);
+        calculateTeamStats(updatedTeam);
+        setNewMember({ name: "", role: "tecnico", email: "", phone: "", bio: "" });
         setIsAddingMember(false);
         
         toast.success(`Membro adicionado`,
@@ -113,6 +155,29 @@ const Equipe: React.FC = () => {
     }
   };
 
+  const handleEditMember = async () => {
+    if (!editingMember) return;
+    
+    setIsSaving(true);
+    try {
+      await updateTeamMember(editingMember.id, editingMember);
+      
+      const updatedTeam = team.map(member =>
+        member.id === editingMember.id ? editingMember : member
+      );
+      setTeam(updatedTeam);
+      calculateTeamStats(updatedTeam);
+      setEditingMember(null);
+      
+      toast.success("Membro atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      toast.error("Erro ao atualizar membro.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteMember = (id: string) => {
     setMemberToDelete(id);
   };
@@ -127,6 +192,7 @@ const Equipe: React.FC = () => {
         
         const updatedTeam = team.filter(member => member.id !== memberToDelete);
         setTeam(updatedTeam);
+        calculateTeamStats(updatedTeam);
         
         toast.success(`Membro removido`,
           {
@@ -220,6 +286,17 @@ const Equipe: React.FC = () => {
     }
   };
 
+  const getRoleIcon = (role: UserRole) => {
+    switch (role) {
+      case "administrador":
+        return <Shield className="w-4 h-4" />;
+      case "gestor":
+        return <CheckCircle2 className="w-4 h-4" />;
+      default:
+        return <User className="w-4 h-4" />;
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -260,9 +337,9 @@ const Equipe: React.FC = () => {
             </Link>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Minha Equipe
+                Gestão de Equipe
               </h1>
-              <p className="text-muted-foreground mt-1">Gerencie membros da equipe</p>
+              <p className="text-muted-foreground mt-1">Gerencie membros e organize sua equipe</p>
             </div>
           </div>
           
@@ -272,202 +349,463 @@ const Equipe: React.FC = () => {
             className="bg-card/50 backdrop-blur-sm border-border/50"
           >
             <Settings className="w-4 h-4 mr-2" />
-            Configurações e Permissões
+            Configurações
           </Button>
         </motion.div>
+
+        {/* Statistics Cards */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de Membros</p>
+                  <p className="text-2xl font-bold">{teamStats.total}</p>
+                </div>
+                <User className="w-8 h-8 text-primary/60" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Administradores</p>
+                  <p className="text-2xl font-bold text-red-500">{teamStats.admins}</p>
+                </div>
+                <Shield className="w-8 h-8 text-red-500/60" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Gestores</p>
+                  <p className="text-2xl font-bold text-blue-500">{teamStats.gestores}</p>
+                </div>
+                <CheckCircle2 className="w-8 h-8 text-blue-500/60" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Técnicos</p>
+                  <p className="text-2xl font-bold text-green-500">{teamStats.tecnicos}</p>
+                </div>
+                <User className="w-8 h-8 text-green-500/60" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Serviços Ativos</p>
+                  <p className="text-2xl font-bold text-orange-500">{teamStats.activeServices}</p>
+                </div>
+                <Clock className="w-8 h-8 text-orange-500/60" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
         
-        {/* Team Management Section */}
+        {/* Main Content with Tabs */}
         <motion.div 
           variants={itemVariants}
           className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg"
         >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Membros da Equipe</h2>
-            <div className="flex gap-3">
-              <Select
-                value={roleFilter}
-                onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
-              >
-                <SelectTrigger className="w-40 bg-background/50">
-                  <SelectValue placeholder="Filtrar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="tecnico">Técnicos</SelectItem>
-                  <SelectItem value="administrador">Administradores</SelectItem>
-                  <SelectItem value="gestor">Gestores</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {/* Team Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {/* Add Member Card */}
-            <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
-              <DialogTrigger asChild>
-                <motion.div 
-                  className="flex flex-col items-center p-6 bg-background/30 border-2 border-dashed border-primary/30 rounded-xl cursor-pointer group hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="h-16 w-16 rounded-full flex items-center justify-center bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
-                    <UserPlus size={24} className="text-primary" />
-                  </div>
-                  <span className="text-sm font-medium text-center">Adicionar Membro</span>
-                </motion.div>
-              </DialogTrigger>
-              <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
-                <DialogHeader>
-                  <DialogTitle>Adicionar novo membro</DialogTitle>
-                  <DialogDescription>
-                    Preencha as informações para adicionar um novo membro à equipe.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      placeholder="Nome do membro"
-                      value={newMember.name}
-                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@exemplo.com"
-                      value={newMember.email}
-                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone (opcional)</Label>
-                    <Input
-                      id="phone"
-                      placeholder="(00) 00000-0000"
-                      value={newMember.phone}
-                      onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Função</Label>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-background/50">
+              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+              <TabsTrigger value="management">Gerenciamento</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="mt-6">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Membros da Equipe</h2>
+                  <div className="flex gap-3">
                     <Select
-                      value={newMember.role}
-                      onValueChange={(value) => setNewMember({ ...newMember, role: value as UserRole })}
+                      value={roleFilter}
+                      onValueChange={(value) => setRoleFilter(value as UserRole | "todos")}
                     >
-                      <SelectTrigger className="bg-background/50">
-                        <SelectValue placeholder="Selecione a função" />
+                      <SelectTrigger className="w-40 bg-background/50">
+                        <SelectValue placeholder="Filtrar por" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tecnico">Técnico</SelectItem>
-                        <SelectItem value="administrador">Administrador</SelectItem>
-                        <SelectItem value="gestor">Gestor</SelectItem>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="tecnico">Técnicos</SelectItem>
+                        <SelectItem value="administrador">Administradores</SelectItem>
+                        <SelectItem value="gestor">Gestores</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddingMember(false)}>Cancelar</Button>
-                  <Button onClick={handleAddMember} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Adicionar
+
+                {/* Team Members List View */}
+                <div className="space-y-4">
+                  {filteredTeam.map((member, index) => (
+                    <motion.div
+                      key={member.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="bg-background/30 border border-border/30 hover:bg-background/50 transition-all duration-200">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="relative">
+                                <TeamMemberAvatar 
+                                  src={member.avatar} 
+                                  name={member.name} 
+                                  size="lg"
+                                  className="ring-2 ring-border/20"
+                                />
+                                {uploadingAvatar === member.id && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                                    <Loader2 className="w-6 h-6 animate-spin text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-semibold">{member.name}</h3>
+                                  <Badge className={`inline-flex items-center gap-1 ${getRoleColor(member.role)}`}>
+                                    {getRoleIcon(member.role)}
+                                    {getRoleDisplayName(member.role)}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  {member.email && (
+                                    <div className="flex items-center gap-1">
+                                      <Mail className="w-4 h-4" />
+                                      {member.email}
+                                    </div>
+                                  )}
+                                  {member.phone && (
+                                    <div className="flex items-center gap-1">
+                                      <Phone className="w-4 h-4" />
+                                      {member.phone}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4" />
+                                    Membro desde {new Date().toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-md border border-border/50">
+                                <DropdownMenuItem onClick={() => setEditingMember(member)}>
+                                  <Edit size={16} className="mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
+                                  <Upload size={16} className="mr-2" />
+                                  Trocar foto
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteMember(member.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 size={16} className="mr-2" />
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={(el) => fileInputRefs.current[member.id] = el}
+                              onChange={(e) => handleFileChange(member.id, e)}
+                              className="hidden"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {filteredTeam.length === 0 && (
+                  <motion.div 
+                    className="text-center py-12"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Nenhum membro encontrado</h3>
+                    <p className="text-muted-foreground">
+                      {roleFilter === "todos" 
+                        ? "Adicione o primeiro membro à sua equipe" 
+                        : `Nenhum membro com o papel "${getRoleDisplayName(roleFilter)}" encontrado`
+                      }
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="management" className="mt-6">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Gerenciar Equipe</h2>
+                  <Button onClick={() => setIsAddingMember(true)}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Adicionar Membro
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            {/* Team Members */}
-            {filteredTeam.map((member, index) => (
-              <motion.div 
-                key={member.id} 
-                className="flex flex-col items-center p-6 bg-background/30 border border-border/30 rounded-xl hover:bg-background/50 transition-all duration-200 group"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <div className="relative mb-4">
-                  <TeamMemberAvatar 
-                    src={member.avatar} 
-                    name={member.name} 
-                    size="lg"
-                    className="ring-2 ring-border/20 group-hover:ring-primary/30 transition-all duration-200"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={(el) => fileInputRefs.current[member.id] = el}
-                    onChange={(e) => handleFileChange(member.id, e)}
-                    className="hidden"
-                  />
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1.5 hover:bg-primary/90 transition-colors shadow-lg opacity-0 group-hover:opacity-100">
-                        {uploadingAvatar === member.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <PlusCircle size={14} />
-                        )}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-md border border-border/50">
-                      <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
-                        <Upload size={16} className="mr-2" />
-                        Trocar foto
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteMember(member.id)}
-                        className="text-destructive focus:text-destructive"
+                </div>
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-background/30 border border-border/30">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <UserPlus className="w-5 h-5" />
+                        Adicionar Membro
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Convide novos membros para sua equipe
+                      </p>
+                      <Button 
+                        onClick={() => setIsAddingMember(true)}
+                        className="w-full"
                       >
-                        <Trash2 size={16} className="mr-2" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        Adicionar
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-background/30 border border-border/30">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Settings className="w-5 h-5" />
+                        Configurações
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Gerencie permissões e configurações
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => navigate("/settings")}
+                        className="w-full"
+                      >
+                        Configurar
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-background/30 border border-border/30">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        Relatórios
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Visualize relatórios de desempenho
+                      </p>
+                      <Button 
+                        variant="outline"
+                        className="w-full"
+                        disabled
+                      >
+                        Em Breve
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
-                
-                <div className="text-center space-y-2">
-                  <h3 className="font-medium text-sm">{member.name}</h3>
-                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium border ${getRoleColor(member.role)}`}>
-                    {getRoleDisplayName(member.role)}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-          
-          {filteredTeam.length === 0 && (
-            <motion.div 
-              className="text-center py-12"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum membro encontrado</h3>
-              <p className="text-muted-foreground">
-                {roleFilter === "todos" 
-                  ? "Adicione o primeiro membro à sua equipe" 
-                  : `Nenhum membro com o papel "${getRoleDisplayName(roleFilter)}" encontrado`
-                }
-              </p>
-            </motion.div>
-          )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </motion.div>
       
+      {/* Add Member Dialog */}
+      <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
+        <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar novo membro</DialogTitle>
+            <DialogDescription>
+              Preencha as informações para adicionar um novo membro à equipe.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                placeholder="Nome completo"
+                value={newMember.name}
+                onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                className="bg-background/50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newMember.email}
+                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                className="bg-background/50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                placeholder="(00) 00000-0000"
+                value={newMember.phone}
+                onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                className="bg-background/50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="role">Função *</Label>
+              <Select
+                value={newMember.role}
+                onValueChange={(value) => setNewMember({ ...newMember, role: value as UserRole })}
+              >
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Selecione a função" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tecnico">Técnico</SelectItem>
+                  <SelectItem value="administrador">Administrador</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bio">Biografia</Label>
+              <Textarea
+                id="bio"
+                placeholder="Descreva brevemente o membro..."
+                value={newMember.bio}
+                onChange={(e) => setNewMember({ ...newMember, bio: e.target.value })}
+                className="bg-background/50"
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddingMember(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddMember} disabled={isSaving || !newMember.name.trim()}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={!!editingMember} onOpenChange={() => setEditingMember(null)}>
+        <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar membro</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do membro da equipe.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingMember && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nome</Label>
+                <Input
+                  id="edit-name"
+                  value={editingMember.name || ''}
+                  onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                  className="bg-background/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingMember.email || ''}
+                  onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })}
+                  className="bg-background/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Telefone</Label>
+                <Input
+                  id="edit-phone"
+                  value={editingMember.phone || ''}
+                  onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
+                  className="bg-background/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Função</Label>
+                <Select
+                  value={editingMember.role}
+                  onValueChange={(value) => setEditingMember({ ...editingMember, role: value as UserRole })}
+                >
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tecnico">Técnico</SelectItem>
+                    <SelectItem value="administrador">Administrador</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMember(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditMember} disabled={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
         <AlertDialogContent className="bg-card/95 backdrop-blur-md border border-border/50">
           <AlertDialogHeader>

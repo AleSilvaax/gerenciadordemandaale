@@ -7,8 +7,8 @@ import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignature
 import { generateModernServiceReport } from "@/utils/pdf/modernPdfReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Camera, FileText } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom"; 
+import { Camera } from "lucide-react";
+import { Link } from "react-router-dom"; 
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
 import { ServiceActions } from "@/components/service-detail/ServiceActions";
@@ -48,7 +48,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
 
     try {
       console.log('[ServiceDetail] Gerando relatório para:', service.title);
-      console.log('[ServiceDetail] Serviço possui', service.photos?.length || 0, 'fotos');
+      console.log('[ServiceDetail] Serviço possui', photos.length, 'fotos');
       
       toast.info("Gerando relatório...");
       await generateModernServiceReport(service);
@@ -128,8 +128,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Camera className="w-5 h-5" />
                     Fotos e Anexos
-                    {service.photos?.length > 0 && (
-                      <span className="text-sm text-muted-foreground">({service.photos.length} fotos)</span>
+                    {photos.length > 0 && (
+                      <span className="text-sm text-muted-foreground">({photos.length} fotos)</span>
                     )}
                   </CardTitle>
                 </CardHeader>
@@ -137,6 +137,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                   <PhotoUploader
                     photos={photos}
                     onPhotosChange={handlePhotosChange}
+                    serviceId={service.id}
                     maxPhotos={10}
                   />
                 </CardContent>

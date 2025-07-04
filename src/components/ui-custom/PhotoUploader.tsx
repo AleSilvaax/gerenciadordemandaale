@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Photo {
   id: string;
@@ -17,6 +18,7 @@ export interface Photo {
 interface PhotoUploaderProps {
   photos: Photo[];
   onPhotosChange: (photos: Photo[]) => void;
+  serviceId?: string;
   maxPhotos?: number;
   disabled?: boolean;
 }
@@ -24,11 +26,64 @@ interface PhotoUploaderProps {
 export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   photos,
   onPhotosChange,
+  serviceId,
   maxPhotos = 10,
   disabled = false
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadToSupabase = async (file: File): Promise<string> => {
+    console.log('[PhotoUploader] Fazendo upload para Supabase:', file.name);
+    
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 9);
+    const filename = `${serviceId || 'temp'}-${timestamp}-${randomId}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('service-photos')
+      .upload(filename, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('[PhotoUploader] Erro no upload:', error);
+      throw new Error(`Falha no upload: ${error.message}`);
+    }
+
+    const { data: publicData } = supabase.storage
+      .from('service-photos')
+      .getPublicUrl(data.path);
+
+    console.log('[PhotoUploader] Upload concluído:', publicData.publicUrl);
+    return publicData.publicUrl;
+  };
+
+  const savePhotoToDatabase = async (photoUrl: string, title: string) => {
+    if (!serviceId) {
+      console.log('[PhotoUploader] Sem serviceId, pulando salvamento no banco');
+      return;
+    }
+
+    console.log('[PhotoUploader] Salvando no banco:', { serviceId, photoUrl, title });
+    
+    const { error } = await supabase
+      .from('service_photos')
+      .insert({
+        service_id: serviceId,
+        photo_url: photoUrl,
+        title: title
+      });
+
+    if (error) {
+      console.error('[PhotoUploader] Erro ao salvar no banco:', error);
+      throw new Error(`Erro ao salvar foto: ${error.message}`);
+    }
+
+    console.log('[PhotoUploader] Foto salva no banco com sucesso');
+  };
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || disabled) return;
@@ -63,24 +118,38 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       for (const file of validFiles) {
         console.log('[PhotoUploader] Processando arquivo:', file.name);
         
-        // Criar URL local para preview
-        const url = URL.createObjectURL(file);
+        const title = file.name.replace(/\.[^/.]+$/, "");
         
-        const photo: Photo = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          file: file,
-          url: url,
-          title: file.name.replace(/\.[^/.]+$/, "")
-        };
+        try {
+          // Upload para Supabase Storage
+          const photoUrl = await uploadToSupabase(file);
+          
+          // Salvar no banco de dados
+          if (serviceId) {
+            await savePhotoToDatabase(photoUrl, title);
+          }
+          
+          const photo: Photo = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            file: file,
+            url: photoUrl,
+            title: title
+          };
 
-        newPhotos.push(photo);
+          newPhotos.push(photo);
+          console.log('[PhotoUploader] Foto processada com sucesso:', title);
+          
+        } catch (error) {
+          console.error('[PhotoUploader] Erro ao processar foto:', file.name, error);
+          toast.error(`Erro ao enviar ${file.name}`);
+        }
       }
 
       if (newPhotos.length > 0) {
         const updatedPhotos = [...photos, ...newPhotos];
         console.log('[PhotoUploader] Adicionando', newPhotos.length, 'fotos. Total:', updatedPhotos.length);
         onPhotosChange(updatedPhotos);
-        toast.success(`${newPhotos.length} foto(s) adicionada(s)!`);
+        toast.success(`${newPhotos.length} foto(s) enviada(s) com sucesso!`);
       }
 
     } catch (error) {
@@ -92,7 +161,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         fileInputRef.current.value = '';
       }
     }
-  }, [photos, maxPhotos, onPhotosChange, disabled]);
+  }, [photos, maxPhotos, onPhotosChange, disabled, serviceId]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -103,31 +172,66 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     e.preventDefault();
   }, []);
 
-  const removePhoto = useCallback((photoId: string) => {
+  const removePhoto = useCallback(async (photoId: string) => {
     if (disabled) return;
     
     console.log('[PhotoUploader] Removendo foto:', photoId);
     const photoToRemove = photos.find(p => p.id === photoId);
     
-    // Revogar URL blob se necessário
-    if (photoToRemove && photoToRemove.url.startsWith('blob:')) {
-      URL.revokeObjectURL(photoToRemove.url);
+    if (photoToRemove) {
+      // Remover do banco se tiver serviceId
+      if (serviceId) {
+        try {
+          const { error } = await supabase
+            .from('service_photos')
+            .delete()
+            .eq('photo_url', photoToRemove.url);
+            
+          if (error) {
+            console.error('[PhotoUploader] Erro ao remover do banco:', error);
+          }
+        } catch (error) {
+          console.error('[PhotoUploader] Erro ao remover foto do banco:', error);
+        }
+      }
+      
+      // Revogar URL blob se necessário
+      if (photoToRemove.url.startsWith('blob:')) {
+        URL.revokeObjectURL(photoToRemove.url);
+      }
     }
     
     const updatedPhotos = photos.filter(p => p.id !== photoId);
     onPhotosChange(updatedPhotos);
     toast.success('Foto removida');
-  }, [photos, onPhotosChange, disabled]);
+  }, [photos, onPhotosChange, disabled, serviceId]);
 
-  const updatePhotoTitle = useCallback((photoId: string, title: string) => {
+  const updatePhotoTitle = useCallback(async (photoId: string, title: string) => {
     if (disabled) return;
     
     console.log('[PhotoUploader] Atualizando título da foto:', photoId, title);
+    
+    const photoToUpdate = photos.find(p => p.id === photoId);
+    if (photoToUpdate && serviceId) {
+      try {
+        const { error } = await supabase
+          .from('service_photos')
+          .update({ title: title })
+          .eq('photo_url', photoToUpdate.url);
+          
+        if (error) {
+          console.error('[PhotoUploader] Erro ao atualizar título no banco:', error);
+        }
+      } catch (error) {
+        console.error('[PhotoUploader] Erro ao atualizar título:', error);
+      }
+    }
+    
     const updatedPhotos = photos.map(photo =>
       photo.id === photoId ? { ...photo, title } : photo
     );
     onPhotosChange(updatedPhotos);
-  }, [photos, onPhotosChange, disabled]);
+  }, [photos, onPhotosChange, disabled, serviceId]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -156,7 +260,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             {isUploading ? (
               <div className="space-y-3">
                 <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Processando imagens...</p>
+                <p className="text-sm text-muted-foreground">Enviando fotos...</p>
               </div>
             ) : (
               <>
