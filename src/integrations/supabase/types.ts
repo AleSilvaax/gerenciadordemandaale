@@ -181,18 +181,21 @@ export type Database = {
           id: string
           photo_url: string
           service_id: string
+          title: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           photo_url: string
           service_id: string
+          title?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           photo_url?: string
           service_id?: string
+          title?: string | null
         }
         Relationships: [
           {

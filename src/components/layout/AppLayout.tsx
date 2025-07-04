@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { Navbar } from "./Navbar";
+import Navbar from "./Navbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -37,7 +37,7 @@ export const AppLayout: React.FC = () => {
             <Route path="/demandas" element={<Demandas />} />
             <Route path="/demandas/:id" element={<ServiceDetail />} />
             <Route path="/estatisticas" element={<Statistics />} />
-            <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/equipe" element={<Equipe />} />
           </Routes>
         </div>
