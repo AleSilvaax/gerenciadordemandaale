@@ -1,28 +1,39 @@
 
 import { useState, useEffect } from 'react';
-import { getServiceTypesFromDatabase } from '@/services/servicesDataService';
+import { getServiceTypesFromDatabase } from '@/services/serviceTypesService';
 import { ServiceTypeConfig } from '@/types/serviceTypes';
 
 export const useServiceTypes = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchServiceTypes = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[useServiceTypes] Carregando tipos de serviço...');
+      
+      const types = await getServiceTypesFromDatabase();
+      console.log('[useServiceTypes] Tipos carregados:', types.length);
+      
+      setServiceTypes(types);
+    } catch (err) {
+      console.error('[useServiceTypes] Erro ao carregar tipos:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchServiceTypes = async () => {
-      try {
-        const types = await getServiceTypesFromDatabase();
-        setServiceTypes(types);
-      } catch (err) {
-        setError(err as Error);
-        console.error('Erro ao carregar tipos de serviço:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchServiceTypes();
   }, []);
 
-  return { serviceTypes, isLoading, error };
+  return {
+    serviceTypes,
+    isLoading,
+    error,
+    refetch: fetchServiceTypes,
+  };
 };

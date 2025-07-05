@@ -162,3 +162,22 @@
 .dark .card-enhanced {
   @apply border-gray-700/50 bg-card/80 shadow-black/20;
 }
+
+/* Mobile layout adjustments for fixed navbar */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Ensure content doesn't get hidden behind fixed navbar */
+  .mobile-safe-area {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Desktop layout with proper spacing */
+@media (min-width: 769px) {
+  .desktop-layout {
+    padding-bottom: 0;
+  }
+}

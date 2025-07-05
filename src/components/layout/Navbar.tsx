@@ -48,9 +48,10 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-card/80 backdrop-blur-sm border-b border-border/50 sticky top-0 z-50">
+    <nav className="bg-card/80 backdrop-blur-sm border-t border-border/50 fixed bottom-0 left-0 right-0 z-50 md:sticky md:top-0 md:bottom-auto md:border-t-0 md:border-b">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <Link 
             to="/" 
@@ -63,7 +64,7 @@ const Navbar = () => {
           </Link>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -93,43 +94,42 @@ const Navbar = () => {
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
             <Link to="/nova-demanda">
-              <Button size="sm" className="hidden sm:flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Nova Demanda
               </Button>
             </Link>
-            
-            {/* Mobile Menu Button - will be implemented later if needed */}
-            <div className="md:hidden">
-              <Button variant="ghost" size="sm">
-                <FileText className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden pb-4">
-          <div className="flex space-x-1 overflow-x-auto">
-            {navItems.map((item) => {
+        {/* Mobile Navigation - Fixed Bottom */}
+        <div className="md:hidden">
+          <div className="flex justify-around items-center py-2 bg-card/95 backdrop-blur-sm">
+            {navItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex flex-col items-center space-y-1 px-3 py-2 rounded-lg whitespace-nowrap transition-all duration-200
+                    flex flex-col items-center space-y-1 px-2 py-2 rounded-lg transition-all duration-200 min-w-0
                     ${isActive(item.path)
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground'
                     }
                   `}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-xs font-medium">{item.name}</span>
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate max-w-[60px]">{item.name}</span>
                 </Link>
               );
             })}
+            <Link to="/nova-demanda">
+              <Button size="sm" className="flex flex-col items-center gap-1 h-auto py-2 px-3">
+                <Plus className="w-5 h-5" />
+                <span className="text-xs">Nova</span>
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

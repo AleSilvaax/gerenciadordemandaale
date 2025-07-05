@@ -1,10 +1,9 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
-import { generateModernServiceReport } from "@/utils/pdf/modernPdfReportGenerator";
+import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
@@ -47,15 +46,15 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
 
     try {
-      console.log('[ServiceDetail] Gerando relatório para:', service.title);
+      console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
       console.log('[ServiceDetail] Serviço possui', photos.length, 'fotos');
       
-      toast.info("Gerando relatório...");
-      await generateModernServiceReport(service);
-      toast.success("Relatório gerado com sucesso!");
+      toast.info("Gerando relatório profissional...");
+      await generateProfessionalServiceReport(service);
+      toast.success("Relatório profissional gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório");
+      toast.error("Erro ao gerar relatório profissional");
     }
   };
 
