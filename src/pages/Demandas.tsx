@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, Download, RefreshCw } from "lucide-react";
+import { Plus, Search, Filter, Download, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
@@ -81,10 +82,22 @@ const Demandas = () => {
     }
   }, [actions]);
 
-  // Export handler
-  const handleExport = useCallback(() => {
-    toast.info("Funcionalidade de export em desenvolvimento");
-  }, []);
+  // Export handler com menu
+  const handleExport = useCallback((format: 'csv' | 'excel' | 'statistics') => {
+    const { exportToCSV, exportToExcel, exportStatistics } = require('@/utils/exportUtils');
+    
+    switch (format) {
+      case 'csv':
+        exportToCSV(services, 'demandas');
+        break;
+      case 'excel':
+        exportToExcel(services, 'demandas');
+        break;
+      case 'statistics':
+        exportStatistics(services, 'estatisticas');
+        break;
+    }
+  }, [services]);
 
   // Handler para filtros avançados
   const handleAdvancedFiltersChange = useCallback((newFilters: LocalSearchFilters) => {
@@ -154,15 +167,29 @@ const Demandas = () => {
               Atualizar
             </Button>
             
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleExport}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Exportar
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('excel')}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('statistics')}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar Estatísticas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             <Button 
               onClick={() => navigate("/nova-demanda")}

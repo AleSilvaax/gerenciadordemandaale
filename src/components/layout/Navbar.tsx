@@ -48,7 +48,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-card/80 backdrop-blur-sm border-t border-border/50 fixed bottom-0 left-0 right-0 z-50 md:sticky md:top-0 md:bottom-auto md:border-t-0 md:border-b">
+    <nav className="bg-card/95 backdrop-blur-sm border-t border-border/50 navbar-mobile-fixed md:sticky md:top-0 md:bottom-auto md:border-t-0 md:border-b md:relative">
       <div className="container mx-auto px-4">
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center justify-between h-16">

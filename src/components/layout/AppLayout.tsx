@@ -14,6 +14,7 @@ import Demandas from "@/pages/Demandas";
 import Settings from "@/pages/Settings";
 import Statistics from "@/pages/Statistics";
 import Equipe from "@/pages/Equipe";
+import ProfilePage from "@/components/profile/ProfilePage";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
@@ -71,6 +72,7 @@ export const AppLayout: React.FC = () => {
             <Route path="/estatisticas" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/equipe" element={<Equipe />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </div>
       </main>

@@ -94,7 +94,11 @@ const addIcon = (doc: jsPDF, icon: string, x: number, y: number) => {
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    console.log('[PDF] Iniciando geração do relatório profissional');
+    console.log('[PDF] Iniciando geração do relatório profissional inteligente');
+    console.log('[PDF] Serviço:', service.title, '- Tipo:', service.serviceType);
+    console.log('[PDF] Fotos:', service.photos?.length || 0);
+    console.log('[PDF] Campos customizados:', service.customFields?.length || 0);
+    console.log('[PDF] Mensagens:', service.messages?.length || 0);
     
     const doc = new jsPDF();
     let currentY = 20;
@@ -275,45 +279,90 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       currentY = (doc as any).lastAutoTable.finalY + 20;
     }
 
-    // RELATÓRIO FOTOGRÁFICO
+    // RELATÓRIO FOTOGRÁFICO INTELIGENTE
     if (service.photos && service.photos.length > 0) {
-      // Verificar se precisa de nova página
-      if (currentY > pageHeight - 100) {
-        doc.addPage();
-        currentY = 20;
-      }
+      // Nova página para fotos
+      doc.addPage();
+      currentY = 20;
 
       addIcon(doc, 'photo', margin, currentY + 5);
-      addFormattedText(doc, `ANEXOS FOTOGRÁFICOS (${service.photos.length} fotos)`, margin + 15, currentY + 8, {
-        fontSize: 14,
+      addFormattedText(doc, `REGISTRO FOTOGRÁFICO (${service.photos.length} anexos)`, margin + 15, currentY + 8, {
+        fontSize: 16,
         fontStyle: 'bold',
         color: [41, 128, 185]
       });
 
-      currentY += 30;
+      currentY += 40;
 
+      // Processamento inteligente das fotos
       for (let i = 0; i < service.photos.length; i++) {
-        if (currentY > pageHeight - 60) {
+        // Verificar espaço disponível
+        if (currentY > pageHeight - 120) {
           doc.addPage();
           currentY = 20;
+          
+          // Título da página de continuação
+          addFormattedText(doc, 'REGISTRO FOTOGRÁFICO (Continuação)', margin, currentY, {
+            fontSize: 14,
+            fontStyle: 'bold',
+            color: [41, 128, 185]
+          });
+          currentY += 30;
         }
 
         const photoTitle = service.photoTitles?.[i] || `Foto ${i + 1}`;
         
-        addFormattedText(doc, sanitizeText(photoTitle), margin, currentY, {
-          fontSize: 11,
+        // Container para cada foto
+        doc.setFillColor(248, 249, 250);
+        doc.roundedRect(margin, currentY, contentWidth, 60, 3, 3, 'F');
+        doc.setDrawColor(233, 236, 239);
+        doc.roundedRect(margin, currentY, contentWidth, 60, 3, 3, 'S');
+
+        // Título da foto
+        addFormattedText(doc, `${i + 1}. ${sanitizeText(photoTitle)}`, margin + 10, currentY + 15, {
+          fontSize: 12,
           fontStyle: 'bold',
-          color: [73, 80, 87]
+          color: [52, 58, 64]
         });
 
-        addFormattedText(doc, `URL: ${service.photos[i]}`, margin, currentY + 12, {
+        // Informações da foto
+        addFormattedText(doc, `Arquivo: ${service.photos[i].split('/').pop() || 'foto.jpg'}`, margin + 10, currentY + 30, {
+          fontSize: 9,
+          color: [108, 117, 125]
+        });
+
+        addFormattedText(doc, `Disponível para visualização no sistema digital`, margin + 10, currentY + 42, {
           fontSize: 8,
           color: [108, 117, 125],
-          maxWidth: contentWidth
+          fontStyle: 'italic'
         });
 
-        currentY += 35;
+        // Placeholder visual para foto
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(245, 245, 245);
+        const photoBoxX = margin + contentWidth - 50;
+        const photoBoxY = currentY + 10;
+        doc.roundedRect(photoBoxX, photoBoxY, 35, 25, 2, 2, 'FD');
+        
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('FOTO', photoBoxX + 17.5, photoBoxY + 15, { align: 'center' });
+
+        currentY += 75;
       }
+      
+      // Nota sobre visualização digital
+      currentY += 10;
+      doc.setFillColor(255, 248, 225);
+      doc.roundedRect(margin, currentY, contentWidth, 25, 3, 3, 'F');
+      addIcon(doc, 'photo', margin + 10, currentY + 15);
+      addFormattedText(doc, 'Todas as fotos estão disponíveis em alta resolução no sistema digital para visualização detalhada.', margin + 25, currentY + 15, {
+        fontSize: 9,
+        color: [133, 100, 4],
+        fontStyle: 'italic',
+        maxWidth: contentWidth - 35
+      });
+      currentY += 35;
     }
 
     // COMUNICAÇÃO E FEEDBACK

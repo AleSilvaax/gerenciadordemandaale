@@ -108,25 +108,87 @@ const Statistics = () => {
   const exportToPDF = () => {
     try {
       const doc = new jsPDF();
+      let currentY = 30;
       
+      // Título principal
       doc.setFontSize(20);
-      doc.text('Relatório de Estatísticas', 20, 30);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RELATÓRIO DE ESTATÍSTICAS', 20, currentY);
+      currentY += 30;
       
+      // Informações do cabeçalho
       doc.setFontSize(12);
-      doc.text(`Período: ${timeFilter === 'all' ? 'Todos' : `Últimos ${timeFilter} dias`}`, 20, 50);
-      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 20, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Período de Análise: ${timeFilter === 'all' ? 'Todos os períodos' : `Últimos ${timeFilter} dias`}`, 20, currentY);
+      currentY += 10;
+      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 20, currentY);
+      currentY += 20;
       
-      doc.text(`Total de Demandas: ${statistics.total}`, 20, 80);
-      doc.text(`Concluídas: ${statistics.completed}`, 20, 90);
-      doc.text(`Pendentes: ${statistics.pending}`, 20, 100);
-      doc.text(`Em Andamento: ${statistics.inProgress}`, 20, 110);
-      doc.text(`Taxa de Conclusão: ${statistics.completionRate}%`, 20, 120);
+      // Resumo executivo
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMO EXECUTIVO', 20, currentY);
+      currentY += 15;
       
-      doc.save('relatorio-estatisticas.pdf');
-      toast.success('Relatório exportado com sucesso!');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      const summary = [
+        `Total de Demandas: ${statistics.total}`,
+        `Demandas Concluídas: ${statistics.completed}`,
+        `Demandas Pendentes: ${statistics.pending}`,
+        `Demandas em Andamento: ${statistics.inProgress}`,
+        `Taxa de Conclusão: ${statistics.completionRate}%`,
+        `Tempo Médio de Resolução: ${statistics.avgResolutionTime}h`
+      ];
+      
+      summary.forEach(line => {
+        doc.text(line, 20, currentY);
+        currentY += 8;
+      });
+      
+      currentY += 15;
+      
+      // Análise por tipo de serviço
+      if (chartData.typeChartData.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DISTRIBUIÇÃO POR TIPO DE SERVIÇO', 20, currentY);
+        currentY += 15;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        chartData.typeChartData.forEach(item => {
+          doc.text(`• ${item.name}: ${item.value} demandas`, 30, currentY);
+          currentY += 6;
+        });
+        currentY += 10;
+      }
+      
+      // Análise de tendência
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANÁLISE DE TENDÊNCIA (7 DIAS)', 20, currentY);
+      currentY += 15;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      chartData.trendData.forEach(trend => {
+        doc.text(`${trend.date}: ${trend.total} demandas (${trend.concluidos} concluídas)`, 30, currentY);
+        currentY += 6;
+      });
+      
+      // Rodapé
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('GerenciadorDemandas - Sistema de Gestão de Serviços', 20, pageHeight - 20);
+      doc.text(`Página 1 de 1`, 170, pageHeight - 20);
+      
+      doc.save(`relatorio-estatisticas-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('Relatório de estatísticas exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
-      toast.error('Erro ao exportar relatório');
+      toast.error('Erro ao exportar relatório de estatísticas');
     }
   };
 

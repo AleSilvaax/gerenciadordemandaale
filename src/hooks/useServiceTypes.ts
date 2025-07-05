@@ -12,15 +12,23 @@ export const useServiceTypes = () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('[useServiceTypes] Carregando tipos de serviço...');
+      console.log('[useServiceTypes] Carregando todos os tipos de serviço...');
       
       const types = await getServiceTypesFromDatabase();
       console.log('[useServiceTypes] Tipos carregados:', types.length);
+      console.log('[useServiceTypes] Lista de tipos:', types.map(t => t.name));
       
       setServiceTypes(types);
     } catch (err) {
       console.error('[useServiceTypes] Erro ao carregar tipos:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      
+      // Fallback: tipos padrão se houver erro
+      setServiceTypes([
+        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
+      ]);
     } finally {
       setIsLoading(false);
     }
