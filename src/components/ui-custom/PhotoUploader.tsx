@@ -33,14 +33,22 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  console.log('[PhotoUploader] Renderizado com:', { 
+    photosCount: photos.length, 
+    serviceId, 
+    disabled 
+  });
+
   const uploadToSupabase = async (file: File): Promise<string> => {
-    console.log('[PhotoUploader] Fazendo upload para Supabase:', file.name);
+    console.log('[PhotoUploader] Iniciando upload para Supabase:', file.name);
     
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 9);
     const filename = `${serviceId || 'temp'}-${timestamp}-${randomId}.${fileExt}`;
     
+    console.log('[PhotoUploader] Nome do arquivo gerado:', filename);
+
     const { data, error } = await supabase.storage
       .from('service-photos')
       .upload(filename, file, {
@@ -49,15 +57,17 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       });
 
     if (error) {
-      console.error('[PhotoUploader] Erro no upload:', error);
+      console.error('[PhotoUploader] Erro no upload do storage:', error);
       throw new Error(`Falha no upload: ${error.message}`);
     }
+
+    console.log('[PhotoUploader] Upload no storage bem-sucedido:', data.path);
 
     const { data: publicData } = supabase.storage
       .from('service-photos')
       .getPublicUrl(data.path);
 
-    console.log('[PhotoUploader] Upload concluído:', publicData.publicUrl);
+    console.log('[PhotoUploader] URL pública gerada:', publicData.publicUrl);
     return publicData.publicUrl;
   };
 
@@ -69,20 +79,21 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
     console.log('[PhotoUploader] Salvando no banco:', { serviceId, photoUrl, title });
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('service_photos')
       .insert({
         service_id: serviceId,
         photo_url: photoUrl,
         title: title
-      });
+      })
+      .select();
 
     if (error) {
       console.error('[PhotoUploader] Erro ao salvar no banco:', error);
       throw new Error(`Erro ao salvar foto: ${error.message}`);
     }
 
-    console.log('[PhotoUploader] Foto salva no banco com sucesso');
+    console.log('[PhotoUploader] Foto salva no banco com sucesso:', data);
   };
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
@@ -141,7 +152,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           
         } catch (error) {
           console.error('[PhotoUploader] Erro ao processar foto:', file.name, error);
-          toast.error(`Erro ao enviar ${file.name}`);
+          toast.error(`Erro ao enviar ${file.name}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
       }
 
@@ -178,26 +189,24 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     console.log('[PhotoUploader] Removendo foto:', photoId);
     const photoToRemove = photos.find(p => p.id === photoId);
     
-    if (photoToRemove) {
-      // Remover do banco se tiver serviceId
-      if (serviceId) {
-        try {
-          const { error } = await supabase
-            .from('service_photos')
-            .delete()
-            .eq('photo_url', photoToRemove.url);
-            
-          if (error) {
-            console.error('[PhotoUploader] Erro ao remover do banco:', error);
-          }
-        } catch (error) {
-          console.error('[PhotoUploader] Erro ao remover foto do banco:', error);
+    if (photoToRemove && serviceId) {
+      try {
+        const { error } = await supabase
+          .from('service_photos')
+          .delete()
+          .eq('photo_url', photoToRemove.url);
+          
+        if (error) {
+          console.error('[PhotoUploader] Erro ao remover do banco:', error);
+          toast.error('Erro ao remover foto do banco de dados');
+          return;
         }
-      }
-      
-      // Revogar URL blob se necessário
-      if (photoToRemove.url.startsWith('blob:')) {
-        URL.revokeObjectURL(photoToRemove.url);
+        
+        console.log('[PhotoUploader] Foto removida do banco com sucesso');
+      } catch (error) {
+        console.error('[PhotoUploader] Erro ao remover foto do banco:', error);
+        toast.error('Erro ao remover foto');
+        return;
       }
     }
     
@@ -221,6 +230,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           
         if (error) {
           console.error('[PhotoUploader] Erro ao atualizar título no banco:', error);
+        } else {
+          console.log('[PhotoUploader] Título atualizado no banco com sucesso');
         }
       } catch (error) {
         console.error('[PhotoUploader] Erro ao atualizar título:', error);

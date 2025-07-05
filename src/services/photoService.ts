@@ -13,7 +13,7 @@ export interface PhotoDeleteResult {
 }
 
 class PhotoService {
-  private readonly bucketName = 'service-photos';
+  private readonly bucketName = 'service-photos'; // Bucket único e correto
 
   async uploadPhoto(file: File): Promise<PhotoUploadResult> {
     try {

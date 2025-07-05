@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -102,8 +101,13 @@ export const useServiceDetail = () => {
     console.log('[useServiceDetail] Atualizando fotos localmente:', newPhotos.length);
     setPhotos(newPhotos);
     
-    // Não precisamos fazer upload aqui pois o PhotoUploader já faz
-    // Apenas atualizamos o estado local
+    // Recarregar fotos do banco após mudanças para manter sincronização
+    if (service?.id) {
+      setTimeout(async () => {
+        const updatedPhotos = await loadPhotosFromDatabase(service.id);
+        setPhotos(updatedPhotos);
+      }, 1000);
+    }
   };
 
   const handleStatusChange = async (newStatus: Service["status"]) => {
