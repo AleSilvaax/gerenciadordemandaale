@@ -25,6 +25,52 @@ const wrapText = (doc: jsPDF, text: string, maxWidth: number): string[] => {
   return doc.splitTextToSize(sanitized, maxWidth);
 };
 
+// Função para processar imagens com melhor compatibilidade
+const processImage = async (imageUrl: string): Promise<string | null> => {
+  try {
+    console.log('[PDF] Processando imagem:', imageUrl);
+    
+    if (imageUrl.startsWith('data:image')) {
+      console.log('[PDF] Imagem já em base64');
+      return imageUrl;
+    }
+
+    // Tentar diferentes métodos para carregar a imagem
+    const response = await fetch(imageUrl, {
+      mode: 'cors',
+      method: 'GET',
+      headers: {
+        'Accept': 'image/*,*/*',
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      console.warn('[PDF] Erro ao carregar imagem via fetch:', response.status);
+      return null;
+    }
+
+    const blob = await response.blob();
+    console.log('[PDF] Blob carregado, tamanho:', blob.size, 'tipo:', blob.type);
+    
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        console.log('[PDF] Conversão para base64 concluída');
+        resolve(reader.result as string);
+      };
+      reader.onerror = (error) => {
+        console.error('[PDF] Erro na conversão:', error);
+        resolve(null);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('[PDF] Erro ao processar imagem:', error);
+    return null;
+  }
+};
+
 // Função para adicionar texto com controle de posição
 const addText = (
   doc: jsPDF,
@@ -60,227 +106,165 @@ const addText = (
     }
   });
 
-  return y + (lines.length * lineHeight) + 5;
-};
-
-// Função para processar imagens
-const processImage = async (imageUrl: string): Promise<string | null> => {
-  try {
-    console.log('[PDF] Processando imagem:', imageUrl);
-    
-    if (imageUrl.startsWith('data:image')) {
-      return imageUrl;
-    }
-
-    const response = await fetch(imageUrl, {
-      mode: 'cors',
-      headers: { 'Accept': 'image/*' }
-    });
-
-    if (!response.ok) {
-      console.warn('[PDF] Erro ao carregar imagem:', response.status);
-      return null;
-    }
-
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('[PDF] Erro ao processar imagem:', error);
-    return null;
-  }
+  return y + (lines.length * lineHeight) + 3;
 };
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    console.log('[PDF] Iniciando geração do relatório profissional');
+    console.log('[PDF] Iniciando geração do relatório profissional minimalista');
     
     const doc = new jsPDF();
     const pageWidth = 210;
     const pageHeight = 297;
-    const margin = 15;
+    const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
-    let currentY = 20;
+    let currentY = 30;
 
-    // === CABEÇALHO PRINCIPAL ===
-    doc.setFillColor(41, 128, 185);
-    doc.rect(0, 0, pageWidth, 45, 'F');
-
-    // Logo placeholder
-    doc.setDrawColor(255, 255, 255);
+    // === CABEÇALHO MINIMALISTA ===
+    // Linha superior
+    doc.setDrawColor(52, 152, 219);
     doc.setLineWidth(2);
-    doc.rect(margin, 8, 35, 25, 'S');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text('LOGO', margin + 17.5, 22, { align: 'center' });
+    doc.line(margin, 25, pageWidth - margin, 25);
 
     // Título principal
-    currentY = addText(doc, 'RELATORIO DE SERVICO', margin + 45, 25, {
-      fontSize: 18,
+    currentY = addText(doc, 'RELATÓRIO DE SERVIÇO', margin, currentY, {
+      fontSize: 20,
       fontStyle: 'bold',
-      color: [255, 255, 255],
-      maxWidth: contentWidth - 45
-    });
-
-    currentY = 55;
-
-    // === CARTÃO DE INFORMAÇÕES PRINCIPAIS ===
-    doc.setFillColor(248, 249, 250);
-    doc.roundedRect(margin, currentY, contentWidth, 85, 3, 3, 'F');
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(margin, currentY, contentWidth, 85, 3, 3, 'S');
-
-    let cardY = currentY + 15;
-
-    // Título do serviço (centralizado)
-    cardY = addText(doc, sanitizeText(service.title), margin + 10, cardY, {
-      fontSize: 14,
-      fontStyle: 'bold',
-      color: [52, 58, 64],
-      maxWidth: contentWidth - 20,
+      color: [52, 73, 94],
+      maxWidth: contentWidth,
       align: 'center'
     });
 
-    cardY += 10;
+    currentY += 15;
 
-    // Informações em duas colunas
-    const leftCol = margin + 15;
-    const rightCol = margin + (contentWidth / 2) + 10;
-
-    // Coluna esquerda
-    cardY = addText(doc, `OS N°: ${sanitizeText(service.number || service.id.substring(0, 8))}`, leftCol, cardY, {
-      fontSize: 11,
+    // === INFORMAÇÕES PRINCIPAIS ===
+    // Título do serviço
+    currentY = addText(doc, sanitizeText(service.title), margin, currentY, {
+      fontSize: 16,
       fontStyle: 'bold',
-      color: [52, 58, 64]
+      color: [44, 62, 80],
+      maxWidth: contentWidth,
+      align: 'center'
     });
 
-    cardY = addText(doc, `Cliente: ${sanitizeText(service.client || 'N/A')}`, leftCol, cardY, {
-      fontSize: 10,
-      color: [73, 80, 87]
-    });
+    currentY += 10;
 
-    // Coluna direita (resetar Y)
-    let rightY = currentY + 40;
+    // OS e Status em linha
+    const osText = `OS: ${sanitizeText(service.number || service.id.substring(0, 8))}`;
+    const statusText = sanitizeText(service.status).toUpperCase();
     
+    addText(doc, osText, margin, currentY, {
+      fontSize: 12,
+      fontStyle: 'bold',
+      color: [52, 73, 94]
+    });
+
     // Status com cor
     const statusColors: Record<string, [number, number, number]> = {
-      'pendente': [255, 193, 7],
-      'concluido': [40, 167, 69],
-      'cancelado': [220, 53, 69]
+      'pendente': [241, 196, 15],
+      'concluido': [46, 204, 113],
+      'cancelado': [231, 76, 60]
     };
     
-    const statusColor = statusColors[service.status] || [108, 117, 125];
-    doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
-    doc.roundedRect(rightCol, rightY - 10, 65, 18, 3, 3, 'F');
-    
-    addText(doc, sanitizeText(service.status).toUpperCase(), rightCol + 32.5, rightY - 2, {
-      fontSize: 10,
+    const statusColor = statusColors[service.status] || [149, 165, 166];
+    addText(doc, statusText, pageWidth - margin - 40, currentY, {
+      fontSize: 12,
       fontStyle: 'bold',
-      color: [255, 255, 255],
-      align: 'center'
+      color: statusColor,
+      align: 'right'
     });
 
-    rightY = addText(doc, `Local: ${sanitizeText(service.location)}`, rightCol, rightY + 10, {
-      fontSize: 10,
-      color: [73, 80, 87]
-    });
+    currentY += 20;
 
-    // Data de criação (parte inferior do cartão)
-    addText(doc, `Criado em: ${service.creationDate ? formatDate(service.creationDate) : 'N/A'}`, leftCol, currentY + 70, {
-      fontSize: 9,
-      color: [108, 117, 125]
-    });
-
-    if (service.date) {
-      addText(doc, `Concluído em: ${formatDate(service.date)}`, rightCol, currentY + 70, {
-        fontSize: 9,
-        color: [108, 117, 125]
-      });
-    }
-
-    currentY += 100;
-
-    // === DETALHES DO SERVIÇO ===
-    currentY = addText(doc, 'DETALHES DO SERVICO', margin, currentY, {
+    // === DADOS DO CLIENTE ===
+    currentY = addText(doc, 'DADOS DO CLIENTE', margin, currentY, {
       fontSize: 14,
       fontStyle: 'bold',
-      color: [41, 128, 185]
+      color: [52, 152, 219]
     });
 
     currentY += 5;
 
-    // Descrição
-    if (service.description) {
-      currentY = addText(doc, 'DESCRICAO:', margin, currentY, {
-        fontSize: 11,
-        fontStyle: 'bold',
-        color: [52, 58, 64]
-      });
+    // Linha separadora
+    doc.setDrawColor(189, 195, 199);
+    doc.setLineWidth(0.5);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 10;
 
-      doc.setFillColor(248, 249, 250);
-      const descLines = wrapText(doc, sanitizeText(service.description), contentWidth - 20);
-      const descHeight = Math.max(25, descLines.length * 4 + 15);
-      doc.roundedRect(margin, currentY, contentWidth, descHeight, 2, 2, 'F');
-      doc.setDrawColor(220, 220, 220);
-      doc.roundedRect(margin, currentY, contentWidth, descHeight, 2, 2, 'S');
+    // Informações do cliente em duas colunas
+    const leftCol = margin;
+    const rightCol = margin + (contentWidth / 2);
 
-      currentY = addText(doc, sanitizeText(service.description), margin + 10, currentY + 8, {
+    let leftY = currentY;
+    let rightY = currentY;
+
+    if (service.client) {
+      leftY = addText(doc, `Cliente: ${sanitizeText(service.client)}`, leftCol, leftY, {
         fontSize: 10,
-        color: [52, 58, 64],
-        maxWidth: contentWidth - 20
+        color: [52, 73, 94]
       });
-
-      currentY += 10;
     }
 
-    // Informações adicionais
-    const infoFields = [
-      { label: 'Tipo de Serviço', value: service.serviceType },
-      { label: 'Prioridade', value: service.priority },
-      { label: 'Endereço', value: service.address },
-      { label: 'Cidade', value: service.city }
-    ];
+    if (service.location) {
+      rightY = addText(doc, `Local: ${sanitizeText(service.location)}`, rightCol, rightY, {
+        fontSize: 10,
+        color: [52, 73, 94]
+      });
+    }
 
-    let hasInfo = false;
-    infoFields.forEach(field => {
-      if (field.value) {
-        if (!hasInfo) {
-          currentY = addText(doc, 'INFORMACOES ADICIONAIS:', margin, currentY, {
-            fontSize: 11,
-            fontStyle: 'bold',
-            color: [52, 58, 64]
-          });
-          hasInfo = true;
-        }
-        currentY = addText(doc, `${field.label}: ${sanitizeText(field.value)}`, margin + 5, currentY, {
-          fontSize: 10,
-          color: [73, 80, 87]
-        });
-      }
-    });
+    if (service.address) {
+      leftY = addText(doc, `Endereço: ${sanitizeText(service.address)}`, leftCol, leftY, {
+        fontSize: 10,
+        color: [52, 73, 94]
+      });
+    }
 
-    if (hasInfo) currentY += 10;
+    if (service.city) {
+      rightY = addText(doc, `Cidade: ${sanitizeText(service.city)}`, rightCol, rightY, {
+        fontSize: 10,
+        color: [52, 73, 94]
+      });
+    }
 
-    // === CHECKLIST TÉCNICO ===
-    if (service.customFields && service.customFields.length > 0) {
-      // Verificar espaço para nova página
-      if (currentY > 200) {
-        doc.addPage();
-        currentY = 20;
-      }
+    currentY = Math.max(leftY, rightY) + 15;
 
-      currentY = addText(doc, 'CHECKLIST TECNICO', margin, currentY, {
+    // === DESCRIÇÃO DO SERVIÇO ===
+    if (service.description) {
+      currentY = addText(doc, 'DESCRIÇÃO DO SERVIÇO', margin, currentY, {
         fontSize: 14,
         fontStyle: 'bold',
-        color: [41, 128, 185]
+        color: [52, 152, 219]
       });
 
       currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 10;
+
+      currentY = addText(doc, sanitizeText(service.description), margin, currentY, {
+        fontSize: 10,
+        color: [52, 73, 94],
+        maxWidth: contentWidth
+      });
+
+      currentY += 15;
+    }
+
+    // === CHECKLIST TÉCNICO ===
+    if (service.customFields && service.customFields.length > 0) {
+      if (currentY > 200) {
+        doc.addPage();
+        currentY = 30;
+      }
+
+      currentY = addText(doc, 'CHECKLIST TÉCNICO', margin, currentY, {
+        fontSize: 14,
+        fontStyle: 'bold',
+        color: [52, 152, 219]
+      });
+
+      currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 10;
 
       const tableData = service.customFields.map((field: CustomField) => {
         let value = '';
@@ -295,54 +279,54 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       });
 
       autoTable(doc, {
-        head: [['Campo', 'Valor']],
+        head: [['Item', 'Status/Valor']],
         body: tableData,
         startY: currentY,
         styles: {
           fontSize: 9,
-          cellPadding: 6,
-          lineColor: [200, 200, 200],
+          cellPadding: 4,
+          lineColor: [189, 195, 199],
           lineWidth: 0.3
         },
         headStyles: {
-          fillColor: [41, 128, 185],
+          fillColor: [52, 152, 219],
           textColor: [255, 255, 255],
           fontStyle: 'bold'
         },
         alternateRowStyles: {
-          fillColor: [248, 249, 250]
+          fillColor: [245, 246, 250]
         },
         columnStyles: {
-          0: { cellWidth: 70 },
-          1: { cellWidth: 100 }
+          0: { cellWidth: 80 },
+          1: { cellWidth: 90 }
         },
         margin: { left: margin, right: margin }
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 15;
+      currentY = (doc as any).lastAutoTable.finalY + 20;
     }
 
     // === REGISTRO FOTOGRÁFICO ===
     if (service.photos && service.photos.length > 0) {
-      // Nova página para fotos
       if (currentY > 150) {
         doc.addPage();
-        currentY = 20;
+        currentY = 30;
       }
 
-      currentY = addText(doc, `REGISTRO FOTOGRAFICO (${service.photos.length} fotos)`, margin, currentY, {
+      currentY = addText(doc, `REGISTRO FOTOGRÁFICO (${service.photos.length} fotos)`, margin, currentY, {
         fontSize: 14,
         fontStyle: 'bold',
-        color: [41, 128, 185]
+        color: [52, 152, 219]
       });
 
-      currentY += 10;
+      currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 15;
 
       for (let i = 0; i < service.photos.length; i++) {
-        // Verificar espaço para nova página
         if (currentY > 200) {
           doc.addPage();
-          currentY = 20;
+          currentY = 30;
         }
 
         const photoTitle = service.photoTitles?.[i] || `Foto ${i + 1}`;
@@ -350,32 +334,36 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         currentY = addText(doc, `${i + 1}. ${sanitizeText(photoTitle)}`, margin, currentY, {
           fontSize: 11,
           fontStyle: 'bold',
-          color: [52, 58, 64]
+          color: [52, 73, 94]
         });
 
         try {
+          console.log('[PDF] Processando foto:', service.photos[i]);
           const processedImage = await processImage(service.photos[i]);
           
           if (processedImage) {
+            console.log('[PDF] Imagem processada com sucesso');
             const imageFormat = processedImage.includes('data:image/png') ? 'PNG' : 'JPEG';
-            const imageWidth = 120;
-            const imageHeight = 80;
+            const imageWidth = 100;
+            const imageHeight = 70;
             const xPosition = (pageWidth - imageWidth) / 2;
             
             doc.addImage(processedImage, imageFormat, xPosition, currentY, imageWidth, imageHeight);
             currentY += imageHeight + 15;
+            console.log('[PDF] Imagem adicionada ao PDF');
           } else {
+            console.warn('[PDF] Não foi possível processar a imagem');
             // Placeholder para foto não disponível
-            doc.setDrawColor(200, 200, 200);
-            doc.setFillColor(245, 245, 245);
-            const boxWidth = 120;
-            const boxHeight = 80;
+            doc.setDrawColor(189, 195, 199);
+            doc.setFillColor(236, 240, 241);
+            const boxWidth = 100;
+            const boxHeight = 70;
             const boxX = (pageWidth - boxWidth) / 2;
-            doc.roundedRect(boxX, currentY, boxWidth, boxHeight, 3, 3, 'FD');
+            doc.rect(boxX, currentY, boxWidth, boxHeight, 'FD');
             
-            addText(doc, 'FOTO INDISPONIVEL', boxX + (boxWidth / 2), currentY + (boxHeight / 2), {
+            addText(doc, 'FOTO NÃO DISPONÍVEL', boxX + (boxWidth / 2), currentY + (boxHeight / 2), {
               fontSize: 10,
-              color: [150, 150, 150],
+              color: [127, 140, 141],
               align: 'center'
             });
             
@@ -392,198 +380,183 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     if (service.messages && service.messages.length > 0) {
       if (currentY > 200) {
         doc.addPage();
-        currentY = 20;
+        currentY = 30;
       }
 
-      currentY = addText(doc, 'HISTORICO DE COMUNICACAO', margin, currentY, {
+      currentY = addText(doc, 'HISTÓRICO DE COMUNICAÇÃO', margin, currentY, {
         fontSize: 14,
         fontStyle: 'bold',
-        color: [41, 128, 185]
+        color: [52, 152, 219]
       });
 
       currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 15;
 
       service.messages.forEach((message) => {
         if (currentY > 250) {
           doc.addPage();
-          currentY = 20;
+          currentY = 30;
         }
 
-        // Caixa da mensagem
-        const messageLines = wrapText(doc, sanitizeText(message.message), contentWidth - 20);
-        const messageHeight = Math.max(35, messageLines.length * 4 + 20);
-        
-        doc.setFillColor(248, 249, 250);
-        doc.roundedRect(margin, currentY, contentWidth, messageHeight, 2, 2, 'F');
-        doc.setDrawColor(220, 220, 220);
-        doc.roundedRect(margin, currentY, contentWidth, messageHeight, 2, 2, 'S');
-
-        // Cabeçalho da mensagem
-        let msgY = currentY + 10;
-        msgY = addText(doc, `${sanitizeText(message.senderName)} (${sanitizeText(message.senderRole)})`, margin + 10, msgY, {
+        // Data e remetente
+        currentY = addText(doc, `${sanitizeText(message.senderName)} - ${formatDate(message.timestamp || new Date().toISOString())}`, margin, currentY, {
           fontSize: 9,
           fontStyle: 'bold',
-          color: [52, 58, 64]
+          color: [52, 73, 94]
         });
 
-        msgY = addText(doc, formatDate(message.timestamp || new Date().toISOString()), margin + 10, msgY, {
-          fontSize: 8,
-          color: [108, 117, 125]
-        });
-
-        msgY = addText(doc, sanitizeText(message.message), margin + 10, msgY, {
+        // Mensagem
+        currentY = addText(doc, sanitizeText(message.message), margin, currentY, {
           fontSize: 9,
-          color: [52, 58, 64],
-          maxWidth: contentWidth - 20
+          color: [52, 73, 94],
+          maxWidth: contentWidth
         });
 
-        currentY += messageHeight + 10;
+        currentY += 8;
       });
+
+      currentY += 10;
     }
 
     // === AVALIAÇÃO DO CLIENTE ===
     if (service.feedback) {
       if (currentY > 220) {
         doc.addPage();
-        currentY = 20;
+        currentY = 30;
       }
 
-      currentY = addText(doc, 'AVALIACAO DO CLIENTE', margin, currentY, {
+      currentY = addText(doc, 'AVALIAÇÃO DO CLIENTE', margin, currentY, {
         fontSize: 14,
         fontStyle: 'bold',
-        color: [41, 128, 185]
+        color: [52, 152, 219]
       });
 
-      doc.setFillColor(255, 248, 225);
-      const feedbackHeight = service.feedback.clientComment ? 50 : 30;
-      doc.roundedRect(margin, currentY, contentWidth, feedbackHeight, 2, 2, 'F');
-      doc.setDrawColor(255, 193, 7);
-      doc.roundedRect(margin, currentY, contentWidth, feedbackHeight, 2, 2, 'S');
+      currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 15;
 
-      let fbY = currentY + 10;
-      fbY = addText(doc, `Avaliacao: ${service.feedback.clientRating}/5 estrelas`, margin + 10, fbY, {
+      currentY = addText(doc, `Avaliação: ${service.feedback.clientRating}/5 estrelas`, margin, currentY, {
         fontSize: 11,
         fontStyle: 'bold',
-        color: [133, 100, 4]
+        color: [52, 73, 94]
       });
 
       if (service.feedback.clientComment) {
-        fbY = addText(doc, `Comentario: ${sanitizeText(service.feedback.clientComment)}`, margin + 10, fbY, {
+        currentY = addText(doc, `Comentário: ${sanitizeText(service.feedback.clientComment)}`, margin, currentY, {
           fontSize: 10,
-          color: [133, 100, 4],
-          maxWidth: contentWidth - 20
+          color: [52, 73, 94],
+          maxWidth: contentWidth
         });
       }
 
-      currentY += feedbackHeight + 15;
+      currentY += 15;
     }
 
-    // === TERMO DE CONCLUSÃO E ASSINATURAS ===
+    // === ASSINATURAS ===
     if (service.signatures && (service.signatures.client || service.signatures.technician)) {
-      doc.addPage();
-      currentY = 20;
+      if (currentY > 180) {
+        doc.addPage();
+        currentY = 30;
+      }
 
-      currentY = addText(doc, 'TERMO DE CONCLUSAO E ASSINATURAS', margin, currentY, {
-        fontSize: 16,
+      currentY = addText(doc, 'ASSINATURAS', margin, currentY, {
+        fontSize: 14,
         fontStyle: 'bold',
-        color: [41, 128, 185],
-        align: 'center',
-        maxWidth: contentWidth
+        color: [52, 152, 219]
       });
 
+      currentY += 5;
+      doc.line(margin, currentY, pageWidth - margin, currentY);
       currentY += 20;
 
       const signatureWidth = (contentWidth - 20) / 2;
 
       // Assinatura do Cliente
       if (service.signatures.client) {
-        doc.setFillColor(248, 249, 250);
-        doc.roundedRect(margin, currentY, signatureWidth, 70, 2, 2, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.roundedRect(margin, currentY, signatureWidth, 70, 2, 2, 'S');
-
-        let sigY = currentY + 10;
-        sigY = addText(doc, 'ASSINATURA DO CLIENTE', margin + 10, sigY, {
+        currentY = addText(doc, 'Cliente', margin, currentY, {
           fontSize: 11,
           fontStyle: 'bold',
-          color: [52, 58, 64]
+          color: [52, 73, 94]
         });
 
         try {
           const processedSignature = await processImage(service.signatures.client);
           if (processedSignature) {
-            doc.addImage(processedSignature, 'PNG', margin + 10, sigY, signatureWidth - 20, 25);
-            sigY += 30;
+            const sigWidth = 60;
+            const sigHeight = 30;
+            const sigX = margin + (signatureWidth - sigWidth) / 2;
+            doc.addImage(processedSignature, 'PNG', sigX, currentY, sigWidth, sigHeight);
+            currentY += sigHeight + 5;
           }
         } catch (error) {
           console.error('[PDF] Erro ao processar assinatura do cliente:', error);
-          sigY += 25;
+          currentY += 35;
         }
 
-        addText(doc, `Cliente: ${sanitizeText(service.client || 'N/A')}`, margin + 10, sigY, {
+        addText(doc, sanitizeText(service.client || 'N/A'), margin, currentY, {
           fontSize: 9,
-          color: [108, 117, 125]
+          color: [127, 140, 141],
+          maxWidth: signatureWidth,
+          align: 'center'
         });
       }
 
       // Assinatura do Técnico
       if (service.signatures.technician) {
+        let techY = currentY - 70; // Posicionar ao lado da assinatura do cliente
         const techX = margin + signatureWidth + 20;
         
-        doc.setFillColor(248, 249, 250);
-        doc.roundedRect(techX, currentY, signatureWidth, 70, 2, 2, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.roundedRect(techX, currentY, signatureWidth, 70, 2, 2, 'S');
-
-        let techY = currentY + 10;
-        techY = addText(doc, 'ASSINATURA DO TECNICO', techX + 10, techY, {
+        techY = addText(doc, 'Técnico', techX, techY, {
           fontSize: 11,
           fontStyle: 'bold',
-          color: [52, 58, 64]
+          color: [52, 73, 94]
         });
 
         try {
           const processedSignature = await processImage(service.signatures.technician);
           if (processedSignature) {
-            doc.addImage(processedSignature, 'PNG', techX + 10, techY, signatureWidth - 20, 25);
-            techY += 30;
+            const sigWidth = 60;
+            const sigHeight = 30;
+            const sigX = techX + (signatureWidth - sigWidth) / 2;
+            doc.addImage(processedSignature, 'PNG', sigX, techY, sigWidth, sigHeight);
+            techY += sigHeight + 5;
           }
         } catch (error) {
           console.error('[PDF] Erro ao processar assinatura do técnico:', error);
-          techY += 25;
+          techY += 35;
         }
 
-        addText(doc, `Tecnico: ${sanitizeText(service.technician?.name || 'N/A')}`, techX + 10, techY, {
+        addText(doc, sanitizeText(service.technician?.name || 'N/A'), techX, techY, {
           fontSize: 9,
-          color: [108, 117, 125]
+          color: [127, 140, 141],
+          maxWidth: signatureWidth,
+          align: 'center'
         });
       }
+
+      currentY += 20;
     }
 
-    // === RODAPÉ EM TODAS AS PÁGINAS ===
+    // === RODAPÉ ===
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       
       // Linha separadora
-      doc.setDrawColor(200, 200, 200);
+      doc.setDrawColor(189, 195, 199);
       doc.setLineWidth(0.3);
-      doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
+      doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
       
       // Informações do rodapé
-      addText(doc, 'GerenciadorDemandas', margin, pageHeight - 15, {
+      addText(doc, `Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, pageHeight - 20, {
         fontSize: 8,
-        color: [108, 117, 125]
+        color: [127, 140, 141]
       });
 
-      addText(doc, `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin + 60, pageHeight - 15, {
+      addText(doc, `Página ${i} de ${pageCount}`, pageWidth - margin - 30, pageHeight - 20, {
         fontSize: 8,
-        color: [108, 117, 125]
-      });
-
-      addText(doc, `Pagina ${i} de ${pageCount}`, pageWidth - margin - 30, pageHeight - 15, {
-        fontSize: 8,
-        color: [108, 117, 125]
+        color: [127, 140, 141]
       });
     }
 
@@ -591,7 +564,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     const fileName = `relatorio_servico_${sanitizeText(service.number || service.id.substring(0, 8))}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
-    console.log('[PDF] Relatório profissional gerado com sucesso:', fileName);
+    console.log('[PDF] Relatório profissional minimalista gerado com sucesso:', fileName);
 
   } catch (error) {
     console.error('[PDF] Erro ao gerar relatório profissional:', error);
