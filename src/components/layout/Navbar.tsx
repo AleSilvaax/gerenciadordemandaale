@@ -103,20 +103,21 @@ const Navbar = () => {
         </div>
 
         {/* Tablet Navigation */}
-        <div className="hidden md:flex lg:hidden items-center justify-between h-14">
+        <div className="hidden md:flex lg:hidden items-center justify-between h-14 tablet-safe">
           {/* Logo/Brand */}
           <Link 
             to="/" 
-            className="flex items-center space-x-2 font-bold text-lg text-primary"
+            className="flex items-center space-x-2 font-bold text-base text-primary flex-shrink-0"
           >
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground text-xs font-bold">GD</span>
             </div>
-            <span className="text-sm">GerenciadorDemandas</span>
+            <span className="hidden sm:block text-sm">GerenciadorDemandas</span>
+            <span className="sm:hidden text-sm">GD</span>
           </Link>
 
-          {/* Navigation Links - Compacto para tablet */}
-          <div className="flex items-center space-x-1">
+          {/* Navigation Links - Scroll horizontal */}
+          <div className="flex items-center space-x-1 overflow-x-auto mobile-scroll-buttons flex-1 mx-4">
             {navItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               return (
@@ -124,7 +125,7 @@ const Navbar = () => {
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex items-center space-x-1 px-2 py-2 rounded-lg transition-all duration-200 text-xs
+                    flex items-center space-x-1 px-2 py-2 rounded-lg transition-all duration-200 text-xs tablet-navbar-item flex-shrink-0
                     ${isActive(item.path)
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
@@ -132,24 +133,24 @@ const Navbar = () => {
                   `}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium whitespace-nowrap">{item.name}</span>
                 </Link>
               );
             })}
           </div>
 
           {/* Action Button */}
-          <Link to="/nova-demanda">
-            <Button size="sm" className="flex items-center gap-1 text-xs px-3 py-2">
+          <Link to="/nova-demanda" className="flex-shrink-0">
+            <Button size="sm" className="flex items-center gap-1 text-xs px-2 py-1 btn-tablet">
               <Plus className="w-4 h-4" />
-              Nova
+              <span className="hidden sm:inline">Nova</span>
             </Button>
           </Link>
         </div>
 
         {/* Mobile Navigation - Fixed Bottom */}
         <div className="md:hidden">
-          <div className="flex justify-around items-center py-2 bg-card/95 backdrop-blur-sm h-16">
+          <div className="flex justify-around items-center py-2 bg-card/95 backdrop-blur-sm h-16 mobile-fit">
             {navItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               return (
@@ -157,22 +158,22 @@ const Navbar = () => {
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex flex-col items-center space-y-1 px-2 py-2 rounded-lg transition-all duration-200 min-w-0
+                    flex flex-col items-center space-y-1 px-1 py-2 rounded-lg transition-all duration-200 min-w-0 flex-1
                     ${isActive(item.path)
                       ? 'text-primary bg-primary/10'
                       : 'text-muted-foreground hover:text-foreground'
                     }
                   `}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-xs font-medium truncate max-w-[50px]">{item.name}</span>
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs font-medium mobile-truncate">{item.name}</span>
                 </Link>
               );
             })}
-            <Link to="/nova-demanda">
-              <Button size="sm" className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs">
-                <Plus className="w-5 h-5" />
-                <span>Nova</span>
+            <Link to="/nova-demanda" className="flex-1">
+              <Button size="sm" className="flex flex-col items-center gap-1 h-auto py-1 px-1 text-xs button-mobile w-full">
+                <Plus className="w-4 h-4" />
+                <span className="text-xs">Nova</span>
               </Button>
             </Link>
           </div>

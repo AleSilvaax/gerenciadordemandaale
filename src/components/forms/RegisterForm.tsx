@@ -92,15 +92,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         email,
         role,
         password,
-        team_id: role === 'requisitor' ? '' : teamId, // Para requisitor, team_id vazio
+        team_id: role === 'requisitor' ? '' : teamId,
       };
       
       const success = await register(userData);
       
-      if (!success) {
+      if (success) {
+        toast.success('Cadastro realizado com sucesso!');
+        navigate('/');
+      } else {
         setError('Ocorreu um erro durante o registro. Verifique se o email já está em uso.');
       }
     } catch (err) {
+      console.error('Erro no registro:', err);
       setError('Ocorreu um erro inesperado.');
     } finally {
       setIsSubmitting(false);
@@ -110,8 +114,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
 
   return (
     <Card className="border-white/10">
-      <CardHeader>
-        <CardTitle>Criar conta</CardTitle>
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">Criar conta</CardTitle>
         <CardDescription>
           Preencha os dados abaixo para se cadastrar no sistema
         </CardDescription>
@@ -120,30 +124,68 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {error && (
-            <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
         
           <div className="space-y-2">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={isSubmitting} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isSubmitting} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isSubmitting} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirmar senha</Label>
-            <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isSubmitting} />
+            <Label htmlFor="name">Nome completo *</Label>
+            <Input 
+              id="name" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              required 
+              disabled={isSubmitting}
+              placeholder="Digite seu nome completo"
+            />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="role">Função</Label>
+            <Label htmlFor="email">Email *</Label>
+            <Input 
+              id="email" 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              disabled={isSubmitting}
+              placeholder="Digite seu email"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha *</Label>
+            <Input 
+              id="password" 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              disabled={isSubmitting}
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirmar senha *</Label>
+            <Input 
+              id="confirm-password" 
+              type="password" 
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)} 
+              required 
+              disabled={isSubmitting}
+              placeholder="Digite a senha novamente"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="role">Função *</Label>
             <Select value={role} onValueChange={(v) => setRole(v as UserRole)} disabled={isSubmitting}>
-              <SelectTrigger id="role"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Selecione sua função" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tecnico">Técnico</SelectItem>
                 <SelectItem value="gestor">Gestor</SelectItem>
@@ -158,27 +200,44 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
             <div className="space-y-2">
               <Label htmlFor="team">Equipe *</Label>
               <Select value={teamId} onValueChange={setTeamId} disabled={isSubmitting || teams.length === 0}>
-                <SelectTrigger id="team"><SelectValue placeholder="Selecione uma equipe" /></SelectTrigger>
+                <SelectTrigger id="team">
+                  <SelectValue placeholder={teams.length === 0 ? "Carregando equipes..." : "Selecione uma equipe"} />
+                </SelectTrigger>
                 <SelectContent>
                   {teams.map(team => (
                     <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {teams.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma equipe encontrada. Entre em contato com o administrador.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-3">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={16} className="mr-2 animate-spin" /> : <UserPlus size={16} className="mr-2" />}
-            {isSubmitting ? 'Registrando...' : 'Criar conta'}
+          <Button type="submit" className="w-full" disabled={isSubmitting || (role !== 'requisitor' && !teamId)}>
+            {isSubmitting ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                Registrando...
+              </>
+            ) : (
+              <>
+                <UserPlus size={16} className="mr-2" />
+                Criar conta
+              </>
+            )}
           </Button>
           
           <div className="text-sm text-center mt-4">
             Já possui uma conta?{" "}
             <Link to="/login" className="text-primary hover:underline">
-              <LogIn className="inline-block h-3 w-3 mr-1" /> Entrar
+              <LogIn className="inline-block h-3 w-3 mr-1" /> 
+              Entrar
             </Link>
           </div>
         </CardFooter>
