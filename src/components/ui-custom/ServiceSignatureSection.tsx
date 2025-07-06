@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { SignatureCapture } from "@/components/ui-custom/SignatureCapture";
 import { PenTool, Download } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
-import { generateDetailedServiceReport } from "@/utils/detailedReportGenerator";
+import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
+import { toast } from "sonner";
 
 interface ServiceSignatureSectionProps {
   service: Service;
@@ -43,6 +44,8 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
   const handleGenerateReport = async () => {
     setIsGenerating(true);
     try {
+      console.log('[ServiceSignatureSection] Iniciando geração do relatório profissional');
+      
       // Garantir que as assinaturas mais recentes estão no serviço
       const updatedService = {
         ...service,
@@ -52,9 +55,14 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
         }
       };
       
-      await generateDetailedServiceReport(updatedService);
+      toast.info("Gerando relatório profissional...");
+      await generateProfessionalServiceReport(updatedService);
+      toast.success("Relatório profissional gerado com sucesso!");
+      
+      console.log('[ServiceSignatureSection] Relatório gerado com sucesso');
     } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
+      console.error('[ServiceSignatureSection] Erro ao gerar relatório:', error);
+      toast.error("Erro ao gerar relatório profissional: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
     } finally {
       setIsGenerating(false);
     }

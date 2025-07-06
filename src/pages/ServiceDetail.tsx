@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
@@ -48,13 +49,17 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     try {
       console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
       console.log('[ServiceDetail] Serviço possui', photos.length, 'fotos');
+      console.log('[ServiceDetail] Campos customizados:', service.customFields?.length || 0);
+      console.log('[ServiceDetail] Mensagens:', service.messages?.length || 0);
+      console.log('[ServiceDetail] Feedback:', service.feedback ? 'Sim' : 'Não');
+      console.log('[ServiceDetail] Assinaturas:', service.signatures ? 'Sim' : 'Não');
       
       toast.info("Gerando relatório profissional...");
       await generateProfessionalServiceReport(service);
       toast.success("Relatório profissional gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório profissional");
+      toast.error("Erro ao gerar relatório profissional: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 

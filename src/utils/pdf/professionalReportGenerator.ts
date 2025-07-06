@@ -1,8 +1,15 @@
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { Service, CustomField } from '@/types/serviceTypes';
 import { formatDate } from '@/utils/formatters';
+
+// Extender a interface do jsPDF para incluir autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: typeof autoTable;
+  }
+}
 
 // Função para sanitizar texto
 const sanitizeText = (text: string | undefined | null): string => {
@@ -84,7 +91,8 @@ const addIcon = (doc: jsPDF, icon: string, x: number, y: number) => {
     calendar: '📅',
     wrench: '🔧',
     star: '⭐',
-    photo: '📷'
+    photo: '📷',
+    message: '💬'
   };
   
   doc.setFont('helvetica', 'normal');
@@ -92,9 +100,38 @@ const addIcon = (doc: jsPDF, icon: string, x: number, y: number) => {
   doc.text(icons[icon as keyof typeof icons] || '•', x, y);
 };
 
+// Função para processar imagem para PDF
+const processImageForPDF = async (imageUrl: string): Promise<string | null> => {
+  try {
+    console.log('[PDF] Processando imagem:', imageUrl);
+    
+    if (imageUrl.startsWith('data:')) {
+      console.log('[PDF] Imagem já em base64');
+      return imageUrl;
+    }
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.warn('[PDF] Erro ao carregar imagem:', response.status);
+      return null;
+    }
+
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('[PDF] Erro ao processar imagem:', error);
+    return null;
+  }
+};
+
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    console.log('[PDF] Iniciando geração do relatório profissional inteligente');
+    console.log('[PDF] Iniciando geração do relatório profissional');
     console.log('[PDF] Serviço:', service.title, '- Tipo:', service.serviceType);
     console.log('[PDF] Fotos:', service.photos?.length || 0);
     console.log('[PDF] Campos customizados:', service.customFields?.length || 0);
@@ -130,19 +167,30 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
     currentY = 70;
 
-    // Cartão de Destaque
+    // Cartão de Informações Principais
     doc.setFillColor(248, 249, 250);
-    doc.roundedRect(margin, currentY, contentWidth, 80, 5, 5, 'F');
+    doc.roundedRect(margin, currentY, contentWidth, 100, 5, 5, 'F');
     doc.setDrawColor(41, 128, 185);
     doc.setLineWidth(1);
-    doc.roundedRect(margin, currentY, contentWidth, 80, 5, 5, 'S');
+    doc.roundedRect(margin, currentY, contentWidth, 100, 5, 5, 'S');
 
-    // Informações principais com ícones
     let cardY = currentY + 15;
     
+    // Título da demanda
+    addFormattedText(doc, sanitizeText(service.title), margin + (contentWidth / 2), cardY, {
+      fontSize: 16,
+      fontStyle: 'bold',
+      color: [52, 58, 64],
+      align: 'center',
+      maxWidth: contentWidth - 20
+    });
+
+    cardY += 25;
+
+    // Informações em duas colunas
     addIcon(doc, 'wrench', margin + 10, cardY);
-    addFormattedText(doc, `OS Nº: ${sanitizeText(service.number)}`, margin + 20, cardY, {
-      fontSize: 14,
+    addFormattedText(doc, `OS Nº: ${sanitizeText(service.number || service.id.substring(0, 8))}`, margin + 20, cardY, {
+      fontSize: 12,
       fontStyle: 'bold',
       color: [52, 58, 64]
     });
@@ -160,19 +208,6 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       color: [73, 80, 87]
     });
 
-    cardY += 15;
-    addIcon(doc, 'calendar', margin + 10, cardY);
-    addFormattedText(doc, `Criação: ${service.creationDate ? formatDate(service.creationDate) : 'N/A'}`, margin + 20, cardY, {
-      fontSize: 11,
-      color: [108, 117, 125]
-    });
-
-    addIcon(doc, 'calendar', margin + 110, cardY);
-    addFormattedText(doc, `Conclusão: ${service.date ? formatDate(service.date) : 'N/A'}`, margin + 120, cardY, {
-      fontSize: 11,
-      color: [108, 117, 125]
-    });
-
     // Status com cor
     const statusColors: Record<string, [number, number, number]> = {
       'pendente': [255, 193, 7],
@@ -182,18 +217,31 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     
     const statusColor = statusColors[service.status] || [108, 117, 125];
     doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
-    doc.roundedRect(margin + 130, currentY + 10, 50, 20, 3, 3, 'F');
+    doc.roundedRect(margin + 110, cardY, 60, 15, 3, 3, 'F');
     
-    addIcon(doc, 'check', margin + 135, currentY + 23);
-    addFormattedText(doc, sanitizeText(service.status).toUpperCase(), margin + 145, currentY + 23, {
+    addFormattedText(doc, sanitizeText(service.status).toUpperCase(), margin + 140, cardY + 10, {
       fontSize: 10,
       fontStyle: 'bold',
-      color: [255, 255, 255]
+      color: [255, 255, 255],
+      align: 'center'
     });
 
-    currentY += 100;
+    cardY += 20;
+    addIcon(doc, 'calendar', margin + 10, cardY);
+    addFormattedText(doc, `Criação: ${service.creationDate ? formatDate(service.creationDate) : 'N/A'}`, margin + 20, cardY, {
+      fontSize: 10,
+      color: [108, 117, 125]
+    });
 
-    // NOVA PÁGINA - DETALHES TÉCNICOS
+    if (service.date) {
+      addIcon(doc, 'calendar', margin + 110, cardY);
+      addFormattedText(doc, `Conclusão: ${formatDate(service.date)}`, margin + 120, cardY, {
+        fontSize: 10,
+        color: [108, 117, 125]
+      });
+    }
+
+    // NOVA PÁGINA - DETALHES DO SERVIÇO
     doc.addPage();
     currentY = 20;
 
@@ -217,7 +265,8 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       currentY += 15;
 
       doc.setFillColor(248, 249, 250);
-      const descHeight = Math.max(30, (sanitizeText(service.description).length / 80) * 12);
+      const descLines = splitTextIntoLines(doc, sanitizeText(service.description), contentWidth - 20);
+      const descHeight = Math.max(30, descLines.length * 5 + 10);
       doc.roundedRect(margin, currentY, contentWidth, descHeight, 3, 3, 'F');
       doc.setDrawColor(233, 236, 239);
       doc.roundedRect(margin, currentY, contentWidth, descHeight, 3, 3, 'S');
@@ -233,6 +282,12 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
     // CHECKLIST TÉCNICO (SEÇÃO CRÍTICA)
     if (service.customFields && service.customFields.length > 0) {
+      // Verificar se há espaço suficiente
+      if (currentY > pageHeight - 100) {
+        doc.addPage();
+        currentY = 20;
+      }
+
       addFormattedText(doc, 'CHECKLIST TÉCNICO', margin, currentY, {
         fontSize: 14,
         fontStyle: 'bold',
@@ -254,7 +309,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         return [sanitizeText(field.label), sanitizeText(value)];
       });
 
-      (doc as any).autoTable({
+      doc.autoTable({
         head: [['Campo', 'Valor']],
         body: tableData,
         startY: currentY,
@@ -279,7 +334,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       currentY = (doc as any).lastAutoTable.finalY + 20;
     }
 
-    // RELATÓRIO FOTOGRÁFICO INTELIGENTE
+    // RELATÓRIO FOTOGRÁFICO
     if (service.photos && service.photos.length > 0) {
       // Nova página para fotos
       doc.addPage();
@@ -294,10 +349,10 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
       currentY += 40;
 
-      // Processamento inteligente das fotos
+      // Processamento das fotos
       for (let i = 0; i < service.photos.length; i++) {
         // Verificar espaço disponível
-        if (currentY > pageHeight - 120) {
+        if (currentY > pageHeight - 150) {
           doc.addPage();
           currentY = 20;
           
@@ -312,73 +367,81 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
         const photoTitle = service.photoTitles?.[i] || `Foto ${i + 1}`;
         
-        // Container para cada foto
-        doc.setFillColor(248, 249, 250);
-        doc.roundedRect(margin, currentY, contentWidth, 60, 3, 3, 'F');
-        doc.setDrawColor(233, 236, 239);
-        doc.roundedRect(margin, currentY, contentWidth, 60, 3, 3, 'S');
-
         // Título da foto
-        addFormattedText(doc, `${i + 1}. ${sanitizeText(photoTitle)}`, margin + 10, currentY + 15, {
+        addFormattedText(doc, `${i + 1}. ${sanitizeText(photoTitle)}`, margin, currentY, {
           fontSize: 12,
           fontStyle: 'bold',
           color: [52, 58, 64]
         });
 
-        // Informações da foto
-        addFormattedText(doc, `Arquivo: ${service.photos[i].split('/').pop() || 'foto.jpg'}`, margin + 10, currentY + 30, {
-          fontSize: 9,
-          color: [108, 117, 125]
-        });
+        currentY += 15;
 
-        addFormattedText(doc, `Disponível para visualização no sistema digital`, margin + 10, currentY + 42, {
-          fontSize: 8,
-          color: [108, 117, 125],
-          fontStyle: 'italic'
-        });
-
-        // Placeholder visual para foto
-        doc.setDrawColor(200, 200, 200);
-        doc.setFillColor(245, 245, 245);
-        const photoBoxX = margin + contentWidth - 50;
-        const photoBoxY = currentY + 10;
-        doc.roundedRect(photoBoxX, photoBoxY, 35, 25, 2, 2, 'FD');
-        
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text('FOTO', photoBoxX + 17.5, photoBoxY + 15, { align: 'center' });
-
-        currentY += 75;
+        try {
+          console.log('[PDF] Processando foto:', service.photos[i]);
+          const processedImage = await processImageForPDF(service.photos[i]);
+          
+          if (processedImage) {
+            const imageFormat = processedImage.includes('data:image/png') ? 'PNG' : 'JPEG';
+            const imageWidth = 120;
+            const imageHeight = 80;
+            const xPosition = (pageWidth - imageWidth) / 2;
+            
+            doc.addImage(processedImage, imageFormat, xPosition, currentY, imageWidth, imageHeight);
+            currentY += imageHeight + 15;
+            console.log('[PDF] Foto processada com sucesso:', photoTitle);
+          } else { 
+            console.warn('[PDF] Falha ao processar foto:', service.photos[i]);
+            
+            // Placeholder visual para foto
+            doc.setDrawColor(200, 200, 200);
+            doc.setFillColor(245, 245, 245);
+            const photoBoxWidth = 120;
+            const photoBoxHeight = 80;
+            const photoBoxX = (pageWidth - photoBoxWidth) / 2;
+            doc.roundedRect(photoBoxX, currentY, photoBoxWidth, photoBoxHeight, 5, 5, 'FD');
+            
+            doc.setFontSize(12);
+            doc.setTextColor(150, 150, 150);
+            doc.text('FOTO INDISPONÍVEL', photoBoxX + (photoBoxWidth / 2), currentY + (photoBoxHeight / 2), { align: 'center' });
+            
+            currentY += photoBoxHeight + 15;
+          }
+        } catch (error) {
+          console.error('[PDF] Erro ao processar foto:', error);
+          
+          // Placeholder para erro
+          doc.setDrawColor(220, 53, 69);
+          doc.setFillColor(255, 245, 245);
+          const errorBoxWidth = 120;
+          const errorBoxHeight = 80;
+          const errorBoxX = (pageWidth - errorBoxWidth) / 2;
+          doc.roundedRect(errorBoxX, currentY, errorBoxWidth, errorBoxHeight, 5, 5, 'FD');
+          
+          doc.setFontSize(10);
+          doc.setTextColor(220, 53, 69);
+          doc.text('ERRO AO CARREGAR', errorBoxX + (errorBoxWidth / 2), currentY + (errorBoxHeight / 2), { align: 'center' });
+          
+          currentY += errorBoxHeight + 15;
+        }
       }
-      
-      // Nota sobre visualização digital
-      currentY += 10;
-      doc.setFillColor(255, 248, 225);
-      doc.roundedRect(margin, currentY, contentWidth, 25, 3, 3, 'F');
-      addIcon(doc, 'photo', margin + 10, currentY + 15);
-      addFormattedText(doc, 'Todas as fotos estão disponíveis em alta resolução no sistema digital para visualização detalhada.', margin + 25, currentY + 15, {
-        fontSize: 9,
-        color: [133, 100, 4],
-        fontStyle: 'italic',
-        maxWidth: contentWidth - 35
-      });
-      currentY += 35;
     }
 
     // COMUNICAÇÃO E FEEDBACK
     if (service.messages && service.messages.length > 0) {
+      // Nova página para mensagens se necessário
       if (currentY > pageHeight - 100) {
         doc.addPage();
         currentY = 20;
       }
 
-      addFormattedText(doc, 'HISTÓRICO DE COMUNICAÇÃO', margin, currentY, {
+      addIcon(doc, 'message', margin, currentY + 5);
+      addFormattedText(doc, 'HISTÓRICO DE COMUNICAÇÃO', margin + 15, currentY + 8, {
         fontSize: 14,
         fontStyle: 'bold',
         color: [41, 128, 185]
       });
 
-      currentY += 20;
+      currentY += 30;
 
       service.messages.forEach((message) => {
         if (currentY > pageHeight - 80) {
@@ -387,7 +450,8 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         }
 
         doc.setFillColor(248, 249, 250);
-        const messageHeight = 40;
+        const messageLines = splitTextIntoLines(doc, sanitizeText(message.message), contentWidth - 20);
+        const messageHeight = Math.max(40, messageLines.length * 4 + 25);
         doc.roundedRect(margin, currentY, contentWidth, messageHeight, 3, 3, 'F');
 
         addFormattedText(doc, `${message.senderName} (${message.senderRole})`, margin + 10, currentY + 12, {
@@ -411,7 +475,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       });
     }
 
-    // Feedback
+    // FEEDBACK DO CLIENTE
     if (service.feedback) {
       if (currentY > pageHeight - 80) {
         doc.addPage();
@@ -428,7 +492,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       currentY += 25;
 
       doc.setFillColor(255, 248, 225);
-      const feedbackHeight = 60;
+      const feedbackHeight = service.feedback.clientComment ? 60 : 40;
       doc.roundedRect(margin, currentY, contentWidth, feedbackHeight, 3, 3, 'F');
 
       addFormattedText(doc, `Avaliação: ${service.feedback.clientRating}/5 estrelas`, margin + 10, currentY + 15, {
@@ -445,24 +509,32 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         });
       }
 
+      if (service.feedback.technicianFeedback) {
+        addFormattedText(doc, `Feedback Técnico: ${sanitizeText(service.feedback.technicianFeedback)}`, margin + 10, currentY + 45, {
+          fontSize: 10,
+          color: [133, 100, 4],
+          maxWidth: contentWidth - 20
+        });
+      }
+
       currentY += feedbackHeight + 20;
     }
 
     // PÁGINA DE ASSINATURAS
-    doc.addPage();
-    currentY = 20;
+    if (service.signatures && (service.signatures.client || service.signatures.technician)) {
+      doc.addPage();
+      currentY = 20;
 
-    addFormattedText(doc, 'TERMO DE CONCLUSÃO E ASSINATURAS', margin, currentY, {
-      fontSize: 16,
-      fontStyle: 'bold',
-      color: [41, 128, 185],
-      align: 'center',
-      maxWidth: contentWidth
-    });
+      addFormattedText(doc, 'TERMO DE CONCLUSÃO E ASSINATURAS', margin, currentY, {
+        fontSize: 16,
+        fontStyle: 'bold',
+        color: [41, 128, 185],
+        align: 'center',
+        maxWidth: contentWidth
+      });
 
-    currentY += 40;
+      currentY += 40;
 
-    if (service.signatures) {
       const signatureWidth = (contentWidth - 20) / 2;
 
       // Assinatura do Cliente
@@ -543,7 +615,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     }
 
     // Salvar PDF
-    const fileName = `relatorio_servico_${sanitizeText(service.number || service.id)}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const fileName = `relatorio_servico_${sanitizeText(service.number || service.id.substring(0, 8))}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
     console.log('[PDF] Relatório profissional gerado com sucesso:', fileName);
