@@ -108,16 +108,6 @@
   --ring: 217 91% 60%;
 }
 
-/* Dark theme for statistics page - even darker */
-.dark .stats-page {
-  --background: 215 35% 2%;
-  --card: 215 35% 5%;
-  --secondary: 215 35% 8%;
-  --muted: 215 35% 8%;
-  --accent: 215 35% 8%;
-  --border: 215 35% 12%;
-}
-
 /* Custom scrollbar */
 .scrollbar-none {
   scrollbar-width: none;
@@ -163,7 +153,7 @@
   @apply border-gray-700/50 bg-card/80 shadow-black/20;
 }
 
-/* Mobile layout adjustments for fixed navbar */
+/* Mobile layout adjustments - Melhor responsividade */
 @media (max-width: 768px) {
   body {
     padding-bottom: env(safe-area-inset-bottom);
@@ -171,7 +161,7 @@
   
   /* Ensure content doesn't get hidden behind fixed navbar */
   .mobile-safe-area {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
   
   /* Force navbar to stay at bottom */
@@ -181,12 +171,104 @@
     left: 0 !important;
     right: 0 !important;
     z-index: 50 !important;
+    height: 70px !important;
+  }
+
+  /* Reduzir tamanhos para mobile */
+  .container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Cards menores em mobile */
+  .card {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Botões menores */
+  .btn-mobile {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Textos menores */
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  h3 { font-size: 1.125rem !important; }
+
+  /* Ajustes para evitar cortes */
+  .overflow-mobile {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet layout adjustments - Melhor responsividade */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Navbar fixado para tablet */
+  .navbar-tablet-fixed {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40 !important;
+  }
+
+  /* Reduzir padding para tablet */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Ajustar tamanhos de botões para tablet */
+  .btn-tablet {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+  }
+
+  /* Evitar cortes de elementos */
+  .tablet-safe {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
 
 /* Desktop layout with proper spacing */
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .desktop-layout {
     padding-bottom: 0;
+  }
+}
+
+/* Melhorias gerais de responsividade */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Prevent layout shifts */
+.prevent-shift {
+  min-height: 2.5rem;
+}
+
+/* Better form responsiveness */
+@media (max-width: 640px) {
+  .form-responsive input,
+  .form-responsive select,
+  .form-responsive textarea {
+    font-size: 1rem; /* Prevent zoom on iOS */
   }
 }

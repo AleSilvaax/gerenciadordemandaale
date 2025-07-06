@@ -7,7 +7,7 @@ import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignature
 import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
+import { Camera, Download } from "lucide-react";
 import { Link } from "react-router-dom"; 
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
@@ -48,18 +48,21 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
 
     try {
       console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
-      console.log('[ServiceDetail] Serviço possui', photos.length, 'fotos');
-      console.log('[ServiceDetail] Campos customizados:', service.customFields?.length || 0);
-      console.log('[ServiceDetail] Mensagens:', service.messages?.length || 0);
-      console.log('[ServiceDetail] Feedback:', service.feedback ? 'Sim' : 'Não');
-      console.log('[ServiceDetail] Assinaturas:', service.signatures ? 'Sim' : 'Não');
+      
+      // Criar serviço atualizado com fotos e assinaturas mais recentes
+      const updatedService = {
+        ...service,
+        photos: photos.map(photo => photo.url),
+        photoTitles: photos.map(photo => photo.title),
+        signatures: service.signatures
+      };
       
       toast.info("Gerando relatório profissional...");
-      await generateProfessionalServiceReport(service);
+      await generateProfessionalServiceReport(updatedService);
       toast.success("Relatório profissional gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório profissional: " + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      toast.error("Erro ao gerar relatório profissional");
     }
   };
 
@@ -91,15 +94,15 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-6"
+        className="container mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
         <ServiceDetailHeader />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -129,8 +132,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             >
               <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Camera className="w-5 h-5" />
+                  <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
                     Fotos e Anexos
                     {photos.length > 0 && (
                       <span className="text-sm text-muted-foreground">({photos.length} fotos)</span>
@@ -148,25 +151,44 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </Card>
             </motion.div>
 
+            {/* Botão único para gerar relatório */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <ServiceActions 
-                service={service} 
-                onStatusChange={handleStatusChange} 
-                editMode={editMode}
-                onGenerateReport={handleGenerateReport}
-              />
+              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
+                <CardContent className="p-4">
+                  <Button 
+                    onClick={handleGenerateReport}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Gerar Relatório PDF
+                  </Button>
+                </CardContent>
+              </Card>
             </motion.div>
-          </div>
 
-          <div className="space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
+            >
+              <ServiceActions 
+                service={service} 
+                onStatusChange={handleStatusChange} 
+                editMode={editMode}
+              />
+            </motion.div>
+          </div>
+
+          <div className="space-y-4 lg:space-y-6">
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
             >
               <ServiceMessages
                 service={service}
@@ -179,7 +201,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.7 }}
             >
               <ServiceFeedback
                 service={service}
@@ -192,12 +214,11 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.8 }}
             >
               <ServiceSignatureSection
                 service={service}
                 onUpdateSignatures={handleUpdateSignatures}
-                onGenerateReport={handleGenerateReport}
               />
             </motion.div>
           </div>

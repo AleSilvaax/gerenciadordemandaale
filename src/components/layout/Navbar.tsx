@@ -48,19 +48,19 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-card/95 backdrop-blur-sm border-t border-border/50 navbar-mobile-fixed md:sticky md:top-0 md:bottom-auto md:border-t-0 md:border-b md:relative">
-      <div className="container mx-auto px-4">
+    <nav className="bg-card/95 backdrop-blur-sm border-t border-border/50 navbar-mobile-fixed md:navbar-tablet-fixed lg:sticky lg:top-0 lg:bottom-auto lg:border-t-0 lg:border-b lg:relative">
+      <div className="container mx-auto px-2 md:px-4">
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center justify-between h-16">
+        <div className="hidden lg:flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <Link 
             to="/" 
-            className="flex items-center space-x-2 font-bold text-xl text-primary"
+            className="flex items-center space-x-2 font-bold text-lg xl:text-xl text-primary"
           >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground text-sm font-bold">GD</span>
+            <div className="w-7 h-7 xl:w-8 xl:h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground text-xs xl:text-sm font-bold">GD</span>
             </div>
-            <span className="hidden sm:block">GerenciadorDemandas</span>
+            <span className="hidden sm:block text-sm xl:text-base">GerenciadorDemandas</span>
           </Link>
 
           {/* Navigation Links */}
@@ -72,7 +72,7 @@ const Navbar = () => {
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200
+                    flex items-center space-x-2 px-2 xl:px-3 py-2 rounded-lg transition-all duration-200 text-sm
                     ${isActive(item.path)
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
@@ -80,7 +80,7 @@ const Navbar = () => {
                   `}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="font-medium">{item.name}</span>
                   {item.badge && (
                     <Badge variant="secondary" className="ml-1 text-xs">
                       {item.badge}
@@ -94,7 +94,7 @@ const Navbar = () => {
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
             <Link to="/nova-demanda">
-              <Button size="sm" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2 text-sm">
                 <Plus className="w-4 h-4" />
                 Nova Demanda
               </Button>
@@ -102,9 +102,54 @@ const Navbar = () => {
           </div>
         </div>
 
+        {/* Tablet Navigation */}
+        <div className="hidden md:flex lg:hidden items-center justify-between h-14">
+          {/* Logo/Brand */}
+          <Link 
+            to="/" 
+            className="flex items-center space-x-2 font-bold text-lg text-primary"
+          >
+            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground text-xs font-bold">GD</span>
+            </div>
+            <span className="text-sm">GerenciadorDemandas</span>
+          </Link>
+
+          {/* Navigation Links - Compacto para tablet */}
+          <div className="flex items-center space-x-1">
+            {navItems.slice(0, 4).map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`
+                    flex items-center space-x-1 px-2 py-2 rounded-lg transition-all duration-200 text-xs
+                    ${isActive(item.path)
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="font-medium">{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Action Button */}
+          <Link to="/nova-demanda">
+            <Button size="sm" className="flex items-center gap-1 text-xs px-3 py-2">
+              <Plus className="w-4 h-4" />
+              Nova
+            </Button>
+          </Link>
+        </div>
+
         {/* Mobile Navigation - Fixed Bottom */}
         <div className="md:hidden">
-          <div className="flex justify-around items-center py-2 bg-card/95 backdrop-blur-sm">
+          <div className="flex justify-around items-center py-2 bg-card/95 backdrop-blur-sm h-16">
             {navItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               return (
@@ -120,14 +165,14 @@ const Navbar = () => {
                   `}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-xs font-medium truncate max-w-[60px]">{item.name}</span>
+                  <span className="text-xs font-medium truncate max-w-[50px]">{item.name}</span>
                 </Link>
               );
             })}
             <Link to="/nova-demanda">
-              <Button size="sm" className="flex flex-col items-center gap-1 h-auto py-2 px-3">
+              <Button size="sm" className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs">
                 <Plus className="w-5 h-5" />
-                <span className="text-xs">Nova</span>
+                <span>Nova</span>
               </Button>
             </Link>
           </div>
