@@ -1,15 +1,8 @@
 
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Service, CustomField } from '@/types/serviceTypes';
 import { formatDate } from '@/utils/formatters';
-
-// Extender a interface do jsPDF para incluir autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: typeof autoTable;
-  }
-}
 
 // Função para sanitizar texto
 const sanitizeText = (text: string | undefined | null): string => {
@@ -309,7 +302,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         return [sanitizeText(field.label), sanitizeText(value)];
       });
 
-      doc.autoTable({
+      autoTable(doc, {
         head: [['Campo', 'Valor']],
         body: tableData,
         startY: currentY,
