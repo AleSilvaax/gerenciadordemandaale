@@ -291,7 +291,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         } else {
           value = String(field.value || 'N/A');
         }
-        return [sanitizeText(field.label || field.name || ''), sanitizeText(value)];
+        return [sanitizeText(field.label || ''), sanitizeText(value)];
       });
 
       autoTable(doc, {
