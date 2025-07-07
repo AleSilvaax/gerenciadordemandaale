@@ -17,8 +17,8 @@ export const useServiceFilters = (services: Service[]) => {
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     status: 'todos',
-    technicianId: '',
-    serviceType: '',
+    technicianId: 'all',
+    serviceType: 'all',
     dateRange: {
       from: null,
       to: null
@@ -51,7 +51,7 @@ export const useServiceFilters = (services: Service[]) => {
     }
 
     // Filtro por técnico
-    if (filters.technicianId) {
+    if (filters.technicianId && filters.technicianId !== 'all') {
       filtered = filtered.filter(service => 
         service.technician?.id === filters.technicianId
       );
@@ -59,7 +59,7 @@ export const useServiceFilters = (services: Service[]) => {
     }
 
     // Filtro por tipo de serviço
-    if (filters.serviceType) {
+    if (filters.serviceType && filters.serviceType !== 'all') {
       filtered = filtered.filter(service => 
         service.serviceType === filters.serviceType
       );
@@ -97,8 +97,8 @@ export const useServiceFilters = (services: Service[]) => {
     setFilters({
       search: '',
       status: 'todos',
-      technicianId: '',
-      serviceType: '',
+      technicianId: 'all',
+      serviceType: 'all',
       dateRange: {
         from: null,
         to: null

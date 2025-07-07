@@ -9,7 +9,6 @@ import { useForm } from "react-hook-form";
 import { getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
-import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 
 interface DetailsFormSectionProps {
   service: any;
@@ -28,14 +27,14 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
     defaultValues: {
       title: service.title,
       status: service.status,
-      serviceType: service.serviceType || "inspection",
+      serviceType: service.serviceType || "Vistoria",
       client: service.client || "",
       location: service.location,
       address: service.address || "",
       city: service.city || "",
       description: service.description || "",
       notes: service.notes || "",
-      technicianId: service.technician?.id ?? "none",
+      technicianId: service.technician?.id || "none",
     }
   });
 
@@ -45,22 +44,34 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 
   useEffect(() => {
     const fetchTypes = async () => {
-      const types = await getServiceTypesFromDatabase();
-      setServiceTypes(types);
+      try {
+        const types = await getServiceTypesFromDatabase();
+        console.log('[DetailsFormSection] Tipos carregados:', types);
+        setServiceTypes(types.filter(type => type && type.name && type.name.trim() !== ''));
+      } catch (error) {
+        console.error('[DetailsFormSection] Erro ao carregar tipos:', error);
+        setServiceTypes([
+          { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+          { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+          { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
+        ]);
+      }
     };
+    
     fetchTypes();
+    
     if (hasPermission("gestor")) {
-      getTeamMembers().then(setTeamMembers);
+      getTeamMembers().then(members => {
+        setTeamMembers(members.filter(member => member && member.id && member.name));
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasPermission]);
 
   return (
     <Form {...form}>
       <form
         className="space-y-4"
         onSubmit={form.handleSubmit((data) => {
-          // Garantia da passagem correta do técnico
           let selectedTech = null;
           if (
             hasPermission("gestor") &&
@@ -82,7 +93,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
           }
           onSubmit({
             ...data,
-            technician: selectedTech, // sempre enviar objeto completo ou null
+            technician: selectedTech,
           });
         })}
       >
@@ -141,7 +152,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
                   </FormControl>
                   <SelectContent>
                     {serviceTypes.map(type => (
-                       <SelectItem key={type.id} value={type.name}>
+                      <SelectItem key={type.id} value={type.name}>
                         {type.name}
                       </SelectItem>
                     ))}

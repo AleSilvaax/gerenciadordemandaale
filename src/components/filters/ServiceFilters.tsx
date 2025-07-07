@@ -107,8 +107,8 @@ export const ServiceFilters: React.FC<ServiceFiltersProps> = ({
             <SelectValue placeholder="Técnico/Responsável" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os Técnicos</SelectItem>
-            {technicians.map(tech => (
+            <SelectItem value="all">Todos os Técnicos</SelectItem>
+            {technicians.filter(tech => tech && tech.id && tech.name).map(tech => (
               <SelectItem key={tech.id} value={tech.id}>
                 {tech.name}
               </SelectItem>
@@ -125,8 +125,8 @@ export const ServiceFilters: React.FC<ServiceFiltersProps> = ({
             <SelectValue placeholder="Tipo de Serviço" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os Tipos</SelectItem>
-            {serviceTypes.map(type => (
+            <SelectItem value="all">Todos os Tipos</SelectItem>
+            {serviceTypes.filter(type => type && type.trim() !== '').map(type => (
               <SelectItem key={type} value={type}>
                 {type}
               </SelectItem>
