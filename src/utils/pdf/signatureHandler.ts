@@ -1,7 +1,7 @@
 
 import { jsPDF } from "jspdf";
 import { PDF_COLORS, PDF_DIMENSIONS } from './pdfConstants';
-import { processImageForPDF } from './imageProcessor';
+import { processImage } from './imageProcessor';
 import { addSection, addInfoLine } from './pdfFormatters';
 import { safeText } from './textUtils';
 
@@ -18,7 +18,7 @@ export const addSignatureSection = async (doc: jsPDF, signatures: { client?: str
       currentY += 10;
       
       try {
-        const processedSignature = await processImageForPDF(signatures.client);
+        const processedSignature = await processImage(signatures.client);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;
@@ -63,7 +63,7 @@ export const addSignatureSection = async (doc: jsPDF, signatures: { client?: str
       currentY += 10;
       
       try {
-        const processedSignature = await processImageForPDF(signatures.technician);
+        const processedSignature = await processImage(signatures.technician);
         if (processedSignature) {
           const signatureWidth = PDF_DIMENSIONS.signatureWidth;
           const signatureHeight = PDF_DIMENSIONS.signatureHeight;

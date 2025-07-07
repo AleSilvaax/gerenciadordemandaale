@@ -66,10 +66,10 @@ export const useServiceFilters = (services: Service[]) => {
       console.log('[FILTERS] Após filtro de tipo:', filtered.length);
     }
 
-    // Filtro por data
+    // Filtro por data - usando creationDate em vez de createdAt
     if (filters.dateRange.from || filters.dateRange.to) {
       filtered = filtered.filter(service => {
-        const serviceDate = new Date(service.createdAt);
+        const serviceDate = new Date(service.creationDate || service.date || new Date());
         const fromDate = filters.dateRange.from;
         const toDate = filters.dateRange.to;
 
