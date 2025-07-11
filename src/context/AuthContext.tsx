@@ -184,6 +184,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   }, [user]);
 
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        toast.error("Erro ao solicitar reset", { description: error.message });
+        return false;
+      }
+      
+      toast.success("Email enviado!", { 
+        description: "Verifique sua caixa de entrada para redefinir a senha." 
+      });
+      return true;
+    } catch (error) {
+      toast.error("Erro inesperado", { description: "Tente novamente mais tarde." });
+      return false;
+    }
+  };
+
   const value = { 
     user, 
     isLoading, 
@@ -194,7 +215,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser, 
     updateUserInfo: setUser, 
     hasPermission, 
-    canAccessRoute, 
+    canAccessRoute,
+    requestPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
