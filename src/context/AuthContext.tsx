@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,19 +7,29 @@ import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Limpar todos os estados de autenticação da Supabase (fix para limbo de sessão)
+// Enhanced auth state cleanup
 export const cleanupAuthState = () => {
-  // Remove supabase padrões
-  localStorage.removeItem('supabase.auth.token');
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      localStorage.removeItem(key);
-    }
+  console.log('[AUTH] Limpando estado de autenticação...');
+  
+  // Remove all Supabase auth keys
+  const keysToRemove = Object.keys(localStorage).filter(key => 
+    key.startsWith('supabase.auth.') || 
+    key.includes('sb-') ||
+    key === 'supabase.auth.token'
+  );
+  
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`[AUTH] Removido: ${key}`);
   });
-  Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      sessionStorage.removeItem(key);
-    }
+
+  // Clean sessionStorage too
+  const sessionKeysToRemove = Object.keys(sessionStorage || {}).filter(key => 
+    key.startsWith('supabase.auth.') || key.includes('sb-')
+  );
+  
+  sessionKeysToRemove.forEach(key => {
+    sessionStorage.removeItem(key);
   });
 };
 
@@ -28,48 +39,103 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = useCallback(async (authUser: User) => {
     try {
+      console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
+      
+      // Primeiro, tentar carregar o perfil com todos os relacionamentos
       const { data, error } = await supabase
         .from('profiles')
-        .select(`*, user_roles (role)`)
+        .select(`
+          *, 
+          user_roles (role),
+          organizations:organization_id (id, name, slug)
+        `)
         .eq('id', authUser.id)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // Profile not found, can happen right after signup
-          console.warn(`Profile for ${authUser.id} not found, retrying once...`);
-          // Retry once after a short delay to allow the DB trigger to run
-          await new Promise(res => setTimeout(res, 1500));
-          const { data: retryData, error: retryError } = await supabase
+        console.error('[AUTH] Erro ao carregar perfil:', error);
+        
+        if (error.code === 'PGRST116') {
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}`);
+          
+          // Se o perfil não existe, criar um perfil básico
+          console.log('[AUTH] Criando perfil básico para usuário existente...');
+          
+          // Obter nome do metadata do usuário ou usar email
+          const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário';
+          
+          // Inserir perfil básico SEM organization_id
+          const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
-            .select(`*, user_roles (role)`)
-            .eq('id', authUser.id)
+            .insert({
+              id: authUser.id,
+              name: userName,
+              avatar: '',
+              team_id: null,
+              organization_id: null // Permitir null temporariamente
+            })
+            .select(`
+              *, 
+              user_roles (role),
+              organizations:organization_id (id, name, slug)
+            `)
             .single();
 
-          if (retryError) throw retryError;
-          return retryData;
+          if (insertError) {
+            console.error('[AUTH] Erro ao criar perfil:', insertError);
+            throw insertError;
+          }
+
+          // Inserir papel padrão se não existir
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: authUser.id,
+              role: 'administrador' // Temporário para usuários legados
+            });
+
+          if (roleError && roleError.code !== '23505') { // Ignorar erro de duplicata
+            console.error('[AUTH] Erro ao criar papel:', roleError);
+          }
+
+          console.log('[AUTH] Perfil básico criado:', newProfile);
+          return newProfile;
         }
+        
         throw error;
       }
+      
+      console.log(`[AUTH] Perfil carregado com sucesso:`, data);
       return data;
     } catch (error) {
-      console.error('Error loading user profile:', error);
-      toast.error("Erro ao carregar perfil", { description: "Não foi possível carregar os dados do seu usuário." });
-      await supabase.auth.signOut();
+      console.error('[AUTH] Erro fatal ao carregar perfil:', error);
+      toast.error("Problema no sistema", { 
+        description: "Entre em contato com o administrador do sistema." 
+      });
+      
+      // Não forçar logout, mas retornar null
       return null;
     }
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     const handleAuthChange = async (event: string, session: any) => {
-      console.log(`Auth event: ${event}`, session);
+      console.log(`[AUTH] Evento: ${event}`, session ? 'com sessão' : 'sem sessão');
+      
+      if (!mounted) return;
+      
       setIsLoading(true);
       
       if (session?.user) {
         const profileData = await loadUserProfile(session.user);
 
-        if (profileData) {
+        if (mounted && profileData) {
           const roleData = profileData.user_roles;
-          const role = Array.isArray(roleData) && roleData.length > 0 ? roleData[0].role : 'tecnico';
+          const role = Array.isArray(roleData) && roleData.length > 0 
+            ? roleData[0].role 
+            : 'administrador'; // Padrão para usuários legados
           
           const authUserData: AuthUser = {
             id: profileData.id,
@@ -79,65 +145,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             team_id: profileData.team_id,
             role: role as any,
             permissions: [],
+            organization_id: profileData.organization_id,
+            organization: profileData.organizations
           };
+          
           setUser(authUserData);
-        } else {
-          // loadUserProfile failed, user is signed out
+          console.log(`[AUTH] Usuário autenticado:`, authUserData);
+          
+          // Se não tem organização, mostrar aviso
+          if (!profileData.organization_id) {
+            toast.warning("Conta sem organização", {
+              description: "Você está usando uma conta legada. Entre em contato com o administrador para migração."
+            });
+          }
+        } else if (mounted) {
           setUser(null);
         }
-      } else {
+      } else if (mounted) {
         setUser(null);
+        console.log('[AUTH] Usuário desconectado');
       }
       
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+      }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      handleAuthChange(event, session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [loadUserProfile]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('[AUTH] Iniciando login...');
     cleanupAuthState();
+    
     try {
-      // Tenta fazer sign out global ANTES de sign in (ignora erro)
-      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
-    } catch {}
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error("Erro no login", { description: "Email ou senha inválidos." });
+      // Force global signout first
+      try { 
+        await supabase.auth.signOut({ scope: 'global' }); 
+      } catch (e) {
+        console.log('[AUTH] Signout preventivo ignorado:', e);
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        console.error('[AUTH] Erro no login:', error);
+        toast.error("Erro no login", { description: "Email ou senha inválidos." });
+        return false;
+      }
+      
+      console.log('[AUTH] Login realizado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro inesperado no login:', error);
+      toast.error("Erro no login", { description: "Erro inesperado. Tente novamente." });
       return false;
     }
-    return true;
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    cleanupAuthState();
-    try {
-      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
-    } catch {}
-    const { error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: { 
-        data: { 
-          name: userData.name, 
-          role: userData.role, 
-          team_id: userData.team_id 
-        },
-        emailRedirectTo: `${window.location.origin}/login`
-      }
+    console.log('[AUTH] Tentativa de registro bloqueada - use sistema de convites');
+    toast.error("Registro não permitido", { 
+      description: "Você deve ser convidado por um administrador para se cadastrar." 
     });
-    if (error) {
-      toast.error("Erro no cadastro", { description: error.message });
-      return false;
-    }
-    toast.success("Cadastro realizado!", { description: "Verifique seu email para confirmar a conta." });
-    return true;
+    return false;
   };
 
   const logout = async (): Promise<void> => {
@@ -184,7 +260,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   }, [user]);
 
-  const value = { 
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        toast.error("Erro ao solicitar reset", { description: error.message });
+        return false;
+      }
+      
+      toast.success("Email enviado!", { 
+        description: "Verifique sua caixa de entrada para redefinir a senha." 
+      });
+      return true;
+    } catch (error) {
+      toast.error("Erro inesperado", { description: "Tente novamente mais tarde." });
+      return false;
+    }
+  };
+
+  const value: AuthContextType = { 
     user, 
     isLoading, 
     isAuthenticated: !!user, 
@@ -194,7 +291,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser, 
     updateUserInfo: setUser, 
     hasPermission, 
-    canAccessRoute, 
+    canAccessRoute,
+    requestPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

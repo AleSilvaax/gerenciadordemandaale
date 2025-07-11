@@ -14,12 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          settings: Json | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          settings?: Json | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          settings?: Json | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar: string | null
           created_at: string | null
           id: string
           name: string | null
+          organization_id: string | null
           team_id: string | null
           updated_at: string | null
         }
@@ -28,6 +59,7 @@ export type Database = {
           created_at?: string | null
           id: string
           name?: string | null
+          organization_id?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
@@ -36,10 +68,18 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string | null
+          organization_id?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_team_id_fkey"
             columns: ["team_id"]
@@ -256,6 +296,7 @@ export type Database = {
           estimated_hours: number | null
           id: string
           name: string
+          organization_id: string | null
           updated_at: string
         }
         Insert: {
@@ -265,6 +306,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           name: string
+          organization_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -274,9 +316,18 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           name?: string
+          organization_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -295,6 +346,7 @@ export type Database = {
           location: string
           notes: string | null
           number: string
+          organization_id: string | null
           photo_titles: string[] | null
           photos: string[] | null
           priority: string | null
@@ -322,6 +374,7 @@ export type Database = {
           location: string
           notes?: string | null
           number: string
+          organization_id?: string | null
           photo_titles?: string[] | null
           photos?: string[] | null
           priority?: string | null
@@ -349,6 +402,7 @@ export type Database = {
           location?: string
           notes?: string | null
           number?: string
+          organization_id?: string | null
           photo_titles?: string[] | null
           photos?: string[] | null
           priority?: string | null
@@ -369,6 +423,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "services_service_type_id_fkey"
             columns: ["service_type_id"]
             isOneToOne: false
@@ -384,6 +445,7 @@ export type Database = {
           id: string
           invite_code: string
           name: string
+          organization_id: string | null
         }
         Insert: {
           created_at?: string
@@ -391,6 +453,7 @@ export type Database = {
           id?: string
           invite_code: string
           name: string
+          organization_id?: string | null
         }
         Update: {
           created_at?: string
@@ -398,8 +461,17 @@ export type Database = {
           id?: string
           invite_code?: string
           name?: string
+          organization_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       technical_fields: {
         Row: {
@@ -408,6 +480,7 @@ export type Database = {
           id: string
           name: string
           options: Json | null
+          organization_id: string | null
           required: boolean
           service_type_id: string
           type: string
@@ -419,6 +492,7 @@ export type Database = {
           id?: string
           name: string
           options?: Json | null
+          organization_id?: string | null
           required?: boolean
           service_type_id: string
           type: string
@@ -430,6 +504,7 @@ export type Database = {
           id?: string
           name?: string
           options?: Json | null
+          organization_id?: string | null
           required?: boolean
           service_type_id?: string
           type?: string
@@ -437,10 +512,78 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "technical_fields_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "technical_fields_service_type_id_fkey"
             columns: ["service_type_id"]
             isOneToOne: false
             referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role: string
+          team_id: string | null
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role?: string
+          team_id?: string | null
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role?: string
+          team_id?: string | null
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -479,6 +622,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_first_organization: {
+        Args: { org_name: string; admin_email: string; admin_name: string }
+        Returns: string
+      }
       create_service_messages_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -510,6 +657,10 @@ export type Database = {
           service_id: string | null
           timestamp: string | null
         }[]
+      }
+      get_user_organization_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_user_role: {
         Args: { user_id: string }

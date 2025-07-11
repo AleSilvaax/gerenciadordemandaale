@@ -10,6 +10,12 @@ export interface AuthUser {
   permissions: string[];
   team_id?: string;
   signature?: string;
+  organization_id?: string; // Novo campo para multi-tenancy
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
 export interface AuthContextType {
@@ -23,6 +29,7 @@ export interface AuthContextType {
   updateUserInfo: (userData: AuthUser) => void;
   hasPermission: (permission: string) => boolean;
   canAccessRoute?: (route: string) => boolean;
+  requestPasswordReset: (email: string) => Promise<boolean>;
 }
 
 export interface RegisterFormData {
