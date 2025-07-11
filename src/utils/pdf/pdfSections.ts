@@ -100,6 +100,31 @@ export const createCoverPage = (doc: jsPDF, service: Service): void => {
 
   currentY += 40;
 
+  // Informações do cliente
+  if (service.client || service.location) {
+    doc.setFillColor(247, 249, 250);
+    doc.roundedRect(margin, currentY, contentWidth, 50, 8, 8, 'F');
+    
+    currentY += 15;
+    
+    if (service.client) {
+      currentY = addText(doc, `Cliente: ${sanitizeText(service.client)}`, margin + 15, currentY, {
+        fontSize: 13,
+        color: [52, 73, 94],
+        maxWidth: contentWidth - 30
+      });
+    }
+
+    if (service.location) {
+      currentY = addText(doc, `Local: ${sanitizeText(service.location)}`, margin + 15, currentY, {
+        fontSize: 13,
+        color: [52, 73, 94],
+        maxWidth: contentWidth - 30
+      });
+    }
+  }
+};
+
 export const addClientSection = (doc: jsPDF, service: Service, startY: number): number => {
   const margin = 20;
   const pageWidth = 210;
