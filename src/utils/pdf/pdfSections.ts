@@ -290,20 +290,55 @@ export const addSignaturesSection = async (doc: jsPDF, service: Service, startY:
   const leftColumnX = startX;
   const rightColumnX = startX + sigWidth + spacing;
   
-  const drawSignature = async (
-    type: 'CLIENTE' | 'TÉCNICO',
-    signatureData: string | undefined,
-    name: string | undefined,
-    columnX: number
-  ) => {
-    if (!signatureData) return;
+const drawSignature = async (
+  type: 'CLIENTE' | 'TÉCNICO',
+  signatureData: string | undefined,
+  name: string | undefined,
+  columnX: number
+) => {
+  if (!signatureData) return;
 
-    // Título (CLIENTE ou TÉCNICO)
-    addText(doc, type, columnX + (sigWidth / 2), currentY, {
-      fontSize: 12,
-      fontStyle: 'bold',
-      color: [52, 73, 94],
-      align: 'center'
+  // Título (CLIENTE ou TÉCNICO)
+  addText(doc, type, columnX + (sigWidth / 2), currentY, {
+    fontSize: 12,
+    fontStyle: 'bold',
+    color: [52, 73, 94],
+    align: 'center'
+  });
+
+  try {
+    const processedSignature = await processImage(signatureData);
+    if (processedSignature) {
+      const imageY = currentY + 15;
+      
+      // Borda da assinatura
+      doc.setDrawColor(189, 195, 199);
+      doc.setLineWidth(0.5);
+      doc.rect(columnX - 2, imageY - 2, sigWidth + 4, sigHeight + 4, 'S');
+      
+      // Imagem da assinatura
+      doc.addImage(processedSignature, 'PNG', columnX, imageY, sigWidth, sigHeight);
+    }
+  } catch (error) {
+    console.error(`[PDF] Erro ao processar assinatura do ${type}:`, error);
+  }
+
+  // --- MELHORIA ADICIONADA AQUI ---
+  const lineY = currentY + 70; // Posição Y da linha
+
+  // Desenha a linha de assinatura
+  doc.setDrawColor(52, 73, 94); // Cor cinza escuro
+  doc.setLineWidth(0.3);
+  doc.line(columnX, lineY, columnX + sigWidth, lineY);
+
+  // Nome abaixo da linha de assinatura
+  addText(doc, sanitizeText(name || 'N/A'), columnX + (sigWidth / 2), lineY + 5, {
+    fontSize: 9,
+    fontStyle: 'italic', // Deixa o nome em itálico para diferenciar
+    color: [127, 140, 141],
+    align: 'center'
+  });
+};
     });
 
     try {
