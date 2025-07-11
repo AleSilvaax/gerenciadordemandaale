@@ -5,6 +5,7 @@ import { Service, CustomField } from '@/types/serviceTypes';
 import { formatDate } from '@/utils/formatters';
 import { addText, sanitizeText, checkPageBreak } from './pdfHelpers';
 import { createCoverPage, addClientSection, addPhotosSection, addSignaturesSection } from './pdfSections';
+import { logger } from '@/utils/loggingService';
 
 const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -27,7 +28,7 @@ const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    console.log('[PDF] Iniciando geração do relatório profissional');
+    logger.info('Iniciando geração do relatório profissional', { serviceId: service.id });
     
     const doc = new jsPDF();
     const margin = 20;
@@ -78,7 +79,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       currentY += 15;
 
       const tableData = service.customFields.map((field: CustomField) => [
-        sanitizeText(field.name || 'Campo'),
+        sanitizeText(field.label || 'Campo'),
         sanitizeText(field.value?.toString() || 'N/A')
       ]);
 
@@ -106,8 +107,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
           doc.setFontSize(8);
           doc.setTextColor(127, 140, 141);
           doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, footerY);
-        },
-        marginBottom: 30,
+        }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -139,7 +139,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
           maxWidth: 170
         });
         
-        currentY = addText(doc, `Por: ${sanitizeText(message.sender_name)} - ${formatDate(message.timestamp)}`, margin + 10, currentY, {
+        currentY = addText(doc, `Por: ${sanitizeText(message.senderName)} - ${formatDate(message.timestamp)}`, margin + 10, currentY, {
           fontSize: 8,
           color: [127, 140, 141],
           maxWidth: 160
@@ -163,16 +163,16 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
       doc.line(margin, currentY, 210 - margin, currentY);
       currentY += 15;
 
-      if (service.feedback.rating) {
-        currentY = addText(doc, `Nota: ${service.feedback.rating}/5`, margin, currentY, {
+      if (service.feedback.clientRating) {
+        currentY = addText(doc, `Nota: ${service.feedback.clientRating}/5`, margin, currentY, {
           fontSize: 12,
           fontStyle: 'bold',
           color: [52, 73, 94]
         });
       }
 
-      if (service.feedback.comment) {
-        currentY = addText(doc, `Comentário: ${sanitizeText(service.feedback.comment)}`, margin, currentY, {
+      if (service.feedback.clientComment) {
+        currentY = addText(doc, `Comentário: ${sanitizeText(service.feedback.clientComment)}`, margin, currentY, {
           fontSize: 11,
           color: [52, 73, 94],
           maxWidth: 170
@@ -199,10 +199,10 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     const fileName = `relatorio_servico_${sanitizeText(service.number || service.id.substring(0, 8))}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
-    console.log('[PDF] Relatório profissional gerado com sucesso:', fileName);
+    logger.info('Relatório profissional gerado com sucesso', { fileName });
 
   } catch (error) {
-    console.error('[PDF] Erro ao gerar relatório profissional:', error);
+    logger.error('Erro ao gerar relatório profissional', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
     throw new Error('Erro ao gerar relatório PDF profissional: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
