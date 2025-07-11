@@ -86,6 +86,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
         head: [['Item', 'Status/Valor']],
         body: tableData,
         startY: currentY,
+        marginBottom: 35, // Garante que a tabela não chegue perto do rodapé
         styles: {
           fontSize: 10,
           cellPadding: 5,
