@@ -1,5 +1,5 @@
 
-export type ServiceStatus = "concluido" | "pendente" | "cancelado" | "em_andamento";
+export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
 export type ServiceType = string;
