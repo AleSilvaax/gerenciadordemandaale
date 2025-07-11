@@ -42,9 +42,11 @@ export const createCoverPage = (doc: jsPDF, service: Service): void => {
   // Informações principais em caixas
   const boxWidth = (contentWidth - 10) / 2;
   const boxHeight = 40;
-  const leftX = margin;
-  const rightX = margin + boxWidth + 10;
-
+  const boxSpacing = 10;
+  const totalBoxesWidth = (boxWidth * 2) + boxSpacing;
+  const leftX = (pageWidth - totalBoxesWidth) / 2;
+  const rightX = leftX + boxWidth + boxSpacing;
+  
   // Caixa OS
   doc.setFillColor(236, 240, 241);
   doc.setDrawColor(189, 195, 199);
