@@ -28,7 +28,7 @@ const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    logger.info('Iniciando geração do relatório profissional', { serviceId: service.id });
+    logger.info(`Iniciando geração do relatório profissional para serviço: ${service.id}`, 'PDF');
     
     const doc = new jsPDF();
     const margin = 20;
@@ -199,10 +199,10 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     const fileName = `relatorio_servico_${sanitizeText(service.number || service.id.substring(0, 8))}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
-    logger.info('Relatório profissional gerado com sucesso', { fileName });
+    logger.info(`Relatório profissional gerado com sucesso: ${fileName}`, 'PDF');
 
   } catch (error) {
-    logger.error('Erro ao gerar relatório profissional', { error: error instanceof Error ? error.message : 'Erro desconhecido' });
+    logger.error(`Erro ao gerar relatório profissional: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
     throw new Error('Erro ao gerar relatório PDF profissional: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
