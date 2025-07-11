@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { SecureRegisterForm } from '@/components/forms/SecureRegisterForm';
+import { SimpleRegisterForm } from '@/components/forms/SimpleRegisterForm';
 import { useAuth } from '@/context/AuthContext';
 
 const Register: React.FC = () => {
@@ -20,7 +20,7 @@ const Register: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
-  return <SecureRegisterForm />;
+  return <SimpleRegisterForm />;
 };
 
 export default Register;

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Enhanced auth state cleanup
+// Simple auth state cleanup
 export const cleanupAuthState = () => {
   console.log('[AUTH] Limpando estado de autenticação...');
   
@@ -41,30 +41,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
       
-      // Primeiro, tentar carregar o perfil com todos os relacionamentos
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *, 
-          user_roles (role),
-          organizations:organization_id (id, name, slug)
-        `)
+        .select(`*, user_roles (role)`)
         .eq('id', authUser.id)
         .single();
 
       if (error) {
-        console.error('[AUTH] Erro ao carregar perfil:', error);
-        
         if (error.code === 'PGRST116') {
-          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}`);
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}, criando perfil básico...`);
           
-          // Se o perfil não existe, criar um perfil básico
-          console.log('[AUTH] Criando perfil básico para usuário existente...');
-          
-          // Obter nome do metadata do usuário ou usar email
+          // Criar perfil básico
           const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário';
           
-          // Inserir perfil básico SEM organization_id
           const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
             .insert({
@@ -72,13 +61,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               name: userName,
               avatar: '',
               team_id: null,
-              organization_id: null // Permitir null temporariamente
+              organization_id: null
             })
-            .select(`
-              *, 
-              user_roles (role),
-              organizations:organization_id (id, name, slug)
-            `)
+            .select(`*, user_roles (role)`)
             .single();
 
           if (insertError) {
@@ -86,34 +71,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw insertError;
           }
 
-          // Inserir papel padrão se não existir
+          // Criar papel padrão (primeiro usuário será admin)
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert({
               user_id: authUser.id,
-              role: 'administrador' // Temporário para usuários legados
+              role: 'administrador' // Primeiro usuário sempre será admin
             });
 
-          if (roleError && roleError.code !== '23505') { // Ignorar erro de duplicata
+          if (roleError && roleError.code !== '23505') {
             console.error('[AUTH] Erro ao criar papel:', roleError);
           }
 
           console.log('[AUTH] Perfil básico criado:', newProfile);
           return newProfile;
         }
-        
         throw error;
       }
       
       console.log(`[AUTH] Perfil carregado com sucesso:`, data);
       return data;
     } catch (error) {
-      console.error('[AUTH] Erro fatal ao carregar perfil:', error);
-      toast.error("Problema no sistema", { 
-        description: "Entre em contato com o administrador do sistema." 
+      console.error('[AUTH] Erro ao carregar perfil:', error);
+      toast.error("Erro ao carregar perfil", { 
+        description: "Não foi possível carregar os dados do usuário." 
       });
-      
-      // Não forçar logout, mas retornar null
       return null;
     }
   }, []);
@@ -135,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const roleData = profileData.user_roles;
           const role = Array.isArray(roleData) && roleData.length > 0 
             ? roleData[0].role 
-            : 'administrador'; // Padrão para usuários legados
+            : 'administrador'; // Default role
           
           const authUserData: AuthUser = {
             id: profileData.id,
@@ -146,18 +128,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: role as any,
             permissions: [],
             organization_id: profileData.organization_id,
-            organization: profileData.organizations
           };
           
           setUser(authUserData);
           console.log(`[AUTH] Usuário autenticado:`, authUserData);
-          
-          // Se não tem organização, mostrar aviso
-          if (!profileData.organization_id) {
-            toast.warning("Conta sem organização", {
-              description: "Você está usando uma conta legada. Entre em contato com o administrador para migração."
-            });
-          }
         } else if (mounted) {
           setUser(null);
         }
@@ -184,13 +158,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     cleanupAuthState();
     
     try {
-      // Force global signout first
-      try { 
-        await supabase.auth.signOut({ scope: 'global' }); 
-      } catch (e) {
-        console.log('[AUTH] Signout preventivo ignorado:', e);
-      }
-
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -209,56 +176,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    console.log('[AUTH] Tentativa de registro bloqueada - use sistema de convites');
-    toast.error("Registro não permitido", { 
-      description: "Você deve ser convidado por um administrador para se cadastrar." 
-    });
-    return false;
+    console.log('[AUTH] Iniciando registro...');
+    cleanupAuthState();
+    
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: { 
+          data: { 
+            name: userData.name, 
+            role: userData.role, 
+            team_id: userData.team_id 
+          },
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      });
+      
+      if (error) {
+        console.error('[AUTH] Erro no registro:', error);
+        toast.error("Erro no cadastro", { description: error.message });
+        return false;
+      }
+      
+      console.log('[AUTH] Registro realizado com sucesso');
+      toast.success("Cadastro realizado!", { 
+        description: "Você já pode fazer login no sistema." 
+      });
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro inesperado no registro:', error);
+      toast.error("Erro no cadastro", { description: "Erro inesperado. Tente novamente." });
+      return false;
+    }
   };
 
   const logout = async (): Promise<void> => {
+    console.log('[AUTH] Iniciando logout...');
     cleanupAuthState();
+    
     try {
       await supabase.auth.signOut({ scope: 'global' });
-    } catch {}
-    // Força um refresh de página para garantir "logout total"
+    } catch (error) {
+      console.log('[AUTH] Erro no logout (ignorado):', error);
+    }
+    
     window.location.href = "/login";
   };
   
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
-    const { data, error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id).select().single();
-    if (error) {
-      toast.error("Erro ao atualizar perfil.", { description: error.message });
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ 
+          name: userData.name, 
+          avatar: userData.avatar 
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('[AUTH] Erro ao atualizar perfil:', error);
+        toast.error("Erro ao atualizar perfil.", { description: error.message });
+        return false;
+      }
+      
+      setUser(prev => prev ? { ...prev, ...userData } : null);
+      toast.success("Perfil atualizado com sucesso!");
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro inesperado ao atualizar perfil:', error);
+      toast.error("Erro ao atualizar perfil.", { description: "Erro inesperado." });
       return false;
     }
-    setUser(prev => prev ? { ...prev, ...userData } : null);
-    toast.success("Perfil atualizado com sucesso!");
-    return true;
   };
-
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    if (user.role === 'administrador') return true;
-    if (user.role === 'gestor') {
-        return ['view_stats', 'add_members', 'create_service'].includes(permission);
-    }
-    return false;
-  };
-
-  const canAccessRoute = useCallback((route: string): boolean => {
-    if (!user) return false;
-    if (user.role === "administrador") return true;
-    if (user.role === "gestor") {
-      // Pode acessar rotas de gestão, mas não as de admin.
-      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
-    }
-    if (user.role === "tecnico") {
-      // Técnico só pode acessar as rotas básicas
-      return ["/", "/demandas", "/demandas/:id", "/buscar", "/settings"].some((r) => route.startsWith(r));
-    }
-    return false;
-  }, [user]);
 
   const requestPasswordReset = async (email: string): Promise<boolean> => {
     try {
@@ -280,6 +274,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'administrador') return true;
+    if (user.role === 'gestor') {
+      return ['view_stats', 'add_members', 'create_service', 'manage_team'].includes(permission);
+    }
+    if (user.role === 'tecnico') {
+      return ['view_services', 'update_services'].includes(permission);
+    }
+    return false;
+  };
+
+  const canAccessRoute = useCallback((route: string): boolean => {
+    if (!user) return false;
+    if (user.role === "administrador") return true;
+    
+    if (user.role === "gestor") {
+      const allowedRoutes = [
+        "/nova-demanda", "/estatisticas", "/equipe", "/settings", "/", 
+        "/demandas", "/buscar"
+      ];
+      return allowedRoutes.some(r => route.startsWith(r));
+    }
+    
+    if (user.role === "tecnico") {
+      const allowedRoutes = ["/", "/demandas", "/buscar", "/settings"];
+      return allowedRoutes.some(r => route.startsWith(r));
+    }
+    
+    return false;
+  }, [user]);
 
   const value: AuthContextType = { 
     user, 
@@ -304,31 +330,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-const permissions: Record<string, string[]> = {
-  administrador: [
-    'view_services',
-    'create_services', 
-    'edit_services',
-    'delete_services',
-    'manage_team',
-    'view_statistics',
-    'export_reports',
-    'manage_service_types',
-    'manage_technical_fields'
-  ],
-  gestor: [
-    'view_services',
-    'create_services',
-    'edit_services',
-    'delete_services',
-    'view_statistics',
-    'export_reports'
-  ],
-  tecnico: [
-    'view_services',
-    'create_services',
-    'edit_services'
-  ]
 };
