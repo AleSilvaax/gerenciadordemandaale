@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
       
+      // Primeiro, tentar carregar o perfil com todos os relacionamentos
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -51,39 +53,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
+        console.error('[AUTH] Erro ao carregar perfil:', error);
+        
         if (error.code === 'PGRST116') {
-          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}, tentando novamente...`);
-          // Retry once after delay
-          await new Promise(res => setTimeout(res, 2000));
-          const { data: retryData, error: retryError } = await supabase
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}`);
+          
+          // Se o perfil não existe, criar um perfil básico
+          console.log('[AUTH] Criando perfil básico para usuário existente...');
+          
+          // Obter nome do metadata do usuário ou usar email
+          const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário';
+          
+          // Inserir perfil básico SEM organization_id
+          const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
+            .insert({
+              id: authUser.id,
+              name: userName,
+              avatar: '',
+              team_id: null,
+              organization_id: null // Permitir null temporariamente
+            })
             .select(`
               *, 
               user_roles (role),
               organizations:organization_id (id, name, slug)
             `)
-            .eq('id', authUser.id)
             .single();
 
-          if (retryError) {
-            console.error('[AUTH] Erro no retry:', retryError);
-            throw retryError;
+          if (insertError) {
+            console.error('[AUTH] Erro ao criar perfil:', insertError);
+            throw insertError;
           }
-          return retryData;
+
+          // Inserir papel padrão se não existir
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: authUser.id,
+              role: 'administrador' // Temporário para usuários legados
+            });
+
+          if (roleError && roleError.code !== '23505') { // Ignorar erro de duplicata
+            console.error('[AUTH] Erro ao criar papel:', roleError);
+          }
+
+          console.log('[AUTH] Perfil básico criado:', newProfile);
+          return newProfile;
         }
+        
         throw error;
       }
       
       console.log(`[AUTH] Perfil carregado com sucesso:`, data);
       return data;
     } catch (error) {
-      console.error('[AUTH] Erro ao carregar perfil:', error);
-      toast.error("Erro ao carregar perfil", { 
-        description: "Não foi possível carregar os dados do usuário." 
+      console.error('[AUTH] Erro fatal ao carregar perfil:', error);
+      toast.error("Problema no sistema", { 
+        description: "Entre em contato com o administrador do sistema." 
       });
       
-      // Force logout on profile load failure
-      await supabase.auth.signOut();
+      // Não forçar logout, mas retornar null
       return null;
     }
   }, []);
@@ -105,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const roleData = profileData.user_roles;
           const role = Array.isArray(roleData) && roleData.length > 0 
             ? roleData[0].role 
-            : 'tecnico';
+            : 'administrador'; // Padrão para usuários legados
           
           const authUserData: AuthUser = {
             id: profileData.id,
@@ -121,6 +151,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           setUser(authUserData);
           console.log(`[AUTH] Usuário autenticado:`, authUserData);
+          
+          // Se não tem organização, mostrar aviso
+          if (!profileData.organization_id) {
+            toast.warning("Conta sem organização", {
+              description: "Você está usando uma conta legada. Entre em contato com o administrador para migração."
+            });
+          }
         } else if (mounted) {
           setUser(null);
         }
