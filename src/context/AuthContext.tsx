@@ -6,19 +6,29 @@ import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Limpar todos os estados de autenticação da Supabase (fix para limbo de sessão)
+// Enhanced auth state cleanup
 export const cleanupAuthState = () => {
-  // Remove supabase padrões
-  localStorage.removeItem('supabase.auth.token');
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      localStorage.removeItem(key);
-    }
+  console.log('[AUTH] Limpando estado de autenticação...');
+  
+  // Remove all Supabase auth keys
+  const keysToRemove = Object.keys(localStorage).filter(key => 
+    key.startsWith('supabase.auth.') || 
+    key.includes('sb-') ||
+    key === 'supabase.auth.token'
+  );
+  
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`[AUTH] Removido: ${key}`);
   });
-  Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      sessionStorage.removeItem(key);
-    }
+
+  // Clean sessionStorage too
+  const sessionKeysToRemove = Object.keys(sessionStorage || {}).filter(key => 
+    key.startsWith('supabase.auth.') || key.includes('sb-')
+  );
+  
+  sessionKeysToRemove.forEach(key => {
+    sessionStorage.removeItem(key);
   });
 };
 
@@ -28,48 +38,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = useCallback(async (authUser: User) => {
     try {
+      console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
+      
       const { data, error } = await supabase
         .from('profiles')
-        .select(`*, user_roles (role)`)
+        .select(`
+          *, 
+          user_roles (role),
+          organizations:organization_id (id, name, slug)
+        `)
         .eq('id', authUser.id)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // Profile not found, can happen right after signup
-          console.warn(`Profile for ${authUser.id} not found, retrying once...`);
-          // Retry once after a short delay to allow the DB trigger to run
-          await new Promise(res => setTimeout(res, 1500));
+        if (error.code === 'PGRST116') {
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}, tentando novamente...`);
+          // Retry once after delay
+          await new Promise(res => setTimeout(res, 2000));
           const { data: retryData, error: retryError } = await supabase
             .from('profiles')
-            .select(`*, user_roles (role)`)
+            .select(`
+              *, 
+              user_roles (role),
+              organizations:organization_id (id, name, slug)
+            `)
             .eq('id', authUser.id)
             .single();
 
-          if (retryError) throw retryError;
+          if (retryError) {
+            console.error('[AUTH] Erro no retry:', retryError);
+            throw retryError;
+          }
           return retryData;
         }
         throw error;
       }
+      
+      console.log(`[AUTH] Perfil carregado com sucesso:`, data);
       return data;
     } catch (error) {
-      console.error('Error loading user profile:', error);
-      toast.error("Erro ao carregar perfil", { description: "Não foi possível carregar os dados do seu usuário." });
+      console.error('[AUTH] Erro ao carregar perfil:', error);
+      toast.error("Erro ao carregar perfil", { 
+        description: "Não foi possível carregar os dados do usuário." 
+      });
+      
+      // Force logout on profile load failure
       await supabase.auth.signOut();
       return null;
     }
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     const handleAuthChange = async (event: string, session: any) => {
-      console.log(`Auth event: ${event}`, session);
+      console.log(`[AUTH] Evento: ${event}`, session ? 'com sessão' : 'sem sessão');
+      
+      if (!mounted) return;
+      
       setIsLoading(true);
       
       if (session?.user) {
         const profileData = await loadUserProfile(session.user);
 
-        if (profileData) {
+        if (mounted && profileData) {
           const roleData = profileData.user_roles;
-          const role = Array.isArray(roleData) && roleData.length > 0 ? roleData[0].role : 'tecnico';
+          const role = Array.isArray(roleData) && roleData.length > 0 
+            ? roleData[0].role 
+            : 'tecnico';
           
           const authUserData: AuthUser = {
             id: profileData.id,
@@ -79,65 +115,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             team_id: profileData.team_id,
             role: role as any,
             permissions: [],
+            organization_id: profileData.organization_id,
+            organization: profileData.organizations
           };
+          
           setUser(authUserData);
-        } else {
-          // loadUserProfile failed, user is signed out
+          console.log(`[AUTH] Usuário autenticado:`, authUserData);
+        } else if (mounted) {
           setUser(null);
         }
-      } else {
+      } else if (mounted) {
         setUser(null);
+        console.log('[AUTH] Usuário desconectado');
       }
       
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+      }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      handleAuthChange(event, session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [loadUserProfile]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('[AUTH] Iniciando login...');
     cleanupAuthState();
+    
     try {
-      // Tenta fazer sign out global ANTES de sign in (ignora erro)
-      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
-    } catch {}
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error("Erro no login", { description: "Email ou senha inválidos." });
+      // Force global signout first
+      try { 
+        await supabase.auth.signOut({ scope: 'global' }); 
+      } catch (e) {
+        console.log('[AUTH] Signout preventivo ignorado:', e);
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        console.error('[AUTH] Erro no login:', error);
+        toast.error("Erro no login", { description: "Email ou senha inválidos." });
+        return false;
+      }
+      
+      console.log('[AUTH] Login realizado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro inesperado no login:', error);
+      toast.error("Erro no login", { description: "Erro inesperado. Tente novamente." });
       return false;
     }
-    return true;
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    cleanupAuthState();
-    try {
-      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
-    } catch {}
-    const { error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: { 
-        data: { 
-          name: userData.name, 
-          role: userData.role, 
-          team_id: userData.team_id 
-        },
-        emailRedirectTo: `${window.location.origin}/login`
-      }
+    console.log('[AUTH] Tentativa de registro bloqueada - use sistema de convites');
+    toast.error("Registro não permitido", { 
+      description: "Você deve ser convidado por um administrador para se cadastrar." 
     });
-    if (error) {
-      toast.error("Erro no cadastro", { description: error.message });
-      return false;
-    }
-    toast.success("Cadastro realizado!", { description: "Verifique seu email para confirmar a conta." });
-    return true;
+    return false;
   };
 
   const logout = async (): Promise<void> => {
@@ -205,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = { 
+  const value: AuthContextType = { 
     user, 
     isLoading, 
     isAuthenticated: !!user, 
