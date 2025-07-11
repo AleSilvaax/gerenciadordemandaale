@@ -26,12 +26,33 @@ export const inviteService = {
     try {
       console.log('[INVITE] Criando convite:', inviteData);
       
+      // Obter dados do usuário atual
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast.error('Usuário não autenticado');
+        return false;
+      }
+
+      // Obter organization_id do usuário atual
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (!profile?.organization_id) {
+        toast.error('Usuário não pertence a nenhuma organização');
+        return false;
+      }
+      
       const { error } = await supabase
         .from('user_invites')
         .insert({
           email: inviteData.email,
           role: inviteData.role,
-          team_id: inviteData.team_id || null
+          team_id: inviteData.team_id || null,
+          organization_id: profile.organization_id,
+          invited_by: userData.user.id
         });
 
       if (error) {

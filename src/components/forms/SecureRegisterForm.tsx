@@ -54,7 +54,7 @@ export const SecureRegisterForm: React.FC = () => {
             role,
             organization_id,
             team_id,
-            organizations:organization_id (name),
+            organization:organizations!organization_id (name),
             invited_by_profile:profiles!invited_by (name)
           `)
           .eq('token', token)
@@ -190,7 +190,7 @@ export const SecureRegisterForm: React.FC = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Bem-vindo!</CardTitle>
             <CardDescription>
-              Você foi convidado para se juntar à <strong>{inviteData?.organizations?.name}</strong>
+              Você foi convidado para se juntar à <strong>{inviteData?.organization?.name}</strong>
               <br />
               Função: <strong className="capitalize">{inviteData?.role}</strong>
             </CardDescription>

@@ -57,12 +57,25 @@ export const optimizedServiceCrud = {
       }
 
       if (filters.technicianId) {
-        query = query.in('id', 
-          supabase
-            .from('service_technicians')
-            .select('service_id')
-            .eq('technician_id', filters.technicianId)
-        );
+        // Buscar service_ids atribuídos ao técnico
+        const { data: assignedServices } = await supabase
+          .from('service_technicians')
+          .select('service_id')
+          .eq('technician_id', filters.technicianId);
+
+        const serviceIds = assignedServices?.map(a => a.service_id) || [];
+        if (serviceIds.length > 0) {
+          query = query.in('id', serviceIds);
+        } else {
+          // Se não há serviços atribuídos, retornar array vazio
+          return {
+            data: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0
+          };
+        }
       }
 
       if (filters.startDate) {
@@ -137,13 +150,46 @@ export const optimizedServiceCrud = {
       const { data: numberData } = await supabase.rpc('nextval_for_service');
       const serviceNumber = numberData?.toString().padStart(6, '0') || '000001';
 
+      // Obter organization_id do usuário atual
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (!profile?.organization_id) {
+        throw new Error('Usuário não pertence a nenhuma organização');
+      }
+
+      // Preparar dados para inserção
+      const insertData = {
+        title: serviceData.title,
+        description: serviceData.description,
+        location: serviceData.location,
+        status: serviceData.status || 'pendente',
+        priority: serviceData.priority || 'media',
+        service_type: serviceData.serviceType,
+        client: serviceData.client,
+        address: serviceData.address,
+        city: serviceData.city,
+        date: serviceData.date,
+        notes: serviceData.notes,
+        estimated_hours: serviceData.estimatedHours,
+        number: serviceNumber,
+        created_by: userData.user.id,
+        organization_id: profile.organization_id,
+        custom_fields: serviceData.customFields ? JSON.stringify(serviceData.customFields) : null,
+        feedback: serviceData.feedback ? JSON.stringify(serviceData.feedback) : null
+      };
+
       const { data, error } = await supabase
         .from('services')
-        .insert({
-          ...serviceData,
-          number: serviceNumber,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        })
+        .insert(insertData)
         .select(`
           *,
           service_technicians!left (
@@ -178,15 +224,31 @@ export const optimizedServiceCrud = {
 
       console.log('[SERVICES] Atualizando serviço:', serviceData.id);
 
-      const { id, technician, technicians, messages, ...updateData } = serviceData;
+      // Preparar dados para atualização
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Mapear apenas os campos que existem na tabela
+      if (serviceData.title !== undefined) updateData.title = serviceData.title;
+      if (serviceData.description !== undefined) updateData.description = serviceData.description;
+      if (serviceData.location !== undefined) updateData.location = serviceData.location;
+      if (serviceData.status !== undefined) updateData.status = serviceData.status;
+      if (serviceData.priority !== undefined) updateData.priority = serviceData.priority;
+      if (serviceData.serviceType !== undefined) updateData.service_type = serviceData.serviceType;
+      if (serviceData.client !== undefined) updateData.client = serviceData.client;
+      if (serviceData.address !== undefined) updateData.address = serviceData.address;
+      if (serviceData.city !== undefined) updateData.city = serviceData.city;
+      if (serviceData.date !== undefined) updateData.date = serviceData.date;
+      if (serviceData.notes !== undefined) updateData.notes = serviceData.notes;
+      if (serviceData.estimatedHours !== undefined) updateData.estimated_hours = serviceData.estimatedHours;
+      if (serviceData.customFields !== undefined) updateData.custom_fields = JSON.stringify(serviceData.customFields);
+      if (serviceData.feedback !== undefined) updateData.feedback = JSON.stringify(serviceData.feedback);
 
       const { data, error } = await supabase
         .from('services')
-        .update({
-          ...updateData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
+        .update(updateData)
+        .eq('id', serviceData.id)
         .select(`
           *,
           service_technicians!left (
@@ -311,7 +373,9 @@ export const optimizedServiceCrud = {
         role: 'tecnico'
       },
       technicians,
-      messages: []
+      messages: [],
+      customFields: data.custom_fields ? JSON.parse(data.custom_fields) : [],
+      feedback: data.feedback ? JSON.parse(data.feedback) : undefined
     };
   }
 };
