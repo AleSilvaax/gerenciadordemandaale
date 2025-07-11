@@ -28,6 +28,10 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
     }
   };
 
+  const getServiceDate = () => {
+    return service.created_at || service.creationDate || service.date || new Date().toISOString();
+  };
+
   return (
     <Card className="w-full mb-3">
       <CardContent className="p-4">
@@ -42,7 +46,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
                 #{service.number}
               </p>
             </div>
-            <StatusBadge status={service.status} size="sm" />
+            <StatusBadge status={service.status} small />
           </div>
 
           {/* Client and Location */}
@@ -64,7 +68,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="w-3 h-3" />
-              <span>{formatDate(service.createdAt)}</span>
+              <span>{formatDate(getServiceDate())}</span>
             </div>
             
             {service.priority && (

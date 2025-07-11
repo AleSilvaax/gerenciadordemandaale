@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { ServiceFiltersType } from '@/hooks/useServiceFilters';
+import { FilterState } from '@/hooks/useServiceFilters';
 
 interface MobileServiceFiltersProps {
-  filters: ServiceFiltersType;
-  onFilterChange: (key: keyof ServiceFiltersType, value: any) => void;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: any) => void;
   onClearFilters: () => void;
   serviceTypes: string[];
   totalResults: number;
@@ -83,24 +83,6 @@ export const MobileServiceFilters: React.FC<MobileServiceFiltersProps> = ({
                       <SelectItem value="em_andamento">Em Andamento</SelectItem>
                       <SelectItem value="concluido">Concluído</SelectItem>
                       <SelectItem value="cancelado">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Prioridade</label>
-                  <Select
-                    value={filters.priority}
-                    onValueChange={(value) => onFilterChange('priority', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas as prioridades" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
