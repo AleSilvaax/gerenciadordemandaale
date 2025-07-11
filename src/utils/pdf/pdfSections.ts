@@ -267,7 +267,6 @@ export const addSignaturesSection = async (doc: jsPDF, service: Service, startY:
 
   const margin = 20;
   const pageWidth = 210;
-  const contentWidth = pageWidth - (margin * 2);
   let currentY = checkPageBreak(doc, startY, 120);
 
   currentY = addText(doc, 'ASSINATURAS', margin, currentY, {
@@ -281,13 +280,26 @@ export const addSignaturesSection = async (doc: jsPDF, service: Service, startY:
   doc.line(margin, currentY, pageWidth - margin, currentY);
   currentY += 25;
 
-  const signatureWidth = (contentWidth - 40) / 2;
-  const leftX = margin + 20;
-  const rightX = leftX + signatureWidth + 40;
+  // --- NOVA LÓGICA DE CÁLCULO ---
+  const sigWidth = 75; // Largura de cada caixa de assinatura
+  const sigHeight = 40; // Altura de cada caixa de assinatura
+  const spacing = 15; // Espaçamento entre as caixas
+  const totalSignaturesWidth = (sigWidth * 2) + spacing;
+  const startX = (pageWidth - totalSignaturesWidth) / 2; // Ponto X inicial para centralizar o conjunto
 
-  // Assinatura do Cliente
-  if (service.signatures.client) {
-    addText(doc, 'CLIENTE', leftX + (signatureWidth / 2), currentY, {
+  const leftColumnX = startX;
+  const rightColumnX = startX + sigWidth + spacing;
+  
+  const drawSignature = async (
+    type: 'CLIENTE' | 'TÉCNICO',
+    signatureData: string | undefined,
+    name: string | undefined,
+    columnX: number
+  ) => {
+    if (!signatureData) return;
+
+    // Título (CLIENTE ou TÉCNICO)
+    addText(doc, type, columnX + (sigWidth / 2), currentY, {
       fontSize: 12,
       fontStyle: 'bold',
       color: [52, 73, 94],
@@ -295,61 +307,33 @@ export const addSignaturesSection = async (doc: jsPDF, service: Service, startY:
     });
 
     try {
-      const processedSignature = await processImage(service.signatures.client);
+      const processedSignature = await processImage(signatureData);
       if (processedSignature) {
-        const sigWidth = 80;
-        const sigHeight = 40;
-        const sigX = leftX + (signatureWidth - sigWidth) / 2;
+        const imageY = currentY + 15;
         
+        // Borda da assinatura
         doc.setDrawColor(189, 195, 199);
         doc.setLineWidth(0.5);
-        doc.rect(sigX - 2, currentY + 13, sigWidth + 4, sigHeight + 4);
+        doc.rect(columnX - 2, imageY - 2, sigWidth + 4, sigHeight + 4, 'S');
         
-        doc.addImage(processedSignature, 'PNG', sigX, currentY + 15, sigWidth, sigHeight);
+        // Imagem da assinatura
+        doc.addImage(processedSignature, 'PNG', columnX, imageY, sigWidth, sigHeight);
       }
     } catch (error) {
-      console.error('[PDF] Erro ao processar assinatura do cliente:', error);
+      console.error(`[PDF] Erro ao processar assinatura do ${type}:`, error);
     }
 
-    addText(doc, sanitizeText(service.client || 'N/A'), leftX + (signatureWidth / 2), currentY + 70, {
+    // Nome abaixo da assinatura
+    addText(doc, sanitizeText(name || 'N/A'), columnX + (sigWidth / 2), currentY + 70, {
       fontSize: 10,
       color: [127, 140, 141],
       align: 'center'
     });
-  }
+  };
 
-  // Assinatura do Técnico
-  if (service.signatures.technician) {
-    addText(doc, 'TÉCNICO', rightX + (signatureWidth / 2), currentY, {
-      fontSize: 12,
-      fontStyle: 'bold',
-      color: [52, 73, 94],
-      align: 'center'
-    });
-
-    try {
-      const processedSignature = await processImage(service.signatures.technician);
-      if (processedSignature) {
-        const sigWidth = 80;
-        const sigHeight = 40;
-        const sigX = rightX + (signatureWidth - sigWidth) / 2;
-        
-        doc.setDrawColor(189, 195, 199);
-        doc.setLineWidth(0.5);
-        doc.rect(sigX - 2, currentY + 13, sigWidth + 4, sigHeight + 4);
-        
-        doc.addImage(processedSignature, 'PNG', sigX, currentY + 15, sigWidth, sigHeight);
-      }
-    } catch (error) {
-      console.error('[PDF] Erro ao processar assinatura do técnico:', error);
-    }
-
-    addText(doc, sanitizeText(service.technician?.name || 'N/A'), rightX + (signatureWidth / 2), currentY + 70, {
-      fontSize: 10,
-      color: [127, 140, 141],
-      align: 'center'
-    });
-  }
+  // Desenha as duas assinaturas
+  await drawSignature('CLIENTE', service.signatures.client, service.client, leftColumnX);
+  await drawSignature('TÉCNICO', service.signatures.technician, service.technician?.name, rightColumnX);
 
   return currentY + 85;
 };
