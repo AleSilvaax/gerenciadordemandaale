@@ -1,4 +1,3 @@
-// Em: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -7,7 +6,6 @@ import { formatDate } from '@/utils/formatters';
 import { addText, sanitizeText, checkPageBreak } from './pdfHelpers';
 import { createCoverPage, addClientSection, addPhotosSection, addSignaturesSection } from './pdfSections';
 
-// --- NOVA FUNÇÃO PARA O RODAPÉ ---
 const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -27,7 +25,6 @@ const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
   doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
 };
 
-
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
     console.log('[PDF] Iniciando geração do relatório profissional');
@@ -46,28 +43,62 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
     // === DESCRIÇÃO DO SERVIÇO ===
     if (service.description) {
-      // ... (código da descrição continua o mesmo)
       currentY = checkPageBreak(doc, currentY, 40);
-      currentY = addText(doc, 'DESCRIÇÃO DO SERVIÇO', /* ... */);
-      // ...
+      currentY = addText(doc, 'DESCRIÇÃO DO SERVIÇO', margin, currentY, {
+        fontSize: 16,
+        fontStyle: 'bold',
+        color: [41, 128, 185]
+      });
+
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(1);
+      doc.line(margin, currentY, 210 - margin, currentY);
+      currentY += 15;
+
+      currentY = addText(doc, sanitizeText(service.description), margin, currentY, {
+        fontSize: 11,
+        color: [52, 73, 94],
+        maxWidth: 170
+      });
       currentY += 20;
     }
 
-    // === CHECKLIST TÉCNICO (COM A CORREÇÃO) ===
+    // === CHECKLIST TÉCNICO ===
     if (service.customFields && service.customFields.length > 0) {
       currentY = checkPageBreak(doc, currentY, 60);
-      currentY = addText(doc, 'CHECKLIST TÉCNICO', /* ... */);
+      currentY = addText(doc, 'CHECKLIST TÉCNICO', margin, currentY, {
+        fontSize: 16,
+        fontStyle: 'bold',
+        color: [41, 128, 185]
+      });
+
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(1);
+      doc.line(margin, currentY, 210 - margin, currentY);
       currentY += 15;
 
-      const tableData = service.customFields.map(/* ... */);
+      const tableData = service.customFields.map((field: CustomField) => [
+        sanitizeText(field.name || 'Campo'),
+        sanitizeText(field.value?.toString() || 'N/A')
+      ]);
 
       autoTable(doc, {
         head: [['Item', 'Status/Valor']],
         body: tableData,
         startY: currentY,
-        // O hook didDrawPage garante que o rodapé seja adicionado a cada página criada pela tabela
+        styles: {
+          fontSize: 10,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [248, 249, 250],
+        },
         didDrawPage: (data) => {
-          // Note que ainda não sabemos o total de páginas, então adicionamos o rodapé sem o total
           const pageHeight = doc.internal.pageSize.getHeight();
           const footerY = pageHeight - 15;
           doc.setDrawColor(189, 195, 199);
@@ -76,8 +107,7 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
           doc.setTextColor(127, 140, 141);
           doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, footerY);
         },
-        // A margem inferior garante que a tabela não escreva sobre a área do rodapé
-        marginBottom: 30, 
+        marginBottom: 30,
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -88,25 +118,79 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 
     // === HISTÓRICO DE COMUNICAÇÃO ===
     if (service.messages && service.messages.length > 0) {
-       // ... (código do histórico continua o mesmo) ...
+      currentY = checkPageBreak(doc, currentY, 60);
+      currentY = addText(doc, 'HISTÓRICO DE COMUNICAÇÃO', margin, currentY, {
+        fontSize: 16,
+        fontStyle: 'bold',
+        color: [41, 128, 185]
+      });
+
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(1);
+      doc.line(margin, currentY, 210 - margin, currentY);
+      currentY += 15;
+
+      service.messages.slice(0, 5).forEach((message, index) => {
+        currentY = checkPageBreak(doc, currentY, 30);
+        
+        currentY = addText(doc, `${index + 1}. ${sanitizeText(message.message)}`, margin, currentY, {
+          fontSize: 10,
+          color: [52, 73, 94],
+          maxWidth: 170
+        });
+        
+        currentY = addText(doc, `Por: ${sanitizeText(message.sender_name)} - ${formatDate(message.timestamp)}`, margin + 10, currentY, {
+          fontSize: 8,
+          color: [127, 140, 141],
+          maxWidth: 160
+        });
+        currentY += 5;
+      });
+      currentY += 15;
     }
 
     // === AVALIAÇÃO DO CLIENTE ===
     if (service.feedback) {
-       // ... (código do feedback continua o mesmo) ...
+      currentY = checkPageBreak(doc, currentY, 40);
+      currentY = addText(doc, 'AVALIAÇÃO DO CLIENTE', margin, currentY, {
+        fontSize: 16,
+        fontStyle: 'bold',
+        color: [41, 128, 185]
+      });
+
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(1);
+      doc.line(margin, currentY, 210 - margin, currentY);
+      currentY += 15;
+
+      if (service.feedback.rating) {
+        currentY = addText(doc, `Nota: ${service.feedback.rating}/5`, margin, currentY, {
+          fontSize: 12,
+          fontStyle: 'bold',
+          color: [52, 73, 94]
+        });
+      }
+
+      if (service.feedback.comment) {
+        currentY = addText(doc, `Comentário: ${sanitizeText(service.feedback.comment)}`, margin, currentY, {
+          fontSize: 11,
+          color: [52, 73, 94],
+          maxWidth: 170
+        });
+      }
+      currentY += 15;
     }
 
     // === ASSINATURAS ===
     currentY = await addSignaturesSection(doc, service, currentY);
 
-    // === ADICIONAR RODAPÉ COM NÚMERO TOTAL DE PÁGINAS (AGORA NO FINAL) ===
+    // === ADICIONAR RODAPÉ COM NÚMERO TOTAL DE PÁGINAS ===
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       const pageWidth = doc.internal.pageSize.getWidth();
       const footerY = doc.internal.pageSize.getHeight() - 15;
       
-      // Adiciona apenas o número da página, o resto já foi desenhado
       doc.setFontSize(8);
       doc.setTextColor(127, 140, 141);
       doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, footerY, { align: 'right' });

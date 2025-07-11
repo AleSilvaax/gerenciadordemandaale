@@ -9,115 +9,86 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
-import { AdvancedSearch } from "@/components/search/AdvancedSearch";
+import { ServiceFilters } from "@/components/filters/ServiceFilters";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
-import { useOptimizedServices } from "@/hooks/useOptimizedServices";
+import { useServiceFilters } from "@/hooks/useServiceFilters";
+import { useServices } from "@/hooks/useServices";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useServiceTypes } from "@/hooks/useServiceTypes";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-interface LocalSearchFilters {
-  status: string;
-  priority: string;
-  serviceType: string;
-  client: string;
-  location: string;
-  searchTerm: string;
-  dateFrom: Date | null;
-  dateTo: Date | null;
-  technician: string;
-}
-
 const Demandas = () => {
   const navigate = useNavigate();
+  const { services, isLoading, error, refreshServices } = useServices();
+  const { teamMembers } = useTeamMembers();
+  const { serviceTypes } = useServiceTypes();
+  
   const {
-    services,
-    isLoading,
-    error,
     filters,
-    serviceStats,
-    filterOptions,
-    actions
-  } = useOptimizedServices();
+    filteredServices,
+    updateFilter,
+    clearFilters
+  } = useServiceFilters(services);
 
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<LocalSearchFilters>({
-    status: 'all',
-    priority: 'all',
-    serviceType: 'all',
-    client: '',
-    location: '',
-    searchTerm: '',
-    dateFrom: null,
-    dateTo: null,
-    technician: 'all'
-  });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Handler otimizado para busca
-  const handleSearch = useCallback((term: string) => {
-    actions.setSearchTerm(term);
-  }, [actions]);
+  // Estatísticas calculadas
+  const serviceStats = useMemo(() => {
+    const total = services.length;
+    const pending = services.filter(s => s.status === 'pendente').length;
+    const completed = services.filter(s => s.status === 'concluido').length;
+    const cancelled = services.filter(s => s.status === 'cancelado').length;
+    const highPriority = services.filter(s => s.priority === 'alta').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Handler otimizado para filtros
-  const handleFilterChange = useCallback((filterType: string, value: string) => {
-    switch (filterType) {
-      case 'status':
-        actions.setStatusFilter(value);
-        break;
-      case 'priority':
-        actions.setPriorityFilter(value);
-        break;
-      case 'serviceType':
-        actions.setServiceTypeFilter(value);
-        break;
-    }
-  }, [actions]);
+    return {
+      total,
+      pending,
+      inProgress: pending,
+      completed,
+      highPriority,
+      completionRate,
+    };
+  }, [services]);
+
+  // Lista de tipos de serviço únicos
+  const uniqueServiceTypes = useMemo(() => {
+    const types = [...new Set(services.map(s => s.serviceType).filter(Boolean))];
+    return types.filter(type => type.trim() !== '');
+  }, [services]);
 
   // Handler para refresh manual
   const handleRefresh = useCallback(async () => {
     try {
-      await actions.loadServices();
+      await refreshServices();
       toast.success("Demandas atualizadas!");
     } catch (error) {
       toast.error("Erro ao atualizar demandas");
     }
-  }, [actions]);
+  }, [refreshServices]);
 
   // Export handler com menu
   const handleExport = useCallback((format: 'csv' | 'excel' | 'statistics') => {
-    const { exportToCSV, exportToExcel, exportStatistics } = require('@/utils/exportUtils');
-    
-    switch (format) {
-      case 'csv':
-        exportToCSV(services, 'demandas');
-        break;
-      case 'excel':
-        exportToExcel(services, 'demandas');
-        break;
-      case 'statistics':
-        exportStatistics(services, 'estatisticas');
-        break;
+    try {
+      const { exportToCSV, exportToExcel, exportStatistics } = require('@/utils/exportUtils');
+      
+      switch (format) {
+        case 'csv':
+          exportToCSV(filteredServices, 'demandas');
+          break;
+        case 'excel':
+          exportToExcel(filteredServices, 'demandas');
+          break;
+        case 'statistics':
+          exportStatistics(filteredServices, 'estatisticas');
+          break;
+      }
+      toast.success(`Dados exportados em ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Erro ao exportar dados");
     }
-  }, [services]);
-
-  // Handler para filtros avançados
-  const handleAdvancedFiltersChange = useCallback((newFilters: LocalSearchFilters) => {
-    setSearchFilters(newFilters);
-  }, []);
-
-  const handleClearAdvancedFilters = useCallback(() => {
-    setSearchFilters({
-      status: 'all',
-      priority: 'all',
-      serviceType: 'all',
-      client: '',
-      location: '',
-      searchTerm: '',
-      dateFrom: null,
-      dateTo: null,
-      technician: 'all'
-    });
-    actions.clearFilters();
-  }, [actions]);
+  }, [filteredServices]);
 
   if (error) {
     return (
@@ -210,91 +181,24 @@ const Demandas = () => {
           <StatisticsCards {...serviceStats} />
         </motion.div>
 
-        {/* Filtros rápidos */}
-        <motion.div 
-          className="flex flex-col lg:flex-row gap-4"
+        {/* Sistema de Filtros Integrado */}
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Buscar demandas..."
-              value={filters.searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="concluido">Concluído</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.priority} onValueChange={(value) => handleFilterChange('priority', value)}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.serviceType} onValueChange={(value) => handleFilterChange('serviceType', value)}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {filterOptions.serviceTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-              className="gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              Filtros
-            </Button>
-          </div>
+          <ServiceFilters
+            filters={filters}
+            onFilterChange={updateFilter}
+            onClearFilters={clearFilters}
+            onExport={() => handleExport('csv')}
+            technicians={teamMembers}
+            serviceTypes={uniqueServiceTypes}
+            totalResults={filteredServices.length}
+          />
         </motion.div>
 
-        {/* Busca avançada */}
-        {showAdvancedSearch && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AdvancedSearch
-              filters={searchFilters}
-              onFiltersChange={handleAdvancedFiltersChange}
-              onClearFilters={handleClearAdvancedFilters}
-              serviceTypes={filterOptions.serviceTypes}
-              technicians={[]}
-            />
-          </motion.div>
-        )}
-
-        {/* Lista de demandas em cards verticais */}
+        {/* Lista de demandas */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -321,12 +225,12 @@ const Demandas = () => {
                 </Card>
               ))}
             </div>
-          ) : services.length === 0 ? (
+          ) : filteredServices.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
                 <p className="text-lg font-medium mb-2">Nenhuma demanda encontrada</p>
                 <p className="text-muted-foreground mb-4">
-                  {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all' || filters.serviceType !== 'all' 
+                  {filters.search || filters.status !== 'todos' || filters.serviceType !== 'all' 
                     ? "Tente ajustar os filtros de busca" 
                     : "Crie sua primeira demanda para começar"
                   }
@@ -339,7 +243,7 @@ const Demandas = () => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {services.map((service, index) => (
+              {filteredServices.map((service, index) => (
                 <motion.div
                   key={service.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -354,7 +258,7 @@ const Demandas = () => {
         </motion.div>
 
         {/* Informações de resultados */}
-        {!isLoading && services.length > 0 && (
+        {!isLoading && filteredServices.length > 0 && (
           <motion.div 
             className="flex justify-center"
             initial={{ opacity: 0 }}
@@ -362,7 +266,7 @@ const Demandas = () => {
             transition={{ delay: 0.5 }}
           >
             <Badge variant="outline" className="px-4 py-2">
-              Mostrando {services.length} de {serviceStats.total} demandas
+              Mostrando {filteredServices.length} de {serviceStats.total} demandas
             </Badge>
           </motion.div>
         )}

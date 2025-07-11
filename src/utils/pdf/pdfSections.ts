@@ -280,17 +280,16 @@ export const addSignaturesSection = async (doc: jsPDF, service: Service, startY:
   doc.line(margin, currentY, pageWidth - margin, currentY);
   currentY += 25;
 
-  // --- NOVA LÓGICA DE CÁLCULO ---
-  const sigWidth = 75; // Largura de cada caixa de assinatura
-  const sigHeight = 40; // Altura de cada caixa de assinatura
-  const spacing = 15; // Espaçamento entre as caixas
+  const sigWidth = 75;
+  const sigHeight = 40;
+  const spacing = 15;
   const totalSignaturesWidth = (sigWidth * 2) + spacing;
-  const startX = (pageWidth - totalSignaturesWidth) / 2; // Ponto X inicial para centralizar o conjunto
+  const startX = (pageWidth - totalSignaturesWidth) / 2;
 
   const leftColumnX = startX;
   const rightColumnX = startX + sigWidth + spacing;
   
-const drawSignature = async (
+  const drawSignature = async (
     type: 'CLIENTE' | 'TÉCNICO',
     signatureData: string | undefined,
     name: string | undefined,

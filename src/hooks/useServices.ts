@@ -4,7 +4,6 @@ import { useServiceStore } from '@/store/serviceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useCachedData } from './useCachedData';
 import { getServices } from '@/services/servicesDataService';
-import { useOptimizedServices } from './useOptimizedServices';
 
 export const useServices = () => {
   const { addNotification } = useUIStore();
@@ -46,12 +45,10 @@ export const useServices = () => {
     }
   }, [error, addNotification]);
 
-  // Use optimized services hook for filtering and performance
-  const optimizedServices = useOptimizedServices();
-
   return {
-    ...optimizedServices,
+    services,
+    isLoading,
+    error,
     refreshServices: () => mutate(), // Use mutate to refresh cache
-    isLoading
   };
 };

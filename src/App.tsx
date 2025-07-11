@@ -8,13 +8,8 @@ import { ThemeProvider } from "next-themes";
 import { ProtectedRoute } from "./components/guards/ProtectedRoute";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { AppLayout } from "./components/layout/AppLayout";
-import Index from "./pages/Index";
-import EnhancedIndex from "./pages/EnhancedIndex";
-import NewService from "./pages/NewService";
-import ServiceDetail from "./pages/ServiceDetail";
-import Demandas from "./pages/Demandas";
 import Login from "./pages/Login";
-import Settings from "./pages/Settings";
+import Register from "./pages/Register";
 import "./App.css";
 
 const queryClient = new QueryClient({
@@ -37,6 +32,7 @@ function App() {
               <AuthProvider>
                 <Routes>
                   <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
                   <Route
                     path="/*"
                     element={
