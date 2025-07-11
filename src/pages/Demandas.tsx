@@ -9,17 +9,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
+import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
+import { MobileHeader } from "@/components/layout/MobileHeader";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
 import { useServiceFilters } from "@/hooks/useServiceFilters";
 import { useServices } from "@/hooks/useServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useServiceTypes } from "@/hooks/useServiceTypes";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Demandas = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { services, isLoading, error, refreshServices } = useServices();
   const { teamMembers } = useTeamMembers();
   const { serviceTypes } = useServiceTypes();
@@ -92,7 +97,7 @@ const Demandas = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Erro ao carregar demandas</h2>
           <p className="text-muted-foreground mb-4">Ocorreu um erro ao buscar as demandas.</p>
@@ -104,73 +109,91 @@ const Demandas = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Mobile Header */}
+      <MobileHeader
+        title="Demandas"
+        subtitle="Gerencie todas as demandas"
+        rightAction={
+          <Button
+            size="sm"
+            onClick={() => navigate("/nova-demanda")}
+            className="gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Nova
+          </Button>
+        }
+      />
+
       <motion.div 
-        className="container mx-auto p-6 space-y-6"
+        className={`container mx-auto p-4 space-y-4 ${isMobile ? 'pt-2' : 'p-6 space-y-6'}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header */}
-        <motion.div 
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Demandas
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie e acompanhe todas as demandas de serviço
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
+        {/* Desktop Header */}
+        {!isMobile && (
+          <motion.div 
+            className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Demandas
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Gerencie e acompanhe todas as demandas de serviço
+              </p>
+            </div>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Exportar
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('statistics')}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar Estatísticas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button 
-              onClick={() => navigate("/nova-demanda")}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Nova Demanda
-            </Button>
-          </div>
-        </motion.div>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Exportar
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('excel')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('statistics')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar Estatísticas
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button 
+                onClick={() => navigate("/nova-demanda")}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Demanda
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Estatísticas */}
         <motion.div
@@ -181,21 +204,31 @@ const Demandas = () => {
           <StatisticsCards {...serviceStats} />
         </motion.div>
 
-        {/* Sistema de Filtros Integrado */}
+        {/* Sistema de Filtros */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <ServiceFilters
-            filters={filters}
-            onFilterChange={updateFilter}
-            onClearFilters={clearFilters}
-            onExport={() => handleExport('csv')}
-            technicians={teamMembers}
-            serviceTypes={uniqueServiceTypes}
-            totalResults={filteredServices.length}
-          />
+          {isMobile ? (
+            <MobileServiceFilters
+              filters={filters}
+              onFilterChange={updateFilter}
+              onClearFilters={clearFilters}
+              serviceTypes={uniqueServiceTypes}
+              totalResults={filteredServices.length}
+            />
+          ) : (
+            <ServiceFilters
+              filters={filters}
+              onFilterChange={updateFilter}
+              onClearFilters={clearFilters}
+              onExport={() => handleExport('csv')}
+              technicians={teamMembers}
+              serviceTypes={uniqueServiceTypes}
+              totalResults={filteredServices.length}
+            />
+          )}
         </motion.div>
 
         {/* Lista de demandas */}
@@ -203,6 +236,7 @@ const Demandas = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
+          className={isMobile ? 'pb-20' : ''}
         >
           {isLoading ? (
             <div className="space-y-4">
@@ -242,7 +276,7 @@ const Demandas = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className={`space-y-4 ${isMobile ? 'space-y-3' : ''}`}>
               {filteredServices.map((service, index) => (
                 <motion.div
                   key={service.id}
@@ -250,7 +284,11 @@ const Demandas = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ServiceCard service={service} />
+                  {isMobile ? (
+                    <MobileServiceCard service={service} />
+                  ) : (
+                    <ServiceCard service={service} />
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -258,7 +296,7 @@ const Demandas = () => {
         </motion.div>
 
         {/* Informações de resultados */}
-        {!isLoading && filteredServices.length > 0 && (
+        {!isLoading && filteredServices.length > 0 && !isMobile && (
           <motion.div 
             className="flex justify-center"
             initial={{ opacity: 0 }}
