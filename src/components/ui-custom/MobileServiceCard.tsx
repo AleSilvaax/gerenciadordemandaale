@@ -29,7 +29,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
   };
 
   const getServiceDate = () => {
-    return service.created_at || service.creationDate || service.date || new Date().toISOString();
+    return service.creationDate || service.date || new Date().toISOString();
   };
 
   return (
