@@ -62,6 +62,7 @@ export const createCoverPage = (doc: jsPDF, service: Service): void => {
   });
 
   // Caixa Data
+  doc.setFillColor(236, 240, 241);
   doc.roundedRect(rightX, currentY, boxWidth, boxHeight, 5, 5, 'FD');
   
   addText(doc, 'DATA DE GERAÇÃO', rightX + 10, currentY + 15, {
