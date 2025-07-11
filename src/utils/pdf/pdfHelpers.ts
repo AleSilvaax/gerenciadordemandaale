@@ -61,7 +61,7 @@ export const addText = (
 
 // Função para verificar se precisa de nova página
 export const checkPageBreak = (doc: jsPDF, currentY: number, requiredHeight: number = 30): number => {
-  if (currentY + requiredHeight > 270) {
+  if (currentY + requiredHeight > 265) {
     doc.addPage();
     return 30;
   }
