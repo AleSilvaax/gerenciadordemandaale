@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/MockAuthContext";
 
 interface DetailsFormSectionProps {
   service: any;

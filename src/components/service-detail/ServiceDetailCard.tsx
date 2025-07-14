@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { updateService } from "@/services/servicesDataService";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/MockAuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";

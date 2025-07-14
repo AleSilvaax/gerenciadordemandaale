@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth } from '@/context/AuthContext';
 import { Home, FileText, Plus, BarChart3, Settings, Users, Calendar } from 'lucide-react';
 
 interface NavItem {
@@ -15,9 +14,6 @@ interface NavItem {
 const Navbar: React.FC = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
-  const { user } = useAuth();
-
-  if (!user) return null;
 
   const navItems: NavItem[] = [
     { to: '/', icon: Home, label: 'Início', roles: ['administrador', 'gestor', 'tecnico'] },
@@ -29,16 +25,12 @@ const Navbar: React.FC = () => {
     { to: '/settings', icon: Settings, label: 'Config', roles: ['administrador', 'gestor', 'tecnico'] },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
-    item.roles.includes(user.role)
-  );
-
   if (!isMobile) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border/50 z-50">
       <div className="flex justify-around items-center py-2 px-1">
-        {filteredNavItems.map(({ to, icon: Icon, label }) => {
+        {navItems.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to || 
             (to !== '/' && location.pathname.startsWith(to));
           

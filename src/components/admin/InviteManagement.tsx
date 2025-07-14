@@ -19,7 +19,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/MockAuthContext';
 import { inviteService, CreateInviteData, InviteListItem } from '@/services/inviteService';
 import { supabase } from '@/integrations/supabase/client';
 
