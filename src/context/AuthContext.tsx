@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
+import { AuthUser, AuthContextType, RegisterFormData, UserRole } from '@/types/auth';
 import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: currentUser.email,
         name: profile.name || 'Usuário',
         avatar: profile.avatar || '',
-        role: roleData.role,
+        role: roleData.role as UserRole,
         permissions: [],
         team_id: profile.team_id,
         organization_id: profile.organization_id,
@@ -268,7 +267,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
-    session,
     isLoading,
     isAuthenticated: !!user,
     login,
