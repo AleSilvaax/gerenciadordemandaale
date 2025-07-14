@@ -41,79 +41,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
       
-      // Primeiro, tentar carregar o perfil com todos os relacionamentos
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *, 
-          user_roles (role),
-          organizations:organization_id (id, name, slug)
+          user_roles (role)
         `)
         .eq('id', authUser.id)
         .single();
 
+      if (error && error.code === 'PGRST116') {
+        console.warn(`[AUTH] Perfil não encontrado para ${authUser.id} - será criado automaticamente pelo trigger`);
+        return null;
+      }
+
       if (error) {
         console.error('[AUTH] Erro ao carregar perfil:', error);
-        
-        if (error.code === 'PGRST116') {
-          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}`);
-          
-          // Se o perfil não existe, criar um perfil básico
-          console.log('[AUTH] Criando perfil básico para usuário existente...');
-          
-          // Obter nome do metadata do usuário ou usar email
-          const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário';
-          
-          // Inserir perfil básico SEM organization_id
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authUser.id,
-              name: userName,
-              avatar: '',
-              team_id: null,
-              organization_id: null // Permitir null temporariamente
-            })
-            .select(`
-              *, 
-              user_roles (role),
-              organizations:organization_id (id, name, slug)
-            `)
-            .single();
-
-          if (insertError) {
-            console.error('[AUTH] Erro ao criar perfil:', insertError);
-            throw insertError;
-          }
-
-          // Inserir papel padrão se não existir
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: authUser.id,
-              role: 'administrador' // Temporário para usuários legados
-            });
-
-          if (roleError && roleError.code !== '23505') { // Ignorar erro de duplicata
-            console.error('[AUTH] Erro ao criar papel:', roleError);
-          }
-
-          console.log('[AUTH] Perfil básico criado:', newProfile);
-          return newProfile;
-        }
-        
         throw error;
       }
       
       console.log(`[AUTH] Perfil carregado com sucesso:`, data);
       return data;
     } catch (error) {
-      console.error('[AUTH] Erro fatal ao carregar perfil:', error);
-      toast.error("Problema no sistema", { 
-        description: "Entre em contato com o administrador do sistema." 
-      });
-      
-      // Não forçar logout, mas retornar null
+      console.error('[AUTH] Erro ao carregar perfil:', error);
       return null;
     }
   }, []);
@@ -135,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const roleData = profileData.user_roles;
           const role = Array.isArray(roleData) && roleData.length > 0 
             ? roleData[0].role 
-            : 'administrador'; // Padrão para usuários legados
+            : 'tecnico'; // Padrão
           
           const authUserData: AuthUser = {
             id: profileData.id,
@@ -145,19 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             team_id: profileData.team_id,
             role: role as any,
             permissions: [],
-            organization_id: profileData.organization_id,
-            organization: profileData.organizations
+            organization_id: profileData.organization_id || null,
+            organization: null
           };
           
           setUser(authUserData);
           console.log(`[AUTH] Usuário autenticado:`, authUserData);
-          
-          // Se não tem organização, mostrar aviso
-          if (!profileData.organization_id) {
-            toast.warning("Conta sem organização", {
-              description: "Você está usando uma conta legada. Entre em contato com o administrador para migração."
-            });
-          }
         } else if (mounted) {
           setUser(null);
         }
@@ -209,11 +152,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
-    console.log('[AUTH] Tentativa de registro bloqueada - use sistema de convites');
-    toast.error("Registro não permitido", { 
-      description: "Você deve ser convidado por um administrador para se cadastrar." 
-    });
-    return false;
+    try {
+      console.log('[AUTH] Registrando usuário:', userData.email);
+      
+      const { error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: userData.role || 'tecnico'
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+      
+      if (error) {
+        console.error('[AUTH] Erro no registro:', error);
+        toast.error("Erro no registro", { description: error.message });
+        return false;
+      }
+      
+      toast.success("Registro realizado!", { 
+        description: "Verifique seu email para confirmar a conta." 
+      });
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro inesperado no registro:', error);
+      toast.error("Erro no registro", { description: "Erro inesperado. Tente novamente." });
+      return false;
+    }
   };
 
   const logout = async (): Promise<void> => {
