@@ -4,9 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Service } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 
-/**
- * Busca todos os serviços VINCULADOS AO técnico logado
- */
 export function useTechnicianServices() {
   const { user } = useAuth();
 
@@ -31,7 +28,7 @@ export function useTechnicianServices() {
 
         if (assignmentsError) {
           console.error("[TECH-SERVICES] Erro ao buscar atribuições:", assignmentsError);
-          throw new Error(assignmentsError.message);
+          return [];
         }
 
         const serviceIds = assignments?.map(a => a.service_id) || [];
@@ -52,7 +49,7 @@ export function useTechnicianServices() {
 
         if (servicesError) {
           console.error("[TECH-SERVICES] Erro ao buscar serviços:", servicesError);
-          throw new Error(servicesError.message);
+          return [];
         }
 
         console.log("[TECH-SERVICES] Serviços encontrados:", services?.length || 0);
@@ -73,11 +70,12 @@ export function useTechnicianServices() {
         })) as Service[];
       } catch (error) {
         console.error("[TECH-SERVICES] Erro geral:", error);
-        throw error;
+        return [];
       }
     },
-    enabled: !!user,
-    retry: 2,
-    staleTime: 30000, // 30 segundos
+    enabled: !!user && user.role === 'tecnico',
+    retry: 1,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 }

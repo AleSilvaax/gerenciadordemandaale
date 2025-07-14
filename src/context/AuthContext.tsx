@@ -36,6 +36,7 @@ export const cleanupAuthState = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const loadUserProfile = useCallback(async (authUser: User) => {
     try {
@@ -50,13 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', authUser.id)
         .single();
 
-      if (error && error.code === 'PGRST116') {
-        console.warn(`[AUTH] Perfil não encontrado para ${authUser.id} - será criado automaticamente pelo trigger`);
-        return null;
-      }
-
       if (error) {
         console.error('[AUTH] Erro ao carregar perfil:', error);
+        if (error.code === 'PGRST116') {
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id} - será criado automaticamente pelo trigger`);
+          return null;
+        }
         throw error;
       }
       
@@ -68,72 +68,108 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
 
-    const handleAuthChange = async (event: string, session: any) => {
-      console.log(`[AUTH] Evento: ${event}`, session ? 'com sessão' : 'sem sessão');
-      
-      if (!mounted) return;
-      
-      setIsLoading(true);
-      
-      if (session?.user) {
-        const profileData = await loadUserProfile(session.user);
-
-        if (mounted && profileData) {
-          const roleData = profileData.user_roles;
-          const role = Array.isArray(roleData) && roleData.length > 0 
-            ? roleData[0].role 
-            : 'tecnico'; // Padrão
-          
-          const authUserData: AuthUser = {
-            id: profileData.id,
-            email: session.user.email,
-            name: profileData.name || 'Usuário',
-            avatar: profileData.avatar || '',
-            team_id: profileData.team_id,
-            role: role as any,
-            permissions: [],
-            organization_id: profileData.organization_id || null,
-            organization: null
-          };
-          
-          setUser(authUserData);
-          console.log(`[AUTH] Usuário autenticado:`, authUserData);
-        } else if (mounted) {
-          setUser(null);
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[AUTH] Erro ao obter sessão:', error);
         }
-      } else if (mounted) {
-        setUser(null);
-        console.log('[AUTH] Usuário desconectado');
-      }
-      
-      if (mounted) {
-        setIsLoading(false);
+
+        if (mounted) {
+          if (session?.user) {
+            const profileData = await loadUserProfile(session.user);
+            
+            if (profileData && mounted) {
+              const roleData = profileData.user_roles;
+              const role = Array.isArray(roleData) && roleData.length > 0 
+                ? roleData[0].role 
+                : 'tecnico';
+              
+              const authUserData: AuthUser = {
+                id: profileData.id,
+                email: session.user.email,
+                name: profileData.name || 'Usuário',
+                avatar: profileData.avatar || '',
+                team_id: profileData.team_id,
+                role: role as any,
+                permissions: [],
+                organization_id: profileData.organization_id || null,
+                organization: null
+              };
+              
+              setUser(authUserData);
+            }
+          }
+          
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
+      } catch (error) {
+        console.error('[AUTH] Erro na inicialização:', error);
+        if (mounted) {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+    initializeAuth();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, [loadUserProfile]);
 
+  // Set up auth state change listener
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`[AUTH] Evento: ${event}`, session ? 'com sessão' : 'sem sessão');
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          const profileData = await loadUserProfile(session.user);
+
+          if (profileData) {
+            const roleData = profileData.user_roles;
+            const role = Array.isArray(roleData) && roleData.length > 0 
+              ? roleData[0].role 
+              : 'tecnico';
+            
+            const authUserData: AuthUser = {
+              id: profileData.id,
+              email: session.user.email,
+              name: profileData.name || 'Usuário',
+              avatar: profileData.avatar || '',
+              team_id: profileData.team_id,
+              role: role as any,
+              permissions: [],
+              organization_id: profileData.organization_id || null,
+              organization: null
+            };
+            
+            setUser(authUserData);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [isInitialized, loadUserProfile]);
+
   const login = async (email: string, password: string): Promise<boolean> => {
     console.log('[AUTH] Iniciando login...');
-    cleanupAuthState();
     
     try {
-      // Force global signout first
-      try { 
-        await supabase.auth.signOut({ scope: 'global' }); 
-      } catch (e) {
-        console.log('[AUTH] Signout preventivo ignorado:', e);
-      }
-
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -185,24 +221,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (): Promise<void> => {
-    cleanupAuthState();
     try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch {}
-    // Força um refresh de página para garantir "logout total"
-    window.location.href = "/login";
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('[AUTH] Erro no logout:', error);
+    }
   };
   
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
-    const { data, error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id).select().single();
-    if (error) {
-      toast.error("Erro ao atualizar perfil.", { description: error.message });
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ name: userData.name, avatar: userData.avatar })
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        toast.error("Erro ao atualizar perfil.", { description: error.message });
+        return false;
+      }
+      
+      setUser(prev => prev ? { ...prev, ...userData } : null);
+      toast.success("Perfil atualizado com sucesso!");
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Erro ao atualizar perfil:', error);
+      toast.error("Erro ao atualizar perfil.");
       return false;
     }
-    setUser(prev => prev ? { ...prev, ...userData } : null);
-    toast.success("Perfil atualizado com sucesso!");
-    return true;
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -218,12 +268,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return false;
     if (user.role === "administrador") return true;
     if (user.role === "gestor") {
-      // Pode acessar rotas de gestão, mas não as de admin.
-      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
+      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/", "/minhas-demandas"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
     }
     if (user.role === "tecnico") {
-      // Técnico só pode acessar as rotas básicas
-      return ["/", "/demandas", "/demandas/:id", "/buscar", "/settings"].some((r) => route.startsWith(r));
+      return ["/", "/demandas", "/minhas-demandas", "/settings"].some((r) => route.startsWith(r));
     }
     return false;
   }, [user]);
@@ -272,31 +320,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-const permissions: Record<string, string[]> = {
-  administrador: [
-    'view_services',
-    'create_services', 
-    'edit_services',
-    'delete_services',
-    'manage_team',
-    'view_statistics',
-    'export_reports',
-    'manage_service_types',
-    'manage_technical_fields'
-  ],
-  gestor: [
-    'view_services',
-    'create_services',
-    'edit_services',
-    'delete_services',
-    'view_statistics',
-    'export_reports'
-  ],
-  tecnico: [
-    'view_services',
-    'create_services',
-    'edit_services'
-  ]
 };

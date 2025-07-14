@@ -3,6 +3,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
+import { RealtimeNotifications } from "@/components/notifications/RealtimeNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -11,6 +12,8 @@ import Index from "@/pages/Index";
 import NewService from "@/pages/NewService";
 import ServiceDetail from "@/pages/ServiceDetail";
 import Demandas from "@/pages/Demandas";
+import MinhasDemandas from "@/pages/MinhasDemandas";
+import Agendamento from "@/pages/Agendamento";
 import Settings from "@/pages/Settings";
 import Statistics from "@/pages/Statistics";
 import Equipe from "@/pages/Equipe";
@@ -30,6 +33,9 @@ export const AppLayout: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
+      {/* Real-time notifications */}
+      <RealtimeNotifications />
+      
       {/* Header com Menu de Perfil - Apenas Desktop */}
       {!isMobile && user && (
         <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 sticky top-0 z-50">
@@ -68,6 +74,8 @@ export const AppLayout: React.FC = () => {
             <Route path="/dashboard" element={<Index />} />
             <Route path="/nova-demanda" element={<NewService />} />
             <Route path="/demandas" element={<Demandas />} />
+            <Route path="/minhas-demandas" element={<MinhasDemandas />} />
+            <Route path="/agendamento" element={<Agendamento />} />
             <Route path="/demandas/:id" element={<ServiceDetail />} />
             <Route path="/estatisticas" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
