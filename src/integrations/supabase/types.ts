@@ -527,6 +527,63 @@ export type Database = {
           },
         ]
       }
+      technician_schedule: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_time: string
+          id: string
+          location: string | null
+          service_id: string | null
+          start_time: string
+          status: string
+          technician_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_time: string
+          id?: string
+          location?: string | null
+          service_id?: string | null
+          start_time: string
+          status?: string
+          technician_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          location?: string | null
+          service_id?: string | null
+          start_time?: string
+          status?: string
+          technician_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_schedule_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_schedule_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_invites: {
         Row: {
           created_at: string

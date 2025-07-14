@@ -1,320 +1,154 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
-import { toast } from 'sonner';
+
+interface AuthUser extends User {
+  role?: string;
+  name?: string;
+  avatar?: string;
+  team_id?: string;
+  organization_id?: string;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  session: Session | null;
+  isLoading: boolean;
+  signOut: () => Promise<void>;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Enhanced auth state cleanup
-export const cleanupAuthState = () => {
-  console.log('[AUTH] Limpando estado de autenticação...');
-  
-  // Remove all Supabase auth keys
-  const keysToRemove = Object.keys(localStorage).filter(key => 
-    key.startsWith('supabase.auth.') || 
-    key.includes('sb-') ||
-    key === 'supabase.auth.token'
-  );
-  
-  keysToRemove.forEach(key => {
-    localStorage.removeItem(key);
-    console.log(`[AUTH] Removido: ${key}`);
-  });
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-  // Clean sessionStorage too
-  const sessionKeysToRemove = Object.keys(sessionStorage || {}).filter(key => 
-    key.startsWith('supabase.auth.') || key.includes('sb-')
-  );
-  
-  sessionKeysToRemove.forEach(key => {
-    sessionStorage.removeItem(key);
-  });
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  const loadUserProfile = useCallback(async (authUser: User) => {
+  const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
     try {
-      console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
-      
-      const { data, error } = await supabase
+      console.log('[AUTH] Buscando perfil do usuário:', userId);
+
+      // Buscar perfil
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *, 
-          user_roles (role)
-        `)
-        .eq('id', authUser.id)
+        .select('name, avatar, team_id, organization_id')
+        .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('[AUTH] Erro ao carregar perfil:', error);
-        if (error.code === 'PGRST116') {
-          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id} - será criado automaticamente pelo trigger`);
-          return null;
-        }
-        throw error;
+      if (profileError) {
+        console.error('[AUTH] Erro ao buscar perfil:', profileError);
+        return null;
       }
-      
-      console.log(`[AUTH] Perfil carregado com sucesso:`, data);
-      return data;
+
+      // Buscar role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (roleError) {
+        console.error('[AUTH] Erro ao buscar role:', roleError);
+        return null;
+      }
+
+      const currentUser = session?.user;
+      if (!currentUser) return null;
+
+      return {
+        ...currentUser,
+        role: roleData.role,
+        name: profile.name,
+        avatar: profile.avatar,
+        team_id: profile.team_id,
+        organization_id: profile.organization_id,
+      };
     } catch (error) {
-      console.error('[AUTH] Erro ao carregar perfil:', error);
+      console.error('[AUTH] Erro geral ao buscar dados do usuário:', error);
       return null;
     }
-  }, []);
+  };
 
-  // Initialize auth state
+  const handleAuthChange = async (event: string, session: Session | null) => {
+    console.log('[AUTH] Mudança de autenticação:', event, session?.user?.id);
+    
+    setSession(session);
+    
+    if (session?.user) {
+      const userProfile = await fetchUserProfile(session.user.id);
+      setUser(userProfile);
+    } else {
+      setUser(null);
+    }
+    
+    setIsLoading(false);
+  };
+
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[AUTH] Inicializando contexto de autenticação...');
         
-        if (error) {
-          console.error('[AUTH] Erro ao obter sessão:', error);
-        }
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
 
-        if (mounted) {
-          if (session?.user) {
-            const profileData = await loadUserProfile(session.user);
-            
-            if (profileData && mounted) {
-              const roleData = profileData.user_roles;
-              const role = Array.isArray(roleData) && roleData.length > 0 
-                ? roleData[0].role 
-                : 'tecnico';
-              
-              const authUserData: AuthUser = {
-                id: profileData.id,
-                email: session.user.email,
-                name: profileData.name || 'Usuário',
-                avatar: profileData.avatar || '',
-                team_id: profileData.team_id,
-                role: role as any,
-                permissions: [],
-                organization_id: profileData.organization_id || null,
-                organization: null
-              };
-              
-              setUser(authUserData);
-            }
+        if (currentSession?.user) {
+          const userProfile = await fetchUserProfile(currentSession.user.id);
+          if (mounted) {
+            setSession(currentSession);
+            setUser(userProfile);
           }
-          
+        }
+        
+        if (mounted) {
           setIsLoading(false);
-          setIsInitialized(true);
         }
       } catch (error) {
         console.error('[AUTH] Erro na inicialização:', error);
         if (mounted) {
           setIsLoading(false);
-          setIsInitialized(true);
         }
       }
     };
 
     initializeAuth();
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+
     return () => {
       mounted = false;
+      subscription.unsubscribe();
     };
-  }, [loadUserProfile]);
+  }, []);
 
-  // Set up auth state change listener
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log(`[AUTH] Evento: ${event}`, session ? 'com sessão' : 'sem sessão');
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profileData = await loadUserProfile(session.user);
-
-          if (profileData) {
-            const roleData = profileData.user_roles;
-            const role = Array.isArray(roleData) && roleData.length > 0 
-              ? roleData[0].role 
-              : 'tecnico';
-            
-            const authUserData: AuthUser = {
-              id: profileData.id,
-              email: session.user.email,
-              name: profileData.name || 'Usuário',
-              avatar: profileData.avatar || '',
-              team_id: profileData.team_id,
-              role: role as any,
-              permissions: [],
-              organization_id: profileData.organization_id || null,
-              organization: null
-            };
-            
-            setUser(authUserData);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [isInitialized, loadUserProfile]);
-
-  const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('[AUTH] Iniciando login...');
-    
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        console.error('[AUTH] Erro no login:', error);
-        toast.error("Erro no login", { description: "Email ou senha inválidos." });
-        return false;
-      }
-      
-      console.log('[AUTH] Login realizado com sucesso');
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro inesperado no login:', error);
-      toast.error("Erro no login", { description: "Erro inesperado. Tente novamente." });
-      return false;
-    }
+  const signOut = async () => {
+    console.log('[AUTH] Fazendo logout...');
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setIsLoading(false);
   };
 
-  const register = async (userData: RegisterFormData): Promise<boolean> => {
-    try {
-      console.log('[AUTH] Registrando usuário:', userData.email);
-      
-      const { error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            role: userData.role || 'tecnico'
-          },
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-      
-      if (error) {
-        console.error('[AUTH] Erro no registro:', error);
-        toast.error("Erro no registro", { description: error.message });
-        return false;
-      }
-      
-      toast.success("Registro realizado!", { 
-        description: "Verifique seu email para confirmar a conta." 
-      });
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro inesperado no registro:', error);
-      toast.error("Erro no registro", { description: "Erro inesperado. Tente novamente." });
-      return false;
-    }
-  };
-
-  const logout = async (): Promise<void> => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
-      console.error('[AUTH] Erro no logout:', error);
-    }
-  };
-  
-  const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ name: userData.name, avatar: userData.avatar })
-        .eq('id', user.id)
-        .select()
-        .single();
-      
-      if (error) {
-        toast.error("Erro ao atualizar perfil.", { description: error.message });
-        return false;
-      }
-      
-      setUser(prev => prev ? { ...prev, ...userData } : null);
-      toast.success("Perfil atualizado com sucesso!");
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro ao atualizar perfil:', error);
-      toast.error("Erro ao atualizar perfil.");
-      return false;
-    }
-  };
-
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    if (user.role === 'administrador') return true;
-    if (user.role === 'gestor') {
-        return ['view_stats', 'add_members', 'create_service'].includes(permission);
-    }
-    return false;
-  };
-
-  const canAccessRoute = useCallback((route: string): boolean => {
-    if (!user) return false;
-    if (user.role === "administrador") return true;
-    if (user.role === "gestor") {
-      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/", "/minhas-demandas"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
-    }
-    if (user.role === "tecnico") {
-      return ["/", "/demandas", "/minhas-demandas", "/settings"].some((r) => route.startsWith(r));
-    }
-    return false;
-  }, [user]);
-
-  const requestPasswordReset = async (email: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) {
-        toast.error("Erro ao solicitar reset", { description: error.message });
-        return false;
-      }
-      
-      toast.success("Email enviado!", { 
-        description: "Verifique sua caixa de entrada para redefinir a senha." 
-      });
-      return true;
-    } catch (error) {
-      toast.error("Erro inesperado", { description: "Tente novamente mais tarde." });
-      return false;
-    }
-  };
-
-  const value: AuthContextType = { 
-    user, 
-    isLoading, 
-    isAuthenticated: !!user, 
-    login, 
-    logout, 
-    register, 
-    updateUser, 
-    updateUserInfo: setUser, 
-    hasPermission, 
-    canAccessRoute,
-    requestPasswordReset,
+  const value = {
+    user,
+    session,
+    isLoading,
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
