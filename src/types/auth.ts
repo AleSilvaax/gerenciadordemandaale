@@ -1,3 +1,4 @@
+
 export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
 
 export interface AuthUser {
@@ -10,7 +11,7 @@ export interface AuthUser {
   permissions: string[];
   team_id?: string;
   signature?: string;
-  organization_id?: string; // Novo campo para multi-tenancy
+  organization_id?: string;
   organization?: {
     id: string;
     name: string;

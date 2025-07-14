@@ -57,16 +57,16 @@ export function useTechnicianSchedule(selectedDate?: Date) {
       const startDate = startOfDay(selectedDate);
       const endDate = endOfDay(selectedDate);
       
-      // Por enquanto, usando uma query raw até os tipos serem atualizados
+      // Buscar eventos diretamente da tabela technician_schedule
       const { data, error } = await supabase
-        .rpc('get_technician_schedule', {
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          technician_id: technicianId || user?.id
-        });
+        .from('technician_schedule')
+        .select('*')
+        .eq('technician_id', technicianId || user?.id)
+        .gte('start_time', startDate.toISOString())
+        .lte('end_time', endDate.toISOString());
 
       if (error) {
-        console.log('Tabela technician_schedule ainda não disponível nos tipos:', error);
+        console.error('Erro ao carregar eventos:', error);
         setEvents([]);
         return;
       }
@@ -82,8 +82,15 @@ export function useTechnicianSchedule(selectedDate?: Date) {
 
   const createEvent = async (eventData: Omit<ScheduleEvent, 'id' | 'created_at'>) => {
     try {
-      // Por enquanto retorna sucesso mockado
-      toast.success('Agendamento será criado quando a funcionalidade estiver completa');
+      const { data, error } = await supabase
+        .from('technician_schedule')
+        .insert([eventData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Agendamento criado com sucesso!');
       return true;
     } catch (error) {
       console.error('Erro ao criar evento:', error);
