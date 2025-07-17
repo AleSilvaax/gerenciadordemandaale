@@ -38,5 +38,5 @@ export interface RegisterFormData {
   email: string;
   password: string;
   role: UserRole;
-  team_id: string;
+  teamId?: string;
 }

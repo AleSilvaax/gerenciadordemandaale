@@ -181,7 +181,7 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           data: { 
             name: userData.name, 
             role: userData.role, 
-            team_id: userData.team_id 
+            team_id: userData.teamId 
           },
           emailRedirectTo: `${window.location.origin}/login`
         }

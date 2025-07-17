@@ -715,6 +715,18 @@ export type Database = {
           timestamp: string | null
         }[]
       }
+      get_user_complete_profile: {
+        Args: { user_uuid: string }
+        Returns: {
+          id: string
+          name: string
+          avatar: string
+          team_id: string
+          team_name: string
+          organization_id: string
+          role: string
+        }[]
+      }
       get_user_organization_id: {
         Args: Record<PropertyKey, never>
         Returns: string

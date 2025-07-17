@@ -18,41 +18,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
     try {
-      console.log('[AUTH] Buscando perfil do usuário:', userId);
+      console.log('[AUTH] Buscando perfil completo do usuário:', userId);
 
-      // Buscar perfil
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, avatar, team_id, organization_id')
-        .eq('id', userId)
-        .single();
+      // Usar a nova função otimizada do banco
+      const { data, error } = await supabase
+        .rpc('get_user_complete_profile', { user_uuid: userId });
 
-      if (profileError) {
-        console.error('[AUTH] Erro ao buscar perfil:', profileError);
+      if (error) {
+        console.error('[AUTH] Erro ao buscar perfil completo:', error);
         return null;
       }
 
-      // Buscar role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      if (roleError) {
-        console.error('[AUTH] Erro ao buscar role:', roleError);
+      if (!data || data.length === 0) {
+        console.warn('[AUTH] Nenhum perfil encontrado para usuário:', userId);
         return null;
       }
 
+      const profile = data[0];
       const currentUser = session?.user;
-      if (!currentUser) return null;
 
       return {
-        id: currentUser.id,
-        email: currentUser.email,
+        id: profile.id,
+        email: currentUser?.email || '',
         name: profile.name || 'Usuário',
         avatar: profile.avatar || '',
-        role: roleData.role as UserRole,
+        role: profile.role as UserRole,
         permissions: [],
         team_id: profile.team_id,
         organization_id: profile.organization_id,
@@ -71,13 +61,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSession(session);
     
     if (session?.user) {
-      const userProfile = await fetchUserProfile(session.user.id);
-      setUser(userProfile);
+      // Buscar perfil de forma não-bloqueante para evitar loading infinito
+      setTimeout(async () => {
+        const userProfile = await fetchUserProfile(session.user.id);
+        if (userProfile) {
+          setUser(userProfile);
+        } else {
+          // Criar perfil básico temporário se não encontrou
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.email?.split('@')[0] || 'Usuário',
+            avatar: '',
+            role: 'tecnico',
+            permissions: [],
+            team_id: '',
+            organization_id: '',
+            signature: '',
+            phone: '',
+          });
+        }
+        setIsLoading(false);
+      }, 100);
     } else {
       setUser(null);
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -142,7 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
     try {
-      console.log('[AUTH] Iniciando registro...');
+      console.log('[AUTH] Iniciando registro...', userData);
       const { error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -150,9 +159,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           data: { 
             name: userData.name, 
             role: userData.role, 
-            team_id: userData.team_id 
+            team_id: userData.teamId || null
           },
-          emailRedirectTo: `${window.location.origin}/login`
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
       
@@ -164,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('[AUTH] Registro realizado com sucesso');
       toast.success("Cadastro realizado!", { 
-        description: "Verifique seu email para confirmar a conta." 
+        description: "Você pode fazer login agora." 
       });
       return true;
     } catch (error) {

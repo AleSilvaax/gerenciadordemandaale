@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,9 +9,15 @@ import { UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UserRole } from '@/types/auth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RegisterFormProps {
   setRegistrationInProgress?: (inProgress: boolean) => void;
+}
+
+interface Team {
+  id: string;
+  name: string;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInProgress }) => {
@@ -21,10 +26,40 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('tecnico');
+  const [teamId, setTeamId] = useState<string>('');
+  const [teams, setTeams] = useState<Team[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  // Carregar equipes disponíveis
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('teams')
+          .select('id, name')
+          .order('name');
+
+        if (error) {
+          console.error('Erro ao carregar equipes:', error);
+          return;
+        }
+
+        setTeams(data || []);
+        
+        // Selecionar primeira equipe como padrão
+        if (data && data.length > 0) {
+          setTeamId(data[0].id);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar equipes:', error);
+      }
+    };
+
+    loadTeams();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +91,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         email,
         password,
         role,
-        team_id: null,
+        teamId: teamId || undefined,
       });
       
       if (success) {
@@ -124,6 +159,22 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
                 <SelectItem value="tecnico">Técnico</SelectItem>
                 <SelectItem value="gestor">Gestor</SelectItem>
                 <SelectItem value="administrador">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team">Equipe</Label>
+            <Select value={teamId} onValueChange={setTeamId} disabled={isSubmitting}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione sua equipe" />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
