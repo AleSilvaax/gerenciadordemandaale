@@ -8,7 +8,7 @@ import {
   addServiceMessage,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
-import { useAuth } from "@/context/MockAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Photo {

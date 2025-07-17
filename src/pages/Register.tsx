@@ -2,7 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { RegisterForm } from '@/components/forms/RegisterForm';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 const Register: React.FC = () => {
   const { user, isLoading } = useAuth();

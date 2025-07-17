@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useTechnicianServices } from '@/hooks/useTechnicianServices';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { ServiceCard } from '@/components/ui-custom/ServiceCard';

@@ -6,7 +6,7 @@ import { TeamMemberAvatar } from './TeamMemberAvatar';
 import { StatusBadge } from './StatusBadge';
 import { ServiceCardProps } from '@/types/serviceTypes';
 import { DeadlineManager } from './DeadlineManager';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list' }> = ({ service, onDelete, compact = false, variant = 'card' }) => {
   const { id, title, status, location, number, technician, priority, dueDate, creationDate } = service;

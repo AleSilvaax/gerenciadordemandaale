@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { getServicesFromDatabase } from '@/services/servicesDataService';
 import { Service } from '@/types/serviceTypes';
 

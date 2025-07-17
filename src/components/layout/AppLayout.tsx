@@ -5,7 +5,7 @@ import Navbar from "./Navbar";
 import { EnhancedNavbar } from "./EnhancedNavbar";
 import { RealtimeNotifications } from "@/components/notifications/RealtimeNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/MockAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import EnhancedIndex from "@/pages/EnhancedIndex";
 import Index from "@/pages/Index";
 import NewService from "@/pages/NewService";

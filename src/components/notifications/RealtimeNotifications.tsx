@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Bell, MessageSquare, Calendar, AlertCircle } from 'lucide-react';
 

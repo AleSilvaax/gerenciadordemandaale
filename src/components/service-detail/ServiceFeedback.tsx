@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Rating } from "@/components/ui-custom/Rating";
 import { Service, ServiceFeedback as ServiceFeedbackType } from "@/types/serviceTypes";
-import { useAuth } from "@/context/MockAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { Star } from "lucide-react";
 
 interface ServiceFeedbackProps {
