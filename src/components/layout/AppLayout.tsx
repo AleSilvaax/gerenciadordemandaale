@@ -2,8 +2,10 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./Navbar";
+import { EnhancedNavbar } from "./EnhancedNavbar";
 import { RealtimeNotifications } from "@/components/notifications/RealtimeNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/MockAuthContext";
 import EnhancedIndex from "@/pages/EnhancedIndex";
 import Index from "@/pages/Index";
 import NewService from "@/pages/NewService";
@@ -15,30 +17,32 @@ import Settings from "@/pages/Settings";
 import Statistics from "@/pages/Statistics";
 import Equipe from "@/pages/Equipe";
 import ProfilePage from "@/components/profile/ProfilePage";
+import Auth from "@/pages/Auth";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
+  const { user, isAuthenticated } = useAuth();
+  
+  // Se não está autenticado, mostra apenas as páginas de auth
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Routes>
+          <Route path="/*" element={<Auth />} />
+        </Routes>
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-hidden">
       {/* Real-time notifications */}
       <RealtimeNotifications />
       
-      {/* Header com Menu de Perfil - Apenas Desktop */}
-      {!isMobile && (
-        <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 sticky top-0 z-50">
-          <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center space-x-2 font-bold text-xl text-primary">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground text-sm font-bold">GD</span>
-              </div>
-              <span>GerenciadorDemandas</span>
-            </div>
-          </div>
-        </header>
-      )}
+      {/* Header Desktop com Menu de Perfil */}
+      {!isMobile && <EnhancedNavbar />}
 
-      {/* Header Mobile com Menu de Perfil */}
+      {/* Header Mobile */}
       {isMobile && (
         <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 sticky top-0 z-40">
           <div className="flex justify-between items-center">
@@ -67,9 +71,12 @@ export const AppLayout: React.FC = () => {
             <Route path="/settings" element={<Settings />} />
             <Route path="/equipe" element={<Equipe />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/auth" element={<Auth />} />
           </Routes>
         </div>
       </main>
+      
+      {/* Mobile Navigation */}
       <Navbar />
     </div>
   );

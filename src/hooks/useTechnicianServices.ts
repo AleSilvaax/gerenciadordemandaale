@@ -1,81 +1,69 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Service } from "@/types/serviceTypes";
-import { useAuth } from "@/context/MockAuthContext";
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/MockAuthContext';
+import { getServicesFromDatabase } from '@/services/servicesDataService';
+import { Service } from '@/types/serviceTypes';
 
-export function useTechnicianServices() {
+export const useTechnicianServices = () => {
   const { user } = useAuth();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return useQuery<Service[]>({
-    queryKey: ['technician-services', user?.id],
-    queryFn: async () => {
-      if (!user) {
-        console.log("[TECH-SERVICES] Nenhum usuário logado.");
-        return [];
+  useEffect(() => {
+    const fetchTechnicianServices = async () => {
+      if (!user || user.role !== 'tecnico') {
+        setServices([]);
+        setIsLoading(false);
+        return;
       }
-      
-      console.log("[TECH-SERVICES] Buscando serviços para técnico:", user.id);
-      
+
       try {
-        // Primeiro buscar IDs dos serviços vinculados ao técnico
-        const { data: assignments, error: assignmentsError } = await supabase
-          .from('service_technicians')
-          .select('service_id')
-          .eq('technician_id', user.id);
-
-        console.log("[TECH-SERVICES] Query assignments executada:", { assignments, assignmentsError });
-
-        if (assignmentsError) {
-          console.error("[TECH-SERVICES] Erro ao buscar atribuições:", assignmentsError);
-          return [];
-        }
-
-        const serviceIds = assignments?.map(a => a.service_id) || [];
-        console.log("[TECH-SERVICES] Service IDs encontrados:", serviceIds);
-
-        if (serviceIds.length === 0) {
-          console.log("[TECH-SERVICES] Nenhuma demanda atribuída ao técnico.");
-          return [];
-        }
-
-        // Buscar os serviços completos
-        const { data: services, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .in('id', serviceIds);
-
-        console.log("[TECH-SERVICES] Query services executada:", { services, servicesError });
-
-        if (servicesError) {
-          console.error("[TECH-SERVICES] Erro ao buscar serviços:", servicesError);
-          return [];
-        }
-
-        console.log("[TECH-SERVICES] Serviços encontrados:", services?.length || 0);
-
-        // Transformar para o formato esperado
-        return (services || []).map((service: any) => ({
-          ...service,
-          technician: {
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar || '',
-            role: 'tecnico',
-          },
-          status: service.status || 'pendente',
-          priority: service.priority || 'media',
-          serviceType: service.service_type || 'Vistoria',
-          messages: [],
-        })) as Service[];
-      } catch (error) {
-        console.error("[TECH-SERVICES] Erro geral:", error);
-        return [];
+        setIsLoading(true);
+        setError(null);
+        
+        console.log('[TechnicianServices] Buscando serviços do técnico:', user.id);
+        
+        const allServices = await getServicesFromDatabase();
+        
+        // Filtrar apenas os serviços atribuídos ao técnico logado
+        const technicianServices = allServices.filter(service => 
+          service.technician && service.technician.id === user.id
+        );
+        
+        console.log('[TechnicianServices] Serviços encontrados:', technicianServices.length);
+        setServices(technicianServices);
+        
+      } catch (err) {
+        console.error('[TechnicianServices] Erro ao buscar serviços:', err);
+        setError('Erro ao carregar suas demandas');
+        setServices([]);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    enabled: !!user && user.role === 'tecnico',
-    retry: 1,
-    staleTime: 30000,
-    refetchOnWindowFocus: false,
-  });
-}
+    };
+
+    fetchTechnicianServices();
+  }, [user]);
+
+  const refreshServices = async () => {
+    if (!user || user.role !== 'tecnico') return;
+    
+    try {
+      const allServices = await getServicesFromDatabase();
+      const technicianServices = allServices.filter(service => 
+        service.technician && service.technician.id === user.id
+      );
+      setServices(technicianServices);
+    } catch (err) {
+      console.error('[TechnicianServices] Erro ao atualizar serviços:', err);
+    }
+  };
+
+  return {
+    services,
+    isLoading,
+    error,
+    refreshServices
+  };
+};
