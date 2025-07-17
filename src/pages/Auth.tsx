@@ -1,15 +1,23 @@
 
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/context/MockAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { RegisterForm } from '@/components/forms/RegisterForm';
 import { LoginForm } from '@/components/forms/LoginForm';
 
 const Auth: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [registrationInProgress, setRegistrationInProgress] = useState(false);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // Se o usuário já está logado, redireciona para home
   if (user && !registrationInProgress) {

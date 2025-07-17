@@ -1,14 +1,13 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/context/MockAuthContext';
-import { toast } from 'sonner';
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,65 +25,24 @@ export const LoginForm: React.FC = () => {
       return;
     }
     
+    if (isSubmitting) return;
+    
     setErrorMsg(null);
     setIsSubmitting(true);
+    console.log("Submitting login form with email:", email);
     
     try {
       const success = await login(email, password);
+      console.log("Login result:", success);
       
       if (success) {
-        toast.success("Login realizado com sucesso!");
-        navigate("/");
+        navigate('/');
       } else {
         setErrorMsg("Email ou senha inválidos");
-        toast.error("Erro no login");
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrorMsg("Erro ao fazer login. Tente novamente.");
-      toast.error("Erro no login");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async (role: string) => {
-    if (isSubmitting) return;
-    
-    let demoEmail = '';
-    const demoPassword = '123456';
-    
-    switch(role) {
-      case 'tecnico':
-        demoEmail = 'joao@exemplo.com';
-        break;
-      case 'administrador':
-        demoEmail = 'maria@exemplo.com';
-        break;
-      case 'gestor':
-        demoEmail = 'carlos@exemplo.com';
-        break;
-    }
-    
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setIsSubmitting(true);
-    setErrorMsg(null);
-    
-    try {
-      const success = await login(demoEmail, demoPassword);
-      
-      if (success) {
-        toast.success(`Login como ${role} realizado!`);
-        navigate("/");
-      } else {
-        setErrorMsg("Erro ao fazer login com credenciais de demonstração");
-        toast.error("Erro no login demo");
-      }
-    } catch (error) {
-      console.error("Demo login error:", error);
-      setErrorMsg("Erro ao fazer login com credenciais de demonstração");
-      toast.error("Erro no login demo");
+      setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -93,58 +51,16 @@ export const LoginForm: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Entrar no Sistema</CardTitle>
+        <CardTitle>Entrar no sistema</CardTitle>
         <CardDescription>
-          Use suas credenciais para acessar o sistema
+          Use seu email e senha para acessar o sistema
         </CardDescription>
       </CardHeader>
       
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          <Alert className="bg-muted/50 border-primary/20">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <p className="text-sm mb-2">Credenciais de demonstração:</p>
-              <div className="grid grid-cols-3 gap-2">
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => handleDemoLogin('tecnico')}
-                  disabled={isSubmitting}
-                >
-                  Técnico
-                </Button>
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => handleDemoLogin('administrador')}
-                  disabled={isSubmitting}
-                >
-                  Admin
-                </Button>
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => handleDemoLogin('gestor')}
-                  disabled={isSubmitting}
-                >
-                  Gestor
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Senha: 123456
-              </p>
-            </AlertDescription>
-          </Alert>
-
           {errorMsg && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="py-2">
               <AlertDescription>{errorMsg}</AlertDescription>
             </Alert>
           )}
