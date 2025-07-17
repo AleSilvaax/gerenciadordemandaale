@@ -23,9 +23,15 @@ export interface ServiceMessage {
 }
 
 export interface ServiceFeedback {
+  rating: number;
+  comment: string;
+  wouldRecommend: boolean;
   clientRating: number;
   clientComment?: string;
   technicianFeedback?: string;
+  userId?: string;
+  userName?: string;
+  timestamp?: string;
 }
 
 export interface CustomField {

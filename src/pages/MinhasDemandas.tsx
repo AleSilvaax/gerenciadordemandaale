@@ -15,7 +15,7 @@ import { Navigate } from 'react-router-dom';
 
 const MinhasDemandas: React.FC = () => {
   const { user } = useAuth();
-  const { data: services = [], isLoading, error } = useTechnicianServices();
+  const { services = [], isLoading, error } = useTechnicianServices();
   const { isConnected } = useRealtimeNotifications();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,7 +82,7 @@ const MinhasDemandas: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center text-muted-foreground">
-              <p>Erro ao carregar demandas: {error.message}</p>
+              <p>Erro ao carregar demandas: {error}</p>
               <Button 
                 onClick={() => window.location.reload()} 
                 className="mt-4"

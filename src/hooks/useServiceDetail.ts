@@ -135,6 +135,8 @@ export const useServiceDetail = () => {
         userId: user.id,
         userName: user.name,
         timestamp: new Date().toISOString(),
+        clientRating: feedback.rating,
+        clientComment: feedback.comment,
       };
 
       await updateService({

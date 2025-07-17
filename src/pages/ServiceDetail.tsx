@@ -142,8 +142,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 </CardHeader>
                 <CardContent>
                   <PhotoUploader
-                    photos={photos}
-                    onPhotosChange={handlePhotosChange}
+                    photos={photos.map(p => ({ ...p, id: p.url, file: new File([], p.title) }))}
+                    onPhotosChange={(newPhotos) => handlePhotosChange(newPhotos.map(p => ({ url: p.url, title: p.title })))}
                     serviceId={service.id}
                     maxPhotos={10}
                   />
@@ -205,8 +205,12 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             >
               <ServiceFeedback
                 service={service}
-                feedback={feedback}
-                setFeedback={setFeedback}
+                feedback={{ ...feedback, clientRating: feedback.rating }}
+                setFeedback={(newFeedback) => setFeedback({ 
+                  rating: newFeedback.rating || newFeedback.clientRating || 0, 
+                  comment: newFeedback.comment || newFeedback.clientComment || "", 
+                  wouldRecommend: newFeedback.wouldRecommend || false 
+                })}
                 onSubmitFeedback={handleSubmitFeedback}
               />
             </motion.div>
