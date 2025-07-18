@@ -8,8 +8,7 @@ import { updateService } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDate } from "@/utils/formatters";
 import { MapPin, Calendar, Clock, User, FileText, CheckCircle, XCircle } from "lucide-react";
 
 interface ServiceDetailCardProps {
@@ -74,10 +73,8 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             <div>
               <p className="text-sm font-medium">Criação</p>
               <p className="text-sm text-muted-foreground">
-                {service.creationDate && new Date(service.creationDate).toString() !== 'Invalid Date'
-                  ? format(new Date(service.creationDate), "PPP", { locale: ptBR })
-                  : "Data não disponível" // Fallback se a data for inválida ou nula
-                }
+                {service.creationDate ? formatDate(service.creationDate) :
+                 service.date ? formatDate(service.date) : 'Data não disponível'}
               </p>
             </div>
           </div>
@@ -87,10 +84,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <div>
                 <p className="text-sm font-medium">Vencimento</p>
                 <p className="text-sm text-muted-foreground">
-                  {service.dueDate && new Date(service.dueDate).toString() !== 'Invalid Date'
-                    ? format(new Date(service.dueDate), "PPP", { locale: ptBR })
-                    : "Data não disponível" // Fallback se a data for inválida ou nula
-                  }
+                  {formatDate(service.dueDate)}
                 </p>
               </div>
             </div>
@@ -126,7 +120,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
                 : undefined
             }
             onAssign={async (technician) => {
-              await updateService({ id: service.id, technician });
+              await updateService({ id: service.id, technician: technician || undefined });
               toast.success("Técnico atualizado!");
               onServiceUpdate();
             }}

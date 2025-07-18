@@ -46,12 +46,12 @@ export const MockAuthProvider: React.FC<MockAuthProviderProps> = ({ children }) 
     return true;
   };
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = (): boolean => {
     // Mock admin sempre tem permissão
     return true;
   };
 
-  const canAccessRoute = (route: string): boolean => {
+  const canAccessRoute = (): boolean => {
     // Mock admin sempre pode acessar
     return true;
   };

@@ -61,7 +61,7 @@ export function useTechnicianSchedule(selectedDate?: Date) {
       const { data, error } = await supabase
         .from('technician_schedule')
         .select('*')
-        .eq('technician_id', technicianId || user?.id)
+        .eq('technician_id', technicianId || user?.id || '')
         .gte('start_time', startDate.toISOString())
         .lte('end_time', endDate.toISOString());
 
@@ -71,7 +71,12 @@ export function useTechnicianSchedule(selectedDate?: Date) {
         return;
       }
 
-      setEvents(data || []);
+      setEvents(data?.map(item => ({
+        ...item,
+        description: item.description || undefined,
+        location: item.location || undefined,
+        service_id: item.service_id || undefined
+      })) || []);
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
       setEvents([]);
@@ -82,7 +87,7 @@ export function useTechnicianSchedule(selectedDate?: Date) {
 
   const createEvent = async (eventData: Omit<ScheduleEvent, 'id' | 'created_at'>) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('technician_schedule')
         .insert([eventData])
         .select()

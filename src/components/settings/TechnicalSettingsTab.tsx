@@ -69,7 +69,7 @@ export const TechnicalSettingsTab = () => {
       setSelectedType({
         id: data.id,
         name: data.name,
-        description: data.description,
+        description: data.description || '',
         fields: [],
       });
       toast.success("Tipo de serviço criado.");

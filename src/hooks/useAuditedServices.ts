@@ -30,13 +30,13 @@ export const useAuditedServices = () => {
       const result = await createService(serviceData);
       
       // Handle the response structure from createService
-      const newService = 'created' in result ? result.created : result;
+      const newService = ('created' in result ? result.created : result) as Service;
       
       // Log the action
       await logAction(
         AUDIT_ACTIONS.CREATE,
         RESOURCE_TYPES.SERVICE,
-        newService.id,
+        newService?.id || '',
         undefined,
         extractRelevantFields(serviceData),
         { source: 'web_app' }
@@ -76,9 +76,9 @@ export const useAuditedServices = () => {
 
       // Update cache optimistically
       mutate(current => 
-        current?.map(service => 
+        current ? current.map(service => 
           service.id === serviceId ? { ...service, ...updates } : service
-        )
+        ) : []
       );
 
       toast.success('Demanda atualizada com sucesso!');
@@ -105,7 +105,7 @@ export const useAuditedServices = () => {
         );
 
         // Update cache optimistically
-        mutate(current => current?.filter(service => service.id !== serviceId));
+        mutate(current => current ? current.filter(service => service.id !== serviceId) : []);
         
         toast.success('Demanda excluída com sucesso!');
       }

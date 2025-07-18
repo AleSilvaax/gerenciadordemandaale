@@ -87,7 +87,7 @@ export const useConsolidatedServices = (options: UseConsolidatedServicesOptions 
         service.description?.toLowerCase().includes(searchLower) ||
         service.client?.toLowerCase().includes(searchLower) ||
         service.location.toLowerCase().includes(searchLower) ||
-        service.number.toLowerCase().includes(searchLower)
+        (service.number?.toLowerCase().includes(searchLower) ?? false)
       );
     }
 
@@ -232,7 +232,7 @@ export const useServiceSearch = (searchTerm: string, services: Service[]) => {
       service.description?.toLowerCase().includes(searchLower) ||
       service.client?.toLowerCase().includes(searchLower) ||
       service.location.toLowerCase().includes(searchLower) ||
-      service.number.toLowerCase().includes(searchLower)
+      (service.number?.toLowerCase().includes(searchLower) ?? false)
     );
   }, [services, debouncedSearchTerm]);
 };
