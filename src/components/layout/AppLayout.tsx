@@ -21,7 +21,7 @@ import Auth from "@/pages/Auth";
 
 export const AppLayout: React.FC = () => {
   const isMobile = useIsMobile();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   
   // Se não está autenticado, mostra apenas as páginas de auth
   if (!isAuthenticated) {
@@ -40,7 +40,7 @@ export const AppLayout: React.FC = () => {
       <RealtimeNotifications />
       
       {/* Header Desktop com Menu de Perfil */}
-      {!isMobile && <EnhancedNavbar />}
+      {!isMobile && <EnhancedNavbar isAuthenticated={isAuthenticated} />} {/* Passando a prop isAuthenticated */}
 
       {/* Header Mobile */}
       {isMobile && (
@@ -66,7 +66,7 @@ export const AppLayout: React.FC = () => {
             <Route path="/demandas" element={<Demandas />} />
             <Route path="/minhas-demandas" element={<MinhasDemandas />} />
             <Route path="/agendamento" element={<Agendamento />} />
-            <Route path="/demandas/:id" element={<ServiceDetail />} />
+            <Route path="/servico/:id" element={<ServiceDetail />} />
             <Route path="/estatisticas" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/equipe" element={<Equipe />} />

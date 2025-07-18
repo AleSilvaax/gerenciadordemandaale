@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData, UserRole } from '@/types/auth';
 import { toast } from 'sonner';
@@ -19,23 +19,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
     try {
       console.log('[AUTH] Buscando perfil completo do usuário:', userId);
+      console.log('[AUTH] Chamando RPC get_user_complete_profile...'); // NOVO LOG
 
       // Usar a nova função otimizada do banco
       const { data, error } = await supabase
         .rpc('get_user_complete_profile', { user_uuid: userId });
 
+      console.log('[AUTH] RPC get_user_complete_profile - Data:', data); // NOVO LOG
+      console.log('[AUTH] RPC get_user_complete_profile - Error:', error); // NOVO LOG
+
       if (error) {
         console.error('[AUTH] Erro ao buscar perfil completo:', error);
+        setIsLoading(false); // Crucial para evitar carregamento infinito
         return null;
       }
 
       if (!data || data.length === 0) {
         console.warn('[AUTH] Nenhum perfil encontrado para usuário:', userId);
+        setIsLoading(false); // Crucial para evitar carregamento infinito
         return null;
       }
 
       const profile = data[0];
       const currentUser = session?.user;
+
+      console.log('[AUTH] Perfil completo retornado pela RPC:', profile);
 
       return {
         id: profile.id,
@@ -51,41 +59,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     } catch (error) {
       console.error('[AUTH] Erro geral ao buscar dados do usuário:', error);
+      setIsLoading(false); // Crucial para evitar carregamento infinito
       return null;
     }
   };
 
   const handleAuthChange = async (event: string, session: Session | null) => {
-    console.log('[AUTH] Mudança de autenticação:', event, session?.user?.id);
+    console.log('[AUTH] Mudança de autenticação:', event, 'Sessão User ID:', session?.user?.id); // LOG ATUALIZADO
+    console.log('[AUTH] Antes de setSession/setUser - Session:', session, 'User:', user); // NOVO LOG
     
     setSession(session);
+    setIsLoading(true); // Definir isLoading como true no início do processo de mudança de autenticação
     
     if (session?.user) {
-      // Buscar perfil de forma não-bloqueante para evitar loading infinito
-      setTimeout(async () => {
-        const userProfile = await fetchUserProfile(session.user.id);
-        if (userProfile) {
-          setUser(userProfile);
-        } else {
-          // Criar perfil básico temporário se não encontrou
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.email?.split('@')[0] || 'Usuário',
-            avatar: '',
-            role: 'tecnico',
-            permissions: [],
-            team_id: '',
-            organization_id: '',
-            signature: '',
-            phone: '',
-          });
-        }
-        setIsLoading(false);
-      }, 100);
+      // Remover setTimeout - tornar a busca de perfil síncrona
+      const userProfile = await fetchUserProfile(session.user.id);
+      if (userProfile) {
+        setUser(userProfile);
+        console.log('[AUTH] handleAuthChange - User profile definido:', userProfile); // NOVO LOG
+      } else {
+        // Criar perfil básico temporário se não encontrou
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.email?.split('@')[0] || 'Usuário',
+          avatar: '',
+          role: 'tecnico',
+          permissions: [],
+          team_id: '',
+          organization_id: '',
+          signature: '',
+          phone: '',
+        });
+        console.log('[AUTH] handleAuthChange - Perfil básico definido:', user); // NOVO LOG
+      }
+      setIsLoading(false); // Definir isLoading como false após definir o user
+      console.log('[AUTH] handleAuthChange - isLoading set to false (com user).'); // LOG ATUALIZADO
     } else {
       setUser(null);
       setIsLoading(false);
+      console.log('[AUTH] handleAuthChange - isLoading set to false (sem user).'); // LOG ATUALIZADO
     }
   };
 
@@ -94,27 +107,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        console.log('[AUTH] Inicializando contexto de autenticação...');
+        console.log('[AUTH] Inicializando contexto de autenticação...'); // NOVO LOG
+        setIsLoading(true); // Garantir que isLoading é true na inicialização
         
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (currentSession?.user) {
+          console.log('[AUTH] initializeAuth - Sessão atual encontrada:', currentSession.user.id); // NOVO LOG
           const userProfile = await fetchUserProfile(currentSession.user.id);
           if (mounted) {
             setSession(currentSession);
             setUser(userProfile);
+            console.log('[AUTH] initializeAuth - User profile definido:', userProfile); // NOVO LOG
           }
+        } else {
+          console.log('[AUTH] initializeAuth - Nenhuma sessão encontrada.'); // NOVO LOG
         }
         
         if (mounted) {
           setIsLoading(false);
+          console.log('[AUTH] initializeAuth - isLoading set to false (finalizado).'); // NOVO LOG
         }
       } catch (error) {
         console.error('[AUTH] Erro na inicialização:', error);
         if (mounted) {
           setIsLoading(false);
+          console.log('[AUTH] initializeAuth - isLoading set to false (erro).'); // NOVO LOG
         }
       }
     };
@@ -131,7 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('[AUTH] Iniciando login...');
+      console.log('[AUTH] Iniciando login para:', email); // NOVO LOG
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -140,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
       
-      console.log('[AUTH] Login realizado com sucesso');
+      console.log('[AUTH] Login realizado com sucesso para:', email); // NOVO LOG
       return true;
     } catch (error) {
       console.error('[AUTH] Erro inesperado no login:', error);
@@ -151,7 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
     try {
-      console.log('[AUTH] Iniciando registro...', userData);
+      console.log('[AUTH] Iniciando registro para:', userData.email); // NOVO LOG
       const { error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -171,7 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
       
-      console.log('[AUTH] Registro realizado com sucesso');
+      console.log('[AUTH] Registro realizado com sucesso para:', userData.email); // NOVO LOG
       toast.success("Cadastro realizado!", { 
         description: "Você pode fazer login agora." 
       });
@@ -184,19 +204,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async (): Promise<void> => {
-    console.log('[AUTH] Fazendo logout...');
+    console.log('[AUTH] Fazendo logout...'); // NOVO LOG
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setIsLoading(false);
+    console.log('[AUTH] Logout concluído.'); // NOVO LOG
   };
 
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
     
     try {
-      const { data, error } = await supabase
+      const { data: _data, error } = await supabase
         .from('profiles')
         .update({ 
           name: userData.name, 

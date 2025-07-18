@@ -5,10 +5,14 @@ import { NotificationCenter } from "@/components/notifications/NotificationCente
 import UserProfileMenu from "./UserProfileMenu";
 import { Link } from "react-router-dom";
 
-export const EnhancedNavbar: React.FC = () => {
-  const { user } = useAuth();
+interface EnhancedNavbarProps {
+  isAuthenticated: boolean; // Adicionando prop para autenticação
+}
 
-  if (!user) return null;
+export const EnhancedNavbar: React.FC<EnhancedNavbarProps> = ({ isAuthenticated }) => {
+  // if (!user) return null; // Removido: agora a autenticação é verificada pela prop
+
+  if (!isAuthenticated) return null; // Adicionando verificação da prop
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -30,6 +34,7 @@ export const EnhancedNavbar: React.FC = () => {
             <NotificationCenter />
 
             {/* User Menu */}
+            {/* UserProfileMenu deve funcionar sem 'user' diretamente aqui, dependendo de seu próprio useAuth() */}
             <UserProfileMenu />
           </div>
         </div>

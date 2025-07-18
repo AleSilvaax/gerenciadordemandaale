@@ -74,7 +74,10 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             <div>
               <p className="text-sm font-medium">Criação</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
+                {service.creationDate && new Date(service.creationDate).toString() !== 'Invalid Date'
+                  ? format(new Date(service.creationDate), "PPP", { locale: ptBR })
+                  : "Data não disponível" // Fallback se a data for inválida ou nula
+                }
               </p>
             </div>
           </div>
@@ -84,7 +87,10 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <div>
                 <p className="text-sm font-medium">Vencimento</p>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
+                  {service.dueDate && new Date(service.dueDate).toString() !== 'Invalid Date'
+                    ? format(new Date(service.dueDate), "PPP", { locale: ptBR })
+                    : "Data não disponível" // Fallback se a data for inválida ou nula
+                  }
                 </p>
               </div>
             </div>
@@ -114,7 +120,11 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
 
         {hasPermission("gestor") && (
           <TechnicianAssigner
-            currentTechnicianId={service.technician?.id}
+            currentTechnicianId={
+              service.technician?.id && service.technician.id !== '0'
+                ? service.technician.id
+                : undefined
+            }
             onAssign={async (technician) => {
               await updateService({ id: service.id, technician });
               toast.success("Técnico atualizado!");

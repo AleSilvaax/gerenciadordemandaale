@@ -21,6 +21,7 @@ import { useServiceTypes } from "@/hooks/useServiceTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { deleteService } from "@/services/servicesDataService"; // Importar deleteService
 
 const Demandas = () => {
   const navigate = useNavigate();
@@ -59,8 +60,9 @@ const Demandas = () => {
 
   // Lista de tipos de serviço únicos
   const uniqueServiceTypes = useMemo(() => {
-    const types = [...new Set(services.map(s => s.serviceType).filter(Boolean))];
-    return types.filter(type => type.trim() !== '');
+    // Garante que serviceType é uma string antes de mapear e filtrar
+    const types = [...new Set(services.map(s => s.serviceType).filter((type): type is string => typeof type === 'string' && type.trim() !== ''))];
+    return types;
   }, [services]);
 
   // Handler para refresh manual
@@ -94,6 +96,18 @@ const Demandas = () => {
       toast.error("Erro ao exportar dados");
     }
   }, [filteredServices]);
+
+  // Handler para exclusão de serviço
+  const handleDeleteService = useCallback(async (serviceId: string) => {
+    try {
+      await deleteService(serviceId);
+      toast.success("Demanda excluída com sucesso!");
+      refreshServices(); // Atualiza a lista após exclusão
+    } catch (error) {
+      toast.error("Erro ao excluir demanda.");
+      console.error("Erro ao excluir demanda:", error);
+    }
+  }, [refreshServices]);
 
   if (error) {
     return (
@@ -285,9 +299,19 @@ const Demandas = () => {
                   transition={{ delay: index * 0.05 }}
                 >
                   {isMobile ? (
-                    <MobileServiceCard service={service} />
+                    <MobileServiceCard
+                      service={service}
+                      key={service.id}
+                      onDelete={handleDeleteService}
+                      onClick={() => navigate(`/servico/${service.id}`)} // Alterado de /demandas/ para /servico/
+                    />
                   ) : (
-                    <ServiceCard service={service} />
+                    <ServiceCard
+                      service={service}
+                      key={service.id}
+                      onDelete={handleDeleteService}
+                      onClick={() => navigate(`/servico/${service.id}`)} // Alterado de /demandas/ para /servico/
+                    />
                   )}
                 </motion.div>
               ))}

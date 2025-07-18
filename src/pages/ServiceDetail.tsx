@@ -4,13 +4,14 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { getService, updateService, addServiceMessage } from "@/services/api";
+import { getService, updateService } from "@/services/api";
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
 import { ServiceActions } from "@/components/service-detail/ServiceActions";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { Service } from "@/types/serviceTypes";
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ const ServiceDetail: React.FC = () => {
           navigate("/demandas");
         } else {
           setService(serviceData);
+          console.log("[DEBUG] ServiceDetail - Service data após fetch:", serviceData); // Adicionado para depuração
         }
       } catch (error) {
         console.error("Erro ao carregar os detalhes da demanda:", error);
@@ -57,14 +59,28 @@ const ServiceDetail: React.FC = () => {
     );
   }
 
-  // ==================================================================
-  // AQUI ESTÁ A CORREÇÃO DE SANITIZAÇÃO (SUGESTÃO DA OUTRA IA)
-  // Garantimos que nenhum dado essencial seja nulo antes de renderizar
-  // ==================================================================
+  // SANITIZAÇÃO ROBUSTA
+  const safeTechnician =
+    !service.technician || (Array.isArray(service.technician) && service.technician.length === 0)
+      ? { id: '0', name: 'Não atribuído', avatar: '' }
+      : Array.isArray(service.technician)
+        ? service.technician[0]
+        : service.technician;
+
   const safeService = {
     ...service,
-    technician: service.technician || { id: '0', name: 'Não atribuído', avatar: '' },
-    feedback: service.feedback || { rating: 0, comment: '', wouldRecommend: false },
+    technician: safeTechnician,
+    feedback: service.feedback || { 
+      rating: 0, 
+      comment: '', 
+      wouldRecommend: false,
+      clientRating: 0, // Adicionado campo obrigatório
+      clientComment: '', // Adicionado campo opcional com valor padrão
+      technicianFeedback: '', // Adicionado campo opcional com valor padrão
+      userId: '', // Adicionado campo opcional com valor padrão
+      userName: '', // Adicionado campo opcional com valor padrão
+      timestamp: '', // Adicionado campo opcional com valor padrão
+    },
     photos: Array.isArray(service.photos) ? service.photos : [],
     customFields: Array.isArray(service.customFields) ? service.customFields : [],
     signatures: service.signatures || { client: '', technician: '' }
@@ -81,26 +97,28 @@ const ServiceDetail: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <motion.div
-        className="container mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <ServiceDetailHeader />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Agora passamos o objeto "seguro" para os componentes filhos */}
-            <ServiceDetailCard service={safeService} onServiceUpdate={() => getService(safeService.id).then(setService)} />
-            <ServiceActions service={safeService} onStatusChange={handleStatusChange} />
-            {/* Restante dos componentes que usam 'safeService' */}
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <motion.div
+          className="container mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <ServiceDetailHeader />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Agora passamos o objeto "seguro" para os componentes filhos */}
+              <ServiceDetailCard service={safeService} onServiceUpdate={() => getService(safeService.id).then(setService)} />
+              <ServiceActions service={safeService} onStatusChange={handleStatusChange} />
+              {/* Restante dos componentes que usam 'safeService' */}
+            </div>
+            <div className="space-y-6">
+              {/* Componentes da coluna da direita */}
+            </div>
           </div>
-          <div className="space-y-6">
-            {/* Componentes da coluna da direita */}
-          </div>
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

@@ -12,9 +12,11 @@ import { ptBR } from 'date-fns/locale';
 
 interface MobileServiceCardProps {
   service: Service;
+  onDelete?: (id: string) => Promise<void>; // Adicionado
+  onClick?: () => void; // Adicionado
 }
 
-export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service }) => {
+export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service, onClick }) => {
   const navigate = useNavigate();
 
   const formatDate = (dateString: string) => {
@@ -33,7 +35,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
   };
 
   return (
-    <Card className="w-full mb-3">
+    <Card className="w-full mb-3" onClick={onClick}> {/* Adicionado onClick no Card */}
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header - Title and Status */}
@@ -85,7 +87,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/demandas/${service.id}`)}
+            onClick={onClick} // Alterado para usar a prop onClick
             className="w-full h-8 text-xs"
           >
             <Eye className="w-3 h-3 mr-2" />

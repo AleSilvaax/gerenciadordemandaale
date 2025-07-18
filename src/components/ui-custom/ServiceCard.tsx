@@ -25,7 +25,7 @@ export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list
   const canDelete = hasPermission('delete_services');
 
   return (
-    <Link to={`/demandas/${id}`} className="block">
+    <Link to={`/servico/${id}`} className="block">
       <Card
         className={`
           transition-all duration-300 hover:border-primary/30 hover:shadow-lg
