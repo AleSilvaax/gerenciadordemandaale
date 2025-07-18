@@ -3,10 +3,9 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Calendar, MapPin, User, Clock } from 'lucide-react';
+import { Eye, MapPin, User, Clock } from 'lucide-react';
 import { Service } from '@/types/serviceTypes';
 import { StatusBadge } from './StatusBadge';
-import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -17,7 +16,6 @@ interface MobileServiceCardProps {
 }
 
 export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service, onClick }) => {
-  const navigate = useNavigate();
 
   const formatDate = (dateString: string) => {
     try {

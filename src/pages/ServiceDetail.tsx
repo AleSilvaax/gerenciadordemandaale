@@ -96,6 +96,17 @@ const ServiceDetail: React.FC = () => {
     }
   };
 
+  const handleGenerateReport = async (service: Service) => {
+    try {
+      const { generateServiceReport } = await import('@/utils/pdf/professionalReportGenerator');
+      await generateServiceReport(service);
+      toast.success("Relatório PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error("Erro ao gerar o relatório PDF. Tente novamente.");
+    }
+  };
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -109,7 +120,11 @@ const ServiceDetail: React.FC = () => {
             <div className="lg:col-span-2 space-y-6">
               {/* Agora passamos o objeto "seguro" para os componentes filhos */}
               <ServiceDetailCard service={safeService} onServiceUpdate={() => getService(safeService.id).then(setService)} />
-              <ServiceActions service={safeService} onStatusChange={handleStatusChange} />
+              <ServiceActions 
+                service={safeService} 
+                onStatusChange={handleStatusChange}
+                onGenerateReport={() => handleGenerateReport(safeService)}
+              />
               {/* Restante dos componentes que usam 'safeService' */}
             </div>
             <div className="space-y-6">

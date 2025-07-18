@@ -8,7 +8,7 @@ import { ServiceCardProps } from '@/types/serviceTypes';
 import { DeadlineManager } from './DeadlineManager';
 import { useAuth } from '@/context/AuthContext';
 
-export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list' }> = ({ service, onDelete, compact = false, variant = 'card' }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, compact = false }) => {
   const { id, title, status, location, number, technician, priority, dueDate, creationDate } = service;
   const { hasPermission } = useAuth();
 
@@ -94,12 +94,12 @@ export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list
           <CardFooter className="border-t pt-3 pb-3 px-4 sm:px-6">
             <div className="flex items-center justify-between w-full gap-1">
               <div className="flex items-center gap-2 min-w-0">
-                <TeamMemberAvatar
-                  src={technician?.avatar}
-                  name={technician?.name}
-                  size="sm"
-                />
-                <span className="text-sm text-left truncate max-w-[100px] sm:max-w-[160px] min-w-0">{technician?.name || "Não atribuído"}</span>
+                 <TeamMemberAvatar
+                   src={technician?.avatar || ''}
+                   name={technician?.name || 'Não atribuído'}
+                   size="sm"
+                 />
+                 <span className="text-sm text-left truncate max-w-[100px] sm:max-w-[160px] min-w-0">{technician?.name || "Não atribuído"}</span>
               </div>
               {onDelete && canDelete && (
                 <button

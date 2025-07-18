@@ -1,12 +1,10 @@
 
-import React, { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, Download, RefreshCw, ChevronDown } from "lucide-react";
+import { Plus, Download, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
@@ -17,7 +15,7 @@ import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
 import { useServiceFilters } from "@/hooks/useServiceFilters";
 import { useServices } from "@/hooks/useServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
-import { useServiceTypes } from "@/hooks/useServiceTypes";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,7 +26,6 @@ const Demandas = () => {
   const isMobile = useIsMobile();
   const { services, isLoading, error, refreshServices } = useServices();
   const { teamMembers } = useTeamMembers();
-  const { serviceTypes } = useServiceTypes();
   
   const {
     filters,
@@ -37,14 +34,14 @@ const Demandas = () => {
     clearFilters
   } = useServiceFilters(services);
 
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
 
   // Estatísticas calculadas
   const serviceStats = useMemo(() => {
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
     const completed = services.filter(s => s.status === 'concluido').length;
-    const cancelled = services.filter(s => s.status === 'cancelado').length;
+    
     const highPriority = services.filter(s => s.priority === 'alta').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
