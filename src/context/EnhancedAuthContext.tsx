@@ -105,7 +105,7 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             email: session.user.email,
             name: profileData.name || 'Usuário',
             avatar: profileData.avatar || '',
-            team_id: profileData.team_id,
+            team_id: profileData.team_id || undefined,
             role: role as any,
             permissions: [],
           };
@@ -223,15 +223,13 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user) return false;
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ 
           name: userData.name, 
           avatar: userData.avatar 
         })
-        .eq('id', user.id)
-        .select()
-        .single();
+        .eq('id', user.id);
       
       if (error) {
         console.error('[AUTH] Erro ao atualizar perfil:', error);

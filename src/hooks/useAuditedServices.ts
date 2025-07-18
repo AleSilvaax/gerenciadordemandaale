@@ -43,7 +43,7 @@ export const useAuditedServices = () => {
       );
 
       // Update cache optimistically
-      mutate(current => current ? [newService, ...current] : [newService]);
+      mutate(current => current ? [newService!, ...current] : [newService!]);
       
       toast.success('Demanda criada com sucesso!');
       return newService;

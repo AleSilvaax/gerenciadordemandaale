@@ -29,13 +29,13 @@ export const RealTimeStatsCards: React.FC = () => {
         
         const completed = services.filter(s => s.status === 'concluido').length;
         const pending = services.filter(s => s.status === 'pendente').length;
-        const canceled = services.filter(s => s.status === 'cancelado').length;
         
         // Calculate overdue services (pending services with dueDate in the past)
         const now = new Date();
         const overdue = services.filter(s => {
           if (s.status !== 'pendente') return false;
-          const dueDate = new Date(s.dueDate || s.creationDate);
+          if (!s.dueDate && !s.creationDate) return false;
+          const dueDate = new Date(s.dueDate || s.creationDate!);
           return dueDate < now;
         }).length;
 

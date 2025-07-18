@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser, AuthContextType, RegisterFormData, UserRole } from '@/types/auth';
 import { toast } from 'sonner';
@@ -196,7 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) return false;
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ 
           name: userData.name, 
