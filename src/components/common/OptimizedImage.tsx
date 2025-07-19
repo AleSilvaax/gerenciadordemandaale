@@ -23,7 +23,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   className = '',
   width,
   height,
-  quality = 80,
+  
   placeholder,
   onLoad,
   onError,

@@ -15,9 +15,7 @@ export const AuditLogViewer: React.FC = () => {
   const { user } = useAuth();
   const { logs, isLoading, getLogs: loadLogs } = useAuditLog();
   
-  const filterLogs = (filters: any) => {
-    return logs.filter((log: any) => true); // Simplified for now
-  };
+  // Filter functionality will be implemented when needed
   
   const [filteredLogs, setFilteredLogs] = useState<AuditLogEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

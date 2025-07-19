@@ -1,6 +1,6 @@
 
 import React from "react";
-import { useAuth } from "@/context/AuthContext";
+
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import UserProfileMenu from "./UserProfileMenu";
 import { Link } from "react-router-dom";
