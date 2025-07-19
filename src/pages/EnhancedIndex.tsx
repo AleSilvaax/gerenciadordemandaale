@@ -47,28 +47,24 @@ export default function EnhancedIndex() {
           value={statistics.total}
           description="Serviços cadastrados"
           icon={<Activity className="h-4 w-4" />}
-          trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="Concluídos"
           value={statistics.completed}
           description="Serviços finalizados"
           icon={<CheckCircle className="h-4 w-4" />}
-          trend={{ value: 8, isPositive: true }}
         />
         <StatCard
           title="Pendentes"
           value={statistics.pending}
           description="Aguardando execução"
           icon={<Clock className="h-4 w-4" />}
-          trend={{ value: 3, isPositive: false }}
         />
         <StatCard
           title="Em Atraso"
           value={statistics.overdue}
           description="Serviços atrasados"
           icon={<AlertTriangle className="h-4 w-4" />}
-          trend={{ value: 15, isPositive: false }}
         />
       </div>
 
@@ -164,7 +160,6 @@ export default function EnhancedIndex() {
                     <ServiceCard 
                       key={service.id} 
                       service={service}
-                      highlighted={true}
                     />
                   ))
                 )}

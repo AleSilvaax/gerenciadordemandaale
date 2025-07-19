@@ -222,13 +222,13 @@ export const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 </label>
                 <div className="flex gap-2">
                   <DatePicker
-                    date={filters.dateFrom}
-                    onDateChange={(date) => handleFilterChange('dateFrom', date)}
+                    value={filters.dateFrom || undefined}
+                    onChange={(date) => handleFilterChange('dateFrom', date)}
                     placeholder="Data inicial"
                   />
                   <DatePicker
-                    date={filters.dateTo}
-                    onDateChange={(date) => handleFilterChange('dateTo', date)}
+                    value={filters.dateTo || undefined}
+                    onChange={(date) => handleFilterChange('dateTo', date)}
                     placeholder="Data final"
                   />
                 </div>
