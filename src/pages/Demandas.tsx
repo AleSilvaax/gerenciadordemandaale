@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
 import { useAuditedServices } from "@/hooks/useAuditedServices";
@@ -54,13 +54,13 @@ export default function Demandas() {
       </div>
 
       <StatisticsCards 
-        data={services}
-        total={stats.total}
-        pending={stats.pending}
-        inProgress={stats.inProgress}
-        completed={stats.completed}
-        highPriority={stats.highPriority}
-        completionRate={stats.completionRate}
+        data={{
+          totalServices: stats.total,
+          completedServices: stats.completed,
+          pendingServices: stats.pending,
+          overdue: 0,
+          activeUsers: 0
+        }}
       />
 
       <Card>

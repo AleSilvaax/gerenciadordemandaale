@@ -39,7 +39,7 @@ export const useAuditedServices = () => {
         { source: 'web_app' }
       );
 
-      mutate((current: Service[] | null) => current ? [newService, ...current] : [newService]);
+      mutate([newService, ...(services || [])]);
       
       toast.success('Demanda criada com sucesso!');
       return newService;
@@ -69,11 +69,9 @@ export const useAuditedServices = () => {
         }
       );
 
-      mutate((current: Service[] | null) => 
-        current ? current.map((service: Service) => 
-          service.id === serviceId ? { ...service, ...updates } : service
-        ) : []
-      );
+      mutate((services || []).map((service: Service) => 
+        service.id === serviceId ? { ...service, ...updates } : service
+      ));
 
       toast.success('Demanda atualizada com sucesso!');
       return updatedService;
@@ -97,9 +95,7 @@ export const useAuditedServices = () => {
           { source: 'web_app' }
         );
 
-        mutate((current: Service[] | null) => 
-          current ? current.filter((service: Service) => service.id !== serviceId) : []
-        );
+        mutate((services || []).filter((service: Service) => service.id !== serviceId));
         
         toast.success('Demanda excluída com sucesso!');
       }

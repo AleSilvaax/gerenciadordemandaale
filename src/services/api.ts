@@ -95,6 +95,7 @@ export const getService = async (id: string): Promise<Service | null> => {
 
   return {
     ...data,
+    creationDate: data.created_at, // Add creationDate for compatibility
     technician: safeTechnician,
     feedback: safeFeedback,
     customFields: safeCustomFields

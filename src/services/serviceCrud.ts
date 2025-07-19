@@ -176,7 +176,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         createdBy: service.created_by || undefined,
         client: service.client || undefined,
         address: service.address || undefined,
-        city: service.city || undefined,
+      city: service.city || undefined,
         notes: service.notes || undefined,
         estimatedHours: service.estimated_hours || undefined,
         customFields: customFieldsParsed,

@@ -25,9 +25,9 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
       .from('service_messages')
       .insert({
         service_id: serviceId,
-        sender_id: message.senderId || 'system',
-        sender_name: message.senderName || 'Sistema',
-        sender_role: message.senderRole || 'system',
+        sender_id: message.sender_id || 'system',
+        sender_name: message.sender_name || 'Sistema',
+        sender_role: message.sender_role || 'system',
         message: message.message,
         timestamp: new Date().toISOString()
       })
@@ -63,9 +63,9 @@ const saveMessageViaEdgeFunction = async (serviceId: string, message: ServiceMes
       body: {
         serviceId,
         message: {
-          author: message.senderId || 'system',
-          author_name: message.senderName || 'Sistema',
-          type: message.senderRole || 'system',
+          author: message.sender_id || 'system',
+          author_name: message.sender_name || 'Sistema',
+          type: message.sender_role || 'system',
           text: message.message
         }
       }

@@ -19,9 +19,9 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
     if (!types || types.length === 0) {
       console.log('[ServiceTypes] Nenhum tipo encontrado, retornando tipos padrão');
       return [
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
+        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
+        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
+        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
       ];
     }
 
@@ -93,9 +93,9 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
     console.error("Erro ao buscar tipos de serviço:", e);
     // Retornar tipos padrão em caso de erro
     return [
-      { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
-      { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
-      { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
+        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
+        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
+        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
     ];
   }
 };

@@ -78,6 +78,7 @@ export const getService = async (id: string): Promise<Service | null> => {
 
   return {
     ...data,
+    creationDate: data.created_at, // Adicionar creationDate para compatibilidade
     technician: safeTechnician,
     feedback: safeFeedback,
     customFields: safeCustomFields

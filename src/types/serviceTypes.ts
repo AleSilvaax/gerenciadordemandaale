@@ -1,7 +1,7 @@
 
-export type ServiceStatus = 'pendente' | 'concluido' | 'cancelado';
+export type ServiceStatus = 'pendente' | 'concluido' | 'cancelado' | 'em_andamento';
 export type ServicePriority = 'baixa' | 'media' | 'alta' | 'urgente';
-export type UserRole = 'tecnico' | 'administrador' | 'gestor';
+export type UserRole = 'tecnico' | 'administrador' | 'gestor' | 'requisitor';
 
 export interface TeamMember {
   id: string;
@@ -37,6 +37,31 @@ export interface ServiceTypeConfig {
   estimatedHours?: number;
   defaultPriority?: ServicePriority;
   technicalFields?: TechnicalField[];
+  fields?: TechnicalField[]; // Adicionar fields para compatibilidade
+}
+
+export interface ServiceCardProps {
+  service: Service;
+  onDelete?: (serviceId: string) => void;
+  compact?: boolean;
+}
+
+export interface ServiceMessage {
+  id: string;
+  service_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_role: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface StatisticsData {
+  totalServices: number;
+  completedServices: number;
+  pendingServices: number;
+  overdue: number;
+  activeUsers: number;
 }
 
 export interface Service {

@@ -56,7 +56,7 @@ export const TechnicalSettingsTab = () => {
         id: data.id,
         name: data.name,
         description: data.description || '',
-        fields: [],
+        technicalFields: [],
       });
       toast.success("Tipo de serviço criado.");
     } catch {
@@ -241,7 +241,7 @@ export const TechnicalSettingsTab = () => {
                     }`}
                   >
                     <div className="font-medium">{type.name}</div>
-                    <div className="text-sm opacity-70">{type.fields.length} campos</div>
+                    <div className="text-sm opacity-70">{type.technicalFields?.length || 0} campos</div>
                   </div>
                 ))}
               </div>
@@ -347,7 +347,7 @@ export const TechnicalSettingsTab = () => {
                           </Button>
                         </div>
                         <div className="space-y-2">
-                          {selectedType.fields.map((field) => (
+                          {selectedType.technicalFields?.map((field: any) => (
                             <div key={field.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                               <div>
                                 <div className="font-medium">{field.name}</div>

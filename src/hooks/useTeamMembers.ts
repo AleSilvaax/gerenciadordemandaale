@@ -41,7 +41,7 @@ export const useTeamMembers = () => {
     try {
       const updatedMember = await updateTeamMember(id, memberData);
       setTeamMembers(prev => prev.map(member => 
-        member.id === id ? { ...member, ...updatedMember } : member
+        member.id === id ? { ...member, ...memberData } : member
       ));
       toast.success('Membro atualizado com sucesso!');
       return updatedMember;
