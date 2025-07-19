@@ -1,159 +1,76 @@
 
-import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { StatCard } from "@/components/ui-custom/StatCard";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Activity, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  Calendar
-} from "lucide-react";
-import { useConsolidatedServices } from "@/hooks/useConsolidatedServices";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuditedServices } from "@/hooks/useAuditedServices";
+import { CalendarDays, CheckCircle, Clock, Users } from "lucide-react";
 
 export default function Index() {
-  const { services, isLoading, statistics } = useConsolidatedServices();
+  const { services, isLoading } = useAuditedServices();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredServices = services.filter(service =>
+    service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.client?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const stats = {
+    total: services.length,
+    pending: services.filter(s => s.status === 'pendente').length,
+    completed: services.filter(s => s.status === 'concluido').length,
+    highPriority: services.filter(s => s.priority === 'alta' || s.priority === 'urgente').length
+  };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
 
-  const recentServices = services.slice(0, 6);
-
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-sm">
-            <Calendar className="mr-2 h-4 w-4" />
-            Hoje
-          </Badge>
-        </div>
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total de Serviços"
-          value={statistics.total}
-          description="Serviços cadastrados"
-          icon={<Activity className="h-4 w-4" />}
-        />
-        <StatCard
-          title="Concluídos"
-          value={statistics.completed}
-          description="Serviços finalizados"
-          icon={<CheckCircle className="h-4 w-4" />}
+          title="Total de Demandas"
+          value={stats.total}
+          description="Todas as demandas no sistema"
+          icon={<CalendarDays className="h-4 w-4" />}
         />
         <StatCard
           title="Pendentes"
-          value={statistics.pending}
-          description="Aguardando execução"
+          value={stats.pending}
+          description="Aguardando atendimento"
           icon={<Clock className="h-4 w-4" />}
         />
         <StatCard
-          title="Em Atraso"
-          value={statistics.overdue}
-          description="Serviços atrasados"
-          icon={<AlertTriangle className="h-4 w-4" />}
+          title="Concluídas"
+          value={stats.completed}
+          description="Finalizadas com sucesso"
+          icon={<CheckCircle className="h-4 w-4" />}
+        />
+        <StatCard
+          title="Alta Prioridade"
+          value={stats.highPriority}
+          description="Demandam atenção urgente"
+          icon={<Users className="h-4 w-4" />}
         />
       </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>  
-          <TabsTrigger value="recent">Recentes</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Resumo Executivo</CardTitle>
-                <CardDescription>
-                  Visão geral da performance atual
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Taxa de Conclusão</span>
-                    <span className="font-bold text-green-600">
-                      {statistics.completionRate}%
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Serviços Ativos</span>
-                    <span className="font-bold">{statistics.pending}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Alta Prioridade</span>
-                    <span className="font-bold text-red-600">
-                      {statistics.byPriority.high}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Tipos de Serviço</CardTitle>
-                <CardDescription>
-                  Distribuição atual
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(statistics.byType).map(([type, count]) => (
-                    <div key={type} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{type}</span>
-                      <Badge variant="secondary">{count}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="recent" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Serviços Recentes</CardTitle>
-              <CardDescription>
-                Últimos serviços cadastrados no sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {recentServices.map((service) => (
-                  <ServiceCard 
-                    key={service.id} 
-                    service={service}
-                  />
-                ))}
-              </div>
-              
-              {services.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhum serviço encontrado
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-4">
+        {filteredServices.slice(0, 10).map((service) => (
+          <ServiceCard 
+            key={service.id} 
+            service={service}
+          />
+        ))}
+      </div>
     </div>
   );
 }

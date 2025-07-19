@@ -7,13 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Edit } from "lucide-react";
-import { ServiceTypeConfig } from '@/types/serviceTypes';
+import { Edit } from "lucide-react";
 import { 
   getServiceTypesFromDatabase,
   createTechnicalField,
-  updateTechnicalField,
-  deleteTechnicalField 
+  updateTechnicalField
 } from '@/services/serviceTypesService';
 import { toast } from "sonner";
 
@@ -24,15 +22,13 @@ interface TechnicalFieldsManagerProps {
 export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({ 
   onFieldsChange 
 }) => {
-  const [selectedServiceType, setSelectedServiceType] = useState<string>('');
+  const [selectedServiceType] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [editingField, setEditingField] = useState<any>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
 
   const [fieldData, setFieldData] = useState({
     name: '',
-    type: 'text',
+    type: 'text' as 'text' | 'number' | 'textarea' | 'boolean' | 'select' | 'date' | 'checkbox',
     required: false,
     description: '',
     options: [] as string[]
@@ -114,27 +110,6 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
     }
   };
 
-  const handleDeleteField = async (fieldId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este campo?")) return;
-
-    setIsLoading(true);
-    try {
-      await deleteTechnicalField(fieldId);
-      toast.success("Campo excluído com sucesso!");
-      
-      if (onFieldsChange) {
-        onFieldsChange([]);
-      }
-    } catch (error) {
-      console.error('[TechnicalFieldsManager] Error deleting field:', error);
-      toast.error("Erro ao excluir campo");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // const isCompleted = currentStep === totalSteps;
-
   return (
     <div className="space-y-6">
       <Card>
@@ -160,7 +135,7 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
               <Label htmlFor="field-type">Tipo do Campo</Label>
               <Select 
                 value={fieldData.type} 
-                onValueChange={(value) => setFieldData(prev => ({ ...prev, type: value }))}
+                onValueChange={(value: any) => setFieldData(prev => ({ ...prev, type: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
@@ -209,7 +184,6 @@ export const TechnicalFieldsManager: React.FC<TechnicalFieldsManagerProps> = ({
               </>
             ) : (
               <Button onClick={handleAddField} disabled={isLoading}>
-                <Plus className="h-4 w-4 mr-2" />
                 Adicionar Campo
               </Button>
             )}

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
@@ -392,24 +391,24 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
     // Campos JSON - serializar corretamente
     if (service.customFields !== undefined) {
-      updateData.custom_fields = service.customFields ? JSON.stringify(service.customFields) : null;
+      updateData.custom_fields = service.customFields ? JSON.stringify(service.customFields) : undefined;
     }
     if (service.signatures !== undefined) {
-      updateData.signatures = service.signatures ? JSON.stringify(service.signatures) : null;
+      updateData.signatures = service.signatures ? JSON.stringify(service.signatures) : undefined;
       console.log('Salvando assinaturas no banco:', updateData.signatures);
     }
     if (service.feedback !== undefined) {
-      updateData.feedback = service.feedback ? JSON.stringify(service.feedback) : null;
+      updateData.feedback = service.feedback ? JSON.stringify(service.feedback) : undefined;
       console.log('Salvando feedback no banco:', updateData.feedback);
     }
 
     // Arrays de fotos
     if (service.photos !== undefined) {
-      updateData.photos = service.photos || null;
+      updateData.photos = service.photos || undefined;
       console.log('Salvando fotos no banco:', service.photos?.length, 'fotos');
     }
     if (service.photoTitles !== undefined) {
-      updateData.photo_titles = service.photoTitles || null;
+      updateData.photo_titles = service.photoTitles || undefined;
       console.log('Salvando títulos das fotos no banco:', service.photoTitles?.length, 'títulos');
     }
 

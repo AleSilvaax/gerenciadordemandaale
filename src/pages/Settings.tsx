@@ -1,75 +1,55 @@
 
-import React from "react";
-import { Card } from "@/components/ui/card";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EnhancedVisualPreferencesTab } from "@/components/settings/EnhancedVisualPreferencesTab";
+import { Badge } from "@/components/ui/badge";
+import { VisualPreferencesTab } from "@/components/settings/VisualPreferencesTab";
 import { TechnicalSettingsTab } from "@/components/settings/TechnicalSettingsTab";
 import { PermissionsTab } from "@/components/settings/PermissionsTab";
-import { 
-  User, 
-  Palette, 
-  Wrench, 
-  Shield 
-} from "lucide-react";
+import { Settings as SettingsIcon, Palette, Wrench, Shield } from "lucide-react";
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState("visual");
+
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Configurações</h2>
-          <p className="text-muted-foreground">
-            Gerencie suas preferências e configurações do sistema
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Configurações do Sistema</h1>
+        <p className="text-muted-foreground">
+          Gerencie as configurações e preferências do sistema
+        </p>
       </div>
 
-      <Card className="p-6">
-        <Tabs defaultValue="visual" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="visual" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Visual
-            </TabsTrigger>
-            <TabsTrigger value="technical" className="flex items-center gap-2">
-              <Wrench className="h-4 w-4" />
-              Técnico
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Permissões
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Perfil
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="visual" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Visual
+          </TabsTrigger>
+          <TabsTrigger value="technical" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Técnico
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Permissões
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="visual" className="space-y-4">
-            <EnhancedVisualPreferencesTab />
+        <div className="mt-6">
+          <TabsContent value="visual" className="space-y-6">
+            <VisualPreferencesTab />
           </TabsContent>
 
-          <TabsContent value="technical" className="space-y-4">
+          <TabsContent value="technical" className="space-y-6">
             <TechnicalSettingsTab />
           </TabsContent>
 
-          <TabsContent value="permissions" className="space-y-4">
+          <TabsContent value="permissions" className="space-y-6">
             <PermissionsTab />
           </TabsContent>
-
-          <TabsContent value="profile" className="space-y-4">
-            <Card className="p-6">
-              <div className="text-center">
-                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Configurações de Perfil</h3>
-                <p className="text-muted-foreground">
-                  Esta seção estará disponível em breve
-                </p>
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </Card>
+        </div>
+      </Tabs>
     </div>
   );
 }

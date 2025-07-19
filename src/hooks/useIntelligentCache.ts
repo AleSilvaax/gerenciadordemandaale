@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface CacheOptions {
-  ttl?: number; // Time to live in milliseconds
-  maxSize?: number; // Maximum number of cached items
+  ttl?: number;
+  maxSize?: number;
   staleWhileRevalidate?: boolean;
 }
 
@@ -19,16 +19,17 @@ class IntelligentCache {
   private maxSize: number;
   private defaultTTL: number;
   
-  constructor(maxSize = 100, defaultTTL = 5 * 60 * 1000) { // 5 minutes default
+  constructor(maxSize = 100, defaultTTL = 5 * 60 * 1000) {
     this.maxSize = maxSize;
     this.defaultTTL = defaultTTL;
   }
 
   set<T>(key: string, data: T, ttl?: number): void {
-    // Remove oldest item if cache is full
     if (this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
     }
 
     const item: CacheItem<T> = {
@@ -40,7 +41,6 @@ class IntelligentCache {
 
     this.cache.set(key, item);
 
-    // Set expiration timer
     const effectiveTTL = ttl || this.defaultTTL;
     setTimeout(() => {
       const cachedItem = this.cache.get(key);
@@ -53,7 +53,6 @@ class IntelligentCache {
   get<T>(key: string): CacheItem<T> | null {
     const item = this.cache.get(key);
     if (!item) return null;
-
     return item as CacheItem<T>;
   }
 
@@ -69,19 +68,16 @@ class IntelligentCache {
     return this.cache.size;
   }
 
-  // Get all keys that match a pattern
   getKeysByPattern(pattern: RegExp): string[] {
     return Array.from(this.cache.keys()).filter(key => pattern.test(key));
   }
 
-  // Invalidate all keys matching a pattern
   invalidatePattern(pattern: RegExp): void {
     const keysToDelete = this.getKeysByPattern(pattern);
     keysToDelete.forEach(key => this.delete(key));
   }
 }
 
-// Global cache instance
 const globalCache = new IntelligentCache();
 
 export const useIntelligentCache = <T>(
@@ -98,12 +94,11 @@ export const useIntelligentCache = <T>(
   const mountedRef = useRef(true);
 
   const {
-    ttl = 5 * 60 * 1000, // 5 minutes
+    ttl = 5 * 60 * 1000,
     staleWhileRevalidate = false
   } = options;
 
   const fetchData = async (ignoreCache = false) => {
-    // Cancel any ongoing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -112,7 +107,6 @@ export const useIntelligentCache = <T>(
     abortControllerRef.current = abortController;
 
     try {
-      // Check cache first
       if (!ignoreCache) {
         const cachedItem = globalCache.get<T>(key);
         if (cachedItem && !cachedItem.isStale) {
@@ -121,7 +115,6 @@ export const useIntelligentCache = <T>(
           return cachedItem.data;
         }
 
-        // If stale data exists and staleWhileRevalidate is enabled
         if (cachedItem && cachedItem.isStale && staleWhileRevalidate) {
           setData(cachedItem.data);
           setIsLoading(false);
@@ -129,7 +122,6 @@ export const useIntelligentCache = <T>(
         }
       }
 
-      // Fetch fresh data
       if (!isValidating) {
         setIsLoading(true);
       }
@@ -138,7 +130,6 @@ export const useIntelligentCache = <T>(
       
       if (!mountedRef.current) return freshData;
 
-      // Cache the fresh data
       globalCache.set(key, freshData, ttl);
       
       setData(freshData);
@@ -161,7 +152,6 @@ export const useIntelligentCache = <T>(
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchData();
     
@@ -173,7 +163,6 @@ export const useIntelligentCache = <T>(
     };
   }, [key]);
 
-  // Auto-refresh functionality
   useEffect(() => {
     if (!ttl) return;
 
@@ -181,14 +170,11 @@ export const useIntelligentCache = <T>(
       const cachedItem = globalCache.get<T>(key);
       if (cachedItem) {
         const age = Date.now() - cachedItem.timestamp;
-        // const cacheIsStale = age > ttl;
-        
-        // Proactively refresh if cache is getting old (80% of TTL)
         if (age > ttl * 0.8) {
           fetchData(true);
         }
       }
-    }, ttl * 0.1); // Check every 10% of TTL
+    }, ttl * 0.1);
 
     return () => clearInterval(interval);
   }, [key, ttl]);
@@ -198,7 +184,6 @@ export const useIntelligentCache = <T>(
       globalCache.set(key, newData, ttl);
       setData(newData);
     } else {
-      // Revalidate
       fetchData(true);
     }
   };
