@@ -1,17 +1,16 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Palette, Monitor, Sun, Moon, Type, Layout, Zap, RefreshCw } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
+import { Palette, Sun, Moon, Type, Layout, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const EnhancedVisualPreferencesTab: React.FC = () => {
-  const theme = 'light';
+  const [theme, setTheme] = useState('light');
   const [fontSize, setFontSize] = useState([16]);
   const [compactMode, setCompactMode] = useState(false);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);

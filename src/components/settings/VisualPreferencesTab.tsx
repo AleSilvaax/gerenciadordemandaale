@@ -7,8 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Moon, Sun, Monitor, Palette, Layers, RotateCw, Gauge } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
+import { Moon, Sun, RotateCw } from "lucide-react";
 
 interface ColorScheme {
   id: string;
@@ -38,7 +37,8 @@ const layoutOptions = [
 ];
 
 export const VisualPreferencesTab = () => {
-  const { isDarkMode, setDarkMode, theme, setTheme } = useTheme();
+  const [isDarkMode, setDarkMode] = React.useState(false);
+  const [theme, setTheme] = React.useState('light');
   const [colorScheme, setColorScheme] = React.useState<string>("default");
   const [layout, setLayout] = React.useState<string>("balanced");
   const [animationLevel, setAnimationLevel] = React.useState<number>(50);
