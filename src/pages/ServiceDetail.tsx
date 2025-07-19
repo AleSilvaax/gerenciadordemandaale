@@ -98,8 +98,8 @@ const ServiceDetail: React.FC = () => {
 
   const handleGenerateReport = async (service: Service) => {
     try {
-      const { generateServiceReport } = await import('@/utils/pdf/professionalReportGenerator');
-      await generateServiceReport(service);
+      const { generateProfessionalServiceReport } = await import('@/utils/pdf/professionalReportGenerator');
+      await generateProfessionalServiceReport(service);
       toast.success("Relatório PDF gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,21 +19,16 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Area,
   AreaChart
 } from 'recharts';
 import { 
   TrendingUp, 
-  Users, 
   Clock, 
   CheckCircle, 
   AlertTriangle,
-  Calendar,
   Activity,
-  Download,
-  Filter
+  Download
 } from 'lucide-react';
 
 interface AdvancedDashboardProps {
@@ -41,7 +36,6 @@ interface AdvancedDashboardProps {
 }
 
 export const AdvancedDashboard: React.FC<AdvancedDashboardProps> = ({ className }) => {
-  const { user } = useAuth();
   const { services = [] } = useServices();
   const { teamMembers = [] } = useTeamMembers();
   

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Service } from "@/types/serviceTypes";
 
 // Atualiza qualquer campo da demanda, incluindo dados aninhados
 export async function updateService(data: any): Promise<any> {

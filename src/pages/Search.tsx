@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Search as SearchIcon, Clock, MapPin, Calendar } from "lucide-react";
+import { ArrowLeft, Search as SearchIcon, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { getServices } from "@/services/servicesDataService";
 import { Service } from "@/types/serviceTypes";
-import { formatDate } from "@/utils/formatters";
+
 
 const Search: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,7 +51,7 @@ const Search: React.FC = () => {
         service.description?.toLowerCase().includes(query) ||
         service.location.toLowerCase().includes(query) ||
         service.client?.toLowerCase().includes(query) ||
-        service.technician.name.toLowerCase().includes(query) ||
+        service.technician?.name?.toLowerCase().includes(query) ||
         service.id.toLowerCase().includes(query)
     );
 
@@ -76,7 +76,7 @@ const Search: React.FC = () => {
         service.description?.toLowerCase().includes(query) ||
         service.location.toLowerCase().includes(query) ||
         service.client?.toLowerCase().includes(query) ||
-        service.technician.name.toLowerCase().includes(query) ||
+        service.technician?.name?.toLowerCase().includes(query) ||
         service.id.toLowerCase().includes(query)
     );
 
