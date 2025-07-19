@@ -9,7 +9,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
     console.log('Updating profile for user:', userId, 'with data:', userData);
     
     // Extract the data we want to save to the profile
-    const { name, email, phone, avatar } = userData;
+    const { name, avatar } = userData;
     
     // Update the profiles table in Supabase
     const { error } = await supabase
@@ -62,7 +62,15 @@ export const fetchUserProfile = async (userId: string): Promise<Partial<AuthUser
     }
 
     console.log('Profile fetched successfully:', data);
-    return data;
+    
+    // Convert null values to undefined for compatibility with AuthUser type
+    return {
+      id: data.id,
+      name: data.name || undefined,
+      avatar: data.avatar || undefined,
+      organization_id: data.organization_id || undefined,
+      team_id: data.team_id || undefined,
+    };
   } catch (error) {
     console.error('Error in fetchUserProfile:', error);
     return null;

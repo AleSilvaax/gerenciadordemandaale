@@ -1,17 +1,17 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember, ServicePriority, ServiceStatus, CustomField } from '@/types/serviceTypes';
+import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
 // Interface para a tabela de mensagens de serviço
 interface ServiceMessageRow {
   id: string;
-  service_id: string;
+  service_id: string | null;
   sender_id: string;
   sender_name: string;
   sender_role: string;
   message: string;
-  timestamp: string;
+  timestamp: string | null;
 }
 
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
@@ -96,7 +96,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         role: 'tecnico',
       };
 
-      // Buscar mensagens para este serviço
+      // Buscar mensagens para este serviço - filtrar apenas válidas
       const serviceMessages = messagesData
         .filter(m => m.service_id === service.id)
         .map(m => ({
@@ -104,7 +104,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
           senderName: m.sender_name,
           senderRole: m.sender_role,
           message: m.message,
-          timestamp: m.timestamp
+          timestamp: m.timestamp || new Date().toISOString()
         }));
 
       // Parse seguro dos campos JSON
@@ -141,7 +141,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         }
       }
 
-      // Arrays seguros
+      // Arrays seguros - converter null para undefined
       const safePhotoTitles = Array.isArray(service.photo_titles) 
         ? service.photo_titles.filter((x: any) => typeof x === 'string')
         : undefined;
@@ -162,31 +162,31 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         ? service.status as ServiceStatus
         : 'pendente' as ServiceStatus;
 
-      const processedService = {
+      const processedService: Service = {
         id: service.id,
         title: service.title || 'Sem título',
         location: service.location || 'Local não informado',
         status: safeStatus,
         technician: technician,
         creationDate: service.created_at,
-        dueDate: service.due_date,
+        dueDate: service.due_date || undefined,
         priority: safePriority,
         serviceType: service.service_type || 'Vistoria',
         number: service.number,
-        description: service.description,
-        createdBy: service.created_by,
-        client: service.client,
-        address: service.address,
-        city: service.city,
-        notes: service.notes,
-        estimatedHours: service.estimated_hours,
+        description: service.description || undefined,
+        createdBy: service.created_by || undefined,
+        client: service.client || undefined,
+        address: service.address || undefined,
+        city: service.city || undefined,
+        notes: service.notes || undefined,
+        estimatedHours: service.estimated_hours || undefined,
         customFields: customFieldsParsed,
         signatures: signaturesParsed,
         feedback: feedbackParsed,
         messages: serviceMessages,
         photos: safePhotos,
         photoTitles: safePhotoTitles,
-        date: service.date,
+        date: service.date || undefined,
       };
 
       console.log('[SERVICES] Serviço processado:', processedService.id, processedService.title);
@@ -195,9 +195,9 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
 
     console.log('[SERVICES] Total de serviços processados:', services.length);
     return services;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[SERVICES] Erro geral:', error);
-    toast.error(`Erro ao buscar demandas: ${error.message || 'Erro desconhecido'}`);
+    toast.error(`Erro ao buscar demandas: ${error?.message || 'Erro desconhecido'}`);
     return [];
   }
 };
@@ -283,12 +283,12 @@ export const createServiceInDatabase = async (
     // Helpers - safe type assertions and parse functions
     const safePriority = typeof data.priority === 'string' &&
       ['baixa', 'media', 'alta', 'urgente'].includes(data.priority)
-      ? data.priority as ServicePriority
-      : undefined;
+        ? data.priority as ServicePriority
+        : undefined;
     const safeServiceType = typeof data.service_type === 'string' &&
       ['Vistoria', 'Instalação', 'Manutenção'].includes(data.service_type)
-      ? data.service_type
-      : undefined;
+        ? data.service_type
+        : undefined;
 
     // Parse possible JSON fields
     let customFieldsParsed: any = undefined;
@@ -311,7 +311,7 @@ export const createServiceInDatabase = async (
       } catch { feedbackParsed = undefined; }
     }
 
-    // Arrays seguros
+    // Arrays seguros - converter null para undefined
     const safePhotoTitles =
       Array.isArray(data.photo_titles)
         ? data.photo_titles.filter((x: any) => typeof x === 'string')
@@ -335,27 +335,27 @@ export const createServiceInDatabase = async (
           role: 'tecnico',
         },
         creationDate: data.created_at,
-        dueDate: data.due_date ?? service.dueDate,
-        priority: safePriority ?? service.priority,
-        serviceType: safeServiceType ?? service.serviceType,
-        description: data.description ?? service.description,
-        createdBy: data.created_by ?? service.createdBy,
-        client: data.client ?? service.client,
-        address: data.address ?? service.address,
-        city: data.city ?? service.city,
-        notes: data.notes ?? service.notes,
-        estimatedHours: data.estimated_hours ?? service.estimatedHours,
+        dueDate: data.due_date || service.dueDate,
+        priority: safePriority || service.priority,
+        serviceType: safeServiceType || service.serviceType,
+        description: data.description || service.description,
+        createdBy: data.created_by || service.createdBy,
+        client: data.client || service.client,
+        address: data.address || service.address,
+        city: data.city || service.city,
+        notes: data.notes || service.notes,
+        estimatedHours: data.estimated_hours || service.estimatedHours,
         customFields: customFieldsParsed,
         signatures: signaturesParsed,
         feedback: feedbackParsed,
         messages: service.messages || [],
         photos: safePhotos,
         photoTitles: safePhotoTitles,
-        date: data.date ?? service.date
+        date: data.date || service.date
       },
       technicianError
     };
-  } catch (error) {
+  } catch (error: any) {
     if (typeof error?.message === "string" && error.message === "PERMISSION_DENIED") {
       toast.error("Permissão negada ao criar demanda. Consulte o administrador.");
     }
@@ -375,20 +375,20 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       updated_at: new Date().toISOString()
     };
 
-    // Campos básicos
+    // Campos básicos - converter undefined para null para o banco
     if (service.title !== undefined) updateData.title = service.title;
     if (service.location !== undefined) updateData.location = service.location;
     if (service.status !== undefined) updateData.status = service.status;
     if (service.priority !== undefined) updateData.priority = service.priority;
     if (service.serviceType !== undefined) updateData.service_type = service.serviceType;
-    if (service.description !== undefined) updateData.description = service.description;
-    if (service.client !== undefined) updateData.client = service.client;
-    if (service.address !== undefined) updateData.address = service.address;
-    if (service.city !== undefined) updateData.city = service.city;
-    if (service.notes !== undefined) updateData.notes = service.notes;
-    if (service.estimatedHours !== undefined) updateData.estimated_hours = service.estimatedHours;
-    if (service.dueDate !== undefined) updateData.due_date = service.dueDate;
-    if (service.date !== undefined) updateData.date = service.date;
+    if (service.description !== undefined) updateData.description = service.description || null;
+    if (service.client !== undefined) updateData.client = service.client || null;
+    if (service.address !== undefined) updateData.address = service.address || null;
+    if (service.city !== undefined) updateData.city = service.city || null;
+    if (service.notes !== undefined) updateData.notes = service.notes || null;
+    if (service.estimatedHours !== undefined) updateData.estimated_hours = service.estimatedHours || null;
+    if (service.dueDate !== undefined) updateData.due_date = service.dueDate || null;
+    if (service.date !== undefined) updateData.date = service.date || null;
 
     // Campos JSON - serializar corretamente
     if (service.customFields !== undefined) {
@@ -405,11 +405,11 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
     // Arrays de fotos
     if (service.photos !== undefined) {
-      updateData.photos = service.photos;
+      updateData.photos = service.photos || null;
       console.log('Salvando fotos no banco:', service.photos?.length, 'fotos');
     }
     if (service.photoTitles !== undefined) {
-      updateData.photo_titles = service.photoTitles;
+      updateData.photo_titles = service.photoTitles || null;
       console.log('Salvando títulos das fotos no banco:', service.photoTitles?.length, 'títulos');
     }
 
@@ -498,24 +498,24 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         role: 'tecnico',
       },
       creationDate: data.created_at,
-      dueDate: data.due_date,
+      dueDate: data.due_date || undefined,
       priority: data.priority as ServicePriority,
       serviceType: data.service_type,
       number: data.number,
-      description: data.description,
-      createdBy: data.created_by,
-      client: data.client,
-      address: data.address,
-      city: data.city,
-      notes: data.notes,
-      estimatedHours: data.estimated_hours,
+      description: data.description || undefined,
+      createdBy: data.created_by || undefined,
+      client: data.client || undefined,
+      address: data.address || undefined,
+      city: data.city || undefined,
+      notes: data.notes || undefined,
+      estimatedHours: data.estimated_hours || undefined,
       customFields: customFieldsParsed,
       signatures: signaturesParsed,
       feedback: feedbackParsed,
       messages: service.messages || [],
-      photos: data.photos,
-      photoTitles: data.photo_titles,
-      date: data.date,
+      photos: data.photos || undefined,
+      photoTitles: data.photo_titles || undefined,
+      date: data.date || undefined,
     };
   } catch (error) {
     console.error('Erro em updateServiceInDatabase:', error);
@@ -549,7 +549,7 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
 };
 
 // Helper function to assign a technician to a service
-async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
+async function assignTechnician(serviceId: string, technicianId: string): Promise<void> => {
   try {
     // First, remove existing technician assignments
     const { error: deleteError } = await supabase
@@ -573,8 +573,6 @@ async function assignTechnician(serviceId: string, technicianId: string): Promis
     throw error;
   }
 }
-
-// Adicione este código ao final de src/services/serviceCrud.ts
 
 /**
  * Faz o upload de um arquivo de imagem para o Supabase Storage.

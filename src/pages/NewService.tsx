@@ -1,436 +1,412 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { 
+  CalendarIcon, 
+  MapPin, 
+  User, 
+  FileText, 
+  Save, 
+  ArrowLeft,
+  Plus
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowLeft, Plus, Calendar, MapPin, FileText, User } from "lucide-react";
-import { Link } from "react-router-dom";
-import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { createServiceInDatabase } from "@/services/serviceCrud";
+import { Service, ServicePriority, ServiceStatus } from "@/types/serviceTypes";
+import { toast } from "sonner";
 
-interface ServiceFormData {
-  title: string;
-  serviceType: string;
-  client: string;
-  location: string;
-  address: string;
-  city: string;
-  description: string;
-  notes: string;
-  dueDate: string;
-  technicianId: string;
-}
-
-const NewService: React.FC = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+export default function NewService() {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
-
-  const form = useForm<ServiceFormData>({
-    defaultValues: {
-      title: "",
-      serviceType: "",
-      client: "",
-      location: "",
-      address: "",
-      city: "",
-      description: "",
-      notes: "",
-      dueDate: "",
-      technicianId: "none",
-    },
+  const { user } = useAuth();
+  const { teamMembers } = useTeamMembers();
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [dueDate, setDueDate] = useState<Date>();
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    client: '',
+    address: '',
+    city: '',
+    priority: 'media' as ServicePriority,
+    serviceType: 'Vistoria',
+    technicianId: '',
+    estimatedHours: '',
+    notes: ''
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const types = await getServiceTypesFromDatabase();
-        setServiceTypes(types);
-        
-        if (hasPermission("gestor")) {
-          const members = await getTeamMembers();
-          setTeamMembers(members);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        toast.error("Erro ao carregar tipos de serviço");
-      }
-    };
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
-    fetchData();
-  }, [hasPermission]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim()) {
+      toast.error('Título é obrigatório');
+      return;
+    }
+    
+    if (!formData.location.trim()) {
+      toast.error('Local é obrigatório');
+      return;
+    }
 
-  const onSubmit = async (data: ServiceFormData) => {
-    setIsSubmitting(true);
+    if (!user?.id) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      console.log("Criando nova demanda:", data);
-
-      // Encontrar o técnico selecionado
-      let selectedTechnician = null;
-      if (hasPermission("gestor") && data.technicianId && data.technicianId !== "none") {
-        const technician = teamMembers.find(t => t.id === data.technicianId);
-        if (technician) {
-          selectedTechnician = {
-            id: technician.id,
-            name: technician.name,
-            avatar: technician.avatar,
-            role: technician.role,
-            email: technician.email,
-            phone: technician.phone,
-            signature: technician.signature
-          };
-        }
-      } else if (!hasPermission("gestor") && user) {
-        // Se não é gestor, atribuir a si mesmo
-        selectedTechnician = {
-          id: user.id,
-          name: user.name || "Usuário",
-          avatar: user.avatar || "",
-          role: user.role || "tecnico",
-          email: user.email,
-          phone: user.phone,
-          signature: user.signature || ""
-        };
-      }
-
-      const serviceData = {
-        title: data.title,
-        serviceType: data.serviceType,
-        client: data.client,
-        location: data.location,
-        address: data.address,
-        city: data.city,
-        description: data.description,
-        notes: data.notes,
-        dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
-        technician: selectedTechnician,
-        status: "pendente" as const,
-        priority: "media" as const,
-        createdBy: user?.id,
-        creationDate: new Date().toISOString(),
+      // Find selected technician
+      const selectedTechnician = teamMembers?.find(t => t.id === formData.technicianId) || {
+        id: '0',
+        name: 'Não atribuído',
+        avatar: '',
+        role: 'tecnico' as const
       };
 
-      const result = await createService(serviceData);
-      const newService = result.created;
-      console.log("Demanda criada:", newService);
-      
-      toast.success("Demanda criada com sucesso!");
-      if (newService) {
-        navigate(`/servico/${newService.id}`); // Alterado de /demandas/ para /servico/
+      const newService: Omit<Service, "id"> = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        location: formData.location.trim(),
+        client: formData.client.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        city: formData.city.trim() || undefined,
+        status: 'pendente' as ServiceStatus,
+        priority: formData.priority,
+        serviceType: formData.serviceType,
+        technician: selectedTechnician,
+        createdBy: user.id,
+        creationDate: new Date().toISOString(),
+        dueDate: dueDate?.toISOString(),
+        estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : undefined,
+        notes: formData.notes.trim() || undefined,
+        number: '', // Will be generated by the service
+        messages: [],
+        photos: [],
+        photoTitles: []
+      };
+
+      console.log('[NewService] Criando serviço:', newService);
+
+      const result = await createServiceInDatabase(newService);
+
+      if (result.created) {
+        toast.success('Demanda criada com sucesso!');
+        
+        if (result.technicianError) {
+          toast.warning(result.technicianError);
+        }
+        
+        navigate('/demandas');
+      } else {
+        toast.error('Erro ao criar demanda');
       }
-    } catch (error) {
-      console.error("Erro ao criar demanda:", error);
-      toast.error("Erro ao criar a demanda");
+    } catch (error: any) {
+      console.error('[NewService] Erro ao criar serviço:', error);
+      toast.error(error.message || 'Erro ao criar demanda');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Header */}
-        <motion.div 
-          className="flex items-center gap-4 mb-8"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-        >
-          <Link 
-            to="/demandas" 
-            className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Nova Demanda
-            </h1>
-            <p className="text-muted-foreground mt-1">Crie uma nova demanda de serviço</p>
-          </div>
-        </motion.div>
+    <div className="flex-1 space-y-6 p-8 pt-6">
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Nova Demanda</h2>
+          <p className="text-muted-foreground">
+            Preencha as informações para criar uma nova demanda de serviço
+          </p>
+        </div>
+      </div>
 
-        {/* Main Form */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Informações da Demanda
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Informações Básicas
               </CardTitle>
+              <CardDescription>
+                Dados principais da demanda
+              </CardDescription>
             </CardHeader>
-            
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Título */}
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Título da Demanda
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Digite o título da demanda"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Título *</label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  placeholder="Ex: Vistoria Elétrica - Prédio Comercial"
+                  required
+                />
+              </div>
 
-                    {/* Tipo de Serviço */}
-                    <FormField
-                      control={form.control}
-                      name="serviceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Serviço/Demanda</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-background/50">
-                                <SelectValue placeholder="Selecione o tipo de serviço" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {serviceTypes.map(type => (
-                                <SelectItem key={type.id} value={type.name}>
-                                  {type.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Descrição</label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Descreva os detalhes da demanda..."
+                  rows={3}
+                />
+              </div>
 
-                    {/* Cliente */}
-                    <FormField
-                      control={form.control}
-                      name="client"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cliente</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Nome do cliente"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tipo de Serviço</label>
+                  <Select
+                    value={formData.serviceType}
+                    onValueChange={(value) => handleInputChange('serviceType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Vistoria">Vistoria</SelectItem>
+                      <SelectItem value="Instalação">Instalação</SelectItem>
+                      <SelectItem value="Manutenção">Manutenção</SelectItem>
+                      <SelectItem value="Reparo">Reparo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                    {/* Localidade */}
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Localidade
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Localidade do serviço"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Endereço */}
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Endereço completo"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Cidade */}
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Cidade"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                     {/* Data de Vencimento */}
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Data de Vencimento
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="date"
-                              className="bg-background/50"
-                              onChange={(e) => {
-                                // Corrigir timezone: usar data exata sem conversão UTC
-                                const selectedDate = e.target.value;
-                                if (selectedDate) {
-                                  // Manter a data exata sem conversão de timezone
-                                  const localDate = new Date(selectedDate + 'T00:00:00');
-                                  field.onChange(localDate.toISOString().split('T')[0]);
-                                } else {
-                                  field.onChange('');
-                                }
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Técnico Responsável (apenas para gestores) */}
-                    {hasPermission("gestor") && (
-                      <FormField
-                        control={form.control}
-                        name="technicianId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              Técnico Responsável
-                            </FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="bg-background/50">
-                                  <SelectValue placeholder="Selecionar técnico" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">Não atribuído</SelectItem>
-                                {teamMembers.map((tech) => (
-                                  <SelectItem key={tech.id} value={tech.id}>
-                                    {tech.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </div>
-
-                  {/* Descrição */}
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Descreva os detalhes da demanda"
-                            rows={4}
-                            className="bg-background/50"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Notas Adicionais */}
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notas Adicionais</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Informações adicionais relevantes"
-                            rows={3}
-                            className="bg-background/50"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Botões */}
-                  <div className="flex justify-end gap-4 pt-6 border-t">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => navigate("/demandas")}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="min-w-[120px]"
-                    >
-                      {isSubmitting ? "Criando..." : "Criar Demanda"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Prioridade</label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) => handleInputChange('priority', value as ServicePriority)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baixa">
+                        <div className="flex items-center">
+                          <Badge variant="secondary" className="mr-2">Baixa</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="media">
+                        <div className="flex items-center">
+                          <Badge variant="outline" className="mr-2">Média</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="alta">
+                        <div className="flex items-center">
+                          <Badge variant="destructive" className="mr-2">Alta</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="urgente">
+                        <div className="flex items-center">
+                          <Badge variant="destructive" className="mr-2">Urgente</Badge>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
+
+          {/* Location and Client */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Local e Cliente
+              </CardTitle>
+              <CardDescription>
+                Informações de localização e cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Local *</label>
+                <Input
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="Ex: Shopping Center ABC"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cliente</label>
+                <Input
+                  value={formData.client}
+                  onChange={(e) => handleInputChange('client', e.target.value)}
+                  placeholder="Nome do cliente ou empresa"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Endereço</label>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  placeholder="Endereço completo"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cidade</label>
+                <Input
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  placeholder="Cidade"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Assignment and Schedule */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Atribuição e Agenda
+            </CardTitle>
+            <CardDescription>
+              Configure responsável e prazos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Técnico Responsável</label>
+                <Select
+                  value={formData.technicianId}
+                  onValueChange={(value) => handleInputChange('technicianId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um técnico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Não atribuído</SelectItem>
+                    {teamMembers?.filter(member => member.role === 'tecnico').map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Prazo de Conclusão</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Horas Estimadas</label>
+                <Input
+                  type="number"
+                  value={formData.estimatedHours}
+                  onChange={(e) => handleInputChange('estimatedHours', e.target.value)}
+                  placeholder="Ex: 8"
+                  min="1"
+                  max="100"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Additional Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Observações Adicionais</CardTitle>
+            <CardDescription>
+              Informações complementares sobre a demanda
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Adicione observações importantes, requisitos especiais, ou instruções específicas..."
+              rows={4}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4">
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex-1 max-w-xs"
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Criando...
+              </div>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Criar Demanda
+              </>
+            )}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(-1)}
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
     </div>
   );
-};
-
-export default NewService;
+}

@@ -101,9 +101,17 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
 };
 
 export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
+  // Garantir que name não seja undefined
+  if (!type.name || type.name.trim() === '') {
+    throw new Error('Nome do tipo de serviço é obrigatório');
+  }
+
   const { data, error } = await supabase
     .from("service_types")
-    .insert({ name: type.name, description: type.description })
+    .insert({ 
+      name: type.name.trim(), 
+      description: type.description || null 
+    })
     .select()
     .single();
   if (error) throw error;

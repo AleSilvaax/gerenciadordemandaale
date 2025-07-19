@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Palette, Sun, Moon, Type, Layout, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -43,7 +42,7 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
   };
 
   const resetToDefaults = () => {
-    setTheme('dark');
+    setTheme('light');
     setFontSize([16]);
     setCompactMode(false);
     setAnimationsEnabled(true);

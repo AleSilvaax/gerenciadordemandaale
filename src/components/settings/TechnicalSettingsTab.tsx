@@ -1,17 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCw, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { ServiceTypeConfig, TechnicalField } from "@/types/serviceTypes";
 import {
   getServiceTypesFromDatabase,
@@ -213,7 +205,7 @@ export const TechnicalSettingsTab = () => {
   };
 
   const resetToDefaults = () => {
-    // setServiceTypes(defaultServiceTypes);
+    setServiceTypes([]);
     setSelectedType(null);
     toast.success("Configurações restauradas para os valores padrão");
   };
@@ -230,42 +222,156 @@ export const TechnicalSettingsTab = () => {
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
             {/* Lista de Tipos de Serviço */}
-            <ServiceTypeList
-              serviceTypes={serviceTypes}
-              selectedType={selectedType}
-              onSelectType={handleSelectType}
-              onCreateNewType={handleCreateNewType}
-            />
+            <div className="lg:col-span-2 border rounded-lg p-4 h-[500px] flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium">Tipos de Serviço</h3>
+                <Button size="sm" onClick={handleCreateNewType}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {serviceTypes.map((type) => (
+                  <div
+                    key={type.id}
+                    onClick={() => handleSelectType(type)}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedType?.id === type.id 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    <div className="font-medium">{type.name}</div>
+                    <div className="text-sm opacity-70">{type.fields.length} campos</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Detalhes do Tipo Selecionado */}
             <div className="lg:col-span-5 border rounded-lg p-4 h-[500px] flex flex-col">
               {selectedType ? (
                 <>
-                  <ServiceTypeForm
-                    selectedType={selectedType}
-                    onUpdateType={handleUpdateType}
-                    onChange={setSelectedType}
-                    onDeleteType={handleDeleteType}
-                    isSaving={isSaving}
-                  />
+                  <div className="mb-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={selectedType.name}
+                          onChange={(e) => setSelectedType({...selectedType, name: e.target.value})}
+                          className="text-lg font-medium bg-transparent border-none outline-none focus:ring-2 focus:ring-primary rounded px-2 py-1"
+                        />
+                        <textarea
+                          value={selectedType.description}
+                          onChange={(e) => setSelectedType({...selectedType, description: e.target.value})}
+                          placeholder="Descrição do tipo de serviço..."
+                          className="w-full mt-2 p-2 bg-muted rounded resize-none"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button size="sm" onClick={handleUpdateType} disabled={isSaving}>
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={handleDeleteType} disabled={isSaving}>
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="mt-6 flex-1 flex flex-col overflow-y-auto">
                     {editingField ? (
-                      <TechnicalFieldForm
-                        editingField={editingField}
-                        isNewField={isNewField}
-                        onChange={setEditingField}
-                        onCancel={() => setEditingField(null)}
-                        onSave={handleSaveField}
-                        isSaving={isSaving}
-                      />
+                      <div className="p-4 border rounded-lg">
+                        <h4 className="font-medium mb-4">
+                          {isNewField ? 'Novo Campo' : 'Editar Campo'}
+                        </h4>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Nome</label>
+                            <input
+                              type="text"
+                              value={editingField.name}
+                              onChange={(e) => setEditingField({...editingField, name: e.target.value})}
+                              className="w-full p-2 border rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Tipo</label>
+                            <select
+                              value={editingField.type}
+                              onChange={(e) => setEditingField({...editingField, type: e.target.value as any})}
+                              className="w-full p-2 border rounded"
+                            >
+                              <option value="text">Texto</option>
+                              <option value="number">Número</option>
+                              <option value="select">Seleção</option>
+                              <option value="checkbox">Checkbox</option>
+                              <option value="textarea">Área de Texto</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Descrição</label>
+                            <textarea
+                              value={editingField.description || ''}
+                              onChange={(e) => setEditingField({...editingField, description: e.target.value})}
+                              className="w-full p-2 border rounded"
+                              rows={2}
+                            />
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editingField.required}
+                              onChange={(e) => setEditingField({...editingField, required: e.target.checked})}
+                              className="mr-2"
+                            />
+                            <label className="text-sm">Campo obrigatório</label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={handleSaveField} disabled={isSaving}>
+                              Salvar
+                            </Button>
+                            <Button variant="outline" onClick={() => setEditingField(null)}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <TechnicalFieldList
-                        fields={selectedType.fields}
-                        onEditField={handleEditField}
-                        onDeleteField={handleDeleteField}
-                        onAddField={handleAddField}
-                      />
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-medium">Campos Técnicos</h4>
+                          <Button size="sm" onClick={handleAddField}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar Campo
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {selectedType.fields.map((field) => (
+                            <div key={field.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <div>
+                                <div className="font-medium">{field.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {field.type} {field.required && '(obrigatório)'}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleEditField(field)}>
+                                  Editar
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  onClick={() => handleDeleteField(field.id)}
+                                  disabled={isSaving}
+                                >
+                                  Excluir
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </>
@@ -328,8 +434,3 @@ export const TechnicalSettingsTab = () => {
     </div>
   );
 };
-
-import { ServiceTypeList } from "./ServiceTypeList";
-import { ServiceTypeForm } from "./ServiceTypeForm";
-import { TechnicalFieldList } from "./TechnicalFieldList";
-import { TechnicalFieldForm } from "./TechnicalFieldForm";

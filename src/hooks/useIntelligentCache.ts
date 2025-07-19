@@ -1,255 +1,222 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-  hits: number;
-  lastAccessed: number;
-}
+import { useState, useEffect, useRef } from 'react';
 
 interface CacheOptions {
   ttl?: number; // Time to live in milliseconds
-  maxSize?: number; // Maximum cache size
+  maxSize?: number; // Maximum number of cached items
   staleWhileRevalidate?: boolean;
-  onEvict?: (key: string, data: any) => void;
+}
+
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
+  isStale: boolean;
+  key: string;
 }
 
 class IntelligentCache {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheItem<any>>();
   private maxSize: number;
-  private revalidationPromises = new Map<string, Promise<any>>();
-
-  constructor(maxSize = 100) {
+  private defaultTTL: number;
+  
+  constructor(maxSize = 100, defaultTTL = 5 * 60 * 1000) { // 5 minutes default
     this.maxSize = maxSize;
+    this.defaultTTL = defaultTTL;
   }
 
-  set<T>(key: string, data: T, ttl = 5 * 60 * 1000): void {
-    // Clean up expired entries
-    this.cleanup();
-
-    // Evict LRU if cache is full
+  set<T>(key: string, data: T, ttl?: number): void {
+    // Remove oldest item if cache is full
     if (this.cache.size >= this.maxSize) {
-      this.evictLRU();
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
     }
 
-    this.cache.set(key, {
+    const item: CacheItem<T> = {
       data,
       timestamp: Date.now(),
-      ttl,
-      hits: 0,
-      lastAccessed: Date.now()
-    });
+      isStale: false,
+      key
+    };
+
+    this.cache.set(key, item);
+
+    // Set expiration timer
+    const effectiveTTL = ttl || this.defaultTTL;
+    setTimeout(() => {
+      const cachedItem = this.cache.get(key);
+      if (cachedItem) {
+        cachedItem.isStale = true;
+      }
+    }, effectiveTTL);
   }
 
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
+  get<T>(key: string): CacheItem<T> | null {
+    const item = this.cache.get(key);
+    if (!item) return null;
 
-    // Update access statistics
-    entry.hits++;
-    entry.lastAccessed = Date.now();
-
-    // Check if expired
-    if (Date.now() - entry.timestamp > entry.ttl) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
+    return item as CacheItem<T>;
   }
 
-  isStale(key: string): boolean {
-    const entry = this.cache.get(key);
-    if (!entry) return true;
-    return Date.now() - entry.timestamp > entry.ttl;
-  }
-
-  has(key: string): boolean {
-    return this.cache.has(key) && !this.isStale(key);
-  }
-
-  delete(key: string): void {
-    this.cache.delete(key);
-    this.revalidationPromises.delete(key);
+  delete(key: string): boolean {
+    return this.cache.delete(key);
   }
 
   clear(): void {
     this.cache.clear();
-    this.revalidationPromises.clear();
   }
 
-  private cleanup(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > entry.ttl) {
-        this.cache.delete(key);
-      }
-    }
+  size(): number {
+    return this.cache.size;
   }
 
-  private evictLRU(): void {
-    let oldestKey = '';
-    let oldestTime = Date.now();
-
-    for (const [key, entry] of this.cache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey) {
-      this.cache.delete(oldestKey);
-    }
+  // Get all keys that match a pattern
+  getKeysByPattern(pattern: RegExp): string[] {
+    return Array.from(this.cache.keys()).filter(key => pattern.test(key));
   }
 
-  getStats() {
-    let totalHits = 0;
-    let expiredCount = 0;
-    const now = Date.now();
-
-    for (const entry of this.cache.values()) {
-      totalHits += entry.hits;
-      if (now - entry.timestamp > entry.ttl) {
-        expiredCount++;
-      }
-    }
-
-    return {
-      size: this.cache.size,
-      totalHits,
-      expiredCount,
-      hitRate: totalHits > 0 ? totalHits / this.cache.size : 0
-    };
+  // Invalidate all keys matching a pattern
+  invalidatePattern(pattern: RegExp): void {
+    const keysToDelete = this.getKeysByPattern(pattern);
+    keysToDelete.forEach(key => this.delete(key));
   }
 }
 
-const globalCache = new IntelligentCache(200);
+// Global cache instance
+const globalCache = new IntelligentCache();
 
 export const useIntelligentCache = <T>(
   key: string,
-  fetcher: () => Promise<T>,
+  fetchFn: () => Promise<T>,
   options: CacheOptions = {}
 ) => {
-  const {
-    ttl = 5 * 60 * 1000, // 5 minutes default
-    staleWhileRevalidate = true
-  } = options;
-
   const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [isStale, setIsStale] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
 
-  const fetchData = useCallback(async (forceRefresh = false) => {
+  const {
+    ttl = 5 * 60 * 1000, // 5 minutes
+    staleWhileRevalidate = false
+  } = options;
+
+  const fetchData = async (ignoreCache = false) => {
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
-      setError(null);
-      
       // Check cache first
-      const cachedData = globalCache.get<T>(key);
-      const hasCache = globalCache.has(key);
-      const cacheIsStale = globalCache.isStale(key);
+      if (!ignoreCache) {
+        const cachedItem = globalCache.get<T>(key);
+        if (cachedItem && !cachedItem.isStale) {
+          setData(cachedItem.data);
+          setIsLoading(false);
+          return cachedItem.data;
+        }
 
-      // If we have valid cache and not forcing refresh, use it
-      if (hasCache && !forceRefresh) {
-        setData(cachedData);
-        setIsStale(false);
-        return cachedData;
-      }
-
-      // If stale but we have data, show stale data while revalidating
-      if (cachedData && staleWhileRevalidate && !forceRefresh) {
-        setData(cachedData);
-        setIsStale(true);
-      } else {
-        setIsLoading(true);
+        // If stale data exists and staleWhileRevalidate is enabled
+        if (cachedItem && cachedItem.isStale && staleWhileRevalidate) {
+          setData(cachedItem.data);
+          setIsLoading(false);
+          setIsValidating(true);
+        }
       }
 
       // Fetch fresh data
-      const freshData = await fetcher();
+      if (!isValidating) {
+        setIsLoading(true);
+      }
+      
+      const freshData = await fetchFn();
       
       if (!mountedRef.current) return freshData;
 
-      // Update cache and state
+      // Cache the fresh data
       globalCache.set(key, freshData, ttl);
+      
       setData(freshData);
-      setIsStale(false);
+      setError(null);
       
       return freshData;
     } catch (err) {
       if (!mountedRef.current) return null;
       
-      const errorObj = err instanceof Error ? err : new Error('Unknown error');
-      setError(errorObj);
-      
-      // If we have stale data, keep showing it on error
-      const cachedData = globalCache.get<T>(key);
-      if (cachedData && staleWhileRevalidate) {
-        setData(cachedData);
-        setIsStale(true);
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err);
+        console.error(`Cache fetch error for key ${key}:`, err);
       }
-      
-      throw errorObj;
+      return null;
     } finally {
       if (mountedRef.current) {
         setIsLoading(false);
+        setIsValidating(false);
       }
     }
-  }, [key, fetcher, ttl, staleWhileRevalidate]);
+  };
 
-  const mutate = useCallback(async (newData?: T | Promise<T> | ((current: T | null) => T | Promise<T>)) => {
-    if (typeof newData === 'function') {
-      const currentData = globalCache.get<T>(key);
-      const result = (newData as Function)(currentData);
-      const resolvedData = await Promise.resolve(result);
-      globalCache.set(key, resolvedData, ttl);
-      setData(resolvedData);
-      setIsStale(false);
-      return resolvedData;
-    } else if (newData !== undefined) {
-      const resolvedData = await Promise.resolve(newData);
-      globalCache.set(key, resolvedData, ttl);
-      setData(resolvedData);
-      setIsStale(false);
-      return resolvedData;
-    } else {
-      return fetchData(true);
-    }
-  }, [key, ttl, fetchData]);
-
-  const invalidate = useCallback(() => {
-    globalCache.delete(key);
-    setData(null);
-    setIsStale(false);
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+    
+    return () => {
+      mountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [key]);
 
+  // Auto-refresh functionality
   useEffect(() => {
-    mountedRef.current = true;
-    fetchData();
+    if (!ttl) return;
 
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchData]);
+    const interval = setInterval(() => {
+      const cachedItem = globalCache.get<T>(key);
+      if (cachedItem) {
+        const age = Date.now() - cachedItem.timestamp;
+        // const cacheIsStale = age > ttl;
+        
+        // Proactively refresh if cache is getting old (80% of TTL)
+        if (age > ttl * 0.8) {
+          fetchData(true);
+        }
+      }
+    }, ttl * 0.1); // Check every 10% of TTL
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+    return () => clearInterval(interval);
+  }, [key, ttl]);
+
+  const mutate = (newData?: T) => {
+    if (newData) {
+      globalCache.set(key, newData, ttl);
+      setData(newData);
+    } else {
+      // Revalidate
+      fetchData(true);
+    }
+  };
+
+  const invalidate = () => {
+    globalCache.delete(key);
+    setData(null);
+  };
 
   return {
     data,
     isLoading,
     error,
-    isStale,
+    isValidating,
     mutate,
     invalidate,
-    refresh: () => fetchData(true),
-    cacheStats: globalCache.getStats()
+    cache: globalCache
   };
 };
 
-export { globalCache };
+export { globalCache as intelligentCache };
