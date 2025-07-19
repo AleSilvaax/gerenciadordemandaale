@@ -1,20 +1,19 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart 
+  PieChart, Pie, Cell, Area, AreaChart 
 } from 'recharts';
 import { 
-  Download, TrendingUp, Clock, CheckCircle, AlertTriangle, 
-  Users, Calendar, FileText, Activity 
+  Download, TrendingUp, Clock, CheckCircle, Activity
 } from 'lucide-react';
 import { useServices } from '@/hooks/useServices';
-import { Service } from '@/types/serviceTypes';
+
 import { format, subDays, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -252,7 +251,7 @@ const Statistics = () => {
               <SelectContent>
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 {serviceTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                  <SelectItem key={type || 'unknown'} value={type || 'unknown'}>{type || 'Não especificado'}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

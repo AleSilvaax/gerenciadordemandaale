@@ -168,9 +168,9 @@ export const optimizedServiceCrud = {
 
       // Preparar dados para inserção
       const insertData = {
-        title: serviceData.title,
-        description: serviceData.description,
-        location: serviceData.location,
+        title: serviceData.title || 'Sem título',
+        description: serviceData.description || '',
+        location: serviceData.location || 'Não especificado',
         status: serviceData.status || 'pendente',
         priority: serviceData.priority || 'media',
         service_type: serviceData.serviceType,

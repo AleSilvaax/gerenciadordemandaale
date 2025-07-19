@@ -18,7 +18,7 @@ export interface InviteListItem {
   created_at: string;
   teams?: {
     name: string;
-  };
+  } | undefined;
 }
 
 export const inviteService = {
@@ -96,7 +96,10 @@ export const inviteService = {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        teams: item.teams || undefined
+      }));
     } catch (error) {
       console.error('[INVITE] Erro ao buscar convites:', error);
       toast.error('Erro ao carregar convites');
