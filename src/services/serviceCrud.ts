@@ -549,7 +549,7 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
 };
 
 // Helper function to assign a technician to a service
-async function assignTechnician(serviceId: string, technicianId: string): Promise<void> => {
+async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
   try {
     // First, remove existing technician assignments
     const { error: deleteError } = await supabase
