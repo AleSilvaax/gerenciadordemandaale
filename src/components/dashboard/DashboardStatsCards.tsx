@@ -1,7 +1,7 @@
 
 import React from "react";
 import { StatCard } from "@/components/ui-custom/StatCard";
-import { TrendingUp, CheckCircle, Clock, AlertTriangle, Users } from "lucide-react";
+import { TrendingUp, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export const DashboardStatsCards: React.FC = () => {

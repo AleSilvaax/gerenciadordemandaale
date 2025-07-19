@@ -3,16 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Calendar, AlertCircle } from 'lucide-react';
+import { MessageSquare, Calendar, AlertCircle } from 'lucide-react';
 
-interface NotificationData {
-  id: string;
-  type: 'service_update' | 'new_message' | 'schedule_reminder' | 'system_alert';
-  title: string;
-  message: string;
-  data?: any;
-  created_at: string;
-}
+// Notification system interface (removed unused interface)
 
 export const RealtimeNotifications: React.FC = () => {
   const { user } = useAuth();
