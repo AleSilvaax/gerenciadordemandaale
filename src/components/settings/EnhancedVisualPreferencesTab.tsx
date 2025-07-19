@@ -11,7 +11,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
 
 export const EnhancedVisualPreferencesTab: React.FC = () => {
-  const { theme, setTheme, isDarkMode, toggleTheme } = useTheme();
+  const theme = 'light';
   const [fontSize, setFontSize] = useState([16]);
   const [compactMode, setCompactMode] = useState(false);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
