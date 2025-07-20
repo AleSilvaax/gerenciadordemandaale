@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
 
 interface ProtectedRouteProps {
   requiredRole?: 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
@@ -14,7 +13,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   children
 }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useEnhancedAuth();
   const location = useLocation();
 
   // Show loading while checking auth state

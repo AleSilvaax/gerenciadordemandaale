@@ -15,7 +15,7 @@ import Settings from '@/pages/Settings';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import NotFound from '@/pages/NotFound';
-import { ProtectedRoute } from '@/components/guards/ProtectedRoute';
+import SimpleAuthGuard from '@/components/guards/SimpleAuthGuard';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 
 const queryClient = new QueryClient();
@@ -30,7 +30,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/*" element={
-                <ProtectedRoute>
+                <SimpleAuthGuard>
                   <AppLayout>
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -46,7 +46,7 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
-                </ProtectedRoute>
+                </SimpleAuthGuard>
               } />
             </Routes>
           </EnhancedAuthProvider>
