@@ -15,10 +15,30 @@ import Settings from '@/pages/Settings';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import NotFound from '@/pages/NotFound';
-import SimpleAuthGuard from '@/components/guards/SimpleAuthGuard';
 import { ProfilePage } from '@/components/profile/ProfilePage';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
 
 const queryClient = new QueryClient();
+
+const AuthGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useEnhancedAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
   return (
@@ -30,7 +50,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/*" element={
-                <SimpleAuthGuard>
+                <AuthGuard>
                   <AppLayout>
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -46,7 +66,7 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
-                </SimpleAuthGuard>
+                </AuthGuard>
               } />
             </Routes>
           </EnhancedAuthProvider>

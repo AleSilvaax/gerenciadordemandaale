@@ -4,7 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { Loader2 } from "lucide-react";
 import EnhancedIndex from "@/pages/EnhancedIndex";
 import Index from "@/pages/Index";
@@ -16,9 +16,13 @@ import Statistics from "@/pages/Statistics";
 import Equipe from "@/pages/Equipe";
 import ProfilePage from "@/components/profile/ProfilePage";
 
-export const AppLayout: React.FC = () => {
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
-  const { isLoading, user } = useAuth();
+  const { isLoading, user } = useEnhancedAuth();
   
   if (isLoading) {
     return (
@@ -63,17 +67,7 @@ export const AppLayout: React.FC = () => {
 
       <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-4'} overflow-y-auto overflow-x-hidden scrollbar-none`}>
         <div className="pt-0 min-w-full">
-          <Routes>
-            <Route path="/" element={<EnhancedIndex />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/nova-demanda" element={<NewService />} />
-            <Route path="/demandas" element={<Demandas />} />
-            <Route path="/demandas/:id" element={<ServiceDetail />} />
-            <Route path="/estatisticas" element={<Statistics />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/equipe" element={<Equipe />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
+          {children}
         </div>
       </main>
       <Navbar />
