@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getServices } from '@/services/servicesDataService';
@@ -87,7 +88,7 @@ export const useConsolidatedServices = (options: UseConsolidatedServicesOptions 
         service.description?.toLowerCase().includes(searchLower) ||
         service.client?.toLowerCase().includes(searchLower) ||
         service.location.toLowerCase().includes(searchLower) ||
-        (service.number?.toLowerCase().includes(searchLower) ?? false)
+        service.number.toLowerCase().includes(searchLower)
       );
     }
 
@@ -232,7 +233,7 @@ export const useServiceSearch = (searchTerm: string, services: Service[]) => {
       service.description?.toLowerCase().includes(searchLower) ||
       service.client?.toLowerCase().includes(searchLower) ||
       service.location.toLowerCase().includes(searchLower) ||
-      (service.number?.toLowerCase().includes(searchLower) ?? false)
+      service.number.toLowerCase().includes(searchLower)
     );
   }, [services, debouncedSearchTerm]);
 };

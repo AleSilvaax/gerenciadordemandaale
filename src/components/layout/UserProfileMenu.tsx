@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,8 +19,7 @@ const UserProfileMenu = () => {
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // if (!user) return null; // REMOVIDO: A Navbar já lida com a autenticação.
-                         // Este componente agora sempre tentará renderizar com base no `user` atual.
+  if (!user) return null;
 
   const handleLogout = async () => {
     try {
@@ -54,21 +53,21 @@ const UserProfileMenu = () => {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user?.avatar || ""} alt={user?.name || "Usuário"} />
+            <AvatarImage src={user.avatar || ""} alt={user.name || "Usuário"} />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {getUserInitials(user?.name || "U")}
+              {getUserInitials(user.name || "U")}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64" align="end" forceMount>
         <div className="flex flex-col space-y-1 p-2">
-          <p className="text-sm font-medium leading-none">{user?.name || "Usuário"}</p>
+          <p className="text-sm font-medium leading-none">{user.name || "Usuário"}</p>
           <p className="text-xs leading-none text-muted-foreground">
-            {user?.email || "email@exemplo.com"}
+            {user.email || "email@exemplo.com"}
           </p>
           <p className="text-xs leading-none text-muted-foreground capitalize">
-            {user?.role || "técnico"}
+            {user.role || "técnico"}
           </p>
         </div>
         <DropdownMenuSeparator />

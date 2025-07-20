@@ -54,19 +54,16 @@ export const ChartLine: React.FC<ChartLineProps> = ({ data, activeMonth }) => {
             stroke="url(#colorGradient)"
             strokeWidth={3}
             dot={false}
-            activeDot={(props: any) => {
-              const { cx, cy, stroke, index } = props;
-              return (
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={6}
-                  fill={index === activeIndex ? "#FFFFFF" : "transparent"}
-                  stroke={stroke}
-                  strokeWidth={index === activeIndex ? 2 : 0}
-                />
-              );
-            }}
+            activeDot={({ cx, cy, stroke, index }) => (
+              <circle
+                cx={cx}
+                cy={cy}
+                r={6}
+                fill={index === activeIndex ? "#FFFFFF" : "transparent"}
+                stroke={stroke}
+                strokeWidth={index === activeIndex ? 2 : 0}
+              />
+            )}
           />
         </LineChart>
       </ResponsiveContainer>

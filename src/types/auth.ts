@@ -1,4 +1,3 @@
-
 export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
 
 export interface AuthUser {
@@ -11,12 +10,6 @@ export interface AuthUser {
   permissions: string[];
   team_id?: string;
   signature?: string;
-  organization_id?: string;
-  organization?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
 }
 
 export interface AuthContextType {
@@ -30,7 +23,6 @@ export interface AuthContextType {
   updateUserInfo: (userData: AuthUser) => void;
   hasPermission: (permission: string) => boolean;
   canAccessRoute?: (route: string) => boolean;
-  requestPasswordReset: (email: string) => Promise<boolean>;
 }
 
 export interface RegisterFormData {
@@ -38,5 +30,5 @@ export interface RegisterFormData {
   email: string;
   password: string;
   role: UserRole;
-  teamId?: string;
+  team_id: string;
 }

@@ -1,322 +1,236 @@
-
-import React, { createContext, ReactNode } from 'react';
-import { Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUser, AuthContextType, RegisterFormData, UserRole } from '@/types/auth';
+import { AuthUser, AuthContextType, RegisterFormData } from '@/types/auth';
 import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+// Limpar todos os estados de autenticação da Supabase (fix para limbo de sessão)
+export const cleanupAuthState = () => {
+  // Remove supabase padrões
+  localStorage.removeItem('supabase.auth.token');
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      localStorage.removeItem(key);
+    }
+  });
+  Object.keys(sessionStorage || {}).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+};
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = React.useState<AuthUser | null>(null);
-  const [session, setSession] = React.useState<Session | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserProfile = async (userId: string): Promise<AuthUser | null> => {
+  const loadUserProfile = useCallback(async (authUser: User) => {
     try {
-      console.log('[AUTH] Buscando perfil completo do usuário:', userId);
-      console.log('[AUTH] Chamando RPC get_user_complete_profile...'); // NOVO LOG
-
-      // Usar a nova função otimizada do banco
       const { data, error } = await supabase
-        .rpc('get_user_complete_profile', { user_uuid: userId });
-
-      console.log('[AUTH] RPC get_user_complete_profile - Data:', data); // NOVO LOG
-      console.log('[AUTH] RPC get_user_complete_profile - Error:', error); // NOVO LOG
+        .from('profiles')
+        .select(`*, user_roles (role)`)
+        .eq('id', authUser.id)
+        .single();
 
       if (error) {
-        console.error('[AUTH] Erro ao buscar perfil completo:', error);
-        setIsLoading(false); // Crucial para evitar carregamento infinito
-        return null;
+        if (error.code === 'PGRST116') { // Profile not found, can happen right after signup
+          console.warn(`Profile for ${authUser.id} not found, retrying once...`);
+          // Retry once after a short delay to allow the DB trigger to run
+          await new Promise(res => setTimeout(res, 1500));
+          const { data: retryData, error: retryError } = await supabase
+            .from('profiles')
+            .select(`*, user_roles (role)`)
+            .eq('id', authUser.id)
+            .single();
+
+          if (retryError) throw retryError;
+          return retryData;
+        }
+        throw error;
       }
-
-      if (!data || data.length === 0) {
-        console.warn('[AUTH] Nenhum perfil encontrado para usuário:', userId);
-        setIsLoading(false); // Crucial para evitar carregamento infinito
-        return null;
-      }
-
-      const profile = data[0];
-      const currentUser = session?.user;
-
-      console.log('[AUTH] Perfil completo retornado pela RPC:', profile);
-
-      return {
-        id: profile.id,
-        email: currentUser?.email || '',
-        name: profile.name || 'Usuário',
-        avatar: profile.avatar || '',
-        role: profile.role as UserRole,
-        permissions: [],
-        team_id: profile.team_id,
-        organization_id: profile.organization_id,
-        signature: '',
-        phone: '',
-      };
+      return data;
     } catch (error) {
-      console.error('[AUTH] Erro geral ao buscar dados do usuário:', error);
-      setIsLoading(false); // Crucial para evitar carregamento infinito
+      console.error('Error loading user profile:', error);
+      toast.error("Erro ao carregar perfil", { description: "Não foi possível carregar os dados do seu usuário." });
+      await supabase.auth.signOut();
       return null;
     }
-  };
-
-  const handleAuthChange = async (event: string, session: Session | null) => {
-    console.log('[AUTH] Mudança de autenticação:', event, 'Sessão User ID:', session?.user?.id); // LOG ATUALIZADO
-    console.log('[AUTH] Antes de setSession/setUser - Session:', session, 'User:', user); // NOVO LOG
-    
-    setSession(session);
-    setIsLoading(true); // Definir isLoading como true no início do processo de mudança de autenticação
-    
-    if (session?.user) {
-      // Remover setTimeout - tornar a busca de perfil síncrona
-      const userProfile = await fetchUserProfile(session.user.id);
-      if (userProfile) {
-        setUser(userProfile);
-        console.log('[AUTH] handleAuthChange - User profile definido:', userProfile); // NOVO LOG
-      } else {
-        // Criar perfil básico temporário se não encontrou
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.email?.split('@')[0] || 'Usuário',
-          avatar: '',
-          role: 'tecnico',
-          permissions: [],
-          team_id: '',
-          organization_id: '',
-          signature: '',
-          phone: '',
-        });
-        console.log('[AUTH] handleAuthChange - Perfil básico definido:', user); // NOVO LOG
-      }
-      setIsLoading(false); // Definir isLoading como false após definir o user
-      console.log('[AUTH] handleAuthChange - isLoading set to false (com user).'); // LOG ATUALIZADO
-    } else {
-      setUser(null);
-      setIsLoading(false);
-      console.log('[AUTH] handleAuthChange - isLoading set to false (sem user).'); // LOG ATUALIZADO
-    }
-  };
-
-  React.useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        console.log('[AUTH] Inicializando contexto de autenticação...'); // NOVO LOG
-        setIsLoading(true); // Garantir que isLoading é true na inicialização
-        
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (currentSession?.user) {
-          console.log('[AUTH] initializeAuth - Sessão atual encontrada:', currentSession.user.id); // NOVO LOG
-          const userProfile = await fetchUserProfile(currentSession.user.id);
-          if (mounted) {
-            setSession(currentSession);
-            setUser(userProfile);
-            console.log('[AUTH] initializeAuth - User profile definido:', userProfile); // NOVO LOG
-          }
-        } else {
-          console.log('[AUTH] initializeAuth - Nenhuma sessão encontrada.'); // NOVO LOG
-        }
-        
-        if (mounted) {
-          setIsLoading(false);
-          console.log('[AUTH] initializeAuth - isLoading set to false (finalizado).'); // NOVO LOG
-        }
-      } catch (error) {
-        console.error('[AUTH] Erro na inicialização:', error);
-        if (mounted) {
-          setIsLoading(false);
-          console.log('[AUTH] initializeAuth - isLoading set to false (erro).'); // NOVO LOG
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      console.log('[AUTH] Iniciando login para:', email); // NOVO LOG
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+  useEffect(() => {
+    const handleAuthChange = async (event: string, session: any) => {
+      console.log(`Auth event: ${event}`, session);
+      setIsLoading(true);
       
-      if (error) {
-        console.error('[AUTH] Erro no login:', error);
-        toast.error("Erro no login", { description: "Email ou senha inválidos." });
-        return false;
+      if (session?.user) {
+        const profileData = await loadUserProfile(session.user);
+
+        if (profileData) {
+          const roleData = profileData.user_roles;
+          const role = Array.isArray(roleData) && roleData.length > 0 ? roleData[0].role : 'tecnico';
+          
+          const authUserData: AuthUser = {
+            id: profileData.id,
+            email: session.user.email,
+            name: profileData.name || 'Usuário',
+            avatar: profileData.avatar || '',
+            team_id: profileData.team_id,
+            role: role as any,
+            permissions: [],
+          };
+          setUser(authUserData);
+        } else {
+          // loadUserProfile failed, user is signed out
+          setUser(null);
+        }
+      } else {
+        setUser(null);
       }
       
-      console.log('[AUTH] Login realizado com sucesso para:', email); // NOVO LOG
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro inesperado no login:', error);
-      toast.error("Erro no login", { description: "Erro inesperado. Tente novamente." });
+      setIsLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      handleAuthChange(event, session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadUserProfile]);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    cleanupAuthState();
+    try {
+      // Tenta fazer sign out global ANTES de sign in (ignora erro)
+      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
+    } catch {}
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error("Erro no login", { description: "Email ou senha inválidos." });
       return false;
     }
+    return true;
   };
 
   const register = async (userData: RegisterFormData): Promise<boolean> => {
+    cleanupAuthState();
     try {
-      console.log('[AUTH] Iniciando registro para:', userData.email); // NOVO LOG
-      const { error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: { 
-          data: { 
-            name: userData.name, 
-            role: userData.role, 
-            team_id: userData.teamId || null
-          },
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-      
-      if (error) {
-        console.error('[AUTH] Erro no registro:', error);
-        toast.error("Erro no cadastro", { description: error.message });
-        return false;
+      try { await supabase.auth.signOut({ scope: 'global' }); } catch {}
+    } catch {}
+    const { error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: { 
+        data: { 
+          name: userData.name, 
+          role: userData.role, 
+          team_id: userData.team_id 
+        },
+        emailRedirectTo: `${window.location.origin}/login`
       }
-      
-      console.log('[AUTH] Registro realizado com sucesso para:', userData.email); // NOVO LOG
-      toast.success("Cadastro realizado!", { 
-        description: "Você pode fazer login agora." 
-      });
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro inesperado no registro:', error);
-      toast.error("Erro no cadastro", { description: "Erro inesperado. Tente novamente." });
+    });
+    if (error) {
+      toast.error("Erro no cadastro", { description: error.message });
       return false;
     }
+    toast.success("Cadastro realizado!", { description: "Verifique seu email para confirmar a conta." });
+    return true;
   };
 
   const logout = async (): Promise<void> => {
-    console.log('[AUTH] Fazendo logout...'); // NOVO LOG
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setIsLoading(false);
-    console.log('[AUTH] Logout concluído.'); // NOVO LOG
+    cleanupAuthState();
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch {}
+    // Força um refresh de página para garantir "logout total"
+    window.location.href = "/login";
   };
-
+  
   const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => {
     if (!user) return false;
-    
-    try {
-      const { data: _data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          name: userData.name, 
-          avatar: userData.avatar 
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('[AUTH] Erro ao atualizar perfil:', error);
-        toast.error("Erro ao atualizar perfil.", { description: error.message });
-        return false;
-      }
-      
-      setUser(prev => prev ? { ...prev, ...userData } : null);
-      toast.success("Perfil atualizado com sucesso!");
-      return true;
-    } catch (error) {
-      console.error('[AUTH] Erro inesperado ao atualizar perfil:', error);
-      toast.error("Erro ao atualizar perfil.", { description: "Erro inesperado." });
+    const { data, error } = await supabase.from('profiles').update({ name: userData.name, avatar: userData.avatar }).eq('id', user.id).select().single();
+    if (error) {
+      toast.error("Erro ao atualizar perfil.", { description: error.message });
       return false;
     }
-  };
-
-  const requestPasswordReset = async (email: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) {
-        toast.error("Erro ao solicitar reset", { description: error.message });
-        return false;
-      }
-      
-      toast.success("Email enviado!", { 
-        description: "Verifique sua caixa de entrada para redefinir a senha." 
-      });
-      return true;
-    } catch (error) {
-      toast.error("Erro inesperado", { description: "Tente novamente mais tarde." });
-      return false;
-    }
+    setUser(prev => prev ? { ...prev, ...userData } : null);
+    toast.success("Perfil atualizado com sucesso!");
+    return true;
   };
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     if (user.role === 'administrador') return true;
     if (user.role === 'gestor') {
-      return ['view_stats', 'add_members', 'create_service', 'manage_team'].includes(permission);
-    }
-    if (user.role === 'tecnico') {
-      return ['view_services', 'update_services'].includes(permission);
+        return ['view_stats', 'add_members', 'create_service'].includes(permission);
     }
     return false;
   };
 
-  const canAccessRoute = (route: string): boolean => {
+  const canAccessRoute = useCallback((route: string): boolean => {
     if (!user) return false;
     if (user.role === "administrador") return true;
-    
     if (user.role === "gestor") {
-      const allowedRoutes = [
-        "/nova-demanda", "/estatisticas", "/equipe", "/settings", "/", 
-        "/demandas", "/buscar"
-      ];
-      return allowedRoutes.some(r => route.startsWith(r));
+      // Pode acessar rotas de gestão, mas não as de admin.
+      return ["/nova-demanda", "/estatisticas", "/equipe", "/settings", "/"].includes(route) || route.startsWith("/demandas") || route.startsWith("/buscar");
     }
-    
     if (user.role === "tecnico") {
-      const allowedRoutes = ["/", "/demandas", "/buscar", "/settings"];
-      return allowedRoutes.some(r => route.startsWith(r));
+      // Técnico só pode acessar as rotas básicas
+      return ["/", "/demandas", "/demandas/:id", "/buscar", "/settings"].some((r) => route.startsWith(r));
     }
-    
     return false;
-  };
+  }, [user]);
 
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    login,
-    logout,
-    register,
-    updateUser,
-    updateUserInfo: setUser,
-    hasPermission,
-    canAccessRoute,
-    requestPasswordReset,
+  const value = { 
+    user, 
+    isLoading, 
+    isAuthenticated: !!user, 
+    login, 
+    logout, 
+    register, 
+    updateUser, 
+    updateUserInfo: setUser, 
+    hasPermission, 
+    canAccessRoute, 
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = React.useContext(AuthContext);
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+const permissions: Record<string, string[]> = {
+  administrador: [
+    'view_services',
+    'create_services', 
+    'edit_services',
+    'delete_services',
+    'manage_team',
+    'view_statistics',
+    'export_reports',
+    'manage_service_types',
+    'manage_technical_fields'
+  ],
+  gestor: [
+    'view_services',
+    'create_services',
+    'edit_services',
+    'delete_services',
+    'view_statistics',
+    'export_reports'
+  ],
+  tecnico: [
+    'view_services',
+    'create_services',
+    'edit_services'
+  ]
 };

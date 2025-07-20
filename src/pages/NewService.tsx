@@ -126,9 +126,7 @@ const NewService: React.FC = () => {
       console.log("Demanda criada:", newService);
       
       toast.success("Demanda criada com sucesso!");
-      if (newService) {
-        navigate(`/servico/${newService.id}`); // Alterado de /demandas/ para /servico/
-      }
+      navigate(`/demandas/${newService.id}`);
     } catch (error) {
       console.error("Erro ao criar demanda:", error);
       toast.error("Erro ao criar a demanda");

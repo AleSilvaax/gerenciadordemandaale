@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, Filter, TrendingUp, Calendar, Users, Activity, BarChart3, PieChart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +17,7 @@ const Estatisticas: React.FC = () => {
   const [selectedTechnician, setSelectedTechnician] = useState("all");
   const [selectedServiceType, setSelectedServiceType] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [chartData, setChartData] = useState<{
-    pieChartData: { name: string; value: number; color: string; }[];
-    barChartData: { name: string; value: number; color: string; }[];
-    teamPerformance: { name: string; completed: number; }[];
-    serviceTypes: { name: string; percentage: number; }[];
-  }>({
+  const [chartData, setChartData] = useState({
     pieChartData: [],
     barChartData: [],
     teamPerformance: [],
@@ -53,8 +48,7 @@ const Estatisticas: React.FC = () => {
 
         // Priority distribution
         const priorityCounts = services.reduce((acc, service) => {
-          const priority = service.priority || 'baixa';
-          acc[priority] = (acc[priority] || 0) + 1;
+          acc[service.priority] = (acc[service.priority] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
 

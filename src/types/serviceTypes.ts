@@ -1,7 +1,7 @@
 
-export type ServiceStatus = "concluido" | "pendente" | "cancelado" | "em_andamento";
+export type ServiceStatus = "concluido" | "pendente" | "cancelado";
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
-export type UserRole = "tecnico" | "administrador" | "gestor" | "requisitor";
+export type UserRole = "tecnico" | "administrador" | "gestor";
 export type ServiceType = string;
 
 export interface TeamMember {
@@ -23,15 +23,9 @@ export interface ServiceMessage {
 }
 
 export interface ServiceFeedback {
-  rating: number;
-  comment: string;
-  wouldRecommend: boolean;
   clientRating: number;
   clientComment?: string;
   technicianFeedback?: string;
-  userId?: string;
-  userName?: string;
-  timestamp?: string;
 }
 
 export interface CustomField {
@@ -47,7 +41,7 @@ export interface Service {
   title: string;
   status: ServiceStatus;
   location: string;
-  technician?: TeamMember | null; // Tornar opcional e permitir null
+  technician: TeamMember;
   priority?: ServicePriority;
   dueDate?: string;
   creationDate?: string;
@@ -78,11 +72,7 @@ export interface ServiceCardProps {
   service: Service;
   onDelete?: (id: string) => Promise<void>;
   compact?: boolean;
-  onClick?: () => void; // Adicionar onClick
 }
-
-// Assumindo que MobileServiceCardProps é semelhante, ou criá-la se não existir
-export interface MobileServiceCardProps extends ServiceCardProps {}
 
 export interface ReportData {
   client?: string;

@@ -8,7 +8,8 @@ import { updateService } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
-import { formatDate } from "@/utils/formatters";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { MapPin, Calendar, Clock, User, FileText, CheckCircle, XCircle } from "lucide-react";
 
 interface ServiceDetailCardProps {
@@ -73,8 +74,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             <div>
               <p className="text-sm font-medium">Criação</p>
               <p className="text-sm text-muted-foreground">
-                {service.creationDate ? formatDate(service.creationDate) :
-                 service.date ? formatDate(service.date) : 'Data não disponível'}
+                {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
               </p>
             </div>
           </div>
@@ -84,7 +84,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <div>
                 <p className="text-sm font-medium">Vencimento</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(service.dueDate)}
+                  {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
                 </p>
               </div>
             </div>
@@ -114,13 +114,9 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
 
         {hasPermission("gestor") && (
           <TechnicianAssigner
-            currentTechnicianId={
-              service.technician?.id && service.technician.id !== '0'
-                ? service.technician.id
-                : undefined
-            }
+            currentTechnicianId={service.technician?.id}
             onAssign={async (technician) => {
-              await updateService({ id: service.id, technician: technician || undefined });
+              await updateService({ id: service.id, technician });
               toast.success("Técnico atualizado!");
               onServiceUpdate();
             }}

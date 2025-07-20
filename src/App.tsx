@@ -1,17 +1,21 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/sonner';
-import { ThemeProvider } from 'next-themes';
-
-// Usar contexto de autenticação real em vez do mock
-import { AuthProvider } from '@/context/AuthContext';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "next-themes";
+import { ProtectedRoute } from "./components/guards/ProtectedRoute";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { AppLayout } from "./components/layout/AppLayout";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import "./App.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutos
+      staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 1,
     },
   },
@@ -19,20 +23,31 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-background font-sans antialiased">
-              <Routes>
-                <Route path="/*" element={<AppLayout />} />
-              </Routes>
-            </div>
-          </Router>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            <Toaster />
+            <BrowserRouter>
+              <AuthProvider>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
       </QueryClientProvider>
-    </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

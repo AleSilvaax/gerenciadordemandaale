@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getServices } from '@/services/servicesDataService';
 import { Service } from '@/types/serviceTypes';
@@ -71,7 +71,7 @@ export const useOptimizedServices = () => {
         service.description?.toLowerCase().includes(searchLower) ||
         service.client?.toLowerCase().includes(searchLower) ||
         service.location.toLowerCase().includes(searchLower) ||
-        (service.number?.toLowerCase().includes(searchLower) ?? false)
+        service.number.toLowerCase().includes(searchLower)
       );
     }
 
@@ -189,7 +189,7 @@ export const useServiceSearch = (searchTerm: string, services: Service[]) => {
       service.description?.toLowerCase().includes(searchLower) ||
       service.client?.toLowerCase().includes(searchLower) ||
       service.location.toLowerCase().includes(searchLower) ||
-      (service.number?.toLowerCase().includes(searchLower) ?? false)
+      service.number.toLowerCase().includes(searchLower)
     );
   }, [services, debouncedSearchTerm]);
 };

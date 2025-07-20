@@ -7,79 +7,26 @@ export const addServiceMessage = async (serviceId: string, message: ServiceMessa
   try {
     console.log('[MESSAGING] Adicionando mensagem:', { serviceId, message });
     
-    // Primeiro, verificar se o serviço existe
-    const { data: serviceExists, error: serviceError } = await supabase
-      .from('services')
-      .select('id')
-      .eq('id', serviceId)
-      .single();
-
-    if (serviceError || !serviceExists) {
-      console.error('[MESSAGING] Serviço não encontrado:', serviceError);
-      toast.error('Serviço não encontrado');
-      return;
-    }
-    
-    // Salvar a mensagem na tabela service_messages
-    const { data, error } = await supabase
+    // Salva a mensagem na tabela service_messages
+    const { error } = await supabase
       .from('service_messages')
       .insert({
         service_id: serviceId,
-        sender_id: message.senderId || 'system',
-        sender_name: message.senderName || 'Sistema',
-        sender_role: message.senderRole || 'system',
+        sender_id: message.senderId,
+        sender_name: message.senderName,
+        sender_role: message.senderRole,
         message: message.message,
-        timestamp: new Date().toISOString()
-      })
-      .select()
-      .single();
+      });
     
     if (error) {
       console.error('[MESSAGING] Erro ao salvar mensagem:', error);
-      // Tentar salvar via edge function como fallback
-      await saveMessageViaEdgeFunction(serviceId, message);
-      return;
-    }
-
-    console.log('[MESSAGING] Mensagem salva com sucesso:', data);
-    toast.success('Mensagem enviada com sucesso');
-  } catch (error) {
-    console.error('[MESSAGING] Erro geral:', error);
-    // Fallback: tentar via edge function
-    try {
-      await saveMessageViaEdgeFunction(serviceId, message);
-    } catch (fallbackError) {
-      console.error('[MESSAGING] Fallback também falhou:', fallbackError);
-      toast.error('Erro ao enviar mensagem');
-    }
-  }
-};
-
-const saveMessageViaEdgeFunction = async (serviceId: string, message: ServiceMessage): Promise<void> => {
-  try {
-    console.log('[MESSAGING] Tentando salvar via edge function...');
-    
-    const { data, error } = await supabase.functions.invoke('add_service_message', {
-      body: {
-        serviceId,
-        message: {
-          author: message.senderId || 'system',
-          author_name: message.senderName || 'Sistema',
-          type: message.senderRole || 'system',
-          text: message.message
-        }
-      }
-    });
-
-    if (error) {
-      console.error('[MESSAGING] Erro na edge function:', error);
       throw error;
     }
 
-    console.log('[MESSAGING] Mensagem salva via edge function:', data);
-    toast.success('Mensagem enviada com sucesso');
+    console.log('[MESSAGING] Mensagem salva com sucesso');
   } catch (error) {
-    console.error('[MESSAGING] Erro na edge function:', error);
+    console.error('[MESSAGING] Erro geral:', error);
+    toast.error('Erro ao enviar mensagem');
     throw error;
   }
 };
@@ -89,24 +36,20 @@ export const addServiceFeedback = async (serviceId: string, feedback: ServiceFee
     console.log('[FEEDBACK] Salvando feedback:', { serviceId, feedback });
     
     // Atualizar o serviço com o feedback
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('services')
       .update({
         feedback: JSON.stringify(feedback),
         updated_at: new Date().toISOString()
       })
-      .eq('id', serviceId)
-      .select()
-      .single();
+      .eq('id', serviceId);
     
     if (error) {
       console.error('[FEEDBACK] Erro ao salvar feedback:', error);
-      toast.error('Erro ao salvar feedback');
       throw error;
     }
 
-    console.log('[FEEDBACK] Feedback salvo com sucesso:', data);
-    toast.success('Feedback salvo com sucesso');
+    console.log('[FEEDBACK] Feedback salvo com sucesso');
   } catch (error) {
     console.error('[FEEDBACK] Erro geral:', error);
     toast.error('Erro ao salvar feedback');

@@ -3,19 +3,19 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, MapPin, User, Clock } from 'lucide-react';
+import { Eye, Calendar, MapPin, User, Clock } from 'lucide-react';
 import { Service } from '@/types/serviceTypes';
 import { StatusBadge } from './StatusBadge';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface MobileServiceCardProps {
   service: Service;
-  onDelete?: (id: string) => Promise<void>; // Adicionado
-  onClick?: () => void; // Adicionado
 }
 
-export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service, onClick }) => {
+export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service }) => {
+  const navigate = useNavigate();
 
   const formatDate = (dateString: string) => {
     try {
@@ -33,7 +33,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service, o
   };
 
   return (
-    <Card className="w-full mb-3" onClick={onClick}> {/* Adicionado onClick no Card */}
+    <Card className="w-full mb-3">
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header - Title and Status */}
@@ -85,7 +85,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service, o
           <Button
             variant="outline"
             size="sm"
-            onClick={onClick} // Alterado para usar a prop onClick
+            onClick={() => navigate(`/demandas/${service.id}`)}
             className="w-full h-8 text-xs"
           >
             <Eye className="w-3 h-3 mr-2" />

@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { getServices } from '@/services/servicesDataService';
 import { Service } from '@/types/serviceTypes';
 import { supabase } from '@/integrations/supabase/client';
