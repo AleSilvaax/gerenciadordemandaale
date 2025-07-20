@@ -498,7 +498,7 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         role: 'tecnico',
       },
       creationDate: data.created_at,
-      dueDate: data.due_date,
+      dueDate: data.due_date || undefined,
       priority: data.priority as ServicePriority,
       serviceType: data.service_type,
       number: data.number,
