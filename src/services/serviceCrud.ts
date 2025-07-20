@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember, ServicePriority, ServiceStatus, CustomField } from '@/types/serviceTypes';
+import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
 
 // Interface para a tabela de mensagens de serviço
@@ -500,22 +500,22 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       creationDate: data.created_at,
       dueDate: data.due_date || undefined,
       priority: data.priority as ServicePriority,
-      serviceType: data.service_type,
+      serviceType: data.service_type || undefined,
       number: data.number,
-      description: data.description,
-      createdBy: data.created_by,
-      client: data.client,
-      address: data.address,
-      city: data.city,
-      notes: data.notes,
-      estimatedHours: data.estimated_hours,
+      description: data.description || undefined,
+      createdBy: data.created_by || undefined,
+      client: data.client || undefined,
+      address: data.address || undefined,
+      city: data.city || undefined,
+      notes: data.notes || undefined,
+      estimatedHours: data.estimated_hours || undefined,
       customFields: customFieldsParsed,
       signatures: signaturesParsed,
       feedback: feedbackParsed,
       messages: service.messages || [],
-      photos: data.photos,
-      photoTitles: data.photo_titles,
-      date: data.date,
+      photos: data.photos || undefined,
+      photoTitles: data.photo_titles || undefined,
+      date: data.date || undefined,
     };
   } catch (error) {
     console.error('Erro em updateServiceInDatabase:', error);
