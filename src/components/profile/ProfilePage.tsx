@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/context/AuthContext';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
 import { User, Mail, Phone, Edit2, Save, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
