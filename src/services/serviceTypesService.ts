@@ -101,13 +101,36 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
 };
 
 export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
-  const { data, error } = await supabase
-    .from("service_types")
-    .insert({ name: type.name, description: type.description })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  try {
+    console.log('[ServiceTypes] Criando tipo de serviço:', type);
+    
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    const { data, error } = await supabase
+      .from("service_types")
+      .insert({ 
+        name: type.name, 
+        description: type.description,
+        organization_id: null // Por enquanto não usar organização
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('[ServiceTypes] Erro ao criar tipo:', error);
+      throw error;
+    }
+    
+    console.log('[ServiceTypes] Tipo criado com sucesso:', data);
+    return data;
+  } catch (error) {
+    console.error('[ServiceTypes] Erro no createServiceType:', error);
+    throw error;
+  }
 };
 
 export const updateServiceType = async (type: ServiceTypeConfig) => {

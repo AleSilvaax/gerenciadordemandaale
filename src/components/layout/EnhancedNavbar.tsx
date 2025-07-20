@@ -1,126 +1,193 @@
-
-import React from "react";
-import { useAuth } from "@/context/AuthContext";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, LogOut, User } from "lucide-react";
+import React from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+  Home,
+  Plus,
+  FileText,
+  Search,
+  Settings,
+  Users,
+  BarChart3,
+  Calendar
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useMobile } from '@/hooks/useMobile';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from '@/lib/utils';
 
 export const EnhancedNavbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, canAccessRoute } = useEnhancedAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isMobile } = useMobile();
 
-  if (!user) return null;
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'administrador': return 'Admin';
-      case 'gestor': return 'Gestor';
-      case 'tecnico': return 'Técnico';
-      default: return role;
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const menuItems = [
+    { 
+      name: 'Dashboard', 
+      path: '/', 
+      icon: Home, 
+      roles: ['tecnico', 'gestor', 'administrador'] 
+    },
+    { 
+      name: 'Nova Demanda', 
+      path: '/nova-demanda', 
+      icon: Plus, 
+      roles: ['gestor', 'administrador'] 
+    },
+    { 
+      name: 'Demandas', 
+      path: '/demandas', 
+      icon: FileText, 
+      roles: ['tecnico', 'gestor', 'administrador'] 
+    },
+    { 
+      name: 'Buscar', 
+      path: '/buscar', 
+      icon: Search, 
+      roles: ['tecnico', 'gestor', 'administrador'] 
+    },
+    { 
+      name: 'Calendário', 
+      path: '/calendar', 
+      icon: Calendar, 
+      roles: ['tecnico', 'gestor', 'administrador'] 
+    },
+    { 
+      name: 'Estatísticas', 
+      path: '/estatisticas', 
+      icon: BarChart3, 
+      roles: ['gestor', 'administrador'] 
+    },
+    { 
+      name: 'Equipe', 
+      path: '/equipe', 
+      icon: Users, 
+      roles: ['gestor', 'administrador'] 
+    },
+    { 
+      name: 'Configurações', 
+      path: '/settings', 
+      icon: Settings, 
+      roles: ['gestor', 'administrador'] 
     }
-  };
+  ];
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'administrador': return 'bg-red-100 text-red-800';
-      case 'gestor': return 'bg-blue-100 text-blue-800';
-      case 'tecnico': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const filteredMenuItems = menuItems.filter(item => {
+    return item.roles.includes(user?.role || '');
+  }).filter(item => canAccessRoute ? canAccessRoute(item.path) : true);
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo/Brand */}
-          <div className="flex items-center gap-4">
-            <Link to="/" className="font-bold text-xl text-primary">
-              ServiceFlow
-            </Link>
-          </div>
+    <nav className="bg-background/90 backdrop-blur-md border-b border-border/40 fixed top-0 left-0 w-full z-40">
+      <div className="container max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <span className="font-bold text-xl">
+          Gerenciador<span className="text-primary">Demandas</span>
+        </span>
 
-          {/* Right side - Notifications and User */}
+        {isMobile ? (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="relative rounded-full h-8 w-8">
+                <Avatar className="h-8 w-8">
+                  {user?.avatar ? (
+                    <AvatarImage src={user.avatar} alt={user?.name} />
+                  ) : (
+                    <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                  )}
+                </Avatar>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-3/4 sm:w-2/3 md:w-1/2">
+              <SheetHeader className="text-left">
+                <SheetTitle>Menu</SheetTitle>
+                <SheetDescription>
+                  Navegue pelo sistema
+                </SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-4 py-4">
+                {filteredMenuItems.map(item => (
+                  <Button
+                    key={item.name}
+                    variant="ghost"
+                    className={cn(
+                      "justify-start",
+                      isActive(item.path) ? "text-primary" : "text-foreground"
+                    )}
+                    onClick={() => navigate(item.path)}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.name}
+                  </Button>
+                ))}
+                <Button variant="destructive" className="justify-start" onClick={handleLogout}>
+                  Sair
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
           <div className="flex items-center gap-4">
-            {/* Notification Center */}
-            <NotificationCenter />
+            <div className="flex items-center gap-2">
+              {filteredMenuItems.map(item => (
+                <Button
+                  key={item.name}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    isActive(item.path) ? "text-primary" : "text-foreground"
+                  )}
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {item.name}
+                </Button>
+              ))}
+            </div>
 
-            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
+                <Button variant="ghost" size="sm" className="relative rounded-full h-8 w-8">
+                  <Avatar className="h-8 w-8">
+                    {user?.avatar ? (
+                      <AvatarImage src={user.avatar} alt={user?.name} />
+                    ) : (
+                      <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                    )}
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              
-              <DropdownMenuContent className="w-64" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <Badge className={`text-xs ${getRoleColor(user.role)}`}>
-                        {getRoleLabel(user.role)}
-                      </Badge>
-                    </div>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
-                    <Settings className="h-4 w-4" />
-                    Configurações
-                  </Link>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  Perfil
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
-                    <User className="h-4 w-4" />
-                    Meu Perfil
-                  </Link>
-                </DropdownMenuItem>
-                
                 <DropdownMenuSeparator />
-                
-                <DropdownMenuItem
-                  className="flex items-center gap-2 cursor-pointer text-red-600"
-                  onClick={logout}
-                >
-                  <LogOut className="h-4 w-4" />
+                <DropdownMenuItem onClick={handleLogout}>
                   Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );

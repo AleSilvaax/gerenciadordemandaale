@@ -1,3 +1,4 @@
+
 export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
 
 export interface AuthUser {
@@ -23,6 +24,7 @@ export interface AuthContextType {
   updateUserInfo: (userData: AuthUser) => void;
   hasPermission: (permission: string) => boolean;
   canAccessRoute?: (route: string) => boolean;
+  requestPasswordReset: (email: string) => Promise<boolean>;
 }
 
 export interface RegisterFormData {
