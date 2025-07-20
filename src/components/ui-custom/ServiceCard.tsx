@@ -5,11 +5,11 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { TeamMemberAvatar } from './TeamMemberAvatar';
 import { StatusBadge } from './StatusBadge';
 import { ServiceCardProps } from '@/types/serviceTypes';
-import { format } from 'date-fns';
+import { DeadlineManager } from './DeadlineManager';
 import { useAuth } from '@/context/AuthContext';
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, compact = false }) => {
-  const { id, title, status, location, number, technician, dueDate } = service;
+  const { id, title, status, location, number, technician, priority, dueDate, creationDate } = service;
   const { hasPermission } = useAuth();
 
   const completed = status === 'concluido';
@@ -80,9 +80,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
               </div>
             </div>
 
-            <div className="text-xs text-muted-foreground">
-              Prazo: {dueDate ? format(new Date(dueDate), 'dd/MM/yyyy') : 'Não definido'}
-            </div>
+            <DeadlineManager
+              dueDate={dueDate}
+              creationDate={creationDate}
+              priority={priority}
+              completed={completed}
+              compact={compact}
+            />
           </div>
         </CardContent>
 
@@ -91,7 +95,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onDelete, com
             <div className="flex items-center justify-between w-full gap-1">
               <div className="flex items-center gap-2 min-w-0">
                  <TeamMemberAvatar
-                   avatar={technician?.avatar || ''}
+                   src={technician?.avatar || ''}
                    name={technician?.name || 'Não atribuído'}
                    size="sm"
                  />

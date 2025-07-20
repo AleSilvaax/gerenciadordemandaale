@@ -51,9 +51,9 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
       } catch (error) {
         console.error('[DetailsFormSection] Erro ao carregar tipos:', error);
         setServiceTypes([
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
+          { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+          { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+          { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
         ]);
       }
     };

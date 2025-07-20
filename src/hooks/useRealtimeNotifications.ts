@@ -7,7 +7,7 @@ import { useServiceStore } from '@/store/serviceStore';
 
 export const useRealtimeNotifications = () => {
   const { setConnectionStatus, addNotification } = useUIStore();
-  const { updateService } = useServiceStore();
+  const { updateService, loadServices } = useServiceStore();
 
   useEffect(() => {
     console.log('[REALTIME] Iniciando escuta de notificações...');
@@ -29,7 +29,7 @@ export const useRealtimeNotifications = () => {
             message: `${newService.title} - Cliente: ${newService.client || 'N/A'}`,
             type: 'success'
           });
-          // Notify about new service creation
+          loadServices(); // Recarregar lista
         }
       )
       .on(
@@ -52,7 +52,7 @@ export const useRealtimeNotifications = () => {
             });
           }
           
-          updateService(updatedService.id, updatedService);
+          updateService(updatedService);
         }
       )
       .on(
@@ -97,7 +97,7 @@ export const useRealtimeNotifications = () => {
       supabase.removeChannel(channel);
       setConnectionStatus(false);
     };
-  }, [setConnectionStatus, addNotification, updateService]);
+  }, [setConnectionStatus, addNotification, updateService, loadServices]);
 
   const { isConnected } = useUIStore();
   return { isConnected };

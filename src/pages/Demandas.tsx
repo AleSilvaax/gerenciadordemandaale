@@ -1,144 +1,337 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Plus, Download, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
+import { ServiceFilters } from "@/components/filters/ServiceFilters";
+import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
+import { MobileHeader } from "@/components/layout/MobileHeader";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
-import { useAuditedServices } from "@/hooks/useAuditedServices";
-import { Plus, Search, Filter } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useServiceFilters } from "@/hooks/useServiceFilters";
+import { useServices } from "@/hooks/useServices";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 
-export default function Demandas() {
-  const { services, isLoading } = useAuditedServices();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
-  const [priorityFilter, setPriorityFilter] = useState("todas");
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { deleteService } from "@/services/servicesDataService"; // Importar deleteService
 
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.client?.toLowerCase().includes(searchTerm.toLowerCase());
+const Demandas = () => {
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { services, isLoading, error, refreshServices } = useServices();
+  const { teamMembers } = useTeamMembers();
+  
+  const {
+    filters,
+    filteredServices,
+    updateFilter,
+    clearFilters
+  } = useServiceFilters(services);
+
+  
+
+  // Estatísticas calculadas
+  const serviceStats = useMemo(() => {
+    const total = services.length;
+    const pending = services.filter(s => s.status === 'pendente').length;
+    const completed = services.filter(s => s.status === 'concluido').length;
     
-    const matchesStatus = statusFilter === "todos" || service.status === statusFilter;
-    const matchesPriority = priorityFilter === "todas" || service.priority === priorityFilter;
-    
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+    const highPriority = services.filter(s => s.priority === 'alta').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const stats = {
-    total: services.length,
-    pending: services.filter(s => s.status === 'pendente').length,
-    inProgress: services.filter(s => s.status === 'em_andamento').length,
-    completed: services.filter(s => s.status === 'concluido').length,
-    highPriority: services.filter(s => s.priority === 'alta' || s.priority === 'urgente').length,
-    completionRate: services.length > 0 ? Math.round((services.filter(s => s.status === 'concluido').length / services.length) * 100) : 0
-  };
+    return {
+      total,
+      pending,
+      inProgress: pending,
+      completed,
+      highPriority,
+      completionRate,
+    };
+  }, [services]);
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Carregando demandas...</div>;
+  // Lista de tipos de serviço únicos
+  const uniqueServiceTypes = useMemo(() => {
+    // Garante que serviceType é uma string antes de mapear e filtrar
+    const types = [...new Set(services.map(s => s.serviceType).filter((type): type is string => typeof type === 'string' && type.trim() !== ''))];
+    return types;
+  }, [services]);
+
+  // Handler para refresh manual
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refreshServices();
+      toast.success("Demandas atualizadas!");
+    } catch (error) {
+      toast.error("Erro ao atualizar demandas");
+    }
+  }, [refreshServices]);
+
+  // Export handler com menu
+  const handleExport = useCallback((format: 'csv' | 'excel' | 'statistics') => {
+    try {
+      const { exportToCSV, exportToExcel, exportStatistics } = require('@/utils/exportUtils');
+      
+      switch (format) {
+        case 'csv':
+          exportToCSV(filteredServices, 'demandas');
+          break;
+        case 'excel':
+          exportToExcel(filteredServices, 'demandas');
+          break;
+        case 'statistics':
+          exportStatistics(filteredServices, 'estatisticas');
+          break;
+      }
+      toast.success(`Dados exportados em ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Erro ao exportar dados");
+    }
+  }, [filteredServices]);
+
+  // Handler para exclusão de serviço
+  const handleDeleteService = useCallback(async (serviceId: string) => {
+    try {
+      await deleteService(serviceId);
+      toast.success("Demanda excluída com sucesso!");
+      refreshServices(); // Atualiza a lista após exclusão
+    } catch (error) {
+      toast.error("Erro ao excluir demanda.");
+      console.error("Erro ao excluir demanda:", error);
+    }
+  }, [refreshServices]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Erro ao carregar demandas</h2>
+          <p className="text-muted-foreground mb-4">Ocorreu um erro ao buscar as demandas.</p>
+          <Button onClick={handleRefresh}>Tentar novamente</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Gerenciar Demandas</h1>
-        <Link to="/nova-demanda">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Demanda
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Mobile Header */}
+      <MobileHeader
+        title="Demandas"
+        subtitle="Gerencie todas as demandas"
+        rightAction={
+          <Button
+            size="sm"
+            onClick={() => navigate("/nova-demanda")}
+            className="gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Nova
           </Button>
-        </Link>
-      </div>
-
-      <StatisticsCards 
-        data={{
-          totalServices: stats.total,
-          completedServices: stats.completed,
-          pendingServices: stats.pending,
-          overdue: 0,
-          activeUsers: 0
-        }}
+        }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar demandas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      <motion.div 
+        className={`container mx-auto p-4 space-y-4 ${isMobile ? 'pt-2' : 'p-6 space-y-6'}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Desktop Header */}
+        {!isMobile && (
+          <motion.div 
+            className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Demandas
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Gerencie e acompanhe todas as demandas de serviço
+              </p>
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os Status</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                <SelectItem value="concluido">Concluído</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as Prioridades</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="urgente">Urgente</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("todos");
-                setPriorityFilter("todas");
-              }}
-            >
-              Limpar Filtros
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4">
-        {filteredServices.length > 0 ? (
-          filteredServices.map((service) => (
-            <ServiceCard key={service.id} service={service} />
-          ))
-        ) : (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== "todos" || priorityFilter !== "todas"
-                  ? "Nenhuma demanda encontrada com os filtros aplicados."
-                  : "Nenhuma demanda cadastrada ainda."}
-              </p>
-            </CardContent>
-          </Card>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Exportar
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('excel')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('statistics')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar Estatísticas
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button 
+                onClick={() => navigate("/nova-demanda")}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Demanda
+              </Button>
+            </div>
+          </motion.div>
         )}
-      </div>
+
+        {/* Estatísticas */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <StatisticsCards {...serviceStats} />
+        </motion.div>
+
+        {/* Sistema de Filtros */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          {isMobile ? (
+            <MobileServiceFilters
+              filters={filters}
+              onFilterChange={updateFilter}
+              onClearFilters={clearFilters}
+              serviceTypes={uniqueServiceTypes}
+              totalResults={filteredServices.length}
+            />
+          ) : (
+            <ServiceFilters
+              filters={filters}
+              onFilterChange={updateFilter}
+              onClearFilters={clearFilters}
+              onExport={() => handleExport('csv')}
+              technicians={teamMembers}
+              serviceTypes={uniqueServiceTypes}
+              totalResults={filteredServices.length}
+            />
+          )}
+        </motion.div>
+
+        {/* Lista de demandas */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className={isMobile ? 'pb-20' : ''}
+        >
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <CardHeader>
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="h-3 bg-muted rounded"></div>
+                      <div className="h-3 bg-muted rounded w-5/6"></div>
+                      <div className="flex gap-2">
+                        <div className="h-6 bg-muted rounded w-16"></div>
+                        <div className="h-6 bg-muted rounded w-20"></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredServices.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <p className="text-lg font-medium mb-2">Nenhuma demanda encontrada</p>
+                <p className="text-muted-foreground mb-4">
+                  {filters.search || filters.status !== 'todos' || filters.serviceType !== 'all' 
+                    ? "Tente ajustar os filtros de busca" 
+                    : "Crie sua primeira demanda para começar"
+                  }
+                </p>
+                <Button onClick={() => navigate("/nova-demanda")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Demanda
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={`space-y-4 ${isMobile ? 'space-y-3' : ''}`}>
+              {filteredServices.map((service, index) => (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  {isMobile ? (
+                    <MobileServiceCard
+                      service={service}
+                      key={service.id}
+                      onDelete={handleDeleteService}
+                      onClick={() => navigate(`/servico/${service.id}`)} // Alterado de /demandas/ para /servico/
+                    />
+                  ) : (
+                    <ServiceCard
+                      service={service}
+                      key={service.id}
+                      onDelete={handleDeleteService}
+                      onClick={() => navigate(`/servico/${service.id}`)} // Alterado de /demandas/ para /servico/
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Informações de resultados */}
+        {!isLoading && filteredServices.length > 0 && !isMobile && (
+          <motion.div 
+            className="flex justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Badge variant="outline" className="px-4 py-2">
+              Mostrando {filteredServices.length} de {serviceStats.total} demandas
+            </Badge>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
-}
+};
+
+export default Demandas;

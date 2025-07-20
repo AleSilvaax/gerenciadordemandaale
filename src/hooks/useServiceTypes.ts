@@ -25,9 +25,9 @@ export const useServiceTypes = () => {
       
       // Fallback: tipos padrão se houver erro
       setServiceTypes([
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
+        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
       ]);
     } finally {
       setIsLoading(false);

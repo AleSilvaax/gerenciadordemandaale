@@ -178,4 +178,4 @@ const PermissionsTab: React.FC = () => {
   );
 };
 
-export { PermissionsTab };
+export default PermissionsTab;

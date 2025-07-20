@@ -1,117 +1,238 @@
-
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getServices } from '@/services/servicesDataService';
 import { Service } from '@/types/serviceTypes';
-import { getServicesFromDatabase } from '@/services/serviceCrud';
-import { toast } from "sonner";
+import { useDebounce } from '@/utils/performance';
+import { useUIStore } from '@/store/uiStore';
 
-export const useConsolidatedServices = () => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface ServiceFilters {
+  status: string;
+  priority: string;
+  serviceType: string;
+  searchTerm: string;
+}
 
-  const fetchServices = async () => {
-    try {
-      setIsLoading(true);
-      console.log('[useConsolidatedServices] Iniciando busca de serviços...');
-      
-      const data = await getServicesFromDatabase();
-      console.log('[useConsolidatedServices] Serviços recebidos:', data.length);
-      
-      setServices(data);
-      setError(null);
-    } catch (err: any) {
-      console.error('[useConsolidatedServices] Erro ao buscar serviços:', err);
-      setError(err.message || 'Erro ao carregar serviços');
-      toast.error('Erro ao carregar serviços');
-    } finally {
-      setIsLoading(false);
+interface UseConsolidatedServicesOptions {
+  enableFilters?: boolean;
+  cacheTime?: number;
+  staleTime?: number;
+}
+
+const SERVICES_QUERY_KEY = ['services'];
+
+export const useConsolidatedServices = (options: UseConsolidatedServicesOptions = {}) => {
+  const {
+    enableFilters = true,
+    cacheTime = 5 * 60 * 1000, // 5 minutes
+    staleTime = 2 * 60 * 1000, // 2 minutes
+  } = options;
+
+  const { addNotification } = useUIStore();
+  const queryClient = useQueryClient();
+
+  const [filters, setFilters] = useState<ServiceFilters>({
+    status: 'all',
+    priority: 'all',
+    serviceType: 'all',
+    searchTerm: '',
+  });
+
+  // React Query with intelligent caching
+  const {
+    data: services = [],
+    isLoading,
+    error,
+    refetch,
+    isStale
+  } = useQuery({
+    queryKey: SERVICES_QUERY_KEY,
+    queryFn: getServices,
+    staleTime,
+    gcTime: cacheTime,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // Debounced search for performance
+  const debouncedSearchTerm = useDebounce(filters.searchTerm, 300);
+
+  // Memoized filtered services
+  const filteredServices = useMemo(() => {
+    if (!enableFilters) return services;
+
+    let filtered = [...services];
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(service => service.status === filters.status);
     }
-  };
 
-  useEffect(() => {
-    fetchServices();
-  }, []);
+    // Priority filter
+    if (filters.priority !== 'all') {
+      filtered = filtered.filter(service => service.priority === filters.priority);
+    }
 
-  // Estatísticas consolidadas
-  const statistics = useMemo(() => {
+    // Service type filter
+    if (filters.serviceType !== 'all') {
+      filtered = filtered.filter(service => service.serviceType === filters.serviceType);
+    }
+
+    // Text search filter (debounced)
+    if (debouncedSearchTerm.trim()) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(service => 
+        service.title.toLowerCase().includes(searchLower) ||
+        service.description?.toLowerCase().includes(searchLower) ||
+        service.client?.toLowerCase().includes(searchLower) ||
+        service.location.toLowerCase().includes(searchLower) ||
+        (service.number?.toLowerCase().includes(searchLower) ?? false)
+      );
+    }
+
+    return filtered;
+  }, [services, filters.status, filters.priority, filters.serviceType, debouncedSearchTerm, enableFilters]);
+
+  // Optimized service statistics
+  const serviceStats = useMemo(() => {
     const total = services.length;
     const pending = services.filter(s => s.status === 'pendente').length;
+    const inProgress = services.filter(s => s.status === 'em_andamento').length;
     const completed = services.filter(s => s.status === 'concluido').length;
-    const cancelled = services.filter(s => s.status === 'cancelado').length;
-    
-    // Serviços atrasados (vencidos e ainda pendentes)
-    const overdue = services.filter(s => {
-      if (s.status !== 'pendente' || !s.dueDate) return false;
-      return new Date(s.dueDate) < new Date();
-    }).length;
-
-    // Serviços por prioridade
     const highPriority = services.filter(s => s.priority === 'alta').length;
-    const mediumPriority = services.filter(s => s.priority === 'media').length;
-    const lowPriority = services.filter(s => s.priority === 'baixa').length;
-
-    // Serviços por tipo
-    const byType = services.reduce((acc, service) => {
-      const type = service.serviceType || 'Não definido';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return {
       total,
       pending,
+      inProgress,
       completed,
-      cancelled,
-      overdue,
-      byPriority: {
-        high: highPriority,
-        medium: mediumPriority,
-        low: lowPriority
-      },
-      byType,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
+      highPriority,
+      completionRate,
     };
   }, [services]);
 
-  // Filtros e ordenação
-  const getFilteredServices = (filters: {
-    status?: string;
-    priority?: string;
-    technician?: string;
-    serviceType?: string;
-    search?: string;
-  }) => {
-    return services.filter(service => {
-      if (filters.status && service.status !== filters.status) return false;
-      if (filters.priority && service.priority !== filters.priority) return false;
-      if (filters.technician && service.technician?.id !== filters.technician) return false;
-      if (filters.serviceType && service.serviceType !== filters.serviceType) return false;
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        const searchableText = [
-          service.title,
-          service.description,
-          service.client,
-          service.location,
-          service.number
-        ].join(' ').toLowerCase();
-        
-        if (!searchableText.includes(searchTerm)) return false;
-      }
-      return true;
-    });
-  };
+  // Filter options extracted from real data
+  const filterOptions = useMemo(() => {
+    const serviceTypes = [...new Set(services.map(s => s.serviceType).filter(Boolean))];
+    const priorities = [...new Set(services.map(s => s.priority).filter(Boolean))];
+    
+    return {
+      serviceTypes,
+      priorities,
+      statuses: ['pendente', 'em_andamento', 'concluido', 'cancelado']
+    };
+  }, [services]);
 
-  const refreshServices = () => {
-    fetchServices();
-  };
+  // Error handling
+  useEffect(() => {
+    if (error) {
+      addNotification({
+        title: 'Erro ao carregar dados',
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        type: 'error'
+      });
+    }
+  }, [error, addNotification]);
+
+  // Optimized actions
+  const actions = useMemo(() => ({
+    refreshServices: () => refetch(),
+    
+    setSearchTerm: (term: string) => {
+      setFilters(prev => ({ ...prev, searchTerm: term }));
+    },
+    
+    setStatusFilter: (status: string) => {
+      setFilters(prev => ({ ...prev, status }));
+    },
+    
+    setPriorityFilter: (priority: string) => {
+      setFilters(prev => ({ ...prev, priority }));
+    },
+    
+    setServiceTypeFilter: (serviceType: string) => {
+      setFilters(prev => ({ ...prev, serviceType }));
+    },
+    
+    clearFilters: () => {
+      setFilters({
+        status: 'all',
+        priority: 'all',
+        serviceType: 'all',
+        searchTerm: '',
+      });
+    },
+
+    // Cache management
+    invalidateCache: () => {
+      queryClient.invalidateQueries({ queryKey: SERVICES_QUERY_KEY });
+    },
+
+    // Optimistic updates
+    updateServiceInCache: (updatedService: Service) => {
+      queryClient.setQueryData(SERVICES_QUERY_KEY, (oldData: Service[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(service => 
+          service.id === updatedService.id ? updatedService : service
+        );
+      });
+    },
+
+    addServiceToCache: (newService: Service) => {
+      queryClient.setQueryData(SERVICES_QUERY_KEY, (oldData: Service[] | undefined) => {
+        if (!oldData) return [newService];
+        return [newService, ...oldData];
+      });
+    },
+
+    removeServiceFromCache: (serviceId: string) => {
+      queryClient.setQueryData(SERVICES_QUERY_KEY, (oldData: Service[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.filter(service => service.id !== serviceId);
+      });
+    }
+  }), [refetch, queryClient]);
 
   return {
-    services,
+    // Data
+    services: filteredServices,
+    allServices: services,
+    serviceStats,
+    filterOptions,
+    
+    // State
     isLoading,
     error,
-    statistics,
-    getFilteredServices,
-    refreshServices
+    isStale,
+    filters,
+    
+    // Actions
+    actions,
+    
+    // Legacy compatibility
+    refreshServices: actions.refreshServices,
+    setServices: () => {}, // Deprecated - use cache actions instead
+    setLoading: () => {}, // Deprecated - handled internally
+    setError: () => {}, // Deprecated - handled internally
   };
+};
+
+// Hook for service search optimization
+export const useServiceSearch = (searchTerm: string, services: Service[]) => {
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  
+  return useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return services;
+    
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return services.filter(service => 
+      service.title.toLowerCase().includes(searchLower) ||
+      service.description?.toLowerCase().includes(searchLower) ||
+      service.client?.toLowerCase().includes(searchLower) ||
+      service.location.toLowerCase().includes(searchLower) ||
+      (service.number?.toLowerCase().includes(searchLower) ?? false)
+    );
+  }, [services, debouncedSearchTerm]);
 };

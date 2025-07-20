@@ -14,12 +14,13 @@ export const useAuditedServices = () => {
     isLoading,
     error,
     mutate,
-    isValidating
+    refresh,
+    isStale
   } = useIntelligentCache<Service[]>(
     'services-list',
     getServices,
     {
-      ttl: 2 * 60 * 1000,
+      ttl: 2 * 60 * 1000, // 2 minutes
       staleWhileRevalidate: true
     }
   );
@@ -28,8 +29,10 @@ export const useAuditedServices = () => {
     try {
       const result = await createService(serviceData);
       
+      // Handle the response structure from createService
       const newService = ('created' in result ? result.created : result) as Service;
       
+      // Log the action
       await logAction(
         AUDIT_ACTIONS.CREATE,
         RESOURCE_TYPES.SERVICE,
@@ -39,7 +42,8 @@ export const useAuditedServices = () => {
         { source: 'web_app' }
       );
 
-      mutate([newService, ...(services || [])]);
+      // Update cache optimistically
+      mutate(current => current ? [newService, ...current] : [newService]);
       
       toast.success('Demanda criada com sucesso!');
       return newService;
@@ -57,6 +61,7 @@ export const useAuditedServices = () => {
     try {
       const updatedService = await updateService({ id: serviceId, ...updates });
       
+      // Log the action with before/after values
       await logAction(
         AUDIT_ACTIONS.UPDATE,
         RESOURCE_TYPES.SERVICE,
@@ -69,9 +74,12 @@ export const useAuditedServices = () => {
         }
       );
 
-      mutate((services || []).map((service: Service) => 
-        service.id === serviceId ? { ...service, ...updates } : service
-      ));
+      // Update cache optimistically
+      mutate(current => 
+        current ? current.map(service => 
+          service.id === serviceId ? { ...service, ...updates } : service
+        ) : []
+      );
 
       toast.success('Demanda atualizada com sucesso!');
       return updatedService;
@@ -86,6 +94,7 @@ export const useAuditedServices = () => {
       const success = await deleteService(serviceId);
       
       if (success) {
+        // Log the action
         await logAction(
           AUDIT_ACTIONS.DELETE,
           RESOURCE_TYPES.SERVICE,
@@ -95,7 +104,8 @@ export const useAuditedServices = () => {
           { source: 'web_app' }
         );
 
-        mutate((services || []).filter((service: Service) => service.id !== serviceId));
+        // Update cache optimistically
+        mutate(current => current ? current.filter(service => service.id !== serviceId) : []);
         
         toast.success('Demanda excluída com sucesso!');
       }
@@ -129,7 +139,8 @@ export const useAuditedServices = () => {
     services: services || [],
     isLoading,
     error,
-    isValidating,
+    isStale,
+    refresh,
     createService: createServiceWithAudit,
     updateService: updateServiceWithAudit,
     deleteService: deleteServiceWithAudit,
@@ -138,6 +149,7 @@ export const useAuditedServices = () => {
   };
 };
 
+// Helper function to extract relevant fields for audit logging
 const extractRelevantFields = (service: Partial<Service>) => {
   return {
     title: service.title,

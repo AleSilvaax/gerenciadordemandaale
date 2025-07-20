@@ -104,7 +104,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             </div>
             {service.technician && (
               <TeamMemberAvatar 
-                avatar={service.technician.avatar || ""} 
+                src={service.technician.avatar || ""} 
                 name={service.technician.name} 
                 size="sm"
               />

@@ -19,9 +19,9 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
     if (!types || types.length === 0) {
       console.log('[ServiceTypes] Nenhum tipo encontrado, retornando tipos padrão');
       return [
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
+        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
       ];
     }
 
@@ -93,25 +93,17 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
     console.error("Erro ao buscar tipos de serviço:", e);
     // Retornar tipos padrão em caso de erro
     return [
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', technicalFields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', technicalFields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', technicalFields: [] }
+      { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
+      { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
+      { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
     ];
   }
 };
 
 export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
-  // Garantir que name não seja undefined
-  if (!type.name || type.name.trim() === '') {
-    throw new Error('Nome do tipo de serviço é obrigatório');
-  }
-
   const { data, error } = await supabase
     .from("service_types")
-    .insert({ 
-      name: type.name.trim(), 
-      description: type.description || null 
-    })
+    .insert({ name: type.name, description: type.description })
     .select()
     .single();
   if (error) throw error;

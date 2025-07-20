@@ -1,41 +1,51 @@
 
-import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React, { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { User } from "lucide-react";
 
+type AvatarSize = "sm" | "md" | "lg";
+
 interface TeamMemberAvatarProps {
+  src: string;
   name: string;
-  avatar?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: AvatarSize;
   className?: string;
 }
 
-const sizeClasses = {
-  sm: 'h-8 w-8',
-  md: 'h-10 w-10',
-  lg: 'h-16 w-16'
-};
-
-export const TeamMemberAvatar: React.FC<TeamMemberAvatarProps> = ({ 
-  name, 
-  avatar, 
-  size = 'md',
-  className = ''
+export const TeamMemberAvatar: React.FC<TeamMemberAvatarProps> = ({
+  src,
+  name,
+  size = "md",
+  className,
 }) => {
-  const getInitials = (fullName: string) => {
-    return fullName
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const sizeClasses = {
+    sm: "w-8 h-8",
+    md: "w-10 h-10",
+    lg: "w-12 h-12",
   };
 
+  const initials = name
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase();
+
   return (
-    <Avatar className={`${sizeClasses[size]} ${className}`}>
-      <AvatarImage src={avatar} alt={name} />
-      <AvatarFallback>
-        {name ? getInitials(name) : <User className="h-4 w-4" />}
+    <Avatar 
+      className={cn(
+        "border border-white/20 bg-secondary",
+        sizeClasses[size],
+        className
+      )}
+    >
+      <AvatarImage 
+        src={src} 
+        alt={name} 
+        className="object-cover"
+      />
+      <AvatarFallback className="text-xs font-medium">
+        {initials || <User className="h-4 w-4" />}
       </AvatarFallback>
     </Avatar>
   );
