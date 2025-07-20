@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { ArrowLeft, Plus, Calendar, MapPin, FileText, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
@@ -35,7 +35,7 @@ const NewService: React.FC = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission } = useEnhancedAuth();
 
   const form = useForm<ServiceFormData>({
     defaultValues: {

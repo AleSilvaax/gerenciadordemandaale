@@ -37,9 +37,9 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadUserProfile = useCallback(async (authUser: User) => {
+  const loadUserProfile = useCallback(async (authUser: User, retryCount = 0) => {
     try {
-      console.log(`[AUTH] Carregando perfil para: ${authUser.id}`);
+      console.log(`[AUTH] Carregando perfil para: ${authUser.id} (tentativa ${retryCount + 1})`);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -48,21 +48,11 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}, tentando novamente...`);
-          // Retry once after delay
-          await new Promise(res => setTimeout(res, 2000));
-          const { data: retryData, error: retryError } = await supabase
-            .from('profiles')
-            .select(`*, user_roles (role)`)
-            .eq('id', authUser.id)
-            .single();
-
-          if (retryError) {
-            console.error('[AUTH] Erro no retry:', retryError);
-            throw retryError;
-          }
-          return retryData;
+        if (error.code === 'PGRST116' && retryCount < 2) {
+          console.warn(`[AUTH] Perfil não encontrado para ${authUser.id}, tentando novamente em 1s...`);
+          // Limited retry with delay
+          await new Promise(res => setTimeout(res, 1000));
+          return loadUserProfile(authUser, retryCount + 1);
         }
         throw error;
       }
@@ -71,12 +61,14 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return data;
     } catch (error) {
       console.error('[AUTH] Erro ao carregar perfil:', error);
-      toast.error("Erro ao carregar perfil", { 
-        description: "Não foi possível carregar os dados do usuário." 
-      });
       
-      // Force logout on profile load failure
-      await supabase.auth.signOut();
+      if (retryCount >= 2) {
+        toast.error("Erro ao carregar perfil", { 
+          description: "Não foi possível carregar os dados do usuário após várias tentativas." 
+        });
+        // Force logout on repeated failure
+        await supabase.auth.signOut();
+      }
       return null;
     }
   }, []);
@@ -92,7 +84,7 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setIsLoading(true);
       
       if (session?.user) {
-        const profileData = await loadUserProfile(session.user);
+        const profileData = await loadUserProfile(session.user, 0);
 
         if (mounted && profileData) {
           const roleData = profileData.user_roles;

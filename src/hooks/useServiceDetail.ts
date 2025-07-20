@@ -7,7 +7,7 @@ import {
   addServiceMessage,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Photo {
@@ -24,7 +24,7 @@ export const useServiceDetail = () => {
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
   const [photos, setPhotos] = useState<Photo[]>([]);
   const { id } = useParams<{ id?: string }>();
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

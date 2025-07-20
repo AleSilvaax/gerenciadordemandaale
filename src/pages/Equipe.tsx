@@ -44,13 +44,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const Equipe: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const navigate = useNavigate();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [teamStats, setTeamStats] = useState({

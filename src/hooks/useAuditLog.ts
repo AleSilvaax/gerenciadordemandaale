@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
 
 export interface AuditLogEntry {
   id: string;
@@ -26,7 +26,7 @@ interface AuditLogOptions {
 }
 
 export const useAuditLog = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
