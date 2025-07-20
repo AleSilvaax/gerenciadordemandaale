@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
-import { useMobile } from '@/hooks/useMobile';
+import { useMobile } from '@/hooks/use-mobile';
 import {
   Sheet,
   SheetContent,
@@ -30,7 +30,7 @@ export const EnhancedNavbar: React.FC = () => {
   const { user, logout, canAccessRoute } = useEnhancedAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isMobile } = useMobile();
+  const isMobile = useMobile();
 
   const isActive = (path: string) => {
     return location.pathname === path;

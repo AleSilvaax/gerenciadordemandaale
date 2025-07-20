@@ -1,28 +1,30 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EnhancedAuthProvider } from '@/context/EnhancedAuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Index } from '@/pages/Index';
-import { NewService } from '@/pages/NewService';
-import { Demandas } from '@/pages/Demandas';
-import { ServiceDetail } from '@/pages/ServiceDetail';
-import { Search } from '@/pages/Search';
+import Index from '@/pages/Index';
+import NewService from '@/pages/NewService';
+import Demandas from '@/pages/Demandas';
+import ServiceDetail from '@/pages/ServiceDetail';
+import Search from '@/pages/Search';
 import Statistics from '@/pages/Statistics';
-import { Equipe } from '@/pages/Equipe';
+import Equipe from '@/pages/Equipe';
 import Calendar from '@/pages/Calendar';
-import { Settings } from '@/pages/Settings';
-import { Login } from '@/pages/Login';
-import { Register } from '@/pages/Register';
-import { NotFound } from '@/pages/NotFound';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { ProfilePage } from '@/pages/ProfilePage';
+import Settings from '@/pages/Settings';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import NotFound from '@/pages/NotFound';
+import { ProtectedRoute } from '@/components/guards/ProtectedRoute';
+import { ProfilePage } from '@/components/profile/ProfilePage';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <QueryClient>
+        <QueryClientProvider client={queryClient}>
           <EnhancedAuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -48,7 +50,7 @@ function App() {
               } />
             </Routes>
           </EnhancedAuthProvider>
-        </QueryClient>
+        </QueryClientProvider>
       </BrowserRouter>
     </div>
   );

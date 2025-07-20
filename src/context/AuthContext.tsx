@@ -184,6 +184,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   }, [user]);
 
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao solicitar reset de senha:', error);
+      return false;
+    }
+  };
+
   const value = { 
     user, 
     isLoading, 
@@ -194,7 +205,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser, 
     updateUserInfo: setUser, 
     hasPermission, 
-    canAccessRoute, 
+    canAccessRoute,
+    requestPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

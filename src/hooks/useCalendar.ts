@@ -1,22 +1,19 @@
-
-import { useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { TechnicianSchedule, CalendarEvent, CreateScheduleData, UpdateScheduleData } from '@/types/calendarTypes';
+import { CalendarEvent } from '@/types/calendarTypes';
 import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
-import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 
 const CALENDAR_QUERY_KEY = ['calendar'];
 
 export const useCalendar = () => {
   const { user } = useEnhancedAuth();
-  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Fetch schedules based on user role
+  // Fetch services to simulate calendar events
   const {
-    data: schedules = [],
+    data: services = [],
     isLoading,
     error,
     refetch
@@ -26,135 +23,68 @@ export const useCalendar = () => {
       if (!user) return [];
 
       let query = supabase
-        .from('technician_schedule')
+        .from('services')
         .select(`
           *,
-          profiles:technician_id (
+          profiles:created_by (
             id,
             name
-          ),
-          services:service_id (
-            id,
-            number,
-            title,
-            client
           )
         `)
-        .order('start_time', { ascending: true });
+        .order('created_at', { ascending: true });
 
-      // Se for técnico, só vê os próprios agendamentos
+      // Se for técnico, filtrar por serviços atribuídos
       if (user.role === 'tecnico') {
-        query = query.eq('technician_id', user.id);
+        const { data: technicianServices } = await supabase
+          .from('service_technicians')
+          .select('service_id')
+          .eq('technician_id', user.id);
+
+        if (technicianServices) {
+          const serviceIds = technicianServices.map(st => st.service_id);
+          query = query.in('id', serviceIds);
+        }
       }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error('[Calendar] Erro ao buscar agendamentos:', error);
+        console.error('[Calendar] Erro ao buscar serviços:', error);
         throw error;
       }
 
       return data || [];
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
-  // Transform schedules to calendar events
+  // Transform services to calendar events
   const calendarEvents = useMemo(() => {
-    return schedules.map((schedule: any): CalendarEvent => ({
-      id: schedule.id,
-      title: schedule.title,
-      start: parseISO(schedule.start_time),
-      end: parseISO(schedule.end_time),
-      description: schedule.description,
-      status: schedule.status,
-      technician: schedule.profiles ? {
-        id: schedule.profiles.id,
-        name: schedule.profiles.name
-      } : undefined,
-      service: schedule.services ? {
-        id: schedule.services.id,
-        number: schedule.services.number,
-        client: schedule.services.client
-      } : undefined,
-      location: schedule.location
-    }));
-  }, [schedules]);
-
-  // Create schedule mutation
-  const createScheduleMutation = useMutation({
-    mutationFn: async (data: CreateScheduleData) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const scheduleData = {
-        ...data,
-        technician_id: user.id,
-        status: 'agendado' as const
+    return services.map((service: any): CalendarEvent => {
+      const serviceDate = service.due_date ? parseISO(service.due_date) : parseISO(service.created_at);
+      
+      return {
+        id: service.id,
+        title: service.title,
+        start: serviceDate,
+        end: addDays(serviceDate, 1),
+        description: service.description,
+        status: service.status,
+        technician: service.profiles ? {
+          id: service.profiles.id,
+          name: service.profiles.name
+        } : undefined,
+        service: {
+          id: service.id,
+          number: service.number,
+          client: service.client
+        },
+        location: service.location
       };
-
-      const { data: newSchedule, error } = await supabase
-        .from('technician_schedule')
-        .insert(scheduleData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newSchedule;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CALENDAR_QUERY_KEY });
-      toast.success('Agendamento criado com sucesso!');
-    },
-    onError: (error) => {
-      console.error('[Calendar] Erro ao criar agendamento:', error);
-      toast.error('Erro ao criar agendamento');
-    }
-  });
-
-  // Update schedule mutation
-  const updateScheduleMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateScheduleData }) => {
-      const { data: updatedSchedule, error } = await supabase
-        .from('technician_schedule')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return updatedSchedule;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CALENDAR_QUERY_KEY });
-      toast.success('Agendamento atualizado com sucesso!');
-    },
-    onError: (error) => {
-      console.error('[Calendar] Erro ao atualizar agendamento:', error);
-      toast.error('Erro ao atualizar agendamento');
-    }
-  });
-
-  // Delete schedule mutation
-  const deleteScheduleMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('technician_schedule')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CALENDAR_QUERY_KEY });
-      toast.success('Agendamento removido com sucesso!');
-    },
-    onError: (error) => {
-      console.error('[Calendar] Erro ao remover agendamento:', error);
-      toast.error('Erro ao remover agendamento');
-    }
-  });
+    });
+  }, [services]);
 
   // Get events for selected date
   const getDayEvents = (date: Date) => {
@@ -164,28 +94,9 @@ export const useCalendar = () => {
     );
   };
 
-  // Check for conflicts
-  const checkConflicts = (startTime: string, endTime: string, excludeId?: string) => {
-    const newStart = parseISO(startTime);
-    const newEnd = parseISO(endTime);
-
-    return calendarEvents.filter(event => {
-      if (excludeId && event.id === excludeId) return false;
-      
-      const eventStart = event.start;
-      const eventEnd = event.end;
-
-      return (
-        (newStart >= eventStart && newStart < eventEnd) ||
-        (newEnd > eventStart && newEnd <= eventEnd) ||
-        (newStart <= eventStart && newEnd >= eventEnd)
-      );
-    });
-  };
-
   return {
     // Data
-    schedules,
+    schedules: services,
     calendarEvents,
     selectedDate,
     
@@ -195,16 +106,12 @@ export const useCalendar = () => {
     
     // Actions
     setSelectedDate,
-    createSchedule: createScheduleMutation.mutate,
-    updateSchedule: updateScheduleMutation.mutate,
-    deleteSchedule: deleteScheduleMutation.mutate,
     getDayEvents,
-    checkConflicts,
     refetch,
     
     // Loading states
-    isCreating: createScheduleMutation.isPending,
-    isUpdating: updateScheduleMutation.isPending,
-    isDeleting: deleteScheduleMutation.isPending,
+    isCreating: false,
+    isUpdating: false,
+    isDeleting: false,
   };
 };
