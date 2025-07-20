@@ -104,18 +104,12 @@ export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
   try {
     console.log('[ServiceTypes] Criando tipo de serviço:', type);
     
-    // Verificar se o usuário está autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      throw new Error('Usuário não autenticado');
-    }
-
     const { data, error } = await supabase
       .from("service_types")
       .insert({ 
         name: type.name, 
         description: type.description,
-        organization_id: null // Por enquanto não usar organização
+        organization_id: null // Não usar organização por enquanto
       })
       .select()
       .single();
@@ -150,20 +144,26 @@ export const deleteServiceType = async (id: string) => {
 };
 
 export const createTechnicalField = async (serviceTypeId: string, field: Omit<TechnicalField, "id">) => {
-  const { data, error } = await supabase
-    .from("technical_fields")
-    .insert({
-      service_type_id: serviceTypeId,
-      name: field.name,
-      description: field.description,
-      type: field.type,
-      required: field.required,
-      options: field.options ? JSON.stringify(field.options) : null,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from("technical_fields")
+      .insert({
+        service_type_id: serviceTypeId,
+        name: field.name,
+        description: field.description,
+        type: field.type,
+        required: field.required,
+        options: field.options ? JSON.stringify(field.options) : null,
+        organization_id: null // Não usar organização por enquanto
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('[ServiceTypes] Erro ao criar campo técnico:', error);
+    throw error;
+  }
 };
 
 export const updateTechnicalField = async (field: TechnicalField) => {
