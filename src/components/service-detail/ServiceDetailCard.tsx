@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { updateService } from "@/services/servicesDataService";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
@@ -18,7 +18,10 @@ interface ServiceDetailCardProps {
 }
 
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
-  const { hasPermission } = useOptimizedAuth();
+  const { user } = useAuth();
+
+  // Função para verificar permissões - simplificada já que não temos hasPermission no AuthContext
+  const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -112,7 +115,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           </div>
         </div>
 
-        {hasPermission("gestor") && (
+        {hasGestorPermission && (
           <TechnicianAssigner
             currentTechnicianId={service.technician?.id}
             onAssign={async (technician) => {
