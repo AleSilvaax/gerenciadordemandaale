@@ -1,118 +1,140 @@
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  Clock, 
+  Calendar, 
+  User, 
+  ArrowRight,
+  MapPin,
+  Wrench
+} from "lucide-react";
+import { Service } from "@/types/serviceTypes";
+import { StatusBadge } from "./StatusBadge";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { TeamMemberAvatar } from './TeamMemberAvatar';
-import { StatusBadge } from './StatusBadge';
-import { ServiceCardProps } from '@/types/serviceTypes';
-import { DeadlineManager } from './DeadlineManager';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+interface ServiceCardProps {
+  service: Service;
+}
 
-export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list' }> = ({ service, onDelete, compact = false, variant = 'card' }) => {
-  const { id, title, status, location, number, technician, priority, dueDate, creationDate } = service;
-  const { hasPermission } = useOptimizedAuth();
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const completed = status === 'concluido';
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onDelete) {
-      await onDelete(id);
-    }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   };
 
-  const canDelete = hasPermission('delete_services');
+  const isDeadlineNear = (deadline: string) => {
+    const deadlineDate = new Date(deadline);
+    const now = new Date();
+    const diff = deadlineDate.getTime() - now.getTime();
+    const daysUntilDeadline = Math.ceil(diff / (1000 * 3600 * 24));
+    return daysUntilDeadline <= 7;
+  };
+
+  const handleViewDetails = () => {
+    navigate(`/demanda/${service.id}`);
+  };
 
   return (
-    <Link to={`/demanda/${id}`} className="block">
-      <Card
-        className={`
-          transition-all duration-300 hover:border-primary/30 hover:shadow-lg
-          ${completed ? 'bg-muted/30' : ''}
-          ${compact ? 'p-2' : ''}
-          w-full
-          max-w-full
-          mx-auto
-          rounded-xl
-          shadow-md
-        `}
-        style={{ wordBreak: 'break-word' }}
-      >
-        <CardContent className={`${compact ? 'pt-2 px-3' : 'pt-4'} px-4 sm:px-6`}>
-          <div>
-            <div className="flex justify-between items-start gap-3 mb-3">
-              <div className="flex-1 min-w-0">
-                {/* Número da demanda */}
-                {number && (
-                  <div className="flex items-center mb-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                      Nº {number}
-                    </span>
-                  </div>
-                )}
-                {/* Título alinhado à esquerda */}
-                <h3
-                  className={`
-                    font-medium text-left leading-tight mb-1 break-words
-                    ${compact ? 'text-sm' : 'text-base'}
-                    text-wrap
-                  `}
-                  style={{ minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                >
-                  {title}
-                </h3>
-                {/* Localização alinhada à esquerda */}
-                <p
-                  className={`
-                    text-muted-foreground text-left leading-tight
-                    ${compact ? 'text-xs' : 'text-sm'}
-                    truncate whitespace-pre-line break-words
-                    max-w-full
-                  `}
-                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}
-                >
-                  {location}
-                </p>
-              </div>
-              <div className="flex-shrink-0 py-1 pl-1">
-                <StatusBadge status={status} small={compact} />
-              </div>
+    <Card className="hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg font-semibold text-card-foreground line-clamp-2">
+            {service.title}
+          </CardTitle>
+          <StatusBadge status={service.status} />
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Description */}
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {service.description}
+        </p>
+        
+        {/* Service Info */}
+        <div className="space-y-2">
+          {service.serviceType && (
+            <div className="flex items-center gap-2 text-sm">
+              <Wrench className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Tipo:</span>
+              <Badge variant="secondary" className="text-xs">
+                {service.serviceType}
+              </Badge>
             </div>
+          )}
+          
+          {service.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Local:</span>
+              <span className="font-medium">{service.location}</span>
+            </div>
+          )}
+        </div>
 
-            <DeadlineManager
-              dueDate={dueDate}
-              creationDate={creationDate}
-              priority={priority}
-              completed={completed}
-              compact={compact}
-            />
+        {/* Dates */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Criado:</span>
+            <span>{formatDate(service.createdAt)}</span>
           </div>
-        </CardContent>
-
-        {!compact && (
-          <CardFooter className="border-t pt-3 pb-3 px-4 sm:px-6">
-            <div className="flex items-center justify-between w-full gap-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <TeamMemberAvatar
-                  src={technician?.avatar}
-                  name={technician?.name}
-                  size="sm"
-                />
-                <span className="text-sm text-left truncate max-w-[100px] sm:max-w-[160px] min-w-0">{technician?.name || "Não atribuído"}</span>
-              </div>
-              {onDelete && canDelete && (
-                <button
-                  onClick={handleDelete}
-                  className="text-xs text-destructive hover:underline flex-shrink-0"
-                >
-                  Excluir
-                </button>
-              )}
+          
+          {service.deadline && (
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Prazo:</span>
+              <span className={isDeadlineNear(service.deadline) ? "text-red-600 font-medium" : ""}>
+                {formatDate(service.deadline)}
+              </span>
             </div>
-          </CardFooter>
+          )}
+        </div>
+
+        {/* Technician */}
+        {service.assignedTechnician && (
+          <div className="flex items-center gap-2 text-sm">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Técnico:</span>
+            <span className="font-medium">{service.assignedTechnician}</span>
+          </div>
         )}
-      </Card>
-    </Link>
+
+        {/* Priority */}
+        {service.priority && (
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant={service.priority === 'alta' ? 'destructive' : 
+                     service.priority === 'media' ? 'default' : 'secondary'}
+              className="text-xs"
+            >
+              Prioridade: {service.priority}
+            </Badge>
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="pt-2">
+          <Button 
+            onClick={handleViewDetails}
+            className="w-full flex items-center justify-center gap-2"
+            size="sm"
+          >
+            Ver Detalhes
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
