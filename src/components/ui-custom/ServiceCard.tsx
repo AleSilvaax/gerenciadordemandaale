@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,26 +88,26 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Criado:</span>
-            <span>{formatDate(service.createdAt)}</span>
+            <span>{service.creationDate ? formatDate(service.creationDate) : 'N/A'}</span>
           </div>
           
-          {service.deadline && (
+          {service.dueDate && (
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">Prazo:</span>
-              <span className={isDeadlineNear(service.deadline) ? "text-red-600 font-medium" : ""}>
-                {formatDate(service.deadline)}
+              <span className={isDeadlineNear(service.dueDate) ? "text-red-600 font-medium" : ""}>
+                {formatDate(service.dueDate)}
               </span>
             </div>
           )}
         </div>
 
         {/* Technician */}
-        {service.assignedTechnician && (
+        {service.technician && (
           <div className="flex items-center gap-2 text-sm">
             <User className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Técnico:</span>
-            <span className="font-medium">{service.assignedTechnician}</span>
+            <span className="font-medium">{service.technician.name}</span>
           </div>
         )}
 

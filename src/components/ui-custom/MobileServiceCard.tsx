@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -83,24 +84,24 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
         <div className="space-y-1 text-xs mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-3 h-3 text-muted-foreground" />
-            <span className="text-muted-foreground">Criado: {formatDate(service.createdAt)}</span>
+            <span className="text-muted-foreground">Criado: {service.creationDate ? formatDate(service.creationDate) : 'N/A'}</span>
           </div>
           
-          {service.deadline && (
+          {service.dueDate && (
             <div className="flex items-center gap-2">
               <Clock className="w-3 h-3 text-muted-foreground" />
-              <span className={`text-muted-foreground ${isDeadlineNear(service.deadline) ? "text-red-600 font-medium" : ""}`}>
-                Prazo: {formatDate(service.deadline)}
+              <span className={`text-muted-foreground ${isDeadlineNear(service.dueDate) ? "text-red-600 font-medium" : ""}`}>
+                Prazo: {formatDate(service.dueDate)}
               </span>
             </div>
           )}
         </div>
 
         {/* Technician */}
-        {service.assignedTechnician && (
+        {service.technician && (
           <div className="flex items-center gap-2 text-xs mb-2">
             <User className="w-3 h-3 text-muted-foreground" />
-            <span className="text-muted-foreground truncate">{service.assignedTechnician}</span>
+            <span className="text-muted-foreground truncate">{service.technician.name}</span>
           </div>
         )}
 
