@@ -1,14 +1,15 @@
+
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarEvent } from '@/types/calendarTypes';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, addDays } from 'date-fns';
 
 const CALENDAR_QUERY_KEY = ['calendar'];
 
 export const useCalendar = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Fetch services to simulate calendar events

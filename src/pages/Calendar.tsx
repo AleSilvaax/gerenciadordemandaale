@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarView } from '@/components/calendar/CalendarView';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { CalendarEvent } from '@/types/calendarTypes';
 
 const Calendar: React.FC = () => {
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const handleCreateEvent = () => {
