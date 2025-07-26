@@ -4,12 +4,12 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, FileText, Users, Settings, BarChart3, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => {
