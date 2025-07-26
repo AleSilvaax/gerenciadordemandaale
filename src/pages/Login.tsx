@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
@@ -14,7 +14,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { login, user, isLoading: authLoading } = useEnhancedAuth();
+  const { login, user, isLoading: authLoading } = useOptimizedAuth();
   
   useEffect(() => {
     // Reset submission state when component unmounts

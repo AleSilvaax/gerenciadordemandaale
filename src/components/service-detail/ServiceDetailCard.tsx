@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { updateService } from "@/services/servicesDataService";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
@@ -18,7 +18,7 @@ interface ServiceDetailCardProps {
 }
 
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
-  const { hasPermission } = useEnhancedAuth();
+  const { hasPermission } = useOptimizedAuth();
 
   const getStatusIcon = (status: string) => {
     switch (status) {

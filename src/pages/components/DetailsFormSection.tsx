@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 
 interface DetailsFormSectionProps {
   service: any;
@@ -40,7 +40,7 @@ const DetailsFormSection: React.FC<DetailsFormSectionProps> = ({
 
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const { hasPermission } = useEnhancedAuth();
+  const { hasPermission } = useOptimizedAuth();
 
   useEffect(() => {
     const fetchTypes = async () => {

@@ -7,7 +7,7 @@ import {
   addServiceMessage,
 } from "@/services/servicesDataService";
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Photo {
@@ -24,7 +24,7 @@ export const useServiceDetail = () => {
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
   const [photos, setPhotos] = useState<Photo[]>([]);
   const { id } = useParams<{ id?: string }>();
-  const { user } = useEnhancedAuth();
+  const { user } = useOptimizedAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,28 +70,51 @@ export const useServiceDetail = () => {
   };
 
   const fetchService = async (serviceId: string) => {
+    const timeout = 10000; // 10 seconds timeout
+    
     try {
       setIsLoading(true);
       console.log('[useServiceDetail] Buscando serviço:', serviceId);
       
-      const services = await getServices();
-      const foundService = services.find(s => s.id === serviceId);
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Service fetch timeout')), timeout)
+      );
+
+      const servicesPromise = getServices();
+      const services = await Promise.race([servicesPromise, timeoutPromise]) as any;
+      
+      const foundService = services.find((s: any) => s.id === serviceId);
       
       if (foundService) {
         console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
         setService(foundService);
         
-        // Carregar fotos do banco de dados
-        const loadedPhotos = await loadPhotosFromDatabase(serviceId);
-        setPhotos(loadedPhotos);
+        // Carregar fotos do banco de dados com timeout
+        try {
+          const loadedPhotos = await Promise.race([
+            loadPhotosFromDatabase(serviceId),
+            new Promise(resolve => setTimeout(() => resolve([]), 5000))
+          ]) as any;
+          setPhotos(loadedPhotos);
+        } catch (photoError) {
+          console.warn('[useServiceDetail] Erro ao carregar fotos:', photoError);
+          setPhotos([]);
+        }
         
       } else {
+        console.warn('[useServiceDetail] Serviço não encontrado para ID:', serviceId);
         toast.error("Serviço não encontrado");
         navigate("/demandas");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao carregar serviço:", error);
-      toast.error("Erro ao carregar serviço");
+      if (error.message === 'Service fetch timeout') {
+        toast.error("Timeout ao carregar serviço. Tente novamente.");
+      } else {
+        toast.error("Erro ao carregar serviço");
+      }
+      navigate("/demandas");
     } finally {
       setIsLoading(false);
     }

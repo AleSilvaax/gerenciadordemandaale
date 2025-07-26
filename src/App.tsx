@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EnhancedAuthProvider } from '@/context/EnhancedAuthContext';
+import { OptimizedAuthProvider, useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import Index from '@/pages/Index';
 import NewService from '@/pages/NewService';
@@ -17,12 +17,12 @@ import Register from '@/pages/Register';
 import NotFound from '@/pages/NotFound';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { ServiceErrorBoundary } from '@/components/common/ServiceErrorBoundary';
 
 const queryClient = new QueryClient();
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useEnhancedAuth();
+  const { user, isLoading } = useOptimizedAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -45,31 +45,38 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <EnhancedAuthProvider>
+          <OptimizedAuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/*" element={
-                <AuthGuard>
-                  <AppLayout>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/nova-demanda" element={<NewService />} />
-                      <Route path="/demandas" element={<Demandas />} />
-                      <Route path="/demanda/:id" element={<ServiceDetail />} />
-                      <Route path="/buscar" element={<Search />} />
-                      <Route path="/estatisticas" element={<Statistics />} />
-                      <Route path="/equipe" element={<Equipe />} />
-                      <Route path="/calendar" element={<Calendar />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </AppLayout>
-                </AuthGuard>
-              } />
+              <Route 
+                path="/*" 
+                element={
+                  <AuthGuard>
+                    <AppLayout>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/nova-demanda" element={<NewService />} />
+                        <Route path="/demandas" element={<Demandas />} />
+                        <Route path="/demanda/:id" element={
+                          <ServiceErrorBoundary>
+                            <ServiceDetail />
+                          </ServiceErrorBoundary>
+                        } />
+                        <Route path="/buscar" element={<Search />} />
+                        <Route path="/estatisticas" element={<Statistics />} />
+                        <Route path="/equipe" element={<Equipe />} />
+                        <Route path="/calendar" element={<Calendar />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </AppLayout>
+                  </AuthGuard>
+                } 
+              />
             </Routes>
-          </EnhancedAuthProvider>
+          </OptimizedAuthProvider>
         </QueryClientProvider>
       </BrowserRouter>
     </div>

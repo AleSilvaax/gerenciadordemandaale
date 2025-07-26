@@ -6,11 +6,11 @@ import { TeamMemberAvatar } from './TeamMemberAvatar';
 import { StatusBadge } from './StatusBadge';
 import { ServiceCardProps } from '@/types/serviceTypes';
 import { DeadlineManager } from './DeadlineManager';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 
 export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list' }> = ({ service, onDelete, compact = false, variant = 'card' }) => {
   const { id, title, status, location, number, technician, priority, dueDate, creationDate } = service;
-  const { hasPermission } = useEnhancedAuth();
+  const { hasPermission } = useOptimizedAuth();
 
   const completed = status === 'concluido';
 
@@ -25,7 +25,7 @@ export const ServiceCard: React.FC<ServiceCardProps & { variant?: 'card' | 'list
   const canDelete = hasPermission('delete_services');
 
   return (
-    <Link to={`/demandas/${id}`} className="block">
+    <Link to={`/demanda/${id}`} className="block">
       <Card
         className={`
           transition-all duration-300 hover:border-primary/30 hover:shadow-lg

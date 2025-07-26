@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const UserProfileMenu = () => {
-  const { user, logout } = useEnhancedAuth();
+  const { user, logout } = useOptimizedAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 

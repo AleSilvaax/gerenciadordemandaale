@@ -10,7 +10,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { useMobile } from '@/hooks/use-mobile';
 import {
   Sheet,
@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from '@/lib/utils';
 
 export const EnhancedNavbar: React.FC = () => {
-  const { user, logout, canAccessRoute } = useEnhancedAuth();
+  const { user, logout, canAccessRoute } = useOptimizedAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMobile();

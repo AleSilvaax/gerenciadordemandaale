@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { ArrowLeft, Plus, Calendar, MapPin, FileText, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
@@ -35,7 +35,7 @@ const NewService: React.FC = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const navigate = useNavigate();
-  const { user, hasPermission } = useEnhancedAuth();
+  const { user, hasPermission } = useOptimizedAuth();
 
   const form = useForm<ServiceFormData>({
     defaultValues: {
@@ -99,8 +99,8 @@ const NewService: React.FC = () => {
           avatar: user.avatar || "",
           role: user.role || "tecnico",
           email: user.email,
-          phone: user.phone,
-          signature: user.signature || ""
+          phone: "",
+          signature: ""
         };
       }
 
@@ -126,7 +126,7 @@ const NewService: React.FC = () => {
       console.log("Demanda criada:", newService);
       
       toast.success("Demanda criada com sucesso!");
-      navigate(`/demandas/${newService.id}`);
+      navigate(`/demanda/${newService.id}`);
     } catch (error) {
       console.error("Erro ao criar demanda:", error);
       toast.error("Erro ao criar a demanda");

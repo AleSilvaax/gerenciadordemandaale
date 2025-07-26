@@ -85,7 +85,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({ service })
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/demandas/${service.id}`)}
+            onClick={() => navigate(`/demanda/${service.id}`)}
             className="w-full h-8 text-xs"
           >
             <Eye className="w-3 h-3 mr-2" />

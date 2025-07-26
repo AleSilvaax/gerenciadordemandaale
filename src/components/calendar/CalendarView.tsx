@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin } from 'lucide-react';
 import { useCalendar } from '@/hooks/useCalendar';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onCreateEvent,
   onEventClick
 }) => {
-  const { user } = useEnhancedAuth();
+  const { user } = useOptimizedAuth();
   const { calendarEvents, selectedDate, setSelectedDate, isLoading } = useCalendar();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
