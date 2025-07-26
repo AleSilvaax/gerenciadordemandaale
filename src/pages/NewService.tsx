@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Plus, Calendar, MapPin, FileText, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
@@ -35,7 +36,10 @@ const NewService: React.FC = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const navigate = useNavigate();
-  const { user, hasPermission } = useOptimizedAuth();
+  const { user } = useAuth();
+
+  // Function to check if user has gestor permission - simplified since we don't have hasPermission in AuthContext
+  const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
   const form = useForm<ServiceFormData>({
     defaultValues: {
@@ -58,7 +62,7 @@ const NewService: React.FC = () => {
         const types = await getServiceTypesFromDatabase();
         setServiceTypes(types);
         
-        if (hasPermission("gestor")) {
+        if (hasGestorPermission) {
           const members = await getTeamMembers();
           setTeamMembers(members);
         }
@@ -69,7 +73,7 @@ const NewService: React.FC = () => {
     };
 
     fetchData();
-  }, [hasPermission]);
+  }, [hasGestorPermission]);
 
   const onSubmit = async (data: ServiceFormData) => {
     setIsSubmitting(true);
@@ -78,7 +82,7 @@ const NewService: React.FC = () => {
 
       // Encontrar o técnico selecionado
       let selectedTechnician = null;
-      if (hasPermission("gestor") && data.technicianId && data.technicianId !== "none") {
+      if (hasGestorPermission && data.technicianId && data.technicianId !== "none") {
         const technician = teamMembers.find(t => t.id === data.technicianId);
         if (technician) {
           selectedTechnician = {
@@ -91,7 +95,7 @@ const NewService: React.FC = () => {
             signature: technician.signature
           };
         }
-      } else if (!hasPermission("gestor") && user) {
+      } else if (!hasGestorPermission && user) {
         // Se não é gestor, atribuir a si mesmo
         selectedTechnician = {
           id: user.id,
@@ -335,7 +339,7 @@ const NewService: React.FC = () => {
                     />
 
                     {/* Técnico Responsável (apenas para gestores) */}
-                    {hasPermission("gestor") && (
+                    {hasGestorPermission && (
                       <FormField
                         control={form.control}
                         name="technicianId"
@@ -432,3 +436,4 @@ const NewService: React.FC = () => {
 };
 
 export default NewService;
+
