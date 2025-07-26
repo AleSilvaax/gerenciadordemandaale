@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,10 +12,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 const UserProfileMenu = () => {
-  const { user, logout } = useOptimizedAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -25,11 +24,8 @@ const UserProfileMenu = () => {
     try {
       setIsLoggingOut(true);
       await logout();
-      toast.success("Logout realizado com sucesso!");
-      navigate("/login");
     } catch (error) {
       console.error("Erro no logout:", error);
-      toast.error("Erro ao fazer logout");
     } finally {
       setIsLoggingOut(false);
     }

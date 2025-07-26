@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
@@ -14,66 +15,70 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { login, user, isLoading: authLoading } = useOptimizedAuth();
+  const { login, user, isLoading } = useAuth();
+  const navigate = useNavigate();
   
+  // Se usuário já está logado, redirecionar
   useEffect(() => {
-    // Reset submission state when component unmounts
-    return () => {
-      if (isSubmitting) {
-        setIsSubmitting(false);
-      }
-    };
-  }, []);
+    if (user && !isLoading) {
+      console.log("Usuário já logado, redirecionando...");
+      navigate('/', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
 
-  // If user is already logged in, redirect to home
+  // Mostrar loading enquanto verifica autenticação
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={40} className="animate-spin text-primary" />
+          <p className="text-muted-foreground">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se usuário já está logado, não mostrar a página de login
   if (user) {
-    console.log("User already logged in, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       setErrorMsg("Por favor, preencha todos os campos");
       return;
     }
     
-    if (isSubmitting) {
-      console.log("Already submitting, preventing duplicate submission");
-      return;
-    }
+    if (isSubmitting) return;
     
     setErrorMsg(null);
     setIsSubmitting(true);
-    console.log("Submitting login form with email:", email);
+    console.log("Tentando fazer login com:", email);
     
     try {
-      const success = await login(email, password);
-      console.log("Login result:", success);
+      const success = await login(email.trim(), password.trim());
       
-      if (!success) {
+      if (success) {
+        console.log("Login bem-sucedido, redirecionando...");
+        navigate('/', { replace: true });
+      } else {
         setErrorMsg("Email ou senha inválidos");
-        toast.error("Erro no login", {
-          description: "Verifique suas credenciais e tente novamente",
-        });
-        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error("Login error:", error);
-      setErrorMsg("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
-      toast.error("Erro no login", {
-        description: "Ocorreu um problema ao processar seu login",
-      });
+      console.error("Erro no login:", error);
+      setErrorMsg("Erro ao fazer login. Tente novamente.");
+    } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleDemoLogin = async (role: string) => {
-    if (isSubmitting) return; // Prevent multiple submissions
+    if (isSubmitting) return;
     
     let demoEmail = '';
-    let demoPassword = '123456';
+    const demoPassword = '123456';
     
     switch(role) {
       case 'tecnico':
@@ -92,25 +97,18 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
     setErrorMsg(null);
     
-    // Automatically submit after setting credentials
     try {
-      console.log("Using demo login with role:", role, "email:", demoEmail);
       const success = await login(demoEmail, demoPassword);
-      console.log("Demo login result:", success);
       
-      if (!success) {
+      if (success) {
+        navigate('/', { replace: true });
+      } else {
         setErrorMsg("Erro ao fazer login com credenciais de demonstração");
-        toast.error("Erro no login com demo", {
-          description: "Não foi possível acessar com as credenciais de demonstração",
-        });
-        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error("Demo login error:", error);
+      console.error("Erro no demo login:", error);
       setErrorMsg("Erro ao fazer login com credenciais de demonstração");
-      toast.error("Erro no login com demo", {
-        description: "Não foi possível acessar com as credenciais de demonstração",
-      });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -144,7 +142,7 @@ const Login: React.FC = () => {
                 onClick={() => handleDemoLogin('administrador')}
                 disabled={isSubmitting}
               >
-                Administrador
+                Admin
               </Button>
               <Button 
                 variant="outline" 
@@ -189,6 +187,7 @@ const Login: React.FC = () => {
                   required
                   className="transition-medium"
                   disabled={isSubmitting}
+                  autoComplete="email"
                 />
               </div>
               
@@ -203,6 +202,7 @@ const Login: React.FC = () => {
                   required
                   className="transition-medium"
                   disabled={isSubmitting}
+                  autoComplete="current-password"
                 />
               </div>
             </CardContent>
