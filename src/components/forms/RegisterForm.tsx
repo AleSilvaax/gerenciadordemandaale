@@ -9,7 +9,7 @@ import { LogIn, Loader2, UserPlus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserRole } from '@/types/auth';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { RegisterFormData } from '@/types/auth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +33,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   const [teams, setTeams] = useState<Team[]>([]);   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { register } = useOptimizedAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   // Busca as equipes disponíveis quando o componente carrega
