@@ -40,7 +40,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handlePhotosChange
   } = useServiceDetail();
 
-   const handleGenerateReport = async () => {
+ // DENTRO DE: src/pages/ServiceDetail.tsx
+
+  // A palavra 'async' foi adicionada aqui
+  const handleGenerateReport = async () => {
     if (!service) {
       toast.error("Serviço não encontrado");
       return;
@@ -50,8 +53,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       console.log('[ServiceDetail] Gerando relatório V3 para:', service.title);
       toast.info("Gerando relatório profissional...");
 
-      // Agora enviamos não só o serviço, mas também as fotos (com seus títulos)
-      // e os membros da equipe para que o PDF possa usar seus nomes.
+      // Agora o 'await' funcionará corretamente
       await generateProfessionalServiceReport(service, photos);
       
       toast.success("Relatório profissional gerado com sucesso!");
