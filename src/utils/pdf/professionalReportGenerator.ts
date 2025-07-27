@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E FINAL V8.0: src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E CORRIGIDO V8.1: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import { Service, Photo, User } from '@/types/serviceTypes';
@@ -17,9 +17,8 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório de Design V8 para: ${service.id}`, 'PDF');
-    
-    // Constrói o conteúdo do checklist técnico
+    logger.info(`Gerando Relatório de Design V8.1 para: ${service.id}`, 'PDF');
+
     const checklistHtml = (service.customFields && service.customFields.length > 0)
       ? `
         <div class="section-title">Checklist Técnico</div>
@@ -39,7 +38,6 @@ export const generateProfessionalServiceReport = async (
       `
       : '';
 
-    // Constrói a grade de fotos
     const photosHtml = (photos && photos.length > 0)
       ? `
         <div class="section-title">Registro Fotográfico</div>
@@ -54,7 +52,6 @@ export const generateProfessionalServiceReport = async (
       `
       : '';
 
-    // Constrói a seção de assinaturas (com verificação de segurança)
     const signaturesHtml = (service.signatures?.client || service.signatures?.technician)
       ? `
         <div class="section-title">Assinaturas</div>
@@ -77,8 +74,7 @@ export const generateProfessionalServiceReport = async (
       `
       : '';
 
-    // Monta o documento HTML completo
-    const htmlString = `
+    const htmlString = \`
       <html>
       <head>
         <meta charset="UTF-8">
@@ -120,3 +116,65 @@ export const generateProfessionalServiceReport = async (
         </style>
       </head>
       <body>
+        <div class="cover page">
+          <h1>Relatório de Serviço</h1>
+          <h2>${service.title}</h2>
+          <div class="info">
+            Cliente: ${service.client || 'N/A'} | OS: ${service.number || 'N/A'} | Gerado por: ${user.name || 'N/A'} em ${new Date().toLocaleDateString('pt-BR')}
+          </div>
+        </div>
+        
+        <div class="page">
+          <div class="section-title">Resumo da Demanda</div>
+          <div class="two-col">
+            <div>
+              <p><strong>Cliente:</strong> ${service.client || 'N/A'}</p>
+              <p><strong>Local:</strong> ${service.location || 'N/A'}</p>
+              <p><strong>Endereço:</strong> ${service.address || 'N/A'}</p>
+            </div>
+            <div>
+              <p><strong>Status:</strong> ${service.status}</p>
+              <p><strong>Tipo:</strong> ${service.serviceType || 'N/A'}</p>
+              <p><strong>Técnico(s):</strong> ${(service.technicians && service.technicians.length > 0) ? service.technicians.map(t => t.name).join(', ') : 'N/A'}</p>
+            </div>
+          </div>
+          <p><strong>Descrição:</strong> ${service.description || 'Nenhuma descrição fornecida.'}</p>
+          
+          ${checklistHtml}
+          ${photosHtml}
+          ${signaturesHtml}
+        </div>
+      </body>
+      </html>
+    \`; // <-- O ERRO ESTAVA AQUI, FALTAVA ESTE ACENTO GRAVE DE FECHAMENTO
+
+    const doc = new jsPDF('p', 'pt', 'a4');
+    
+    await doc.html(htmlString, {
+      callback: (doc) => {
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          if (i > 1) {
+            const footerHtml = \`<div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #aaa; font-family: 'Roboto', sans-serif;">Página \${i} de \${pageCount}</div>\`;
+            doc.html(footerHtml, {
+                window: doc.internal.ownerDocument.defaultView,
+                x: 0,
+                y: doc.internal.pageSize.height - 40,
+                width: doc.internal.pageSize.width,
+            });
+          }
+        }
+        const fileName = \`Relatorio_OS_\${service.number || service.id.substring(0, 6)}.pdf\`;
+        doc.save(fileName);
+        logger.info(\`Relatório V8.1 gerado: \${fileName}\`, 'PDF');
+      },
+      autoPaging: 'slice',
+      margin: [0, 0, 0, 0]
+    });
+
+  } catch (error) {
+    logger.error(\`Erro ao gerar Relatório V8.1: \${error instanceof Error ? error.message : 'Desconhecido'}\`, 'PDF');
+    throw new Error('Falha ao gerar PDF: ' + (error instanceof Error ? error.message : 'Desconhecido'));
+  }
+};
