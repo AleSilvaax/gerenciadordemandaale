@@ -1,10 +1,11 @@
+// ARQUIVO ATUALIZADO: src/components/layout/Navbar.tsx
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
     Home, 
     FileText, 
     Users, 
-    // Settings, // Ícone não mais necessário
     BarChart3, 
     Plus,
     Calendar
@@ -20,48 +21,23 @@ const Navbar = () => {
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => {
-    return location.pathname.startsWith(path) && path !== "/" || location.pathname === path;
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(path);
   };
 
-  // LISTA DE ITENS ATUALIZADA SEM "CONFIGURAÇÕES"
   const navItems = [
-    {
-      name: "Início",
-      path: "/",
-      icon: Home,
-      badge: null
-    },
-    {
-      name: "Demandas",
-      path: "/demandas",
-      icon: FileText,
-      badge: null
-    },
-    {
-      name: "Agenda",
-      path: "/calendar",
-      icon: Calendar,
-      badge: null
-    },
-    {
-      name: "Estatísticas",
-      path: "/estatisticas",
-      icon: BarChart3,
-      badge: null
-    },
-    {
-      name: "Equipe",
-      path: "/equipe",
-      icon: Users,
-      badge: null
-    }
-    // O item "Configurações" foi removido.
+    { name: "Início", path: "/", icon: Home, badge: null },
+    { name: "Demandas", path: "/demandas", icon: FileText, badge: null },
+    { name: "Agenda", path: "/calendar", icon: Calendar, badge: null },
+    { name: "Estatísticas", path: "/estatisticas", icon: BarChart3, badge: null },
+    { name: "Equipe", path: "/equipe", icon: Users, badge: null },
   ];
   
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
     const { role } = user;
-
     if (["/estatisticas", "/equipe"].includes(item.path)) {
       return role === 'administrador' || role === 'gestor';
     }
@@ -69,12 +45,10 @@ const Navbar = () => {
   });
 
   return (
+    // A LÓGICA DE POSICIONAMENTO FOI SIMPLIFICADA AQUI
     <nav className={`
-      bg-card/95 backdrop-blur-sm border-b border-border/50
-      ${isMobile 
-        ? 'fixed bottom-0 left-0 right-0 z-50 h-16 border-t' // Versão mobile (já estava correta)
-        : 'fixed top-0 left-0 right-0 z-50 h-16' // VERSÃO DESKTOP CORRIGIDA PARA FICAR FIXA
-      }
+      fixed bottom-0 left-0 right-0 z-50 h-16
+      bg-card/95 backdrop-blur-sm border-t border-border/50
     `}>
       <div className="container mx-auto px-2 md:px-4">
         {/* Desktop Navigation */}
