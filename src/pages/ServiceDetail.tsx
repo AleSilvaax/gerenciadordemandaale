@@ -42,25 +42,34 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
 
 // DENTRO DE: src/pages/ServiceDetail.tsx
 
-  const handleGenerateReport = async () => {
-    if (!service) {
-      toast.error("Serviço não encontrado");
-      return;
-    }
+const handleGenerateReport = async () => {
+  if (!service) {
+    toast.error("Serviço não encontrado");
+    return;
+  }
 
-    try {
-      console.log('[ServiceDetail] Gerando relatório V3 para:', service.title);
-      toast.info("Gerando relatório profissional...");
-
-      // A chamada PRECISA ter os dois parâmetros, nesta ordem:
-      await generateProfessionalServiceReport(service, photos);
-      
-      toast.success("Relatório profissional gerado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório profissional");
-    }
-  };
+  try {
+    console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
+    
+    // Criar serviço atualizado com fotos e assinaturas mais recentes
+    const updatedService = {
+      ...service,
+      photos: photos.map(photo => photo.url),
+      photoTitles: photos.map(photo => photo.title),
+      signatures: service.signatures
+    };
+    
+    toast.info("Gerando relatório profissional...");
+    
+    // Agora que a função é 'async', este 'await' vai funcionar
+    await generateProfessionalServiceReport(updatedService); 
+    
+    toast.success("Relatório profissional gerado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao gerar relatório:", error);
+    toast.error("Erro ao gerar relatório profissional");
+  }
+};
       
       // Criar serviço atualizado com fotos e assinaturas mais recentes
       const updatedService = {
