@@ -1,3 +1,4 @@
+// ARQUIVO COMPLETO E CORRIGIDO: src/pages/ServiceDetail.tsx
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import { generateProfessionalServiceReport } from "@/utils/pdf/professionalRepor
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera, Download } from "lucide-react";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
 import { ServiceActions } from "@/components/service-detail/ServiceActions";
@@ -16,12 +17,14 @@ import { ServiceMessages } from "@/components/service-detail/ServiceMessages";
 import { ServiceFeedback } from "@/components/service-detail/ServiceFeedback";
 import { useServiceDetail } from "@/hooks/useServiceDetail";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
 
 interface ServiceDetailProps {
   editMode?: boolean;
 }
 
 const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
+  const { user } = useAuth(); // ADICIONADO PARA PEGAR O USUÁRIO LOGADO
   const {
     service,
     isLoading,
@@ -40,47 +43,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handlePhotosChange
   } = useServiceDetail();
 
-// DENTRO DE: src/pages/ServiceDetail.tsx
+  // FUNÇÃO CORRIGIDA E LIMPA
+  const handleGenerateReport = async () => {
+    if (!service || !user) { // Checagem de segurança para serviço e usuário
+      toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
+      return;
+    }
 
-const handleGenerateReport = async () => {
-  if (!service) {
-    toast.error("Serviço não encontrado");
-    return;
-  }
-
-  try {
-    console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
-    
-    // Criar serviço atualizado com fotos e assinaturas mais recentes
-    const updatedService = {
-      ...service,
-      photos: photos.map(photo => photo.url),
-      photoTitles: photos.map(photo => photo.title),
-      signatures: service.signatures
-    };
-    
-    toast.info("Gerando relatório profissional...");
-    
-    // Agora que a função é 'async', este 'await' vai funcionar
-    await generateProfessionalServiceReport(updatedService); 
-    
-    toast.success("Relatório profissional gerado com sucesso!");
-  } catch (error) {
-    console.error("Erro ao gerar relatório:", error);
-    toast.error("Erro ao gerar relatório profissional");
-  }
-};
-      
-      // Criar serviço atualizado com fotos e assinaturas mais recentes
-      const updatedService = {
-        ...service,
-        photos: photos.map(photo => photo.url),
-        photoTitles: photos.map(photo => photo.title),
-        signatures: service.signatures
-      };
-      
+    try {
+      console.log('[ServiceDetail] Gerando relatório V4 para:', service.title);
       toast.info("Gerando relatório profissional...");
-      await generateProfessionalServiceReport(updatedService);
+      
+      // Chamada correta, passando os 3 parâmetros necessários
+      await generateProfessionalServiceReport(service, photos, user);
+      
       toast.success("Relatório profissional gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
@@ -115,7 +91,7 @@ const handleGenerateReport = async () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <motion.div 
+      <motion.div
         className="container mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -181,7 +157,7 @@ const handleGenerateReport = async () => {
             >
               <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
                 <CardContent className="p-4">
-                  <Button 
+                  <Button
                     onClick={handleGenerateReport}
                     className="w-full"
                     size="lg"
@@ -198,9 +174,9 @@ const handleGenerateReport = async () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              <ServiceActions 
-                service={service} 
-                onStatusChange={handleStatusChange} 
+              <ServiceActions
+                service={service}
+                onStatusChange={handleStatusChange}
                 editMode={editMode}
               />
             </motion.div>
