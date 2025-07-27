@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E CORRIGIDO V8.3: src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E CORRIGIDO V8.4: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import { Service, Photo, User } from '@/types/serviceTypes';
@@ -17,7 +17,7 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório de Design V8.3 para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório de Design V8.4 para: ${service.id}`, 'PDF');
 
     const checklistHtml = (service.customFields && service.customFields.length > 0)
       ? `
@@ -95,7 +95,6 @@ export const generateProfessionalServiceReport = async (
             padding: ${PAGE_MARGIN};
           }
           .cover h1 { font-size: 42pt; margin: 0; font-weight: 700; }
-          /* CORREÇÃO 1: Removido o 'border-top' e 'border-bottom' que causavam o "risco" */
           .cover h2 { font-size: 18pt; margin-top: 20px; font-weight: 300; padding: 10px 0; }
           .cover .info { position: absolute; bottom: 50px; text-align: center; width: 100%; font-size: 9pt; }
           .section-title { font-size: 16pt; font-weight: 700; color: ${HEADING_COLOR}; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid ${THEME_COLOR}; padding-bottom: 8px; }
@@ -106,13 +105,10 @@ export const generateProfessionalServiceReport = async (
           th, td { border: 1px solid ${BORDER_COLOR}; padding: 10px; text-align: left; }
           th { background-color: ${HEADING_COLOR}; color: white; font-weight: 700; }
           tr:nth-child(even) { background-color: #F8F9FA; }
-          
-          /* CORREÇÃO 2: Layout de fotos corrigido para centralizar com no máximo 2 por linha */
           .photo-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; page-break-inside: avoid; }
           .photo-item { width: calc(50% - 10px); text-align: center; }
           .photo-item img { max-width: 100%; border: 1px solid ${BORDER_COLOR}; border-radius: 4px; }
           .photo-item p { font-size: 8pt; margin-top: 5px; color: ${BODY_TEXT_COLOR}; }
-
           .signature-container { display: flex; justify-content: space-around; margin-top: 40px; page-break-inside: avoid; }
           .signature-block { text-align: center; }
           .signature-block img { max-width: 200px; max-height: 100px; }
@@ -163,7 +159,8 @@ export const generateProfessionalServiceReport = async (
           if (i > 1) { // Não adiciona rodapé na capa
             const footerHtml = `<div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #aaa; font-family: 'Noto Sans', sans-serif;">Página ${i} de ${pageCount}</div>`;
             doc.html(footerHtml, {
-                window: doc.internal.ownerDocument.defaultView,
+                // CORREÇÃO APLICADA AQUI: Usando a 'window' global de forma segura
+                window: window,
                 x: 0,
                 y: doc.internal.pageSize.height - 40,
                 width: doc.internal.pageSize.width,
@@ -172,14 +169,14 @@ export const generateProfessionalServiceReport = async (
         }
         const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
         doc.save(fileName);
-        logger.info(`Relatório V8.3 gerado: ${fileName}`, 'PDF');
+        logger.info(`Relatório V8.4 gerado: ${fileName}`, 'PDF');
       },
       autoPaging: 'slice',
       margin: [0, 0, 0, 0]
     });
 
   } catch (error) {
-    logger.error(`Erro ao gerar Relatório V8.3: ${error instanceof Error ? error.message : 'Desconhecido'}`, 'PDF');
+    logger.error(`Erro ao gerar Relatório V8.4: ${error instanceof Error ? error.message : 'Desconhecido'}`, 'PDF');
     throw new Error('Falha ao gerar PDF: ' + (error instanceof Error ? error.message : 'Desconhecido'));
   }
 };
