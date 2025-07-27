@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E FINAL V7.0: src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E CORRIGIDO V7.1: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -28,7 +28,6 @@ const addSectionTitleWithIcon = (doc: jsPDF, title: string, icon: string, y: num
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    // Simples "ícone" de texto para o design
     doc.setTextColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
     doc.text(icon, PAGE_MARGIN, y);
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
@@ -36,7 +35,7 @@ const addSectionTitleWithIcon = (doc: jsPDF, title: string, icon: string, y: num
     doc.setDrawColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
     doc.setLineWidth(1.5);
     doc.line(PAGE_MARGIN + 20, y + 5, PAGE_MARGIN + 60, y + 5);
-    return y + 40; // Espaçamento generoso
+    return y + 40;
 };
 
 // --- FUNÇÃO PRINCIPAL ---
@@ -47,37 +46,32 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório de Design V7 para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório de Design V7.1 para: ${service.id}`, 'PDF');
     
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // --- PÁGINA 1: CAPA COM FOCO EM TIPOGRAFIA ---
+    // --- PÁGINA 1: CAPA ---
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
-    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
     doc.text("RELATÓRIO DE SERVIÇO", PAGE_MARGIN, 80);
-
     doc.setFontSize(48);
     doc.setTextColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
     const titleLines = doc.splitTextToSize(service.title, pageWidth - (PAGE_MARGIN * 2));
     doc.text(titleLines, PAGE_MARGIN, 140);
-    
     doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
     doc.setLineWidth(2);
     doc.line(PAGE_MARGIN, 180, PAGE_MARGIN + 100, 180);
-
     const infoY = pageHeight - 120;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('Cliente:', PAGE_MARGIN, infoY);
     doc.text('Ordem de Serviço:', PAGE_MARGIN, infoY + 20);
     doc.text('Data de Geração:', PAGE_MARGIN, infoY + 40);
-
     doc.setFont('helvetica', 'normal');
     doc.text(service.client || 'N/A', PAGE_MARGIN + 120, infoY);
     doc.text(service.number || 'N/A', PAGE_MARGIN + 120, infoY + 20);
@@ -87,17 +81,15 @@ export const generateProfessionalServiceReport = async (
     doc.addPage();
     let currentY = 70;
 
-    // SEÇÃO 1: Resumo em Colunas
     currentY = addSectionTitleWithIcon(doc, "Resumo da Demanda", "i", currentY);
+    // ... (resto do código igual) ...
     const rightColumnX = pageWidth / 2 + 30;
-    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
     doc.text("CLIENTE E LOCAL", PAGE_MARGIN, currentY);
     doc.text("DETALHES DO SERVIÇO", rightColumnX, currentY);
     currentY += 15;
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
@@ -109,10 +101,12 @@ export const generateProfessionalServiceReport = async (
     currentY += 15;
     const addressLines = doc.splitTextToSize(`Endereço: ${service.address || 'N/A'}`, (pageWidth / 2) - PAGE_MARGIN - 10);
     doc.text(addressLines, PAGE_MARGIN, currentY);
-    doc.text(`Técnicos: ${service.technicians?.map(t => t.name).join(', ') || 'N/A'}`, rightColumnX, currentY);
-    currentY += addressLines.length * 12 + 40; // Espaçamento generoso
+    const techniciansText = (service.technicians && service.technicians.length > 0) 
+      ? service.technicians.map(t => t.name).join(', ') 
+      : 'Nenhum técnico atribuído';
+    doc.text(`Técnicos: ${techniciansText}`, rightColumnX, currentY);
+    currentY += addressLines.length * 12 + 40;
 
-    // SEÇÃO 2: Checklist
     if (service.customFields && service.customFields.length > 0) {
         if (currentY > pageHeight - 200) { doc.addPage(); currentY = 70; }
         currentY = addSectionTitleWithIcon(doc, "Checklist Técnico", "✓", currentY);
@@ -127,7 +121,6 @@ export const generateProfessionalServiceReport = async (
         currentY = (doc as any).lastAutoTable.finalY + 50;
     }
 
-    // SEÇÃO 3: Fotos
     if (photos && photos.length > 0) {
         if (currentY > pageHeight - 300) { doc.addPage(); currentY = 70; }
         currentY = addSectionTitleWithIcon(doc, "Registro Fotográfico", "📷", currentY);
@@ -154,7 +147,7 @@ export const generateProfessionalServiceReport = async (
         currentY += photoSize + 50;
     }
     
-    // SEÇÃO 4: Assinaturas
+    // --- SEÇÃO DE ASSINATURAS (COM A CORREÇÃO) ---
     if (service.signatures?.client || service.signatures?.technician) {
         if (currentY > pageHeight - 150) { doc.addPage(); currentY = 70; }
         currentY = addSectionTitleWithIcon(doc, "Assinaturas", "✍️", currentY);
@@ -171,7 +164,12 @@ export const generateProfessionalServiceReport = async (
             const techX = pageWidth - PAGE_MARGIN - sigWidth;
             doc.addImage(service.signatures.technician, 'PNG', techX, sigY, sigWidth, sigHeight);
             doc.line(techX, sigY + sigHeight + 5, techX + sigWidth, sigY + sigHeight + 5);
-            doc.text(service.technicians?.[0]?.name || 'Técnico', techX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
+            
+            // LÓGICA CORRIGIDA E SEGURA PARA PEGAR O NOME DO TÉCNICO
+            const technicianName = (service.technicians && service.technicians.length > 0 && service.technicians[0].name)
+                                   ? service.technicians[0].name
+                                   : 'Técnico';
+            doc.text(technicianName, techX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
         }
     }
 
@@ -179,16 +177,15 @@ export const generateProfessionalServiceReport = async (
     const pageCount = doc.getNumberOfPages();
     for (let i = 2; i <= pageCount; i++) {
       doc.setPage(i);
-      addPageHeader(doc, service);
-      addPageFooter(doc, i, pageCount);
+      addPageHeaderAndFooter(doc, i, pageCount);
     }
     
     const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
     doc.save(fileName);
-    logger.info(`Relatório de Design V7 gerado: ${fileName}`, 'PDF');
+    logger.info(`Relatório de Design V7.1 gerado: ${fileName}`, 'PDF');
 
   } catch (error) {
-    logger.error(`Erro ao gerar Relatório de Design V7: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
+    logger.error(`Erro ao gerar Relatório de Design V7.1: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
     throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
