@@ -1,44 +1,15 @@
-// ARQUIVO COMPLETO RESTAURADO PARA A VERSÃO ESTÁVEL V7.2: src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E CORRIGIDO V8.3: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { Service, Photo, CustomField, User } from '@/types/serviceTypes';
+import { Service, Photo, User } from '@/types/serviceTypes';
 import { logger } from '@/utils/loggingService';
 
-// --- PALETA DE DESIGN ---
-const THEME_COLOR = [30, 80, 160];
-const HEADING_COLOR = [45, 52, 54];
-const BODY_TEXT_COLOR = [99, 110, 114];
-const BORDER_COLOR = [223, 230, 233];
-const PAGE_MARGIN = 50;
-
-// --- FUNÇÕES AUXILIARES DE DESIGN ---
-
-const addPageHeaderAndFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-    doc.line(PAGE_MARGIN, 40, pageWidth - PAGE_MARGIN, 40);
-    doc.setFontSize(8);
-    doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
-    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
-};
-
-const addSectionTitleWithIcon = (doc: jsPDF, title: string, icon: string, y: number) => {
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    doc.setTextColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
-    doc.text(icon, PAGE_MARGIN, y);
-    doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    doc.text(title, PAGE_MARGIN + 20, y);
-    doc.setDrawColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
-    doc.setLineWidth(1.5);
-    doc.line(PAGE_MARGIN + 20, y + 5, PAGE_MARGIN + 60, y + 5);
-    return y + 40;
-};
-
-// --- FUNÇÃO PRINCIPAL ---
+// --- PALETA DE DESIGN E ESTILOS ---
+const THEME_COLOR = '#1E50A0';      // Azul corporativo
+const HEADING_COLOR = '#2D3436';   // Cinza escuro para títulos
+const BODY_TEXT_COLOR = '#636E72';  // Cinza médio para textos
+const BORDER_COLOR = '#E0E0E0';     // Cinza claro para bordas
+const PAGE_MARGIN = '50px';
 
 export const generateProfessionalServiceReport = async (
   service: Service,
@@ -46,143 +17,169 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório de Design V7.2 para: ${service.id}`, 'PDF');
-    
+    logger.info(`Gerando Relatório de Design V8.3 para: ${service.id}`, 'PDF');
+
+    const checklistHtml = (service.customFields && service.customFields.length > 0)
+      ? `
+        <div class="section-title">Checklist Técnico</div>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Valor / Status</th></tr>
+          </thead>
+          <tbody>
+            ${service.customFields.map(field => `
+              <tr>
+                <td>${field.label}</td>
+                <td>${typeof field.value === 'boolean' ? (field.value ? 'Sim' : 'Não') : (field.value || 'N/A')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `
+      : '';
+
+    const photosHtml = (photos && photos.length > 0)
+      ? `
+        <div class="section-title">Registro Fotográfico</div>
+        <div class="photo-grid">
+          ${photos.map(photo => `
+            <div class="photo-item">
+              <img src="${photo.url}" alt="${photo.title || ''}">
+              <p>${photo.title || ''}</p>
+            </div>
+          `).join('')}
+        </div>
+      `
+      : '';
+
+    const signaturesHtml = (service.signatures?.client || service.signatures?.technician)
+      ? `
+        <div class="section-title">Assinaturas</div>
+        <div class="signature-container">
+          ${service.signatures.client ? `
+            <div class="signature-block">
+              <img src="${service.signatures.client}" alt="Assinatura do Cliente">
+              <div class="signature-line"></div>
+              <p>${service.client || 'Cliente'}</p>
+            </div>
+          ` : ''}
+          ${service.signatures.technician ? `
+            <div class="signature-block">
+              <img src="${service.signatures.technician}" alt="Assinatura do Técnico">
+              <div class="signature-line"></div>
+              <p>${(service.technicians && service.technicians.length > 0 && service.technicians[0].name) || 'Técnico'}</p>
+            </div>
+          ` : ''}
+        </div>
+      `
+      : '';
+
+    const htmlString = `
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Noto Sans', sans-serif; margin: 0; color: ${BODY_TEXT_COLOR}; font-size: 10pt; }
+          .page { padding: ${PAGE_MARGIN}; position: relative; min-height: 90vh; page-break-after: always; }
+          .page:last-child { page-break-after: auto; }
+          .cover {
+            background-color: ${THEME_COLOR};
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: ${PAGE_MARGIN};
+          }
+          .cover h1 { font-size: 42pt; margin: 0; font-weight: 700; }
+          /* CORREÇÃO 1: Removido o 'border-top' e 'border-bottom' que causavam o "risco" */
+          .cover h2 { font-size: 18pt; margin-top: 20px; font-weight: 300; padding: 10px 0; }
+          .cover .info { position: absolute; bottom: 50px; text-align: center; width: 100%; font-size: 9pt; }
+          .section-title { font-size: 16pt; font-weight: 700; color: ${HEADING_COLOR}; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid ${THEME_COLOR}; padding-bottom: 8px; }
+          .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 20px; }
+          .two-col p { margin: 0 0 8px 0; }
+          .two-col strong { color: ${HEADING_COLOR}; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid ${BORDER_COLOR}; padding: 10px; text-align: left; }
+          th { background-color: ${HEADING_COLOR}; color: white; font-weight: 700; }
+          tr:nth-child(even) { background-color: #F8F9FA; }
+          
+          /* CORREÇÃO 2: Layout de fotos corrigido para centralizar com no máximo 2 por linha */
+          .photo-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; page-break-inside: avoid; }
+          .photo-item { width: calc(50% - 10px); text-align: center; }
+          .photo-item img { max-width: 100%; border: 1px solid ${BORDER_COLOR}; border-radius: 4px; }
+          .photo-item p { font-size: 8pt; margin-top: 5px; color: ${BODY_TEXT_COLOR}; }
+
+          .signature-container { display: flex; justify-content: space-around; margin-top: 40px; page-break-inside: avoid; }
+          .signature-block { text-align: center; }
+          .signature-block img { max-width: 200px; max-height: 100px; }
+          .signature-line { border-top: 1px solid ${HEADING_COLOR}; margin-top: 5px; }
+          .signature-block p { font-size: 10pt; margin-top: 5px; color: ${HEADING_COLOR}; }
+        </style>
+      </head>
+      <body>
+        <div class="cover page">
+          <h1>Relatório de Serviço</h1>
+          <h2>${service.title}</h2>
+          <div class="info">
+            Cliente: ${service.client || 'N/A'} | OS: ${service.number || 'N/A'} | Gerado por: ${user.name || 'N/A'} em ${new Date().toLocaleDateString('pt-BR')}
+          </div>
+        </div>
+        
+        <div class="page">
+          <div class="section-title">Resumo da Demanda</div>
+          <div class="two-col">
+            <div>
+              <p><strong>Cliente:</strong> ${service.client || 'N/A'}</p>
+              <p><strong>Local:</strong> ${service.location || 'N/A'}</p>
+              <p><strong>Endereço:</strong> ${service.address || 'N/A'}</p>
+            </div>
+            <div>
+              <p><strong>Status:</strong> ${service.status}</p>
+              <p><strong>Tipo:</strong> ${service.serviceType || 'N/A'}</p>
+              <p><strong>Técnico(s):</strong> ${(service.technicians && service.technicians.length > 0) ? service.technicians.map(t => t.name).join(', ') : 'N/A'}</p>
+            </div>
+          </div>
+          <p><strong>Descrição:</strong> ${service.description || 'Nenhuma descrição fornecida.'}</p>
+          
+          ${checklistHtml}
+          ${photosHtml}
+          ${signaturesHtml}
+        </div>
+      </body>
+      </html>
+    `;
+
     const doc = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    // --- PÁGINA 1: CAPA ---
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    doc.text("RELATÓRIO DE SERVIÇO", PAGE_MARGIN, 80);
-    doc.setFontSize(48);
-    doc.setTextColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
-    const titleLines = doc.splitTextToSize(service.title, pageWidth - (PAGE_MARGIN * 2));
-    doc.text(titleLines, PAGE_MARGIN, 140);
-    doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-    doc.setLineWidth(2);
-    doc.line(PAGE_MARGIN, 180, PAGE_MARGIN + 100, 180);
-    const infoY = pageHeight - 120;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Cliente:', PAGE_MARGIN, infoY);
-    doc.text('Ordem de Serviço:', PAGE_MARGIN, infoY + 20);
-    doc.text('Data de Geração:', PAGE_MARGIN, infoY + 40);
-    doc.setFont('helvetica', 'normal');
-    doc.text(service.client || 'N/A', PAGE_MARGIN + 120, infoY);
-    doc.text(service.number || 'N/A', PAGE_MARGIN + 120, infoY + 20);
-    doc.text(new Date().toLocaleDateString('pt-BR'), PAGE_MARGIN + 120, infoY + 40);
-
-    // --- PÁGINAS DE CONTEÚDO ---
-    doc.addPage();
-    let currentY = 70;
-
-    currentY = addSectionTitleWithIcon(doc, "Resumo da Demanda", "i", currentY);
-    const rightColumnX = pageWidth / 2 + 30;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    doc.text("CLIENTE E LOCAL", PAGE_MARGIN, currentY);
-    doc.text("DETALHES DO SERVIÇO", rightColumnX, currentY);
-    currentY += 15;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
-    doc.text(`Cliente: ${service.client || 'N/A'}`, PAGE_MARGIN, currentY);
-    doc.text(`Status: ${service.status}`, rightColumnX, currentY);
-    currentY += 15;
-    doc.text(`Local: ${service.location || 'N/A'}`, PAGE_MARGIN, currentY);
-    doc.text(`Tipo: ${service.serviceType || 'N/A'}`, rightColumnX, currentY);
-    currentY += 15;
-    const addressLines = doc.splitTextToSize(`Endereço: ${service.address || 'N/A'}`, (pageWidth / 2) - PAGE_MARGIN - 10);
-    doc.text(addressLines, PAGE_MARGIN, currentY);
-    const techniciansText = (service.technicians && service.technicians.length > 0) 
-      ? service.technicians.map(t => t.name).join(', ') 
-      : 'Nenhum técnico atribuído';
-    doc.text(`Técnicos: ${techniciansText}`, rightColumnX, currentY);
-    currentY += addressLines.length * 12 + 40;
-
-    if (service.customFields && service.customFields.length > 0) {
-        if (currentY > pageHeight - 200) { doc.addPage(); currentY = 70; }
-        currentY = addSectionTitleWithIcon(doc, "Checklist Técnico", "✓", currentY);
-        autoTable(doc, {
-            startY: currentY,
-            head: [['ITEM', 'VALOR / STATUS']],
-            body: service.customFields.map(f => [f.label, typeof f.value === 'boolean' ? (f.value ? 'Sim' : 'Não') : f.value?.toString() || 'N/A']),
-            theme: 'striped',
-            headStyles: { fillColor: HEADING_COLOR },
-            styles: { fontSize: 10 }
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 50;
-    }
-
-    if (photos && photos.length > 0) {
-        if (currentY > pageHeight - 300) { doc.addPage(); currentY = 70; }
-        currentY = addSectionTitleWithIcon(doc, "Registro Fotográfico", "📷", currentY);
-        const photoSize = 160;
-        const gap = 20;
-        let x = PAGE_MARGIN;
-        for (const photo of photos) {
-            if (x + photoSize > pageWidth - PAGE_MARGIN) {
-                x = PAGE_MARGIN;
-                currentY += photoSize + 40;
-            }
-            if (currentY + photoSize > pageHeight - 60) {
-                doc.addPage();
-                currentY = 70;
-            }
-            try {
-                doc.addImage(photo.url, 'JPEG', x, currentY, photoSize, photoSize);
-                doc.setFontSize(9);
-                doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
-                doc.text(photo.title || 'Sem título', x + photoSize / 2, currentY + photoSize + 15, { align: 'center' });
-            } catch (e) { /* Erro de imagem */ }
-            x += photoSize + gap;
-        }
-        currentY += photoSize + 50;
-    }
     
-    if (service.signatures?.client || service.signatures?.technician) {
-        if (currentY > pageHeight - 150) { doc.addPage(); currentY = 70; }
-        currentY = addSectionTitleWithIcon(doc, "Assinaturas", "✍️", currentY);
-        const sigY = currentY;
-        const sigWidth = 200;
-        const sigHeight = 100;
-        if (service.signatures.client) {
-            const clientX = PAGE_MARGIN;
-            doc.addImage(service.signatures.client, 'PNG', clientX, sigY, sigWidth, sigHeight);
-            doc.line(clientX, sigY + sigHeight + 5, clientX + sigWidth, sigY + sigHeight + 5);
-            doc.text(service.client || 'Cliente', clientX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
+    await doc.html(htmlString, {
+      callback: (doc) => {
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          if (i > 1) { // Não adiciona rodapé na capa
+            const footerHtml = `<div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #aaa; font-family: 'Noto Sans', sans-serif;">Página ${i} de ${pageCount}</div>`;
+            doc.html(footerHtml, {
+                window: doc.internal.ownerDocument.defaultView,
+                x: 0,
+                y: doc.internal.pageSize.height - 40,
+                width: doc.internal.pageSize.width,
+            });
+          }
         }
-        if (service.signatures.technician) {
-            const techX = pageWidth - PAGE_MARGIN - sigWidth;
-            doc.addImage(service.signatures.technician, 'PNG', techX, sigY, sigWidth, sigHeight);
-            doc.line(techX, sigY + sigHeight + 5, techX + sigWidth, sigY + sigHeight + 5);
-            
-            const technicianName = (service.technicians && service.technicians.length > 0 && service.technicians[0].name)
-                                   ? service.technicians[0].name
-                                   : 'Técnico';
-            doc.text(technicianName, techX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
-        }
-    }
-
-    // --- Finalização ---
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 2; i <= pageCount; i++) {
-      doc.setPage(i);
-      addPageHeaderAndFooter(doc, i, pageCount);
-    }
-    
-    const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
-    doc.save(fileName);
-    logger.info(`Relatório de Design V7.2 gerado: ${fileName}`, 'PDF');
+        const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
+        doc.save(fileName);
+        logger.info(`Relatório V8.3 gerado: ${fileName}`, 'PDF');
+      },
+      autoPaging: 'slice',
+      margin: [0, 0, 0, 0]
+    });
 
   } catch (error) {
-    logger.error(`Erro ao gerar Relatório de Design V7.2: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
-    throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    logger.error(`Erro ao gerar Relatório V8.3: ${error instanceof Error ? error.message : 'Desconhecido'}`, 'PDF');
+    throw new Error('Falha ao gerar PDF: ' + (error instanceof Error ? error.message : 'Desconhecido'));
   }
 };
