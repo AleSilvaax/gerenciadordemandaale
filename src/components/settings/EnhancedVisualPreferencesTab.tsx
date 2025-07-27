@@ -1,21 +1,30 @@
+// ARQUIVO COMPLETO E CORRIGIDO: src/components/settings/EnhancedVisualPreferencesTab.tsx
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Palette, Monitor, Sun, Moon, Type, Layout, Zap, RefreshCw } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
+import { Palette, Sun, Moon, Type, Layout, RefreshCw } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme"; // Mantemos o uso do hook principal
 import { toast } from "sonner";
 
 export const EnhancedVisualPreferencesTab: React.FC = () => {
-  const { theme, setTheme, isDarkMode, toggleTheme } = useTheme();
-  const [fontSize, setFontSize] = useState([16]);
-  const [compactMode, setCompactMode] = useState(false);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
-  const [accentColor, setAccentColor] = useState('blue');
+  // A LÓGICA AGORA VEM DIRETAMENTE DO NOSSO HOOK CENTRAL
+  const {
+    theme,
+    setTheme,
+    config, // Pegamos a configuração completa para ter acesso à cor
+    setAccentColor, // A função correta para mudar a cor
+    setFontSize,
+    setCompactMode,
+    setAnimationsEnabled,
+    resetTheme
+  } = useTheme();
+
+  // Removemos os 'useState' locais que causavam o problema
+  const { accentColor, fontSize, compactMode, animationsEnabled } = config;
 
   const colorOptions = [
     { value: 'blue', label: 'Azul', color: 'bg-blue-500' },
@@ -26,30 +35,23 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
   ];
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    console.log('[THEME] Alterando tema para:', newTheme);
     setTheme(newTheme);
     toast.success(`Tema alterado para ${newTheme === 'dark' ? 'escuro' : 'claro'}`);
   };
 
   const handleFontSizeChange = (newSize: number[]) => {
-    setFontSize(newSize);
-    document.documentElement.style.fontSize = `${newSize[0]}px`;
+    setFontSize(newSize[0]); // A função do hook espera um número, não um array
     toast.success(`Tamanho da fonte: ${newSize[0]}px`);
   };
 
+  // ESTA FUNÇÃO AGORA CHAMA O "CÉREBRO" DO TEMA
   const handleAccentColorChange = (color: string) => {
-    setAccentColor(color);
-    // Aqui você poderia implementar a mudança real da cor
-    toast.success(`Cor de destaque alterada para ${color}`);
+    setAccentColor(color); // Chamando a função correta do useTheme
+    toast.success(`Cor de destaque alterada para ${colorOptions.find(c => c.value === color)?.label}`);
   };
-
+  
   const resetToDefaults = () => {
-    setTheme('dark');
-    setFontSize([16]);
-    setCompactMode(false);
-    setAnimationsEnabled(true);
-    setAccentColor('blue');
-    document.documentElement.style.fontSize = '16px';
+    resetTheme(); // Usando a função de reset do hook
     toast.success('Configurações visuais restauradas');
   };
 
@@ -90,18 +92,6 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
               Escuro
             </Button>
           </div>
-          
-          <div className="flex items-center justify-between">
-            <Label htmlFor="auto-theme">Alternar automaticamente</Label>
-            <Switch
-              id="auto-theme"
-              checked={false}
-              disabled
-              onCheckedChange={() => {
-                toast.info('Recurso em desenvolvimento');
-              }}
-            />
-          </div>
         </CardContent>
       </Card>
 
@@ -124,7 +114,7 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
                 onClick={() => handleAccentColorChange(color.value)}
                 className={`
                   relative w-12 h-12 rounded-lg transition-all duration-200 hover:scale-105
-                  ${color.color} 
+                  ${color.color}
                   ${accentColor === color.value ? 'ring-2 ring-offset-2 ring-primary' : ''}
                 `}
                 title={color.label}
@@ -155,20 +145,16 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Tamanho da fonte</Label>
-              <span className="text-sm text-muted-foreground">{fontSize[0]}px</span>
+              <span className="text-sm text-muted-foreground">{fontSize}px</span>
             </div>
             <Slider
-              value={fontSize}
+              value={[fontSize]} // Slider espera um array
               onValueChange={handleFontSizeChange}
               max={20}
               min={12}
               step={1}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Pequeno (12px)</span>
-              <span>Grande (20px)</span>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -180,16 +166,10 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
             <Layout className="w-5 h-5" />
             Layout e Interface
           </CardTitle>
-          <CardDescription>
-            Configure a aparência e comportamento da interface
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="compact-mode">Modo compacto</Label>
-              <p className="text-sm text-muted-foreground">Reduz espaçamentos para aproveitar melhor o espaço</p>
-            </div>
+            <Label htmlFor="compact-mode">Modo compacto</Label>
             <Switch
               id="compact-mode"
               checked={compactMode}
@@ -199,12 +179,8 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
               }}
             />
           </div>
-
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="animations">Animações</Label>
-              <p className="text-sm text-muted-foreground">Ativa transições e efeitos visuais</p>
-            </div>
+            <Label htmlFor="animations">Animações</Label>
             <Switch
               id="animations"
               checked={animationsEnabled}
@@ -224,13 +200,10 @@ export const EnhancedVisualPreferencesTab: React.FC = () => {
             <RefreshCw className="w-5 h-5" />
             Restaurar Padrões
           </CardTitle>
-          <CardDescription>
-            Volta todas as configurações visuais para os valores padrão
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={resetToDefaults}
             className="w-full"
           >
