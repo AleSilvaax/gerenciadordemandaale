@@ -35,7 +35,7 @@ const addSectionTitle = (doc: jsPDF, title: string, y: number) => {
 
 export const generateProfessionalServiceReport = async (
   service: Service,
-  photos: Photo[], // Recebemos o array completo de fotos agora
+  photos: Photo[],
 ): Promise<void> => {
   try {
     logger.info(`Gerando Relatório V3 para: ${service.id}`, 'PDF');
