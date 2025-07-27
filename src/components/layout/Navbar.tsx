@@ -4,10 +4,10 @@ import {
     Home, 
     FileText, 
     Users, 
-    Settings, 
+    // Settings, // Ícone não mais necessário
     BarChart3, 
     Plus,
-    Calendar // 1. ÍCONE IMPORTADO
+    Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ const Navbar = () => {
     return location.pathname.startsWith(path) && path !== "/" || location.pathname === path;
   };
 
-  // 2. LISTA DE ITENS ATUALIZADA
+  // LISTA DE ITENS ATUALIZADA SEM "CONFIGURAÇÕES"
   const navItems = [
     {
       name: "Início",
@@ -38,7 +38,7 @@ const Navbar = () => {
       badge: null
     },
     {
-      name: "Agenda", // ITEM ADICIONADO
+      name: "Agenda",
       path: "/calendar",
       icon: Calendar,
       badge: null
@@ -54,34 +54,26 @@ const Navbar = () => {
       path: "/equipe",
       icon: Users,
       badge: null
-    },
-    {
-      name: "Configurações",
-      path: "/configuracoes", // ROTA CORRIGIDA
-      icon: Settings,
-      badge: null
     }
+    // O item "Configurações" foi removido.
   ];
   
-  // Lógica de filtro para os itens da Navbar (pode ser diferente da Sidebar)
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
     const { role } = user;
 
-    // Itens que só Admin e Gestor veem
     if (["/estatisticas", "/equipe"].includes(item.path)) {
       return role === 'administrador' || role === 'gestor';
     }
     return true;
   });
 
-
   return (
     <nav className={`
-      bg-card/95 backdrop-blur-sm border-t border-border/50
+      bg-card/95 backdrop-blur-sm border-b border-border/50
       ${isMobile 
-        ? 'fixed bottom-0 left-0 right-0 z-50 h-16' 
-        : 'sticky top-0 border-t-0 border-b relative'
+        ? 'fixed bottom-0 left-0 right-0 z-50 h-16 border-t' // Versão mobile (já estava correta)
+        : 'fixed top-0 left-0 right-0 z-50 h-16' // VERSÃO DESKTOP CORRIGIDA PARA FICAR FIXA
       }
     `}>
       <div className="container mx-auto px-2 md:px-4">
@@ -99,7 +91,7 @@ const Navbar = () => {
             </Link>
 
             <div className="flex items-center space-x-1">
-              {filteredNavItems.map((item) => { // USA A LISTA FILTRADA
+              {filteredNavItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -126,7 +118,7 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Link to="/demandas/nova"> {/* ROTA CORRIGIDA */}
+              <Link to="/demandas/nova">
                 <Button size="sm" className="flex items-center gap-2 text-sm">
                   <Plus className="w-4 h-4" />
                   Nova Demanda
@@ -136,10 +128,10 @@ const Navbar = () => {
           </div>
         )}
 
-        {/* Mobile Navigation - Fixed Bottom */}
+        {/* Mobile Navigation */}
         {isMobile && (
           <div className="flex justify-around items-center py-2 h-16">
-            {filteredNavItems.slice(0, 4).map((item) => { // USA A LISTA FILTRADA
+            {filteredNavItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -160,7 +152,7 @@ const Navbar = () => {
                 </Link>
               );
             })}
-            <Link to="/demandas/nova" className="flex-1 max-w-[60px]"> {/* ROTA CORRIGIDA */}
+            <Link to="/demandas/nova" className="flex-1 max-w-[60px]">
               <Button 
                 size="sm" 
                 className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs w-full"
