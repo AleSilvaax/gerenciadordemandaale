@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E CORRIGIDO V8.1: src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E CORRIGIDO V8.2: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import { Service, Photo, User } from '@/types/serviceTypes';
@@ -17,7 +17,7 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório de Design V8.1 para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório de Design V8.2 para: ${service.id}`, 'PDF');
 
     const checklistHtml = (service.customFields && service.customFields.length > 0)
       ? `
@@ -74,7 +74,8 @@ export const generateProfessionalServiceReport = async (
       `
       : '';
 
-    const htmlString = \`
+    // CORREÇÃO APLICADA AQUI: A string começa diretamente com `
+    const htmlString = `
       <html>
       <head>
         <meta charset="UTF-8">
@@ -146,7 +147,7 @@ export const generateProfessionalServiceReport = async (
         </div>
       </body>
       </html>
-    \`; // <-- O ERRO ESTAVA AQUI, FALTAVA ESTE ACENTO GRAVE DE FECHAMENTO
+    `; // CORREÇÃO APLICADA AQUI: A string termina diretamente com `
 
     const doc = new jsPDF('p', 'pt', 'a4');
     
@@ -156,7 +157,7 @@ export const generateProfessionalServiceReport = async (
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
           if (i > 1) {
-            const footerHtml = \`<div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #aaa; font-family: 'Roboto', sans-serif;">Página \${i} de \${pageCount}</div>\`;
+            const footerHtml = `<div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 8pt; color: #aaa; font-family: 'Roboto', sans-serif;">Página ${i} de ${pageCount}</div>`;
             doc.html(footerHtml, {
                 window: doc.internal.ownerDocument.defaultView,
                 x: 0,
@@ -165,16 +166,16 @@ export const generateProfessionalServiceReport = async (
             });
           }
         }
-        const fileName = \`Relatorio_OS_\${service.number || service.id.substring(0, 6)}.pdf\`;
+        const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
         doc.save(fileName);
-        logger.info(\`Relatório V8.1 gerado: \${fileName}\`, 'PDF');
+        logger.info(`Relatório V8.1 gerado: ${fileName}`, 'PDF');
       },
       autoPaging: 'slice',
       margin: [0, 0, 0, 0]
     });
 
   } catch (error) {
-    logger.error(\`Erro ao gerar Relatório V8.1: \${error instanceof Error ? error.message : 'Desconhecido'}\`, 'PDF');
+    logger.error(`Erro ao gerar Relatório V8.1: ${error instanceof Error ? error.message : 'Desconhecido'}`, 'PDF');
     throw new Error('Falha ao gerar PDF: ' + (error instanceof Error ? error.message : 'Desconhecido'));
   }
 };
