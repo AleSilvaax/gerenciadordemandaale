@@ -3,200 +3,166 @@ import autoTable from 'jspdf-autotable';
 import { Service, Photo, User } from '@/types/serviceTypes';
 import { logger } from '@/utils/loggingService';
 
-// --- CONFIGURAÇÕES DE DESIGN ---
-const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap';
-const THEME_COLOR_START = '#1e3a8a'; // azul escuro
-const THEME_COLOR_END = '#3b82f6';   // azul claro
-const TEXT_COLOR = '#333333';
-const BORDER_COLOR = '#e5e7eb';
-const PAGE_MARGIN = '40px';
+// --- CONFIGURAÇÕES DE DESIGN AVANÇADO ---
+const FONT_VFS_PATH = '/fonts/Montserrat-Regular.ttf';
+const FONT_VFS_KEY = 'Montserrat-Regular.ttf';
+const FONT_FAMILY = 'Montserrat';
+const THEME_COLOR_START = [30, 80, 160]; // azul escuro
+const THEME_COLOR_END = [60, 160, 230]; // azul claro
+const TEXT_COLOR = [45, 52, 54];
+const BORDER_COLOR = [200, 210, 220];
+const PAGE_MARGIN = 40;
+const HEADER_HEIGHT = 60;
+const FOOTER_HEIGHT = 40;
 
-/**
- * Gera o relatório completo usando template HTML/CSS para máxima flexibilidade de layout.
- */
+// Interpolates between two RGB colors
+const interpolateColor = (start: number[], end: number[], t: number) =>
+  start.map((s, i) => Math.round(s + (end[i] - s) * t));
+
 export const generateProfessionalServiceReport = async (
   service: Service,
   photos: Photo[],
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório Profissional para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório Profissional V8 para: ${service.id}`, 'PDF');
     const doc = new jsPDF('p', 'pt', 'a4');
+    const { width: W, height: H } = doc.internal.pageSize;
 
-    // Template HTML com gradientes, grids e tipografia Poppins
-    const html = `
-      <html>
-      <head>
-        <meta charset="UTF-8"/>
-        <link href="${FONT_LINK}" rel="stylesheet"/>
-        <style>
-          body {
-            font-family: 'Poppins', sans-serif;
-            margin: ${PAGE_MARGIN};
-            color: ${TEXT_COLOR};
-            line-height: 1.4;
-          }
-          .cover {
-            background: linear-gradient(135deg, ${THEME_COLOR_START}, ${THEME_COLOR_END});
-            color: #fff;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 0 ${PAGE_MARGIN};
-          }
-          .cover h1 {
-            font-size: 64pt;
-            margin: 0;
-            font-weight: 700;
-          }
-          .cover h2 {
-            font-size: 28pt;
-            margin: 16px 0;
-            font-weight: 500;
-          }
-          .cover .info {
-            font-size: 12pt;
-            margin-top: 24px;
-            display: flex;
-            gap: 24px;
-          }
-          .section-title {
-            font-size: 20pt;
-            margin-top: 48px;
-            margin-bottom: 16px;
-            padding-bottom: 4px;
-            border-bottom: 4px solid ${THEME_COLOR_END};
-            font-weight: 500;
-          }
-          .two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 32px;
-            margin-top: 16px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-          }
-          th, td {
-            border: 1px solid ${BORDER_COLOR};
-            padding: 12px;
-            font-size: 10pt;
-          }
-          th {
-            background-color: ${THEME_COLOR_START};
-            color: #fff;
-            font-weight: 500;
-          }
-          .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin-top: 16px;
-          }
-          .photo-grid img {
-            width: 100%;
-            height: auto;
-            border: 1px solid ${BORDER_COLOR};
-            border-radius: 8px;
-            object-fit: cover;
-          }
-          .signature {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 48px;
-          }
-          .sig-block {
-            text-align: center;
-            font-size: 10pt;
-          }
-          .footer {
-            position: fixed;
-            bottom: ${PAGE_MARGIN};
-            width: calc(100% - 2*${PAGE_MARGIN});
-            text-align: center;
-            font-size: 8pt;
-            color: #888;
-          }
-        </style>
-      </head>
-      <body>
+    // --- EMBED FONT ---
+    // suposição: carregou via VFS antes em build
+    doc.addFont(FONT_VFS_KEY, FONT_FAMILY, 'normal');
+    doc.setFont(FONT_FAMILY);
 
-        <!-- CAPA -->
-        <div class="cover">
-          <h1>RELATÓRIO DE SERVIÇO</h1>
-          <h2>${service.title}</h2>
-          <div class="info">
-            <div><strong>Cliente:</strong> ${service.client || 'N/A'}</div>
-            <div><strong>OS:</strong> ${service.number || 'N/A'}</div>
-            <div><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div>
-          </div>
-        </div>
+    // --- CAPA GRADIENTE ---
+    const steps = 50;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const [r, g, b] = interpolateColor(THEME_COLOR_START, THEME_COLOR_END, t);
+      doc.setFillColor(r, g, b);
+      doc.rect(0, (H - H) * t, W, H / steps, 'F');
+    }
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(60);
+    doc.setFont(undefined, 'bold');
+    doc.text('RELATÓRIO DE SERVIÇO', W / 2, H / 3, { align: 'center' });
+    doc.setFontSize(36);
+    doc.setFont(undefined, 'normal');
+    doc.text(service.title, W / 2, H / 2.5, { align: 'center', maxWidth: W - 2 * PAGE_MARGIN });
 
-        <!-- RESUMO DA DEMANDA -->
-        <div class="section-title">Resumo da Demanda</div>
-        <div class="two-col">
-          <div>
-            <p><strong>Cliente:</strong> ${service.client || 'N/A'}</p>
-            <p><strong>Local:</strong> ${service.location || 'N/A'}</p>
-            <p><strong>Endereço:</strong> ${service.address || 'N/A'}</p>
-          </div>
-          <div>
-            <p><strong>Status:</strong> ${service.status}</p>
-            <p><strong>Tipo:</strong> ${service.serviceType || 'N/A'}</p>
-            <p><strong>Técnico(s):</strong> ${(service.technicians?.map(t => t.name).join(', ') || 'Nenhum')}</p>
-          </div>
-        </div>
+    // Info white box
+    const boxHeight = 100;
+    const boxY = H - PAGE_MARGIN - boxHeight;
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(PAGE_MARGIN, boxY, W - 2 * PAGE_MARGIN, boxHeight, 8, 8, 'F');
+    doc.setTextColor(TEXT_COLOR[0], TEXT_COLOR[1], TEXT_COLOR[2]);
+    doc.setFontSize(12);
+    doc.text(`Cliente: ${service.client || 'N/A'}`, PAGE_MARGIN + 20, boxY + 30);
+    doc.text(`OS: ${service.number || 'N/A'}`, PAGE_MARGIN + 20, boxY + 55);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, PAGE_MARGIN + 20, boxY + 80);
 
-        <!-- CHECKLIST TÉCNICO -->
-        ${service.customFields?.length ? `
-        <div class="section-title">Checklist Técnico</div>
-        <table>
-          <thead><tr><th>Item</th><th>Status</th></tr></thead>
-          <tbody>
-            ${service.customFields.map(f => `<tr><td>${f.label}</td><td>${typeof f.value === 'boolean' ? (f.value ? 'Sim' : 'Não') : f.value}</td></tr>`).join('')}
-          </tbody>
-        </table>
-        ` : ''}
+    // --- PÁGINA DE CONTEÚDO ---
+    doc.addPage();
 
-        <!-- REGISTRO FOTOGRÁFICO -->
-        ${photos?.length ? `
-        <div class="section-title">Registro Fotográfico</div>
-        <div class="photo-grid">
-          ${photos.map(p => `<figure><img src="${p.url}" alt="${p.title || ''}"/><figcaption style="font-size:8pt; text-align:center;">${p.title || ''}</figcaption></figure>`).join('')}
-        </div>
-        ` : ''}
+    // Header
+    doc.setFillColor(...THEME_COLOR_START);
+    doc.rect(0, 0, W, HEADER_HEIGHT, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text('RELATÓRIO DE SERVIÇO', PAGE_MARGIN, HEADER_HEIGHT / 2 + 6);
 
-        <!-- ASSINATURAS -->
-        ${(service.signatures?.client || service.signatures?.technician) ? `
-        <div class="section-title">Assinaturas</div>
-        <div class="signature">
-          ${service.signatures.client ? `<div class="sig-block"><img src="${service.signatures.client}" width="200" height="100"/><div>${service.client || 'Cliente'}</div></div>` : ''}
-          ${service.signatures.technician ? `<div class="sig-block"><img src="${service.signatures.technician}" width="200" height="100"/><div>${(service.technicians?.[0]?.name) || 'Técnico'}</div></div>` : ''}
-        </div>
-        ` : ''}
+    let cursorY = HEADER_HEIGHT + PAGE_MARGIN;
+    doc.setTextColor(TEXT_COLOR[0], TEXT_COLOR[1], TEXT_COLOR[2]);
 
-        <!-- RODAPÉ -->
-        <div class="footer">Página <span class="pageNumber"></span> de <span class="totalPages"></span></div>
-      </body>
-      </html>
-    `;
+    // Seção: Resumo da Demanda
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.text('Resumo da Demanda', PAGE_MARGIN, cursorY);
+    cursorY += 24;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    const colWidth = (W - 2 * PAGE_MARGIN) / 2 - 10;
+    // Coluna 1
+    doc.text(`Cliente: ${service.client || 'N/A'}`, PAGE_MARGIN, cursorY);
+    doc.text(`Local: ${service.location || 'N/A'}`, PAGE_MARGIN, cursorY + 16);
+    doc.text(`Endereço: ${service.address || 'N/A'}`, PAGE_MARGIN, cursorY + 32, { maxWidth: colWidth });
+    // Coluna 2
+    const rightX = PAGE_MARGIN + colWidth + 20;
+    doc.text(`Status: ${service.status}`, rightX, cursorY);
+    doc.text(`Tipo: ${service.serviceType || 'N/A'}`, rightX, cursorY + 16);
+    const techs = service.technicians?.map(t => t.name).join(', ') || 'Nenhum';
+    doc.text(`Técnico(s): ${techs}`, rightX, cursorY + 32, { maxWidth: colWidth });
+    cursorY += 60;
 
-    // Renderiza HTML/CSS no PDF
-    await doc.html(html, {
-      callback: (doc) => {
-        const fileName = `Relatorio_OS_${service.number || service.id.substring(0,6)}.pdf`;
-        doc.save(fileName);
-        logger.info(`Relatório gerado: ${fileName}`, 'PDF');
-      },
-      x: 0,
-      y: 0,
-      autoPaging: 'text',
-      html2canvas: { scale: 0.7 }
-    });
+    // Checklist Técnico
+    if (service.customFields?.length) {
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Checklist Técnico', PAGE_MARGIN, cursorY);
+      cursorY += 20;
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Item', 'Status']],
+        body: service.customFields.map(f => [f.label, typeof f.value === 'boolean' ? (f.value ? 'Sim' : 'Não') : String(f.value)]),
+        theme: 'grid',
+        headStyles: { fillColor: THEME_COLOR_END, textColor: '#FFF' },
+        styles: { fontSize: 10, cellPadding: 6 }
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 30;
+    }
+
+    // Registro Fotográfico
+    if (photos?.length) {
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Registro Fotográfico', PAGE_MARGIN, cursorY);
+      cursorY += 20;
+      const photoSize = 120;
+      let x = PAGE_MARGIN;
+      for (const p of photos) {
+        if (x + photoSize > W - PAGE_MARGIN) { x = PAGE_MARGIN; cursorY += photoSize + 30; }
+        doc.addImage(p.url, 'JPEG', x, cursorY, photoSize, photoSize);
+        doc.setFontSize(8);
+        doc.text(p.title || '', x + photoSize / 2, cursorY + photoSize + 10, { align: 'center' });
+        x += photoSize + 20;
+      }
+      cursorY += photoSize + 40;
+    }
+
+    // Assinaturas
+    if (service.signatures?.client || service.signatures?.technician) {
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Assinaturas', PAGE_MARGIN, cursorY);
+      cursorY += 20;
+      const sigY = cursorY;
+      const sigW = 180;
+      const sigH = 80;
+      if (service.signatures.client) {
+        doc.addImage(service.signatures.client, 'PNG', PAGE_MARGIN, sigY, sigW, sigH);
+        doc.text(service.client || 'Cliente', PAGE_MARGIN + sigW / 2, sigY + sigH + 15, { align: 'center' });
+      }
+      if (service.signatures.technician) {
+        doc.addImage(service.signatures.technician, 'PNG', W - PAGE_MARGIN - sigW, sigY, sigW, sigH);
+        doc.text(service.technicians?.[0]?.name || 'Técnico', W - PAGE_MARGIN - sigW / 2, sigY + sigH + 15, { align: 'center' });
+      }
+    }
+
+    // Footer com paginação
+    const pages = doc.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(...BORDER_COLOR);
+      doc.line(PAGE_MARGIN, H - FOOTER_HEIGHT, W - PAGE_MARGIN, H - FOOTER_HEIGHT);
+      doc.setFontSize(8);
+      doc.setTextColor(TEXT_COLOR[0], TEXT_COLOR[1], TEXT_COLOR[2]);
+      doc.text(`Página ${i} de ${pages}`, W / 2, H - FOOTER_HEIGHT / 2, { align: 'center' });
+    }
+
+    // Salva
+    const fileName = `Relatorio_OS_${service.number || service.id.slice(0,6)}.pdf`;
+    doc.save(fileName);
+    logger.info(`Relatório gerado: ${fileName}`, 'PDF');
 
   } catch (error) {
     logger.error(`Erro ao gerar PDF: ${error instanceof Error ? error.message : 'Desconhecido'}`, 'PDF');
