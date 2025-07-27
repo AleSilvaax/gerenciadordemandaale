@@ -1,7 +1,14 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, Users, Settings, BarChart3, Plus } from "lucide-react";
+import { 
+    Home, 
+    FileText, 
+    Users, 
+    Settings, 
+    BarChart3, 
+    Plus,
+    Calendar // 1. ÍCONE IMPORTADO
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
@@ -13,9 +20,10 @@ const Navbar = () => {
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return location.pathname.startsWith(path) && path !== "/" || location.pathname === path;
   };
 
+  // 2. LISTA DE ITENS ATUALIZADA
   const navItems = [
     {
       name: "Início",
@@ -27,6 +35,12 @@ const Navbar = () => {
       name: "Demandas",
       path: "/demandas",
       icon: FileText,
+      badge: null
+    },
+    {
+      name: "Agenda", // ITEM ADICIONADO
+      path: "/calendar",
+      icon: Calendar,
       badge: null
     },
     {
@@ -43,11 +57,24 @@ const Navbar = () => {
     },
     {
       name: "Configurações",
-      path: "/settings",
+      path: "/configuracoes", // ROTA CORRIGIDA
       icon: Settings,
       badge: null
     }
   ];
+  
+  // Lógica de filtro para os itens da Navbar (pode ser diferente da Sidebar)
+  const filteredNavItems = navItems.filter(item => {
+    if (!user) return false;
+    const { role } = user;
+
+    // Itens que só Admin e Gestor veem
+    if (["/estatisticas", "/equipe"].includes(item.path)) {
+      return role === 'administrador' || role === 'gestor';
+    }
+    return true;
+  });
+
 
   return (
     <nav className={`
@@ -61,7 +88,6 @@ const Navbar = () => {
         {/* Desktop Navigation */}
         {!isMobile && (
           <div className="flex items-center justify-between h-16">
-            {/* Logo/Brand */}
             <Link 
               to="/" 
               className="flex items-center space-x-2 font-bold text-lg xl:text-xl text-primary"
@@ -72,9 +98,8 @@ const Navbar = () => {
               <span className="hidden sm:block text-sm xl:text-base">GerenciadorDemandas</span>
             </Link>
 
-            {/* Navigation Links */}
             <div className="flex items-center space-x-1">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => { // USA A LISTA FILTRADA
                 const Icon = item.icon;
                 return (
                   <Link
@@ -100,9 +125,8 @@ const Navbar = () => {
               })}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center space-x-2">
-              <Link to="/nova-demanda">
+              <Link to="/demandas/nova"> {/* ROTA CORRIGIDA */}
                 <Button size="sm" className="flex items-center gap-2 text-sm">
                   <Plus className="w-4 h-4" />
                   Nova Demanda
@@ -115,7 +139,7 @@ const Navbar = () => {
         {/* Mobile Navigation - Fixed Bottom */}
         {isMobile && (
           <div className="flex justify-around items-center py-2 h-16">
-            {navItems.slice(0, 4).map((item) => {
+            {filteredNavItems.slice(0, 4).map((item) => { // USA A LISTA FILTRADA
               const Icon = item.icon;
               return (
                 <Link
@@ -136,7 +160,7 @@ const Navbar = () => {
                 </Link>
               );
             })}
-            <Link to="/nova-demanda" className="flex-1 max-w-[60px]">
+            <Link to="/demandas/nova" className="flex-1 max-w-[60px]"> {/* ROTA CORRIGIDA */}
               <Button 
                 size="sm" 
                 className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs w-full"
