@@ -1,208 +1,236 @@
+// ARQUIVO ATUALIZADO E COMPLETO: src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Service, CustomField } from '@/types/serviceTypes';
-import { formatDate } from '@/utils/formatters';
-import { addText, sanitizeText, checkPageBreak } from './pdfHelpers';
-import { createCoverPage, addClientSection, addPhotosSection, addSignaturesSection } from './pdfSections';
-import { logger } from '@/utils/loggingService';
+import { Service, CustomField } from '@/types/serviceTypes'; // Seus tipos existentes
+import { logger } from '@/utils/loggingService'; // Seu serviço de log
 
+// --- FUNÇÕES AUXILIARES DE DESENHO ---
+
+// Função para adicionar o cabeçalho em todas as páginas
+const addHeader = (doc: jsPDF, service: Service) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 15;
+
+  // Tente adicionar um logo (se você tiver a URL, pode carregar a imagem)
+  // Por enquanto, vamos usar um placeholder de texto
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text("Sua Empresa", margin, 20);
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text("Relatório de Serviço", pageWidth - margin, 15, { align: 'right' });
+  doc.text(`OS: ${service.number || service.id}`, pageWidth - margin, 22, { align: 'right' });
+};
+
+// Função para adicionar o rodapé em todas as páginas
 const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  const footerY = pageHeight - 15;
+  const margin = 15;
+  const footerY = doc.internal.pageSize.getHeight() - 15;
 
-  // Linha separadora
-  doc.setDrawColor(189, 195, 199);
-  doc.setLineWidth(0.3);
+  doc.setDrawColor(220, 220, 220);
   doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
-  // Informações do rodapé
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(127, 140, 141);
+  doc.setTextColor(150, 150, 150);
   doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, footerY);
   doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
 };
 
+// --- FUNÇÃO PRINCIPAL ---
+
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   try {
-    logger.info(`Iniciando geração do relatório profissional para serviço: ${service.id}`, 'PDF');
+    logger.info(`Iniciando geração do relatório V2 para serviço: ${service.id}`, 'PDF');
     
-    const doc = new jsPDF();
-    const margin = 20;
+    const doc = new jsPDF('p', 'pt', 'a4'); // Usando 'pt' para mais controle, e 'a4' como padrão
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40; // Margem de ~1.4cm
+    let currentY = 80; // Posição inicial do conteúdo, abaixo do cabeçalho
 
-    // === PÁGINA DE CAPA ===
-    createCoverPage(doc, service);
-    doc.addPage();
-    let currentY = 30;
+    // --- SEÇÃO 1: RESUMO (CLIENTE E SERVIÇO) ---
+    doc.setFontSize(11);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont('helvetica', 'normal');
 
-    // === DADOS DO CLIENTE ===
-    currentY = addClientSection(doc, service, currentY);
-    currentY += 10;
+    // Coluna da Esquerda: Dados do Cliente
+    doc.setFont('helvetica', 'bold');
+    doc.text("DADOS DO CLIENTE", margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    currentY += 15;
+    doc.text(`Cliente: ${service.client || 'Não informado'}`, margin, currentY);
+    currentY += 15;
+    doc.text(`Local: ${service.location || 'Não informado'}`, margin, currentY);
+    currentY += 15;
+    
+    // Usando autoTable para formatar o endereço que pode ter várias linhas
+    autoTable(doc, {
+        body: [[`Endereço: ${service.address || 'Não informado'}`]],
+        startY: currentY,
+        theme: 'plain',
+        styles: { fontSize: 11, cellPadding: 0 },
+        margin: { left: margin }
+    });
+    currentY = (doc as any).lastAutoTable.finalY;
 
-    // === DESCRIÇÃO DO SERVIÇO ===
-    if (service.description) {
-      currentY = checkPageBreak(doc, currentY, 40);
-      currentY = addText(doc, 'DESCRIÇÃO DO SERVIÇO', margin, currentY, {
-        fontSize: 16,
-        fontStyle: 'bold',
-        color: [41, 128, 185]
-      });
+    // Coluna da Direita: Dados do Serviço
+    currentY = 80; // Reseta o Y para alinhar com a coluna da esquerda
+    const rightColumnX = pageWidth / 2 + 20;
+    doc.setFont('helvetica', 'bold');
+    doc.text("DADOS DO SERVIÇO", rightColumnX, currentY);
+    doc.setFont('helvetica', 'normal');
+    currentY += 15;
+    doc.text(`Status: ${service.status || 'Não informado'}`, rightColumnX, currentY);
+    currentY += 15;
+    doc.text(`Tipo de Serviço: ${service.serviceType || 'Não informado'}`, rightColumnX, currentY);
+    currentY += 15;
+    doc.text(`Técnico: ${service.technicians?.map(t => t.name).join(', ') || 'Não atribuído'}`, rightColumnX, currentY);
+    currentY = (doc as any).lastAutoTable.finalY + 30; // Pega a maior altura entre as duas colunas
+    
+    // --- SEÇÃO 2: DESCRIÇÃO DO SERVIÇO ---
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text("Descrição do Serviço", margin, currentY);
+    currentY += 20;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const descriptionLines = doc.splitTextToSize(service.description || 'Nenhuma descrição fornecida.', pageWidth - margin * 2);
+    doc.text(descriptionLines, margin, currentY);
+    currentY += descriptionLines.length * 12 + 30;
 
-      doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(1);
-      doc.line(margin, currentY, 210 - margin, currentY);
-      currentY += 15;
 
-      currentY = addText(doc, sanitizeText(service.description), margin, currentY, {
-        fontSize: 11,
-        color: [52, 73, 94],
-        maxWidth: 170
-      });
-      currentY += 20;
-    }
-
-    // === CHECKLIST TÉCNICO ===
+    // --- SEÇÃO 3: CHECKLIST TÉCNICO (CAMPOS PERSONALIZADOS) ---
     if (service.customFields && service.customFields.length > 0) {
-      currentY = checkPageBreak(doc, currentY, 60);
-      currentY = addText(doc, 'CHECKLIST TÉCNICO', margin, currentY, {
-        fontSize: 16,
-        fontStyle: 'bold',
-        color: [41, 128, 185]
-      });
+      // Verifica se precisa de uma nova página
+      if (currentY > doc.internal.pageSize.getHeight() - 200) {
+        doc.addPage();
+        currentY = 80;
+      }
 
-      doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(1);
-      doc.line(margin, currentY, 210 - margin, currentY);
-      currentY += 15;
-
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Checklist Técnico", margin, currentY);
+      currentY += 20;
+      
       const tableData = service.customFields.map((field: CustomField) => [
-        sanitizeText(field.label || 'Campo'),
-        sanitizeText(field.value?.toString() || 'N/A')
+        field.label || 'Campo',
+        // Converte valores booleanos para 'Sim'/'Não' para ficar mais legível
+        typeof field.value === 'boolean' ? (field.value ? 'Sim' : 'Não') : (field.value?.toString() || 'N/A')
       ]);
 
       autoTable(doc, {
-        head: [['Item', 'Status/Valor']],
+        head: [['Item', 'Status / Valor']],
         body: tableData,
         startY: currentY,
-        styles: {
-          fontSize: 10,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [41, 128, 185],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [248, 249, 250],
-        },
-        didDrawPage: (data) => {
-          const pageHeight = doc.internal.pageSize.getHeight();
-          const footerY = pageHeight - 15;
-          doc.setDrawColor(189, 195, 199);
-          doc.line(margin, footerY - 5, doc.internal.pageSize.getWidth() - margin, footerY - 5);
-          doc.setFontSize(8);
-          doc.setTextColor(127, 140, 141);
-          doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, footerY);
+        theme: 'grid',
+        headStyles: { fillColor: [52, 73, 94] },
+        styles: { fontSize: 10, cellPadding: 5 },
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 30;
+    }
+
+
+    // --- SEÇÃO 4: REGISTRO FOTOGRÁFICO ---
+    if (service.photos && service.photos.length > 0) {
+        doc.addPage();
+        currentY = 80;
+
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Registro Fotográfico", margin, currentY);
+        currentY += 20;
+
+        const photoSize = (pageWidth - margin * 2 - 20) / 2; // Tamanho para 2 fotos por linha com um espaço
+        const photoMargin = 20;
+        let photoX = margin;
+
+        for (let i = 0; i < service.photos.length; i++) {
+            const photoUrl = service.photos[i];
+            
+            // Verifica se precisa de uma nova página
+            if (currentY + photoSize > doc.internal.pageSize.getHeight() - 60) {
+                doc.addPage();
+                currentY = 80;
+            }
+
+            try {
+                // Para carregar imagens da web, precisamos de um truque de CORS
+                // Esta é uma implementação simplificada. Pode ser necessário um proxy para CORS.
+                const response = await fetch(photoUrl);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                await new Promise<void>(resolve => {
+                    reader.onload = () => {
+                        doc.addImage(reader.result as string, 'JPEG', photoX, currentY, photoSize, photoSize);
+                        
+                        // Alterna a posição da foto
+                        if ((i + 1) % 2 === 0) {
+                            currentY += photoSize + photoMargin;
+                            photoX = margin;
+                        } else {
+                            photoX += photoSize + photoMargin;
+                        }
+                        resolve();
+                    };
+                    reader.readAsDataURL(blob);
+                });
+
+            } catch(e) {
+                doc.text(`Erro ao carregar foto ${i+1}`, photoX, currentY + photoSize / 2);
+            }
         }
-      });
-
-      currentY = (doc as any).lastAutoTable.finalY + 20;
+        currentY += 30;
     }
 
-    // === REGISTRO FOTOGRÁFICO ===
-    currentY = await addPhotosSection(doc, service, currentY);
+    // --- SEÇÃO 5: ASSINATURAS ---
+    if (service.signatures?.client || service.signatures?.technician) {
+        doc.addPage();
+        currentY = 80;
 
-    // === HISTÓRICO DE COMUNICAÇÃO ===
-    if (service.messages && service.messages.length > 0) {
-      currentY = checkPageBreak(doc, currentY, 60);
-      currentY = addText(doc, 'HISTÓRICO DE COMUNICAÇÃO', margin, currentY, {
-        fontSize: 16,
-        fontStyle: 'bold',
-        color: [41, 128, 185]
-      });
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Assinaturas", margin, currentY);
+        currentY += 50;
 
-      doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(1);
-      doc.line(margin, currentY, 210 - margin, currentY);
-      currentY += 15;
+        const signatureY = currentY;
+        const signatureWidth = 150;
+        const signatureHeight = 75;
 
-      service.messages.slice(0, 5).forEach((message, index) => {
-        currentY = checkPageBreak(doc, currentY, 30);
-        
-        currentY = addText(doc, `${index + 1}. ${sanitizeText(message.message)}`, margin, currentY, {
-          fontSize: 10,
-          color: [52, 73, 94],
-          maxWidth: 170
-        });
-        
-        currentY = addText(doc, `Por: ${sanitizeText(message.senderName)} - ${formatDate(message.timestamp)}`, margin + 10, currentY, {
-          fontSize: 8,
-          color: [127, 140, 141],
-          maxWidth: 160
-        });
-        currentY += 5;
-      });
-      currentY += 15;
+        // Assinatura do Cliente
+        if (service.signatures.client) {
+            doc.addImage(service.signatures.client, 'PNG', margin, signatureY, signatureWidth, signatureHeight);
+            doc.line(margin, signatureY + signatureHeight + 5, margin + signatureWidth, signatureY + signatureHeight + 5);
+            doc.text("Assinatura do Cliente", margin, signatureY + signatureHeight + 20);
+        }
+
+        // Assinatura do Técnico
+        if (service.signatures.technician) {
+            const techX = pageWidth - margin - signatureWidth;
+            doc.addImage(service.signatures.technician, 'PNG', techX, signatureY, signatureWidth, signatureHeight);
+            doc.line(techX, signatureY + signatureHeight + 5, techX + signatureWidth, signatureY + signatureHeight + 5);
+            doc.text("Assinatura do Técnico", techX, signatureY + signatureHeight + 20);
+        }
     }
 
-    // === AVALIAÇÃO DO CLIENTE ===
-    if (service.feedback) {
-      currentY = checkPageBreak(doc, currentY, 40);
-      currentY = addText(doc, 'AVALIAÇÃO DO CLIENTE', margin, currentY, {
-        fontSize: 16,
-        fontStyle: 'bold',
-        color: [41, 128, 185]
-      });
 
-      doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(1);
-      doc.line(margin, currentY, 210 - margin, currentY);
-      currentY += 15;
-
-      if (service.feedback.clientRating) {
-        currentY = addText(doc, `Nota: ${service.feedback.clientRating}/5`, margin, currentY, {
-          fontSize: 12,
-          fontStyle: 'bold',
-          color: [52, 73, 94]
-        });
-      }
-
-      if (service.feedback.clientComment) {
-        currentY = addText(doc, `Comentário: ${sanitizeText(service.feedback.clientComment)}`, margin, currentY, {
-          fontSize: 11,
-          color: [52, 73, 94],
-          maxWidth: 170
-        });
-      }
-      currentY += 15;
-    }
-
-    // === ASSINATURAS ===
-    currentY = await addSignaturesSection(doc, service, currentY);
-
-    // === ADICIONAR RODAPÉ COM NÚMERO TOTAL DE PÁGINAS ===
+    // --- FINALIZAÇÃO: Adiciona cabeçalho e rodapé em todas as páginas ---
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const footerY = doc.internal.pageSize.getHeight() - 15;
-      
-      doc.setFontSize(8);
-      doc.setTextColor(127, 140, 141);
-      doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, footerY, { align: 'right' });
+      addHeader(doc, service);
+      addFooter(doc, i, pageCount);
     }
 
-    const fileName = `relatorio_servico_${sanitizeText(service.number || service.id.substring(0, 8))}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
     doc.save(fileName);
-
-    logger.info(`Relatório profissional gerado com sucesso: ${fileName}`, 'PDF');
+    logger.info(`Relatório V2 gerado: ${fileName}`, 'PDF');
 
   } catch (error) {
-    logger.error(`Erro ao gerar relatório profissional: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
-    throw new Error('Erro ao gerar relatório PDF profissional: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    logger.error(`Erro ao gerar relatório V2: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
+    throw new Error('Erro ao gerar relatório PDF V2: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
