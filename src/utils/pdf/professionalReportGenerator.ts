@@ -1,4 +1,4 @@
-// ARQUIVO COMPLETO E FINAL (VERSÃO ESTÁVEL V7.4): src/utils/pdf/professionalReportGenerator.ts
+// ARQUIVO COMPLETO E FINAL (VERSÃO ESTÁVEL V7.5): src/utils/pdf/professionalReportGenerator.ts
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -6,7 +6,8 @@ import { Service, Photo, CustomField, User } from '@/types/serviceTypes';
 import { logger } from '@/utils/loggingService';
 
 // --- PALETA DE DESIGN ---
-const THEME_COLOR = [30, 80, 160];
+const THEME_COLOR_DARK = [30, 80, 160];
+const THEME_COLOR_LIGHT = [75, 125, 200];
 const HEADING_COLOR = [45, 52, 54];
 const BODY_TEXT_COLOR = [99, 110, 114];
 const BORDER_COLOR = [223, 230, 233];
@@ -24,13 +25,12 @@ const addPageHeaderAndFooter = (doc: jsPDF, pageNum: number, totalPages: number)
     doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
 };
 
-// CORREÇÃO 1: Removidos os ícones que causavam erro de caractere.
 const addSectionTitle = (doc: jsPDF, title: string, y: number) => {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
     doc.text(title, PAGE_MARGIN, y);
-    doc.setDrawColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
+    doc.setDrawColor(THEME_COLOR_DARK[0], THEME_COLOR_DARK[1], THEME_COLOR_DARK[2]);
     doc.setLineWidth(1.5);
     doc.line(PAGE_MARGIN, y + 5, PAGE_MARGIN + 40, y + 5);
     return y + 40;
@@ -49,56 +49,64 @@ export const generateProfessionalServiceReport = async (
   user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório Estável V7.4 para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório Estável V7.5 para: ${service.id}`, 'PDF');
     
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // --- PÁGINA 1: CAPA (CORREÇÃO 2 - Novo Design Gráfico) ---
+    // --- PÁGINA 1: CAPA (NOVO DESIGN MODERNO) ---
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-    // Elemento gráfico de fundo
-    doc.setFillColor(THEME_COLOR[0], THEME_COLOR[1], THEME_COLOR[2]);
-    doc.rect(0, 0, pageWidth / 2.5, pageHeight, 'F');
+    // Elementos gráficos de design no canto inferior esquerdo
+    doc.setFillColor(THEME_COLOR_LIGHT[0], THEME_COLOR_LIGHT[1], THEME_COLOR_LIGHT[2]);
+    doc.rect(0, pageHeight - 200, pageWidth / 2, 200, 'F');
+    doc.setFillColor(THEME_COLOR_DARK[0], THEME_COLOR_DARK[1], THEME_COLOR_DARK[2]);
+    doc.rect(0, pageHeight - 180, pageWidth / 1.5, 180, 'F');
 
-    // Títulos na capa
+    // Título principal do Relatório
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(255, 255, 255);
-    doc.text("RELATÓRIO DE SERVIÇO", 40, 80);
-
-    doc.setFontSize(36);
-    const titleLines = doc.splitTextToSize(sanitizeText(service.title), (pageWidth / 2.5) - 60);
-    doc.text(titleLines, 40, 140);
-    
-    // Informações no lado direito
-    const rightColumnX = pageWidth / 2.5 + 40;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(42);
     doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
-    doc.text('Cliente:', rightColumnX, pageHeight - 120);
-    doc.text('Ordem de Serviço:', rightColumnX, pageHeight - 100);
-    doc.text('Data de Geração:', rightColumnX, pageHeight - 80);
+    doc.text("Relatório de Serviço", PAGE_MARGIN, 120);
 
+    // Linha decorativa
+    doc.setDrawColor(THEME_COLOR_DARK[0], THEME_COLOR_DARK[1], THEME_COLOR_DARK[2]);
+    doc.setLineWidth(3);
+    doc.line(PAGE_MARGIN, 135, PAGE_MARGIN + 80, 135);
+
+    // Título da Demanda
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
-    doc.text(sanitizeText(service.client), rightColumnX + 120, pageHeight - 120);
-    doc.text(sanitizeText(service.number), rightColumnX + 120, pageHeight - 100);
-    doc.text(new Date().toLocaleDateString('pt-BR'), rightColumnX + 120, pageHeight - 80);
+    doc.setFontSize(22);
+    const titleLines = doc.splitTextToSize(sanitizeText(service.title), pageWidth - (PAGE_MARGIN * 2));
+    doc.text(titleLines, PAGE_MARGIN, 200);
 
+    // Bloco de informações principais (alinhado à direita)
+    const rightInfoX = pageWidth - PAGE_MARGIN - 200;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(BODY_TEXT_COLOR[0], BODY_TEXT_COLOR[1], BODY_TEXT_COLOR[2]);
+    doc.text('CLIENTE', rightInfoX, pageHeight / 2 + 80);
+    doc.text('ORDEM DE SERVIÇO', rightInfoX, pageHeight / 2 + 120);
+    doc.text('DATA DE GERAÇÃO', rightInfoX, pageHeight / 2 + 160);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(HEADING_COLOR[0], HEADING_COLOR[1], HEADING_COLOR[2]);
+    doc.text(sanitizeText(service.client), rightInfoX, pageHeight / 2 + 95);
+    doc.text(sanitizeText(service.number), rightInfoX, pageHeight / 2 + 135);
+    doc.text(new Date().toLocaleDateString('pt-BR'), rightInfoX, pageHeight / 2 + 175);
+    
 
     // --- PÁGINAS DE CONTEÚDO ---
     doc.addPage();
     let currentY = 70;
 
     currentY = addSectionTitle(doc, "Resumo da Demanda", currentY);
-    // ... (resto do código igual) ...
     const techniciansText = (service.technicians && service.technicians.length > 0) 
       ? service.technicians.map(t => sanitizeText(t.name)).join(', ') 
       : 'Nenhum técnico atribuído';
-      
     autoTable(doc, {
         startY: currentY,
         body: [
@@ -115,7 +123,6 @@ export const generateProfessionalServiceReport = async (
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120 } }
     });
     currentY = (doc as any).lastAutoTable.finalY + 50;
-
 
     if (service.customFields && service.customFields.length > 0) {
         if (currentY > pageHeight - 200) { doc.addPage(); currentY = 70; }
@@ -134,12 +141,10 @@ export const generateProfessionalServiceReport = async (
     if (photos && photos.length > 0) {
         if (currentY > pageHeight - 300) { doc.addPage(); currentY = 70; }
         currentY = addSectionTitle(doc, "Registro Fotográfico", currentY);
-        
         const photoSize = (pageWidth - (PAGE_MARGIN * 2) - 40) / 2;
         const initialX = PAGE_MARGIN;
         let x = initialX;
         let photoCountInRow = 0;
-
         for (const photo of photos) {
             if (photoCountInRow >= 2) {
                 x = initialX;
@@ -162,25 +167,23 @@ export const generateProfessionalServiceReport = async (
         currentY += photoSize + 50;
     }
     
-    // CORREÇÃO 3: Assinaturas sempre em uma nova página
     if (service.signatures?.client || service.signatures?.technician) {
-        doc.addPage(); // Força uma nova página
-        currentY = 70; // Reseta a posição Y
+        doc.addPage();
+        currentY = 70;
         currentY = addSectionTitle(doc, "Assinaturas", currentY);
         const sigY = currentY;
         const sigWidth = 200;
         const sigHeight = 100;
         if (service.signatures.client) {
-            const clientX = PAGE_MARGIN + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2; // Centraliza na primeira metade
+            const clientX = PAGE_MARGIN + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2;
             doc.addImage(service.signatures.client, 'PNG', clientX, sigY, sigWidth, sigHeight);
             doc.line(clientX, sigY + sigHeight + 5, clientX + sigWidth, sigY + sigHeight + 5);
             doc.text(sanitizeText(service.client), clientX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
         }
         if (service.signatures.technician) {
-            const techX = (pageWidth / 2) + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2; // Centraliza na segunda metade
+            const techX = (pageWidth / 2) + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2;
             doc.addImage(service.signatures.technician, 'PNG', techX, sigY, sigWidth, sigHeight);
             doc.line(techX, sigY + sigHeight + 5, techX + sigWidth, sigY + sigHeight + 5);
-            
             const technicianName = (service.technicians && service.technicians.length > 0 && service.technicians[0].name)
                                    ? sanitizeText(service.technicians[0].name)
                                    : 'Técnico';
@@ -196,10 +199,10 @@ export const generateProfessionalServiceReport = async (
     
     const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
     doc.save(fileName);
-    logger.info(`Relatório Estável V7.4 gerado: ${fileName}`, 'PDF');
+    logger.info(`Relatório Estável V7.5 gerado: ${fileName}`, 'PDF');
 
   } catch (error) {
-    logger.error(`Erro ao gerar Relatório Estável V7.4: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
+    logger.error(`Erro ao gerar Relatório Estável V7.5: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
     throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
