@@ -40,14 +40,26 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handlePhotosChange
   } = useServiceDetail();
 
-  const handleGenerateReport = async () => {
+   const handleGenerateReport = async () => {
     if (!service) {
       toast.error("Serviço não encontrado");
       return;
     }
 
     try {
-      console.log('[ServiceDetail] Gerando relatório profissional para:', service.title);
+      console.log('[ServiceDetail] Gerando relatório V3 para:', service.title);
+      toast.info("Gerando relatório profissional...");
+
+      // Agora enviamos não só o serviço, mas também as fotos (com seus títulos)
+      // e os membros da equipe para que o PDF possa usar seus nomes.
+      await generateProfessionalServiceReport(service, photos);
+      
+      toast.success("Relatório profissional gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error("Erro ao gerar relatório profissional");
+    }
+  };
       
       // Criar serviço atualizado com fotos e assinaturas mais recentes
       const updatedService = {
