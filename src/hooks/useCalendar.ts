@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +11,6 @@ export const useCalendar = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Fetch services to simulate calendar events
   const {
     data: services = [],
     isLoading,
@@ -36,15 +34,28 @@ export const useCalendar = () => {
 
       // Se for técnico, filtrar por serviços atribuídos
       if (user.role === 'tecnico') {
-        const { data: technicianServices } = await supabase
+        const { data: technicianServices, error: techError } = await supabase
           .from('service_technicians')
           .select('service_id')
           .eq('technician_id', user.id);
 
-        if (technicianServices) {
-          const serviceIds = technicianServices.map(st => st.service_id);
-          query = query.in('id', serviceIds);
+        if (techError) {
+          console.error('[Calendar] Erro ao buscar serviços do técnico:', techError);
+          throw techError; // Propaga o erro para o react-query
         }
+
+        // --- A CORREÇÃO ESTÁ AQUI ---
+        // Se o técnico não tiver serviços, a lista de IDs estará vazia.
+        const serviceIds = technicianServices?.map(st => st.service_id) || [];
+        
+        // Se a lista de IDs estiver vazia, não há nada para buscar.
+        // Retornamos um array vazio imediatamente para evitar a requisição inválida.
+        if (serviceIds.length === 0) {
+          return [];
+        }
+        
+        // Se houver IDs, aplicamos o filtro.
+        query = query.in('id', serviceIds);
       }
 
       const { data, error } = await query;
@@ -96,21 +107,14 @@ export const useCalendar = () => {
   };
 
   return {
-    // Data
     schedules: services,
     calendarEvents,
     selectedDate,
-    
-    // State
     isLoading,
     error,
-    
-    // Actions
     setSelectedDate,
     getDayEvents,
     refetch,
-    
-    // Loading states
     isCreating: false,
     isUpdating: false,
     isDeleting: false,
