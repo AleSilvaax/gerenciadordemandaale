@@ -11,8 +11,8 @@ export const useServiceTypes = () => {
     error,
     refetch
   } = useQuery<ServiceTypeConfig[]>({ // Especificamos o tipo de dado esperado
-    queryKey: ['service-types-list'],   // Chave de cache única
-    queryFn: getServiceTypesFromDatabase, // Função que busca os dados
+    queryKey: ['service-types-list'],   // Chave de cache única para os tipos de serviço
+    queryFn: getServiceTypesFromDatabase, // A função que busca os dados
     staleTime: 5 * 60 * 1000,           // Cache de 5 minutos
 
     // A lógica crucial que impede os dados de sumirem durante a atualização
