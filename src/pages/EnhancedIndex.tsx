@@ -330,7 +330,7 @@ const EnhancedIndex: React.FC = () => {
             <TabsContent value="quick-actions" className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/nova-demanda" className="block">
+                  <Link to="/demandas/nova" className="block">
                     <CardContent className="p-8 text-center">
                       <Plus className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
                       <h3 className="font-semibold mb-2 text-left-force">Nova Demanda</h3>
