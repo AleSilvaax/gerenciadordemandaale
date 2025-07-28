@@ -1,8 +1,10 @@
 // ARQUIVO ATUALIZADO E PADRONIZADO: src/hooks/useTeamMembers.ts
 
 import { useQuery } from '@tanstack/react-query';
-import { getTeamMembers } from '@/services/teamMembersService'; // Verifique se este é o caminho correto para sua função
-import { TeamMember } from '@/types/serviceTypes'; // Verifique se este é o tipo correto
+// ATENÇÃO: Verifique se a função que busca os membros da equipe está neste arquivo.
+// O nome pode ser ligeiramente diferente (ex: getTeamMembersFromDatabase).
+import { getTeamMembers } from '@/services/teamMembersService'; 
+import { TeamMember } from '@/types/serviceTypes';
 
 export const useTeamMembers = () => {
   const {
