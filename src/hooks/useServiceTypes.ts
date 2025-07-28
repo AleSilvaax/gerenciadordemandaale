@@ -1,47 +1,34 @@
+// ARQUIVO ATUALIZADO E PADRONIZADO: src/hooks/useServiceTypes.ts
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getServiceTypesFromDatabase } from '@/services/serviceTypesService';
 import { ServiceTypeConfig } from '@/types/serviceTypes';
 
 export const useServiceTypes = () => {
-  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchServiceTypes = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('[useServiceTypes] Carregando todos os tipos de serviço...');
-      
-      const types = await getServiceTypesFromDatabase();
-      console.log('[useServiceTypes] Tipos carregados:', types.length);
-      console.log('[useServiceTypes] Lista de tipos:', types.map(t => t.name));
-      
-      setServiceTypes(types);
-    } catch (err) {
-      console.error('[useServiceTypes] Erro ao carregar tipos:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      
-      // Fallback: tipos padrão se houver erro
-      setServiceTypes([
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchServiceTypes();
-  }, []);
-
-  return {
-    serviceTypes,
+  const {
+    data: serviceTypes,
     isLoading,
     error,
-    refetch: fetchServiceTypes,
+    refetch
+  } = useQuery<ServiceTypeConfig[]>({ // Especificamos o tipo de dado esperado
+    queryKey: ['service-types-list'],   // Chave de cache única
+    queryFn: getServiceTypesFromDatabase, // Função que busca os dados
+    staleTime: 5 * 60 * 1000,           // Cache de 5 minutos
+
+    // A lógica crucial que impede os dados de sumirem durante a atualização
+    placeholderData: (previousData) => previousData,
+    
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    // Retornamos os dados diretamente do useQuery. 
+    // O '?? []' garante que, se não houver dados, retorne um array vazio.
+    serviceTypes: serviceTypes ?? [], 
+    isLoading,
+    error,
+    // Renomeamos 'refetch' para uma função com nome mais específico
+    refetchServiceTypes: refetch,
   };
 };
