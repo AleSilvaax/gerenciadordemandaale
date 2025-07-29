@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -14,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowLeft, Plus, Calendar, MapPin, FileText, User } from "lucide-react";
+// Ícone para o novo campo de Prioridade
+import { ArrowLeft, Plus, Calendar, MapPin, FileText, User, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ServiceTypeConfig, TeamMember } from "@/types/serviceTypes";
+import { ServiceTypeConfig, TeamMember, ServicePriority } from "@/types/serviceTypes";
 
+// 1. ADICIONADO 'priority' À INTERFACE DO FORMULÁRIO
 interface ServiceFormData {
   title: string;
   serviceType: string;
@@ -29,6 +29,7 @@ interface ServiceFormData {
   notes: string;
   dueDate: string;
   technicianId: string;
+  priority: ServicePriority; // <-- ADICIONADO
 }
 
 const NewService: React.FC = () => {
@@ -38,7 +39,6 @@ const NewService: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Function to check if user has gestor permission - simplified since we don't have hasPermission in AuthContext
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
   const form = useForm<ServiceFormData>({
@@ -53,6 +53,7 @@ const NewService: React.FC = () => {
       notes: "",
       dueDate: "",
       technicianId: "none",
+      priority: "media", // <-- 2. ADICIONADO VALOR PADRÃO PARA 'priority'
     },
   });
 
@@ -80,7 +81,6 @@ const NewService: React.FC = () => {
     try {
       console.log("Criando nova demanda:", data);
 
-      // Encontrar o técnico selecionado
       let selectedTechnician = null;
       if (hasGestorPermission && data.technicianId && data.technicianId !== "none") {
         const technician = teamMembers.find(t => t.id === data.technicianId);
@@ -96,7 +96,6 @@ const NewService: React.FC = () => {
           };
         }
       } else if (!hasGestorPermission && user) {
-        // Se não é gestor, atribuir a si mesmo
         selectedTechnician = {
           id: user.id,
           name: user.name || "Usuário",
@@ -120,7 +119,7 @@ const NewService: React.FC = () => {
         dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
         technician: selectedTechnician,
         status: "pendente" as const,
-        priority: "media" as const,
+        priority: data.priority, // <-- 3. ALTERADO DE VALOR FIXO PARA VALOR DO FORMULÁRIO
         createdBy: user?.id,
         creationDate: new Date().toISOString(),
       };
@@ -249,6 +248,33 @@ const NewService: React.FC = () => {
                       )}
                     />
 
+                    {/* Prioridade */}
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" />
+                            Prioridade
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-background/50">
+                                <SelectValue placeholder="Selecione a prioridade" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="urgente">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
                     {/* Localidade */}
                     <FormField
                       control={form.control}
@@ -322,10 +348,8 @@ const NewService: React.FC = () => {
                               type="date"
                               className="bg-background/50"
                               onChange={(e) => {
-                                // Corrigir timezone: usar data exata sem conversão UTC
                                 const selectedDate = e.target.value;
                                 if (selectedDate) {
-                                  // Manter a data exata sem conversão de timezone
                                   const localDate = new Date(selectedDate + 'T00:00:00');
                                   field.onChange(localDate.toISOString().split('T')[0]);
                                 } else {
@@ -436,4 +460,3 @@ const NewService: React.FC = () => {
 };
 
 export default NewService;
-
