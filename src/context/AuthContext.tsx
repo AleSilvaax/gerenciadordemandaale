@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // O estado 'initialized' não é mais necessário com a nova lógica
+  const [initialized, setInitialized] = useState(false);
 
   const buildUserProfile = useCallback(async (authUser: User): Promise<AuthUser> => {
     try {
@@ -102,43 +102,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // ===== INÍCIO DA ALTERAÇÃO =====
-  // Os dois useEffects anteriores foram substituídos por este único useEffect mais robusto.
+  // Inicializar autenticação
   useEffect(() => {
-    // 1. Tenta pegar a sessão inicial assim que o app carrega
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const userProfile = await buildUserProfile(session.user);
-        setSession(session);
-        setUser(userProfile);
-      }
-      setIsLoading(false);
-    });
-
-    // 2. Ouve por todas as mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // Se o evento for de logout, limpa o estado
-        if (event === 'SIGNED_OUT') {
+    let mounted = true;
+    
+    const initializeAuth = async () => {
+      try {
+        // Verificar sessão atual
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[Auth] Erro ao obter sessão:', error);
+          cleanAuthState();
+        }
+        
+        if (mounted) {
+          if (currentSession?.user) {
+            setSession(currentSession);
+            const userProfile = await buildUserProfile(currentSession.user);
+            setUser(userProfile);
+          } else {
+            setSession(null);
+            setUser(null);
+          }
+          setIsLoading(false);
+          setInitialized(true);
+        }
+      } catch (error) {
+        console.error('[Auth] Erro na inicialização:', error);
+        if (mounted) {
           setSession(null);
           setUser(null);
-          cleanAuthState();
-        } 
-        // Para qualquer outro evento com sessão (SIGNED_IN, TOKEN_REFRESHED, etc.)
-        else if (session) {
-          const userProfile = await buildUserProfile(session.user);
-          setSession(session);
-          setUser(userProfile);
+          setIsLoading(false);
+          setInitialized(true);
         }
+      }
+    };
+
+    initializeAuth();
+    return () => { mounted = false; };
+  }, [buildUserProfile]);
+
+  // Listener para mudanças de estado de autenticação
+  useEffect(() => {
+    if (!initialized) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('[Auth] Evento:', event);
+        
+        try {
+          // ===== INÍCIO DA ALTERAÇÃO =====
+          if (event === 'SIGNED_OUT') {
+            setSession(null);
+            setUser(null);
+            cleanAuthState();
+          } else if (newSession?.user) {
+            // Esta condição agora lida com SIGNED_IN, TOKEN_REFRESHED, e USER_UPDATED
+            // Apenas atualiza o perfil se o usuário for diferente do atual para otimizar
+            if (newSession.user.id !== user?.id) {
+              const userProfile = await buildUserProfile(newSession.user);
+              setUser(userProfile);
+            }
+            setSession(newSession); // Sempre atualiza a sessão
+          }
+          // ===== FIM DA ALTERAÇÃO =====
+        } catch (error) {
+          console.error('[Auth] Erro no listener:', error);
+          setSession(null);
+          setUser(null);
+        }
+        
+        setIsLoading(false);
       }
     );
 
-    // 3. Limpa o listener ao desmontar o componente
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, [buildUserProfile]);
-  // ===== FIM DA ALTERAÇÃO =====
+    return () => subscription.unsubscribe();
+  }, [initialized, buildUserProfile, user]); // Adicionado 'user' à dependência para a comparação
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
