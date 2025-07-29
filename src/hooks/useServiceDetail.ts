@@ -22,9 +22,7 @@ export const useServiceDetail = () => {
   const fetchService = useCallback(async (serviceId: string) => {
     setIsLoading(true);
     try {
-      console.log('[useServiceDetail] Buscando detalhes do serviço:', serviceId);
-
-      // Passo 1: Buscar os dados principais do serviço.
+      // Passo 1: Buscar os dados principais do serviço. É a consulta mais importante.
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
         .select('*')
@@ -36,7 +34,7 @@ export const useServiceDetail = () => {
 
       let completeServiceData: Service = serviceData as Service;
 
-      // Passo 2: Buscar as mensagens associadas à demanda.
+      // Passo 2: Buscar as mensagens de forma segura e separada.
       const { data: messagesData, error: messagesError } = await supabase
         .from('service_messages')
         .select('*')
@@ -44,7 +42,7 @@ export const useServiceDetail = () => {
         .order('created_at', { ascending: true });
 
       if (messagesError) {
-        console.warn("Não foi possível carregar as mensagens:", messagesError);
+        console.warn("Não foi possível carregar as mensagens:", messagesError.message);
         completeServiceData.messages = [];
       } else {
         completeServiceData.messages = messagesData || [];
@@ -59,7 +57,7 @@ export const useServiceDetail = () => {
           .single();
         
         if (technicianError) {
-          console.warn("Não foi possível carregar os detalhes do técnico:", technicianError);
+          console.warn("Não foi possível carregar os detalhes do técnico:", technicianError.message);
         } else if (technicianData) {
           completeServiceData.technician = {
               id: technicianData.id,
@@ -78,7 +76,7 @@ export const useServiceDetail = () => {
         .order('created_at', { ascending: true });
 
       if (photosError) {
-        console.warn("Não foi possível carregar as fotos:", photosError);
+        console.warn("Não foi possível carregar as fotos:", photosError.message);
         setPhotos([]);
       } else if (photosData) {
         const loadedPhotos: Photo[] = (photosData || []).map((photo, index) => ({
@@ -133,26 +131,23 @@ export const useServiceDetail = () => {
     if (!service || !newMessage.trim() || !user) return;
     
     try {
-      // ===== CORREÇÃO: Objeto de mensagem criado com as propriedades corretas =====
-      const messageData: ServiceMessage = {
-        senderId: user.id,
+      const messageData: Partial<ServiceMessage> = {
+        service_id: service.id,
+        user_id: user.id, // Corrigido de senderId para user_id se for o caso no seu BD
+        sender_id: user.id, // Adicionando ambos para garantir
+        user_name: user.name || "Usuário",
         senderName: user.name || "Usuário",
         senderRole: user.role || "tecnico",
-        message: newMessage.trim(),
-        // Incluindo propriedades que o tipo ServiceMessage pode esperar
-        id: '', 
-        service_id: service.id,
-        created_at: new Date().toISOString(),
+        content: newMessage.trim(),
+        message: newMessage.trim()
       };
       
-      await addServiceMessage(service.id, messageData);
+      const addedMessage = await addServiceMessage(service.id, messageData as ServiceMessage);
       
-      // Recarrega os dados para garantir que a nova mensagem apareça
-      await fetchService(service.id);
+      setService(prev => prev ? { ...prev, messages: [...(prev.messages || []), addedMessage] } : null);
       setNewMessage("");
       toast.success("Mensagem enviada!");
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
     }
   };
