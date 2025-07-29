@@ -1,4 +1,4 @@
-// ARQUIVO ATUALIZADO: src/components/layout/Navbar.tsx
+// ARQUIVO CORRIGIDO: src/components/layout/Navbar.tsx
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -92,7 +92,8 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Link to="/demandas/nova">
+              {/* CORREÇÃO 1: O caminho foi alterado para /new-service */}
+              <Link to="/new-service">
                 <Button size="sm" className="flex items-center gap-2 text-sm">
                   <Plus className="w-4 h-4" />
                   Nova Demanda
@@ -126,7 +127,8 @@ const Navbar = () => {
                 </Link>
               );
             })}
-            <Link to="/demandas/nova" className="flex-1 max-w-[60px]">
+            {/* CORREÇÃO 2: O caminho foi alterado para /new-service */}
+            <Link to="/new-service" className="flex-1 max-w-[60px]">
               <Button 
                 size="sm" 
                 className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs w-full"
