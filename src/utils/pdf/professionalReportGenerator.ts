@@ -1,5 +1,3 @@
-// ARQUIVO COMPLETO E FINAL (VERSÃO DE DESIGN V7.7): src/utils/pdf/professionalReportGenerator.ts
-
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Service, Photo, CustomField, User } from '@/types/serviceTypes';
@@ -194,4 +192,3 @@ export const generateProfessionalServiceReport = async (
     throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
-
