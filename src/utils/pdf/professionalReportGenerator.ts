@@ -1,6 +1,8 @@
+// ARQUIVO COMPLETO E FINAL (VERSÃO DE DESIGN V7.7): src/utils/pdf/professionalReportGenerator.ts
+
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Service, Photo, CustomField, User, ServiceMessage } from '@/types/serviceTypes'; // Adicionado ServiceMessage
+import { Service, Photo, CustomField, User } from '@/types/serviceTypes';
 import { logger } from '@/utils/loggingService';
 
 // --- PALETA DE DESIGN ---
@@ -36,26 +38,24 @@ const addSectionTitle = (doc: jsPDF, title: string, y: number) => {
 
 const sanitizeText = (text: string | null | undefined): string => {
   if (!text) return 'N/A';
-  // Esta expressão regular é mais permissiva para evitar remover caracteres válidos.
-  return String(text).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  return text.replace(/[^a-zA-Z0-9áéíóúâêîôûàèìòùäëïöüçÁÉÍÓÚÂÊÎÔÛÀÈÌÒÙÄËÏÖÜÇ\s.,:;!?@#$%*()_+-=\[\]{}/\\|"'`~]/g, '');
 };
-
 
 // --- FUNÇÃO PRINCIPAL ---
 
 export const generateProfessionalServiceReport = async (
   service: Service,
   photos: Photo[],
-  user: User // O tipo 'User' aqui é do Supabase, não o nosso 'AuthUser'
+  user: User
 ): Promise<void> => {
   try {
-    logger.info(`Gerando Relatório para: ${service.id}`, 'PDF');
+    logger.info(`Gerando Relatório de Design V7.7 para: ${service.id}`, 'PDF');
     
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // --- PÁGINA 1: CAPA ---
+    // --- PÁGINA 1: CAPA (Design V7.5 Mantido) ---
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
     doc.setFillColor(THEME_COLOR_LIGHT[0], THEME_COLOR_LIGHT[1], THEME_COLOR_LIGHT[2]);
@@ -87,7 +87,7 @@ export const generateProfessionalServiceReport = async (
     doc.text(sanitizeText(service.number), rightInfoX, pageHeight / 2 + 135);
     doc.text(new Date().toLocaleDateString('pt-BR'), rightInfoX, pageHeight / 2 + 175);
     
-    // --- PÁGINAS DE CONTEÚDO ---
+    // --- PÁGINAS DE CONTEÚDO (Layout V7.4 Restaurado, sem Cards) ---
     doc.addPage();
     let currentY = 70;
 
@@ -122,30 +122,6 @@ export const generateProfessionalServiceReport = async (
             theme: 'striped',
             headStyles: { fillColor: HEADING_COLOR },
             styles: { fontSize: 10 }
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 50;
-    }
-
-    // ===== CORREÇÃO 1: ADICIONAR SEÇÃO DE MENSAGENS =====
-    if (service.messages && service.messages.length > 0) {
-        if (currentY > pageHeight - 200) { doc.addPage(); currentY = 70; }
-        currentY = addSectionTitle(doc, "Histórico de Mensagens", currentY);
-        autoTable(doc, {
-            startY: currentY,
-            head: [['DATA', 'AUTOR', 'MENSAGEM']],
-            body: service.messages.map(msg => [
-                new Date(msg.created_at).toLocaleString('pt-BR'),
-                sanitizeText(msg.user_name),
-                sanitizeText(msg.content)
-            ]),
-            theme: 'striped',
-            headStyles: { fillColor: HEADING_COLOR },
-            styles: { fontSize: 10, cellPadding: 4 },
-            columnStyles: {
-                0: { cellWidth: 80 },
-                1: { cellWidth: 80 },
-                2: { cellWidth: 'auto' }
-            }
         });
         currentY = (doc as any).lastAutoTable.finalY + 50;
     }
@@ -196,15 +172,9 @@ export const generateProfessionalServiceReport = async (
             const techX = (pageWidth / 2) + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2;
             doc.addImage(service.signatures.technician, 'PNG', techX, sigY, sigWidth, sigHeight);
             doc.line(techX, sigY + sigHeight + 5, techX + sigWidth, sigY + sigHeight + 5);
-            
-            // ===== CORREÇÃO 2: LÓGICA PARA PEGAR NOME CORRETO DO TÉCNICO =====
-            // Procura o nome do técnico no objeto 'technician' ou no array 'technicians'.
-            let technicianName = 'Técnico Responsável'; // Fallback
-            if (service.technician && service.technician.name) {
-                technicianName = sanitizeText(service.technician.name);
-            } else if (service.technicians && service.technicians.length > 0 && service.technicians[0].name) {
-                technicianName = sanitizeText(service.technicians[0].name);
-            }
+            const technicianName = (service.technicians && service.technicians.length > 0 && service.technicians[0].name)
+                                   ? sanitizeText(service.technicians[0].name)
+                                   : 'Técnico';
             doc.text(technicianName, techX + (sigWidth / 2), sigY + sigHeight + 20, { align: 'center' });
         }
     }
@@ -217,10 +187,11 @@ export const generateProfessionalServiceReport = async (
     
     const fileName = `Relatorio_OS_${service.number || service.id.substring(0, 6)}.pdf`;
     doc.save(fileName);
-    logger.info(`Relatório gerado: ${fileName}`, 'PDF');
+    logger.info(`Relatório Estável V7.7 gerado: ${fileName}`, 'PDF');
 
   } catch (error) {
-    logger.error(`Erro ao gerar Relatório: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
+    logger.error(`Erro ao gerar Relatório Estável V7.7: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'PDF');
     throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
+

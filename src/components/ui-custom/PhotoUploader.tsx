@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, X, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Photo {
   id: string;
-  file?: File; // <-- CORREÇÃO 1: 'file' agora é opcional
+  file: File;
   url: string;
   title: string;
 }
@@ -371,8 +372,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                       
                       <div className="flex items-center space-x-2">
                         <span className="text-xs text-muted-foreground">
-                          {/* ===== CORREÇÃO 2: Adicionada verificação para exibir o tamanho apenas se o arquivo existir ===== */}
-                          {photo.file?.size ? formatFileSize(photo.file.size) : 'Salva'}
+                          {formatFileSize(photo.file.size)}
                         </span>
                       </div>
                     </div>

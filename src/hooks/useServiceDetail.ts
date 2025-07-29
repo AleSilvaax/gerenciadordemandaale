@@ -1,13 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  getServices,
   updateService,
   addServiceMessage,
 } from "@/services/servicesDataService";
-import { Service, ServiceMessage, ServiceFeedback, CustomField, Photo, TeamMember } from "@/types/serviceTypes";
+import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+
+interface Photo {
+  id: string;
+  file: File;
+  url: string;
+  title: string;
+}
 
 export const useServiceDetail = () => {
   const [service, setService] = useState<Service | null>(null);
@@ -19,97 +27,109 @@ export const useServiceDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const fetchService = useCallback(async (serviceId: string) => {
-    setIsLoading(true);
+  useEffect(() => {
+    if (id) {
+      fetchService(id);
+    }
+  }, [id]);
+
+  const loadPhotosFromDatabase = async (serviceId: string) => {
     try {
-      // Passo 1: Buscar os dados principais do serviço. É a consulta mais importante.
-      const { data: serviceData, error: serviceError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('id', serviceId)
-        .single();
-
-      if (serviceError) throw serviceError;
-      if (!serviceData) throw new Error("Demanda não encontrada.");
-
-      let completeServiceData: Service = serviceData as Service;
-
-      // Passo 2: Buscar as mensagens de forma segura e separada.
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('service_messages')
-        .select('*')
-        .eq('service_id', serviceId)
-        .order('created_at', { ascending: true });
-
-      if (messagesError) {
-        console.warn("Não foi possível carregar as mensagens:", messagesError.message);
-        completeServiceData.messages = [];
-      } else {
-        completeServiceData.messages = messagesData || [];
-      }
-
-      // Passo 3: Buscar os detalhes do técnico, se houver um ID.
-      if (serviceData.technician_id) {
-        const { data: technicianData, error: technicianError } = await supabase
-          .from('profiles')
-          .select('id, name, avatar_url, role')
-          .eq('id', serviceData.technician_id)
-          .single();
-        
-        if (technicianError) {
-          console.warn("Não foi possível carregar os detalhes do técnico:", technicianError.message);
-        } else if (technicianData) {
-          completeServiceData.technician = {
-              id: technicianData.id,
-              name: technicianData.name,
-              avatar: technicianData.avatar_url,
-              role: technicianData.role,
-          } as TeamMember;
-        }
-      }
+      console.log('[useServiceDetail] Carregando fotos do banco para o serviço:', serviceId);
       
-      // Passo 4: Buscar as fotos da demanda.
-      const { data: photosData, error: photosError } = await supabase
+      const { data: photosData, error } = await supabase
         .from('service_photos')
         .select('*')
         .eq('service_id', serviceId)
         .order('created_at', { ascending: true });
 
-      if (photosError) {
-        console.warn("Não foi possível carregar as fotos:", photosError.message);
-        setPhotos([]);
-      } else if (photosData) {
-        const loadedPhotos: Photo[] = (photosData || []).map((photo, index) => ({
-          id: `db-${photo.id}`,
-          url: photo.photo_url,
-          title: photo.title || `Foto ${index + 1}`,
-        }));
-        setPhotos(loadedPhotos);
+      if (error) {
+        console.error('[useServiceDetail] Erro ao carregar fotos:', error);
+        return [];
       }
 
-      // Passo 5: Atualizar o estado com todos os dados compilados.
-      setService(completeServiceData);
+      console.log('[useServiceDetail] Fotos encontradas no banco:', photosData?.length || 0);
 
+      if (photosData && photosData.length > 0) {
+        const loadedPhotos: Photo[] = photosData.map((photoData, index) => ({
+          id: `db-${photoData.id}`,
+          file: new File([], 'existing-photo'), // Placeholder para fotos do banco
+          url: photoData.photo_url,
+          title: photoData.title || `Foto ${index + 1}`,
+        }));
+
+        console.log('[useServiceDetail] Fotos processadas:', loadedPhotos.length);
+        return loadedPhotos;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('[useServiceDetail] Erro ao carregar fotos:', error);
+      return [];
+    }
+  };
+
+  const fetchService = async (serviceId: string) => {
+    const timeout = 10000; // 10 seconds timeout
+    
+    try {
+      setIsLoading(true);
+      console.log('[useServiceDetail] Buscando serviço:', serviceId);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Service fetch timeout')), timeout)
+      );
+
+      const servicesPromise = getServices();
+      const services = await Promise.race([servicesPromise, timeoutPromise]) as any;
+      
+      const foundService = services.find((s: any) => s.id === serviceId);
+      
+      if (foundService) {
+        console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
+        setService(foundService);
+        
+        // Carregar fotos do banco de dados com timeout
+        try {
+          const loadedPhotos = await Promise.race([
+            loadPhotosFromDatabase(serviceId),
+            new Promise(resolve => setTimeout(() => resolve([]), 5000))
+          ]) as any;
+          setPhotos(loadedPhotos);
+        } catch (photoError) {
+          console.warn('[useServiceDetail] Erro ao carregar fotos:', photoError);
+          setPhotos([]);
+        }
+        
+      } else {
+        console.warn('[useServiceDetail] Serviço não encontrado para ID:', serviceId);
+        toast.error("Serviço não encontrado");
+        navigate("/demandas");
+      }
     } catch (error: any) {
-      console.error("Erro ao carregar detalhes do serviço:", error);
-      toast.error("Erro ao carregar detalhes do serviço", { description: error.message });
+      console.error("Erro ao carregar serviço:", error);
+      if (error.message === 'Service fetch timeout') {
+        toast.error("Timeout ao carregar serviço. Tente novamente.");
+      } else {
+        toast.error("Erro ao carregar serviço");
+      }
       navigate("/demandas");
     } finally {
       setIsLoading(false);
     }
-  }, [navigate]);
-
-  useEffect(() => {
-    if (id) {
-      fetchService(id);
-    }
-  }, [id, fetchService]);
-
+  };
 
   const handlePhotosChange = async (newPhotos: Photo[]) => {
+    console.log('[useServiceDetail] Atualizando fotos localmente:', newPhotos.length);
     setPhotos(newPhotos);
+    
+    // Recarregar fotos do banco após mudanças para manter sincronização
     if (service?.id) {
-      setTimeout(() => fetchService(service.id), 1000);
+      setTimeout(async () => {
+        const updatedPhotos = await loadPhotosFromDatabase(service.id);
+        setPhotos(updatedPhotos);
+      }, 1000);
     }
   };
 
@@ -119,10 +139,11 @@ export const useServiceDetail = () => {
     try {
       const updatedService = await updateService({ id: service.id, status: newStatus });
       if (updatedService) {
-        setService(prev => prev ? { ...prev, status: newStatus } : null);
+        setService(updatedService);
         toast.success("Status atualizado com sucesso!");
       }
     } catch (error) {
+      console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar status");
     }
   };
@@ -131,23 +152,20 @@ export const useServiceDetail = () => {
     if (!service || !newMessage.trim() || !user) return;
     
     try {
-      const messageData: Partial<ServiceMessage> = {
-        service_id: service.id,
-        user_id: user.id, // Corrigido de senderId para user_id se for o caso no seu BD
-        sender_id: user.id, // Adicionando ambos para garantir
-        user_name: user.name || "Usuário",
+      const messageData: ServiceMessage = {
+        senderId: user.id,
         senderName: user.name || "Usuário",
         senderRole: user.role || "tecnico",
-        content: newMessage.trim(),
-        message: newMessage.trim()
+        message: newMessage.trim(),
+        timestamp: new Date().toISOString()
       };
       
-      const addedMessage = await addServiceMessage(service.id, messageData as ServiceMessage);
-      
-      setService(prev => prev ? { ...prev, messages: [...(prev.messages || []), addedMessage] } : null);
+      await addServiceMessage(service.id, messageData);
+      await fetchService(service.id);
       setNewMessage("");
       toast.success("Mensagem enviada!");
     } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
     }
   };
@@ -158,10 +176,11 @@ export const useServiceDetail = () => {
     try {
       const updatedService = await updateService({ id: service.id, feedback });
       if (updatedService) {
-        setService(prev => prev ? { ...prev, feedback } : null);
+        setService(updatedService);
         toast.success("Feedback salvo com sucesso!");
       }
     } catch (error) {
+      console.error("Erro ao salvar feedback:", error);
       toast.error("Erro ao salvar feedback");
     }
   };
@@ -172,10 +191,11 @@ export const useServiceDetail = () => {
     try {
       const updatedService = await updateService({ id: service.id, signatures });
       if (updatedService) {
-        setService(prev => prev ? { ...prev, signatures: { ...prev.signatures, ...signatures } } : null);
+        setService(updatedService);
         toast.success("Assinaturas atualizadas com sucesso!");
       }
     } catch (error) {
+      console.error("Erro ao atualizar assinaturas:", error);
       toast.error("Erro ao atualizar assinaturas");
     }
   };
@@ -186,10 +206,11 @@ export const useServiceDetail = () => {
     try {
       const updatedService = await updateService({ id: service.id, customFields: fields });
       if (updatedService) {
-        setService(prev => prev ? { ...prev, customFields: fields } : null);
+        setService(updatedService);
         toast.success("Campos técnicos atualizados com sucesso!");
       }
     } catch (error) {
+      console.error("Erro ao atualizar campos técnicos:", error);
       toast.error("Erro ao atualizar campos técnicos");
     }
   };

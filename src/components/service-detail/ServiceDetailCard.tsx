@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ interface ServiceDetailCardProps {
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
   const { user } = useAuth();
 
+  // Função para verificar permissões - simplificada já que não temos hasPermission no AuthContext
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
   const getStatusIcon = (status: string) => {
@@ -63,7 +65,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
             {getStatusIcon(service.status)}
             {service.status === "concluido" ? "Concluído" : 
-              service.status === "cancelado" ? "Cancelado" : "Pendente"}
+             service.status === "cancelado" ? "Cancelado" : "Pendente"}
           </Badge>
         </div>
       </CardHeader>
@@ -75,8 +77,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             <div>
               <p className="text-sm font-medium">Criação</p>
               <p className="text-sm text-muted-foreground">
-                {/* ===== CORREÇÃO 1: Adicionada verificação para evitar erro com data nula ===== */}
-                {service.creationDate ? format(new Date(service.creationDate), "PPP", { locale: ptBR }) : 'Não informado'}
+                {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
               </p>
             </div>
           </div>
@@ -86,8 +87,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <div>
                 <p className="text-sm font-medium">Vencimento</p>
                 <p className="text-sm text-muted-foreground">
-                  {/* ===== CORREÇÃO 2: Adicionada verificação para evitar erro com data nula ===== */}
-                  {service.dueDate ? format(new Date(service.dueDate), "PPP", { locale: ptBR }) : 'Não informado'}
+                  {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
                 </p>
               </div>
             </div>
