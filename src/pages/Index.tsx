@@ -173,12 +173,7 @@ const Index: React.FC = () => {
                 <span className="hidden sm:inline ml-2">Configurações</span>
               </Button>
             </Link>
-            <Link to="/new-service">
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Nova Demanda</span>
-              </Button>
-            </Link>
+            {/* O BOTÃO "NOVA DEMANDA" FOI REMOVIDO DESTA SEÇÃO */}
           </div>
         </motion.div>
 
@@ -304,15 +299,7 @@ const Index: React.FC = () => {
 
             <TabsContent value="quick-actions" className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/new-service" className="block">
-                    <CardContent className="p-8 text-center">
-                      <Plus className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="font-semibold mb-2 text-left-force">Nova Demanda</h3>
-                      <p className="text-sm text-muted-foreground text-left-force">Criar uma nova solicitação de serviço</p>
-                    </CardContent>
-                  </Link>
-                </Card>
+                {/* O CARD "NOVA DEMANDA" FOI REMOVIDO DESTA SEÇÃO */}
 
                 <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/estatisticas" className="block">
