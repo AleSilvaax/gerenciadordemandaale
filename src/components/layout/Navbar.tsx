@@ -1,5 +1,3 @@
-// ARQUIVO CORRIGIDO: src/components/layout/Navbar.tsx
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -45,7 +43,6 @@ const Navbar = () => {
   });
 
   return (
-    // A LÓGICA DE POSICIONAMENTO FOI SIMPLIFICADA AQUI
     <nav className={`
       fixed bottom-0 left-0 right-0 z-50 h-16
       bg-card/95 backdrop-blur-sm border-t border-border/50
@@ -91,14 +88,9 @@ const Navbar = () => {
               })}
             </div>
 
+            {/* O BOTÃO 'NOVA DEMANDA' QUE ESTAVA AQUI FOI REMOVIDO */}
             <div className="flex items-center space-x-2">
-              {/* CORREÇÃO 1: O caminho foi alterado para /new-service */}
-              <Link to="/new-service">
-                <Button size="sm" className="flex items-center gap-2 text-sm">
-                  <Plus className="w-4 h-4" />
-                  Nova Demanda
-                </Button>
-              </Link>
+                {/* Vazio agora */}
             </div>
           </div>
         )}
@@ -106,7 +98,7 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         {isMobile && (
           <div className="flex justify-around items-center py-2 h-16">
-            {filteredNavItems.slice(0, 4).map((item) => {
+            {filteredNavItems.map((item) => { // Alterado para usar todos os itens filtrados, sem o slice.
               const Icon = item.icon;
               return (
                 <Link
@@ -127,16 +119,7 @@ const Navbar = () => {
                 </Link>
               );
             })}
-            {/* CORREÇÃO 2: O caminho foi alterado para /new-service */}
-            <Link to="/new-service" className="flex-1 max-w-[60px]">
-              <Button 
-                size="sm" 
-                className="flex flex-col items-center gap-1 h-auto py-2 px-2 text-xs w-full"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="text-xs leading-none">Nova</span>
-              </Button>
-            </Link>
+            {/* O BOTÃO DE '+' QUE ESTAVA AQUI FOI REMOVIDO */}
           </div>
         )}
       </div>
