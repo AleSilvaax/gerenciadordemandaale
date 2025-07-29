@@ -179,12 +179,15 @@ const EnhancedIndex: React.FC = () => {
                 <span className="hidden sm:inline ml-2">Configurações</span>
               </Button>
             </Link>
+            
+            {/* O BOTÃO 'NOVA DEMANDA' QUE ESTAVA AQUI FOI REMOVIDO 
             <Link to="/demandas/nova">
               <Button size="sm" className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Nova Demanda</span>
               </Button>
             </Link>
+            */}
           </div>
         </motion.div>
 
