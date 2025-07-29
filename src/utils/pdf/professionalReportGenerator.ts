@@ -224,4 +224,3 @@ export const generateProfessionalServiceReport = async (
     throw new Error('Erro ao gerar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
   }
 };
-```
