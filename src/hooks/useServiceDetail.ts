@@ -82,7 +82,7 @@ export const useServiceDetail = () => {
         console.warn("Não foi possível carregar as fotos:", photosError);
         setPhotos([]);
       } else if (photosData) {
-        const loadedPhotos: Photo[] = photosData.map((photo, index) => ({
+        const loadedPhotos: Photo[] = (photosData || []).map((photo, index) => ({
           id: `db-${photo.id}`,
           url: photo.photo_url,
           title: photo.title || `Foto ${index + 1}`,
