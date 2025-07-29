@@ -45,7 +45,7 @@ export const useServiceDetail = () => {
 
       if (messagesError) {
         console.warn("Não foi possível carregar as mensagens:", messagesError);
-        completeServiceData.messages = []; // Garante que messages seja um array vazio em caso de erro
+        completeServiceData.messages = [];
       } else {
         completeServiceData.messages = messagesData || [];
       }
@@ -53,7 +53,7 @@ export const useServiceDetail = () => {
       // Passo 3: Buscar os detalhes do técnico, se houver um ID.
       if (serviceData.technician_id) {
         const { data: technicianData, error: technicianError } = await supabase
-          .from('profiles') // Assumindo que os detalhes dos técnicos estão na tabela 'profiles'
+          .from('profiles')
           .select('id, name, avatar_url, role')
           .eq('id', serviceData.technician_id)
           .single();
@@ -61,7 +61,6 @@ export const useServiceDetail = () => {
         if (technicianError) {
           console.warn("Não foi possível carregar os detalhes do técnico:", technicianError);
         } else if (technicianData) {
-          // Anexa o objeto 'technician' completo ao serviço
           completeServiceData.technician = {
               id: technicianData.id,
               name: technicianData.name,
@@ -112,7 +111,7 @@ export const useServiceDetail = () => {
   const handlePhotosChange = async (newPhotos: Photo[]) => {
     setPhotos(newPhotos);
     if (service?.id) {
-      setTimeout(() => fetchService(service.id), 1000); // Recarrega para garantir consistência
+      setTimeout(() => fetchService(service.id), 1000);
     }
   };
 
@@ -134,19 +133,26 @@ export const useServiceDetail = () => {
     if (!service || !newMessage.trim() || !user) return;
     
     try {
-      const messageData: Partial<ServiceMessage> = {
+      // ===== CORREÇÃO: Objeto de mensagem criado com as propriedades corretas =====
+      const messageData: ServiceMessage = {
+        senderId: user.id,
+        senderName: user.name || "Usuário",
+        senderRole: user.role || "tecnico",
+        message: newMessage.trim(),
+        // Incluindo propriedades que o tipo ServiceMessage pode esperar
+        id: '', 
         service_id: service.id,
-        user_id: user.id,
-        user_name: user.name || "Usuário",
-        content: newMessage.trim(),
+        created_at: new Date().toISOString(),
       };
       
-      const addedMessage = await addServiceMessage(service.id, messageData);
+      await addServiceMessage(service.id, messageData);
       
-      setService(prev => prev ? { ...prev, messages: [...(prev.messages || []), addedMessage] } : null);
+      // Recarrega os dados para garantir que a nova mensagem apareça
+      await fetchService(service.id);
       setNewMessage("");
       toast.success("Mensagem enviada!");
     } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
     }
   };
