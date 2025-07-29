@@ -1,19 +1,19 @@
+// src/components/layout/AppLayout.tsx (Versão corrigida)
 
 import React from "react";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext"; // Note: Você pode estar usando OptimizedAuthContext aqui
 import { Loader2 } from "lucide-react";
+import { Outlet } from "react-router-dom"; // 1. Importe o Outlet
 
-interface AppLayoutProps {
-  children: React.ReactNode;
-}
-
-export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+// Remova a interface AppLayoutProps e o tipo do componente
+export const AppLayout = () => {
   const isMobile = useIsMobile();
-  const { isLoading, user } = useAuth();
-  
+  // Certifique-se de usar o mesmo contexto que no App.tsx
+  const { isLoading, user } = useAuth(); 
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -21,7 +21,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </div>
     );
   }
-  
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Header Unificado */}
@@ -42,7 +42,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-4'} overflow-y-auto`}>
         <div className="pt-0 min-w-full">
-          {children}
+          {/* 2. Substitua 'children' por '<Outlet />' */}
+          <Outlet />
         </div>
       </main>
       
