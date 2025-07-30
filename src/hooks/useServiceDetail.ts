@@ -1,10 +1,10 @@
-// Arquivo: src/hooks/useServiceDetail.ts (VERSÃO FINAL E CORRIGIDA)
+// Arquivo: src/hooks/useServiceDetail.ts (VERSÃO ATUALIZADA)
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  getServiceByIdFromDatabase, // ✅ 1. Importamos a nova função
+  getServiceByIdFromDatabase,
   updateService,
   addServiceMessage,
 } from "@/services/servicesDataService";
@@ -57,7 +57,6 @@ export const useServiceDetail = () => {
     }
   };
 
-  // ✅ 2. A função fetchService foi completamente reescrita
   const fetchService = useCallback(async (serviceId: string) => {
     if (!user) {
       setIsLoading(false);
@@ -65,25 +64,19 @@ export const useServiceDetail = () => {
     }
 
     setIsLoading(true);
-    console.log('[useServiceDetail] Buscando serviço diretamente do DB:', serviceId);
     
     try {
-      // Chama a nova função, passando o ID do serviço e o usuário logado
       const foundService = await getServiceByIdFromDatabase(serviceId, user);
       
       if (foundService) {
-        console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
         setService(foundService);
-        
         const loadedPhotos = await loadPhotosFromDatabase(serviceId);
         setPhotos(loadedPhotos);
       } else {
-        console.warn('[useServiceDetail] Serviço não encontrado ou sem permissão para ID:', serviceId);
         toast.error("Serviço não encontrado", { description: "Você pode não ter permissão para visualizar esta demanda." });
         navigate("/demandas");
       }
     } catch (error: any) {
-      console.error("Erro ao carregar serviço:", error);
       toast.error("Erro ao carregar os detalhes do serviço");
       navigate("/demandas");
     } finally {
@@ -97,8 +90,6 @@ export const useServiceDetail = () => {
     }
   }, [id, user, fetchService]);
 
-
-  // O restante do arquivo (handlers) permanece o mesmo
   const handlePhotosChange = async (newPhotos: Photo[]) => {
     setPhotos(newPhotos);
     if (service?.id) {
