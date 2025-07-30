@@ -1,6 +1,7 @@
 
 export {
   getServicesFromDatabase as getServices,
+  getServiceByIdFromDatabase, // ✅ ADICIONADO AQUI
   createServiceInDatabase as createService,
   updateServiceInDatabase as updateService,
   deleteServiceFromDatabase as deleteService
