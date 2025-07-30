@@ -1,3 +1,4 @@
+// Arquivo: src/services/servicesDataService.ts (VERSÃO ATUALIZADA)
 
 export {
   getServicesFromDatabase as getServices,
