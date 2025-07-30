@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  getServiceByIdFromDatabase, // ✅ 1. Importamos a nova função
-  updateService,
+  // ✅ CORREÇÃO APLICADA AQUI: Importando diretamente da fonte
+  getServiceByIdFromDatabase,
+  updateServiceInDatabase as updateService, // Mantemos os aliases para as outras
   addServiceMessage,
-} from "@/services/servicesDataService";
+} from "@/services/serviceCrud"; // ✅ O caminho foi alterado para o arquivo original
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-// A interface Photo permanece a mesma
 interface Photo {
   id: string;
   file: File;
@@ -58,7 +58,6 @@ export const useServiceDetail = () => {
     }
   };
 
-  // ✅ 2. A função fetchService foi completamente reescrita
   const fetchService = useCallback(async (serviceId: string) => {
     if (!user) {
       setIsLoading(false);
@@ -69,7 +68,6 @@ export const useServiceDetail = () => {
     console.log('[useServiceDetail] Buscando serviço diretamente do DB:', serviceId);
     
     try {
-      // Chama a nova função, passando o ID do serviço e o usuário logado
       const foundService = await getServiceByIdFromDatabase(serviceId, user);
       
       if (foundService) {
@@ -93,17 +91,14 @@ export const useServiceDetail = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (id && user) { // Garante que o usuário já foi carregado antes de buscar
+    if (id && user) {
       fetchService(id);
     }
   }, [id, user, fetchService]);
 
 
-  // O restante do arquivo (handlers) permanece o mesmo
   const handlePhotosChange = async (newPhotos: Photo[]) => {
-    console.log('[useServiceDetail] Atualizando fotos localmente:', newPhotos.length);
     setPhotos(newPhotos);
-    
     if (service?.id) {
       setTimeout(async () => {
         const updatedPhotos = await loadPhotosFromDatabase(service.id);
@@ -114,7 +109,6 @@ export const useServiceDetail = () => {
 
   const handleStatusChange = async (newStatus: Service["status"]) => {
     if (!service) return;
-    
     try {
       const updatedService = await updateService({ id: service.id, status: newStatus });
       if (updatedService) {
@@ -122,14 +116,12 @@ export const useServiceDetail = () => {
         toast.success("Status atualizado com sucesso!");
       }
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar status");
     }
   };
 
   const handleSendMessage = async () => {
     if (!service || !newMessage.trim() || !user) return;
-    
     try {
       const messageData: ServiceMessage = {
         senderId: user.id,
@@ -138,20 +130,17 @@ export const useServiceDetail = () => {
         message: newMessage.trim(),
         timestamp: new Date().toISOString()
       };
-      
       await addServiceMessage(service.id, messageData);
       await fetchService(service.id);
       setNewMessage("");
       toast.success("Mensagem enviada!");
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
     }
   };
 
   const handleSubmitFeedback = async () => {
     if (!service) return;
-    
     try {
       const updatedService = await updateService({ id: service.id, feedback });
       if (updatedService) {
@@ -159,14 +148,12 @@ export const useServiceDetail = () => {
         toast.success("Feedback salvo com sucesso!");
       }
     } catch (error) {
-      console.error("Erro ao salvar feedback:", error);
       toast.error("Erro ao salvar feedback");
     }
   };
 
   const handleUpdateSignatures = async (signatures: { client?: string; technician?: string }) => {
     if (!service) return;
-    
     try {
       const updatedService = await updateService({ id: service.id, signatures });
       if (updatedService) {
@@ -174,14 +161,12 @@ export const useServiceDetail = () => {
         toast.success("Assinaturas atualizadas com sucesso!");
       }
     } catch (error) {
-      console.error("Erro ao atualizar assinaturas:", error);
       toast.error("Erro ao atualizar assinaturas");
     }
   };
 
   const handleUpdateCustomFields = async (fields: CustomField[]) => {
     if (!service) return;
-    
     try {
       const updatedService = await updateService({ id: service.id, customFields: fields });
       if (updatedService) {
@@ -189,7 +174,6 @@ export const useServiceDetail = () => {
         toast.success("Campos técnicos atualizados com sucesso!");
       }
     } catch (error) {
-      console.error("Erro ao atualizar campos técnicos:", error);
       toast.error("Erro ao atualizar campos técnicos");
     }
   };
