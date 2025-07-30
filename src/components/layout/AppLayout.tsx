@@ -1,4 +1,3 @@
-// Arquivo: src/components/layout/AppLayout.tsx (VERSÃO FINAL E CORRIGIDA)
 
 import React from "react";
 import Navbar from "./Navbar";
@@ -6,8 +5,6 @@ import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
-// ✅ CORREÇÃO: Ajustando o caminho da importação para o local correto do arquivo.
-import { NotificationCenter } from "@/components/notifications/NotificationCenter"; 
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -38,12 +35,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span className={isMobile ? "hidden sm:block" : ""}>GerenciadorDemandas</span>
               {isMobile && <span className="sm:hidden">GD</span>}
             </div>
-
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <UserProfileMenu />
-            </div>
-
+            <UserProfileMenu />
           </div>
         </header>
       )}
