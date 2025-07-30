@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useNavigate } from 'react-router-dom';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Caminho de importação correto
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
@@ -72,10 +72,9 @@ const Calendar: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // ✅ HOOK ATUALIZADO: Pegando as variáveis corretas
   const {
     calendarEvents,
-    dayEvents, // Eventos já filtrados para o dia selecionado
+    dayEvents,
     selectedDate,
     setSelectedDate,
     isLoading
