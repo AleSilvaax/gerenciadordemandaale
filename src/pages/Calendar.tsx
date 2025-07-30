@@ -8,12 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useNavigate } from 'react-router-dom';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { useIsMobile } from '@/hooks/use-is-mobile'; // Corrigido o nome do hook
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from "@/lib/utils"; // Importando a função 'cn' para classes condicionais
+import { cn } from "@/lib/utils";
 
-// ✅ NOVO COMPONENTE: Calendário Visual Interativo
+// Componente do Calendário Visual Interativo
 const InteractiveCalendar = ({ selectedDate, setSelectedDate, events }) => {
   const start = startOfMonth(selectedDate);
   const end = endOfMonth(selectedDate);
@@ -26,7 +26,7 @@ const InteractiveCalendar = ({ selectedDate, setSelectedDate, events }) => {
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium">
+        <CardTitle className="text-lg font-medium capitalize">
           {format(selectedDate, 'MMMM yyyy', { locale: ptBR })}
         </CardTitle>
         <div className="flex items-center gap-2">
@@ -51,14 +51,14 @@ const InteractiveCalendar = ({ selectedDate, setSelectedDate, events }) => {
                 key={day.toString()}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center transition-colors text-sm",
+                  "h-8 w-8 rounded-full flex items-center justify-center transition-colors text-sm relative",
                   isSameDay(day, new Date()) && "bg-muted text-foreground",
                   isSameDay(day, selectedDate) && "bg-primary text-primary-foreground",
                   !isSameDay(day, selectedDate) && "hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 {format(day, 'd')}
-                {dayHasEvent && <span className="absolute mt-5 h-1 w-1 rounded-full bg-primary" />}
+                {dayHasEvent && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
               </button>
             )
           })}
@@ -151,12 +151,11 @@ const Calendar: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            {/* ✅ LISTA DE EVENTOS DINÂMICA */}
             <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarIcon className="w-5 h-5" />
-                  Eventos para {format(selectedDate, 'dd/MM/yyyy')}
+                  Eventos para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
                   <span className="text-sm text-muted-foreground">({dayEvents.length})</span>
                 </CardTitle>
               </CardHeader>
@@ -172,7 +171,7 @@ const Calendar: React.FC = () => {
                       <div
                         key={event.id}
                         className="p-3 bg-background/30 rounded-lg border border-border/30 cursor-pointer hover:bg-background/50 transition-colors"
-                        onClick={() => navigate(`/demanda/${event.service?.id}`)}
+                        onClick={() => event.service?.id && navigate(`/demanda/${event.service.id}`)}
                       >
                         <h4 className="font-medium">{event.title}</h4>
                         {event.technician && (
