@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+// Arquivo: src/hooks/useServiceDetail.ts (VERSÃO FINAL E CORRIGIDA)
+
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  getServices,
+  getServiceByIdFromDatabase, // ✅ 1. Importamos a nova função
   updateService,
   addServiceMessage,
 } from "@/services/servicesDataService";
@@ -10,6 +12,7 @@ import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/s
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
+// A interface Photo permanece a mesma
 interface Photo {
   id: string;
   file: File;
@@ -27,16 +30,8 @@ export const useServiceDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (id) {
-      fetchService(id);
-    }
-  }, [id]);
-
   const loadPhotosFromDatabase = async (serviceId: string) => {
     try {
-      console.log('[useServiceDetail] Carregando fotos do banco para o serviço:', serviceId);
-      
       const { data: photosData, error } = await supabase
         .from('service_photos')
         .select('*')
@@ -48,20 +43,14 @@ export const useServiceDetail = () => {
         return [];
       }
 
-      console.log('[useServiceDetail] Fotos encontradas no banco:', photosData?.length || 0);
-
       if (photosData && photosData.length > 0) {
-        const loadedPhotos: Photo[] = photosData.map((photoData, index) => ({
+        return photosData.map((photoData, index) => ({
           id: `db-${photoData.id}`,
-          file: new File([], 'existing-photo'), // Placeholder para fotos do banco
+          file: new File([], 'existing-photo'),
           url: photoData.photo_url,
           title: photoData.title || `Foto ${index + 1}`,
         }));
-
-        console.log('[useServiceDetail] Fotos processadas:', loadedPhotos.length);
-        return loadedPhotos;
       }
-
       return [];
     } catch (error) {
       console.error('[useServiceDetail] Erro ao carregar fotos:', error);
@@ -69,62 +58,52 @@ export const useServiceDetail = () => {
     }
   };
 
-  const fetchService = async (serviceId: string) => {
-    const timeout = 10000; // 10 seconds timeout
+  // ✅ 2. A função fetchService foi completamente reescrita
+  const fetchService = useCallback(async (serviceId: string) => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    console.log('[useServiceDetail] Buscando serviço diretamente do DB:', serviceId);
     
     try {
-      setIsLoading(true);
-      console.log('[useServiceDetail] Buscando serviço:', serviceId);
-      
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Service fetch timeout')), timeout)
-      );
-
-      const servicesPromise = getServices();
-      const services = await Promise.race([servicesPromise, timeoutPromise]) as any;
-      
-      const foundService = services.find((s: any) => s.id === serviceId);
+      // Chama a nova função, passando o ID do serviço e o usuário logado
+      const foundService = await getServiceByIdFromDatabase(serviceId, user);
       
       if (foundService) {
         console.log('[useServiceDetail] Serviço encontrado:', foundService.title);
         setService(foundService);
         
-        // Carregar fotos do banco de dados com timeout
-        try {
-          const loadedPhotos = await Promise.race([
-            loadPhotosFromDatabase(serviceId),
-            new Promise(resolve => setTimeout(() => resolve([]), 5000))
-          ]) as any;
-          setPhotos(loadedPhotos);
-        } catch (photoError) {
-          console.warn('[useServiceDetail] Erro ao carregar fotos:', photoError);
-          setPhotos([]);
-        }
-        
+        const loadedPhotos = await loadPhotosFromDatabase(serviceId);
+        setPhotos(loadedPhotos);
       } else {
-        console.warn('[useServiceDetail] Serviço não encontrado para ID:', serviceId);
-        toast.error("Serviço não encontrado");
+        console.warn('[useServiceDetail] Serviço não encontrado ou sem permissão para ID:', serviceId);
+        toast.error("Serviço não encontrado", { description: "Você pode não ter permissão para visualizar esta demanda." });
         navigate("/demandas");
       }
     } catch (error: any) {
       console.error("Erro ao carregar serviço:", error);
-      if (error.message === 'Service fetch timeout') {
-        toast.error("Timeout ao carregar serviço. Tente novamente.");
-      } else {
-        toast.error("Erro ao carregar serviço");
-      }
+      toast.error("Erro ao carregar os detalhes do serviço");
       navigate("/demandas");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, navigate]);
 
+  useEffect(() => {
+    if (id && user) { // Garante que o usuário já foi carregado antes de buscar
+      fetchService(id);
+    }
+  }, [id, user, fetchService]);
+
+
+  // O restante do arquivo (handlers) permanece o mesmo
   const handlePhotosChange = async (newPhotos: Photo[]) => {
     console.log('[useServiceDetail] Atualizando fotos localmente:', newPhotos.length);
     setPhotos(newPhotos);
     
-    // Recarregar fotos do banco após mudanças para manter sincronização
     if (service?.id) {
       setTimeout(async () => {
         const updatedPhotos = await loadPhotosFromDatabase(service.id);
