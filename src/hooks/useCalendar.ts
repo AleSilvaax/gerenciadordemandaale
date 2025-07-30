@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarEvent } from '@/types/calendarTypes';
 import { useAuth } from '@/context/AuthContext';
-import { parseISO } from 'date-fns';
+import { parseISO, isValid } from 'date-fns';
 
 const CALENDAR_QUERY_KEY = ['calendar-events'];
 
@@ -14,92 +14,91 @@ export const useCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const {
-    data: calendarEvents = [], // O hook agora vai retornar os eventos já formatados
+    data: calendarEvents = [],
     isLoading,
     error,
     refetch
   } = useQuery({
-    // A chave da query garante que os dados sejam re-buscados se o usuário mudar
     queryKey: [...CALENDAR_QUERY_KEY, user?.id],
     
     queryFn: async (): Promise<CalendarEvent[]> => {
-      if (!user) return []; // Se não há usuário, não há eventos
+      if (!user) return [];
 
       console.log(`[Calendar] Buscando eventos para usuário: ${user.id} (${user.role})`);
 
-      // ✅ 1. A consulta agora é feita na tabela 'technician_schedule', que é a fonte correta para a agenda.
-      // Se a sua lógica de agendamento está na tabela 'services', podemos ajustar.
-      // Por agora, vamos assumir que 'technician_schedule' guarda os eventos.
+      // ✅ CORREÇÃO: Voltamos a buscar da tabela 'services', que é a fonte correta.
       let query = supabase
-        .from('technician_schedule')
+        .from('services')
         .select(`
           id,
           title,
           description,
-          start_time,
-          end_time,
           status,
+          due_date,
+          created_at,
+          number,
+          client,
           location,
-          technician_id,
-          service: services (
-            id,
-            number,
-            client
-          ),
-          technician: profiles (
-            id,
-            name,
-            avatar
+          service_technicians!inner (
+            profiles (
+              id,
+              name,
+              avatar
+            )
           )
-        `);
+        `)
+        // Apenas serviços com data de vencimento são relevantes para a agenda
+        .not('due_date', 'is', null); 
 
-      // ✅ 2. A LÓGICA DE PERMISSÃO APLICADA DIRETAMENTE NA CONSULTA
-      // Se o usuário é um técnico, filtramos a busca para retornar apenas seus próprios agendamentos.
+      // Aplicando a mesma lógica de permissão que funciona na lista de demandas
       if (user.role === 'tecnico') {
-        query = query.eq('technician_id', user.id);
+        query = query.filter('service_technicians.technician_id', 'eq', user.id);
       }
-      // Se for gestor ou admin, nenhum filtro é aplicado e todos os eventos são retornados.
 
-      const { data: scheduleData, error: scheduleError } = await query;
+      const { data: servicesData, error: servicesError } = await query;
 
-      if (scheduleError) {
-        console.error('[Calendar] Erro ao buscar agendamentos:', scheduleError);
-        throw scheduleError;
+      if (servicesError) {
+        console.error('[Calendar] Erro ao buscar serviços para a agenda:', servicesError);
+        throw servicesError;
       }
       
-      if (!scheduleData) return [];
+      if (!servicesData) return [];
 
-      // ✅ 3. A TRANSFORMAÇÃO É FEITA AQUI, UMA ÚNICA VEZ
-      // Convertendo os dados do banco para o formato que o calendário espera.
-      const events = scheduleData.map((item: any): CalendarEvent => ({
-        id: item.id,
-        title: item.title,
-        start: parseISO(item.start_time),
-        end: parseISO(item.end_time),
-        description: item.description,
-        status: item.status,
-        location: item.location,
-        technician: item.technician ? {
-            id: item.technician.id,
-            name: item.technician.name || 'Técnico',
-            avatar: item.technician.avatar || ''
-        } : undefined,
-        service: item.service ? {
-            id: item.service.id,
-            number: item.service.number,
-            client: item.service.client
-        } : undefined
-      }));
+      // Transformando os serviços em eventos de calendário
+      const events = servicesData.map((service: any): CalendarEvent | null => {
+        const startDate = parseISO(service.due_date);
+        if (!isValid(startDate)) return null; // Ignora eventos com data inválida
+
+        const technicianProfile = service.service_technicians?.[0]?.profiles;
+        
+        return {
+          id: service.id,
+          title: service.title,
+          start: startDate,
+          end: startDate, // Eventos de calendário duram o dia todo
+          description: service.description,
+          status: service.status,
+          location: service.location,
+          technician: technicianProfile ? {
+              id: technicianProfile.id,
+              name: technicianProfile.name || 'Técnico',
+              avatar: technicianProfile.avatar || ''
+          } : undefined,
+          service: {
+              id: service.id,
+              number: service.number,
+              client: service.client
+          }
+        };
+      }).filter((event): event is CalendarEvent => event !== null); // Remove os nulos
 
       console.log(`[Calendar] ${events.length} eventos formatados.`);
       return events;
     },
-    // A busca só é ativada se houver um usuário logado
-    enabled: !!user, 
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Filtra os eventos do dia selecionado a partir da lista já formatada
   const dayEvents = useMemo(() => {
     const selectedDayString = selectedDate.toISOString().split('T')[0];
     return calendarEvents.filter(event => {
@@ -108,14 +107,13 @@ export const useCalendar = () => {
     });
   }, [selectedDate, calendarEvents]);
 
-
   return {
-    calendarEvents, // A lista completa de eventos para o calendário
-    dayEvents,      // A lista de eventos apenas para o dia selecionado
+    calendarEvents,
+    dayEvents,
     selectedDate,
     setSelectedDate,
     isLoading,
     error,
-    refetchCalendar: refetch, // Renomeado para clareza
+    refetchCalendar: refetch,
   };
 };
