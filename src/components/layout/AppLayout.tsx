@@ -6,7 +6,8 @@ import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
-import { NotificationCenter } from "@/components/NotificationCenter"; // ✅ 1. Importamos o nosso novo componente
+// ✅ CORREÇÃO: Ajustando o caminho da importação para o local correto do arquivo.
+import { NotificationCenter } from "@/components/notifications/NotificationCenter"; 
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -38,7 +39,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {isMobile && <span className="sm:hidden">GD</span>}
             </div>
 
-            {/* ✅ 2. Adicionamos o sino de notificações aqui */}
             <div className="flex items-center gap-2">
               <NotificationCenter />
               <UserProfileMenu />
