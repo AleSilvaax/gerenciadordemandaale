@@ -1,34 +1,30 @@
+// Arquivo: src/services/serviceCrud.ts (VERSÃO ATUALIZADA)
+
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
-
-// (Interface mantida para clareza, embora não seja mais usada diretamente na busca principal)
-interface ServiceMessageRow {
-  id: string;
-  service_id: string;
-  sender_id: string;
-  sender_name: string;
-  sender_role: string;
-  message: string;
-  timestamp: string;
-}
+import { AuthUser } from '@/context/AuthContext'; // Importa o tipo do usuário
 
 /**
- * [VERSÃO OTIMIZADA]
- * Busca todos os serviços, seus técnicos e mensagens em uma única consulta ao banco de dados.
- * Isso melhora drasticamente a performance e a estabilidade da aplicação.
+ * Busca uma lista de serviços com base no perfil do usuário.
+ * - Administradores e Gestores veem todos os serviços.
+ * - Técnicos veem apenas os serviços atribuídos a eles.
  */
-export const getServicesFromDatabase = async (): Promise<Service[]> => {
+export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Service[]> => {
   try {
-    console.log('[SERVICES] Iniciando busca otimizada de serviços...');
+    if (!user) {
+      console.log('[SERVICES] Nenhum usuário logado, retornando lista vazia.');
+      return [];
+    }
 
-    // ÚNICA CONSULTA: Busca serviços e, ao mesmo tempo, suas relações
-    // com técnicos (através dos perfis) e mensagens.
-    const { data: servicesData, error: servicesError } = await supabase
+    console.log(`[SERVICES] Iniciando busca de serviços para usuário ${user.id} com papel ${user.role}`);
+
+    let query = supabase
       .from('services')
       .select(`
         *,
-        service_technicians (
+        service_technicians!inner (
+          technician_id,
           profiles (
             id,
             name,
@@ -36,26 +32,27 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
           )
         ),
         service_messages (*)
-      `)
-      // Ordena os serviços pelos mais recentes primeiro.
-      .order('created_at', { ascending: false });
+      `);
+
+    if (user.role === 'tecnico') {
+      query = query.filter('service_technicians.technician_id', 'eq', user.id);
+    }
+    
+    query = query.order('created_at', { ascending: false });
+
+    const { data: servicesData, error: servicesError } = await query;
 
     if (servicesError) {
-      console.error('[SERVICES] Erro na consulta otimizada:', servicesError);
+      console.error('[SERVICES] Erro na consulta com filtro de acesso:', servicesError);
       throw servicesError;
     }
 
     if (!servicesData || servicesData.length === 0) {
-      console.log('[SERVICES] Nenhum serviço encontrado.');
+      console.log('[SERVICES] Nenhum serviço encontrado para este perfil.');
       return [];
     }
 
-    console.log(`[SERVICES] ${servicesData.length} serviços encontrados. Processando...`);
-
-    // A transformação de dados agora é muito mais simples e eficiente.
     const services: Service[] = servicesData.map((service: any) => {
-      // O técnico já vem aninhado e formatado pela consulta.
-      // Acessamos o primeiro (e único) técnico associado através da tabela de junção.
       const techProfile = service.service_technicians?.[0]?.profiles;
       const technician: TeamMember = techProfile ? {
         id: techProfile.id,
@@ -69,72 +66,117 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
         role: 'tecnico',
       };
 
-      // As mensagens já vêm aninhadas e filtradas por serviço.
       const serviceMessages = (service.service_messages || []).map((m: any) => ({
-        senderId: m.sender_id,
-        senderName: m.sender_name,
-        senderRole: m.sender_role,
-        message: m.message,
-        timestamp: m.timestamp,
+        senderId: m.sender_id, senderName: m.sender_name, senderRole: m.sender_role,
+        message: m.message, timestamp: m.timestamp
       }));
-
-      // Função auxiliar para fazer o parse de campos JSON de forma segura.
+      
       const parseJsonField = (field: any) => {
         if (!field) return undefined;
-        if (typeof field === 'object') return field; // Já é um objeto, retorna direto.
-        try {
-          return JSON.parse(field);
-        } catch {
-          return undefined; // Retorna undefined se houver erro no parse.
-        }
+        if (typeof field === 'object') return field;
+        try { return JSON.parse(field); } catch { return undefined; }
       };
       
-      // Validações de tipo para garantir consistência.
       const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
         ? service.priority as ServicePriority : 'media' as ServicePriority;
       const safeStatus = ['pendente', 'concluido', 'cancelado'].includes(service.status)
         ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
 
-      // Monta o objeto final do serviço com todos os dados já processados.
       return {
-        id: service.id,
-        title: service.title || 'Sem título',
-        location: service.location || 'Local não informado',
-        status: safeStatus,
-        technician: technician,
-        creationDate: service.created_at,
-        dueDate: service.due_date,
-        priority: safePriority,
-        serviceType: service.service_type || 'Vistoria',
-        number: service.number,
-        description: service.description,
-        createdBy: service.created_by,
-        client: service.client,
-        address: service.address,
-        city: service.city,
-        notes: service.notes,
-        estimatedHours: service.estimated_hours,
-        customFields: parseJsonField(service.custom_fields),
-        signatures: parseJsonField(service.signatures),
-        feedback: parseJsonField(service.feedback),
-        messages: serviceMessages,
+        id: service.id, title: service.title || 'Sem título', location: service.location || 'Local não informado',
+        status: safeStatus, technician: technician, creationDate: service.created_at,
+        dueDate: service.due_date, priority: safePriority, serviceType: service.service_type || 'Vistoria',
+        number: service.number, description: service.description, createdBy: service.created_by,
+        client: service.client, address: service.address, city: service.city,
+        notes: service.notes, estimatedHours: service.estimated_hours,
+        customFields: parseJsonField(service.custom_fields), signatures: parseJsonField(service.signatures),
+        feedback: parseJsonField(service.feedback), messages: serviceMessages,
         photos: Array.isArray(service.photos) ? service.photos : [],
         photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
         date: service.date,
       };
     });
 
-    console.log('[SERVICES] Processamento concluído. Retornando serviços.');
     return services;
   } catch (error: any) {
     console.error('[SERVICES] Erro geral na busca de serviços:', error);
     toast.error(`Erro ao buscar demandas: ${error.message || 'Erro desconhecido'}`);
-    return []; // Retorna um array vazio em caso de erro para não quebrar a UI.
+    return [];
   }
 };
 
+/**
+ * ✅ NOVA FUNÇÃO ADICIONADA AQUI
+ * Busca um único serviço pelo seu ID, respeitando as permissões do usuário.
+ */
+export const getServiceByIdFromDatabase = async (serviceId: string, user: AuthUser | null): Promise<Service | null> => {
+  if (!user) return null;
 
-// (As funções abaixo foram mantidas como estavam, pois sua lógica já era robusta e correta)
+  console.log(`[SERVICE DETAIL] Buscando serviço ${serviceId} para usuário ${user.id} (${user.role})`);
+
+  let query = supabase
+    .from('services')
+    .select(`
+      *,
+      service_technicians (
+        technician_id,
+        profiles (
+          id,
+          name,
+          avatar
+        )
+      ),
+      service_messages (*)
+    `)
+    .eq('id', serviceId);
+
+  // Se o usuário for um técnico, a consulta é filtrada para garantir que ele esteja atribuído ao serviço.
+  if (user.role === 'tecnico') {
+    query = query.filter('service_technicians.technician_id', 'eq', user.id);
+  }
+
+  const { data: service, error } = await query.single();
+
+  if (error || !service) {
+    console.error(`[SERVICE DETAIL] Erro ou serviço não encontrado (ou sem permissão) para id ${serviceId}:`, error);
+    return null;
+  }
+
+  // Lógica de transformação de dados para o serviço único
+  const techProfile = service.service_technicians?.[0]?.profiles;
+  const technician: TeamMember = techProfile ? {
+    id: techProfile.id, name: techProfile.name || 'Técnico', avatar: techProfile.avatar || '', role: 'tecnico',
+  } : {
+    id: '0', name: 'Não atribuído', avatar: '', role: 'tecnico',
+  };
+  const serviceMessages = (service.service_messages || []).map((m: any) => ({
+    senderId: m.sender_id, senderName: m.sender_name, senderRole: m.sender_role,
+    message: m.message, timestamp: m.timestamp
+  }));
+  const parseJsonField = (field: any) => {
+    if (!field) return undefined;
+    if (typeof field === 'object') return field;
+    try { return JSON.parse(field); } catch { return undefined; }
+  };
+  const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+    ? service.priority as ServicePriority : 'media' as ServicePriority;
+  const safeStatus = ['pendente', 'concluido', 'cancelado'].includes(service.status)
+    ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
+
+  return {
+    id: service.id, title: service.title || 'Sem título', location: service.location || 'Local não informado',
+    status: safeStatus, technician: technician, creationDate: service.created_at,
+    dueDate: service.due_date, priority: safePriority, serviceType: service.service_type || 'Vistoria',
+    number: service.number, description: service.description, createdBy: service.created_by,
+    client: service.client, address: service.address, city: service.city,
+    notes: service.notes, estimatedHours: service.estimated_hours,
+    customFields: parseJsonField(service.custom_fields), signatures: parseJsonField(service.signatures),
+    feedback: parseJsonField(service.feedback), messages: serviceMessages,
+    photos: Array.isArray(service.photos) ? service.photos : [],
+    photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
+    date: service.date,
+  };
+};
 
 export const createServiceInDatabase = async (
   service: Omit<Service, "id" | "number" | "creationDate"> & { serviceTypeId?: string }
@@ -217,7 +259,6 @@ export const createServiceInDatabase = async (
   }
 };
 
-
 export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
   try {
     console.log('Atualizando serviço no banco:', service);
@@ -226,7 +267,6 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       updated_at: new Date().toISOString()
     };
 
-    // Mapeia os campos do objeto 'service' para os nomes de coluna do banco
     const fieldMapping: { [key in keyof Service]?: string } = {
         title: 'title',
         location: 'location',
@@ -249,7 +289,6 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
         }
     }
     
-    // Trata campos JSON e arrays
     if (service.customFields !== undefined) updateData.custom_fields = service.customFields ? JSON.stringify(service.customFields) : null;
     if (service.signatures !== undefined) updateData.signatures = service.signatures ? JSON.stringify(service.signatures) : null;
     if (service.feedback !== undefined) updateData.feedback = service.feedback ? JSON.stringify(service.feedback) : null;
@@ -284,7 +323,6 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
   }
 };
 
-
 export const deleteServiceFromDatabase = async (id: string): Promise<boolean> => {
   try {
     console.log('Deleting service from database:', id);
@@ -308,22 +346,18 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
   }
 };
 
-
 async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
     console.log(`Atribuindo técnico ${technicianId} ao serviço ${serviceId}`);
     try {
-      // Deleta qualquer atribuição existente para este serviço, garantindo que não haja duplicatas.
       const { error: deleteError } = await supabase
         .from('service_technicians')
         .delete()
         .eq('service_id', serviceId);
       
       if (deleteError) {
-        // Loga o erro, mas não interrompe o fluxo, pois a inserção pode funcionar.
         console.error('Erro ao limpar técnicos antigos (pode ser ignorado se não havia nenhum):', deleteError);
       }
       
-      // Se um técnico válido for fornecido (não '0' ou 'none'), insere a nova atribuição.
       if (technicianId && technicianId !== '0' && technicianId !== 'none') {
         const { error } = await supabase
           .from('service_technicians')
@@ -332,28 +366,24 @@ async function assignTechnician(serviceId: string, technicianId: string): Promis
             technician_id: technicianId
           });
         
-        if (error) throw error; // Se a inserção falhar, lança o erro.
+        if (error) throw error;
         console.log('Técnico atribuído com sucesso.');
       } else {
         console.log('Nenhum técnico válido para atribuir. O serviço ficará sem técnico.');
       }
     } catch (error) {
       console.error('Erro no processo de atribuição de técnico:', error);
-      // Lança o erro para ser capturado pela função que chamou.
       throw error;
     }
 }
 
-
 export const uploadServicePhoto = async (file: File): Promise<string> => {
-  // Cria um nome de arquivo único para evitar conflitos de cache e nomeação.
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-  const filePath = `public/${fileName}`; // Usar a pasta 'public' é uma boa prática para acesso via URL.
+  const filePath = `public/${fileName}`;
 
-  // Faz o upload para o bucket 'service_photos'.
   const { error: uploadError } = await supabase.storage
-    .from('service-photos') // Nome do seu bucket
+    .from('service-photos')
     .upload(filePath, file);
 
   if (uploadError) {
@@ -361,7 +391,6 @@ export const uploadServicePhoto = async (file: File): Promise<string> => {
     throw uploadError;
   }
 
-  // Se o upload for bem-sucedido, obtemos a URL pública para salvar no banco.
   const { data: publicUrlData } = supabase.storage
     .from('service-photos')
     .getPublicUrl(filePath);
