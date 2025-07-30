@@ -5,7 +5,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotificationCenter } from '@/hooks/useNotificationCenter'; // ✅ Conectado ao "cérebro" correto
+import { useNotificationCenter } from "./useNotificationCenter";
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
