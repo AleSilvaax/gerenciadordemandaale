@@ -1,10 +1,10 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* CAMADA BASE ONDE OS TEMAS SÃO DEFINIDOS */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -30,29 +30,27 @@
   }
 
   .dark {
-    --background: 222 84% 4.9%;
+    --background: 220 27% 4%;
     --foreground: 210 40% 98%;
-    --card: 224 20% 8%;
+    --card: 220 27% 6%;
     --card-foreground: 210 40% 98%;
-    --popover: 224 20% 8%;
+    --popover: 220 27% 6%;
     --popover-foreground: 210 40% 98%;
     --primary: 217 91% 60%;
-    --primary-foreground: 224 20% 8%;
-    --secondary: 220 13% 12%;
+    --primary-foreground: 220 27% 4%;
+    --secondary: 220 27% 10%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 220 13% 12%;
+    --muted: 220 27% 10%;
     --muted-foreground: 215 20% 65%;
-    --accent: 220 13% 12%;
+    --accent: 220 27% 10%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
+    --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 18%;
-    --input: 220 13% 18%;
+    --border: 220 27% 15%;
+    --input: 220 27% 15%;
     --ring: 217 91% 60%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -62,51 +60,62 @@
   }
 }
 
-/* Improved Light theme for better contrast */
-.light {
-  --background: 0 0% 100%;
-  --foreground: 215 25% 15%;
-  --card: 0 0% 98%;
-  --card-foreground: 215 25% 15%;
-  --popover: 0 0% 98%;
-  --popover-foreground: 215 25% 15%;
-  --primary: 217 91% 55%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 92%;
-  --secondary-foreground: 215 25% 15%;
-  --muted: 210 40% 94%;
-  --muted-foreground: 215 25% 40%;
-  --accent: 210 40% 92%;
-  --accent-foreground: 215 25% 15%;
-  --destructive: 0 84% 50%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 210 40% 80%;
-  --input: 210 40% 85%;
-  --ring: 217 91% 55%;
-}
+/* =================================================================
+   NOVA SEÇÃO DE TEMAS DE CORES
+   Este bloco foi adicionado para fazer a troca de cores funcionar.
+   Ele permite que o JavaScript defina a cor primária.
+   ================================================================= */
+@layer base {
+    /* Define as cores para o tema VERDE */
+    :root[data-accent-color="green"] {
+        --primary: 142.1 76.2% 36.3%;
+        --primary-foreground: 355.7 100% 97.3%;
+        --ring: 142.1 76.2% 36.3%;
+    }
+    .dark[data-accent-color="green"] {
+        --primary: 142.1 70.6% 45.3%;
+        --primary-foreground: 144.9 80.4% 10%;
+        --ring: 142.1 70.6% 45.3%;
+    }
 
-/* Improved Dark theme - darker and more elegant */
-.dark {
-  --background: 220 27% 4%;
-  --foreground: 210 40% 98%;
-  --card: 220 27% 6%;
-  --card-foreground: 210 40% 98%;
-  --popover: 220 27% 6%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 220 27% 4%;
-  --secondary: 220 27% 10%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 220 27% 10%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 220 27% 10%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 63% 45%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 220 27% 15%;
-  --input: 220 27% 15%;
-  --ring: 217 91% 60%;
+    /* Define as cores para o tema ROXO */
+    :root[data-accent-color="purple"] {
+        --primary: 262.1 83.3% 57.8%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 262.1 83.3% 57.8%;
+    }
+    .dark[data-accent-color="purple"] {
+        --primary: 263.4 90.9% 55.9%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 263.4 90.9% 55.9%;
+    }
+
+    /* Define as cores para o tema LARANJA */
+    :root[data-accent-color="orange"] {
+        --primary: 24.6 95% 53.1%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 24.6 95% 53.1%;
+    }
+    .dark[data-accent-color="orange"] {
+        --primary: 20.5 90.2% 48.2%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 20.5 90.2% 48.2%;
+    }
+
+    /* Define as cores para o tema VERMELHO */
+    :root[data-accent-color="red"] {
+        --primary: 0 72.2% 50.6%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 0 72.2% 50.6%;
+    }
+    .dark[data-accent-color="red"] {
+        --primary: 0 84.2% 60.2%;
+        --primary-foreground: 210 20% 98%;
+        --ring: 0 84.2% 60.2%;
+    }
 }
+/* ================================================================= */
+
 
 /* Custom scrollbar */
 .scrollbar-none {
