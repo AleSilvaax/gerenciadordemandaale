@@ -1,35 +1,30 @@
-// Arquivo: src/services/serviceCrud.ts (VERSÃO ATUALIZADA COM CONTROLE DE ACESSO)
+// Arquivo: src/services/serviceCrud.ts (VERSÃO FINAL COM CONTROLE DE ACESSO CORRIGIDO)
 
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
-import { AuthUser } from '@/context/AuthContext'; // ✅ 1. Importamos o tipo do usuário
-
-// (O restante do arquivo, como as outras funções, permanece o mesmo)
-// ...
+import { AuthUser } from '@/context/AuthContext';
 
 /**
- * [VERSÃO OTIMIZADA COM CONTROLE DE ACESSO]
+ * [VERSÃO FINAL E CORRIGIDA]
  * Busca serviços com base no perfil do usuário.
  * - Administradores e Gestores veem todos os serviços.
  * - Técnicos veem apenas os serviços atribuídos a eles.
  */
-// ✅ 2. A função agora recebe o usuário como parâmetro
 export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Service[]> => {
   try {
     if (!user) {
       console.log('[SERVICES] Nenhum usuário logado, retornando lista vazia.');
-      return []; // Se não houver usuário, não retorna nada.
+      return [];
     }
 
     console.log(`[SERVICES] Iniciando busca de serviços para usuário ${user.id} com papel ${user.role}`);
 
-    // Cria a base da nossa consulta ao banco de dados
     let query = supabase
       .from('services')
       .select(`
         *,
-        service_technicians (
+        service_technicians!inner (
           technician_id,
           profiles (
             id,
@@ -40,20 +35,15 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
         service_messages (*)
       `);
 
-    // ✅ 3. A LÓGICA DE PERMISSÃO É APLICADA AQUI
-    // Se o usuário for um técnico, adicionamos um filtro à consulta.
+    // ✅ A LÓGICA DE PERMISSÃO CORRIGIDA
+    // Se o usuário for um técnico, adicionamos o filtro. O "!inner" acima garante
+    // que apenas os serviços que passarem neste filtro serão retornados.
     if (user.role === 'tecnico') {
-      // Filtra a tabela 'service_technicians' para incluir apenas as linhas
-      // onde o 'technician_id' é igual ao 'id' do usuário logado.
-      // O Supabase é inteligente o suficiente para retornar apenas os 'services'
-      // que correspondem a essa condição.
       query = query.filter('service_technicians.technician_id', 'eq', user.id);
     }
     
-    // Adiciona uma ordenação padrão, por exemplo, pela data de criação
     query = query.order('created_at', { ascending: false });
 
-    // Executa a consulta já com o filtro (se aplicável)
     const { data: servicesData, error: servicesError } = await query;
 
     if (servicesError) {
@@ -68,7 +58,6 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
 
     console.log(`[SERVICES] ${servicesData.length} serviços encontrados para ${user.role}. Processando...`);
 
-    // O código de transformação dos dados continua o mesmo
     const services: Service[] = servicesData.map((service: any) => {
       const techProfile = service.service_technicians?.[0]?.profiles;
       const technician: TeamMember = techProfile ? {
@@ -140,8 +129,6 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
 
 
 // 👇 NENHUMA MUDANÇA NECESSÁRIA NO RESTANTE DO ARQUIVO 👇
-// Create, Update, Delete, etc., continuam como estão.
-
 export const createServiceInDatabase = async (
   service: Omit<Service, "id" | "number" | "creationDate"> & { serviceTypeId?: string }
 ): Promise<{ created: Service | null; technicianError?: string | null }> => {
@@ -206,8 +193,7 @@ export const createServiceInDatabase = async (
       }
     }
 
-    // Após criar, busca o serviço completo com o usuário atual para consistência
-    const currentUser = { id: service.createdBy, role: 'gestor' } as AuthUser; // Simula um usuário para buscar
+    const currentUser = { id: service.createdBy, role: 'gestor' } as AuthUser;
     const createdService = await getServicesFromDatabase(currentUser).then(services => services.find(s => s.id === data.id));
 
     return {
@@ -235,19 +221,10 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     };
 
     const fieldMapping: { [key in keyof Service]?: string } = {
-        title: 'title',
-        location: 'location',
-        status: 'status',
-        priority: 'priority',
-        serviceType: 'service_type',
-        description: 'description',
-        client: 'client',
-        address: 'address',
-        city: 'city',
-        notes: 'notes',
-        estimatedHours: 'estimated_hours',
-        dueDate: 'due_date',
-        date: 'date',
+        title: 'title', location: 'location', status: 'status', priority: 'priority',
+        serviceType: 'service_type', description: 'description', client: 'client',
+        address: 'address', city: 'city', notes: 'notes',
+        estimatedHours: 'estimated_hours', dueDate: 'due_date', date: 'date',
     };
 
     for (const key in fieldMapping) {
@@ -269,18 +246,12 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       .select()
       .single();
     
-    if (error) {
-      console.error('Erro ao atualizar serviço no Supabase:', error);
-      throw error;
-    }
+    if (error) { throw error; }
     
-    console.log('Serviço atualizado com sucesso:', data);
-
     if (service.technician !== undefined) {
       await assignTechnician(service.id, service.technician.id);
     }
     
-    // Simula um usuário admin para garantir que a busca do serviço atualizado funcione
     const adminUser = { id: '', role: 'administrador' } as AuthUser;
     const updatedService = await getServicesFromDatabase(adminUser).then(services => services.find(s => s.id === data.id));
 
@@ -295,19 +266,8 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
 export const deleteServiceFromDatabase = async (id: string): Promise<boolean> => {
   try {
-    console.log('Deleting service from database:', id);
-    
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Error deleting service from Supabase:', error);
-      throw error;
-    }
-    
-    console.log('Service deleted successfully');
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) { throw error; }
     return true;
   } catch (error: any) {
     console.error('Error in deleteServiceFromDatabase:', error);
@@ -318,27 +278,11 @@ export const deleteServiceFromDatabase = async (id: string): Promise<boolean> =>
 
 
 async function assignTechnician(serviceId: string, technicianId: string): Promise<void> {
-    console.log(`Atribuindo técnico ${technicianId} ao serviço ${serviceId}`);
     try {
-      const { error: deleteError } = await supabase
-        .from('service_technicians')
-        .delete()
-        .eq('service_id', serviceId);
-      
-      if (deleteError) {
-        console.error('Erro ao limpar técnicos antigos:', deleteError);
-      }
-      
+      await supabase.from('service_technicians').delete().eq('service_id', serviceId);
       if (technicianId && technicianId !== '0' && technicianId !== 'none') {
-        const { error } = await supabase
-          .from('service_technicians')
-          .insert({
-            service_id: serviceId,
-            technician_id: technicianId
-          });
-        
+        const { error } = await supabase.from('service_technicians').insert({ service_id: serviceId, technician_id: technicianId });
         if (error) throw error;
-        console.log('Técnico atribuído com sucesso.');
       }
     } catch (error) {
       console.error('Erro no processo de atribuição de técnico:', error);
@@ -352,23 +296,11 @@ export const uploadServicePhoto = async (file: File): Promise<string> => {
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
   const filePath = `public/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('service-photos')
-    .upload(filePath, file);
+  const { error: uploadError } = await supabase.storage.from('service-photos').upload(filePath, file);
+  if (uploadError) throw uploadError;
 
-  if (uploadError) {
-    console.error('Erro no upload da imagem:', uploadError);
-    throw uploadError;
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from('service-photos')
-    .getPublicUrl(filePath);
-
-  if (!publicUrlData) {
-    throw new Error("Não foi possível obter a URL pública da imagem.");
-  }
+  const { data: publicUrlData } = supabase.storage.from('service-photos').getPublicUrl(filePath);
+  if (!publicUrlData) throw new Error("Não foi possível obter a URL pública da imagem.");
   
-  console.log('Imagem enviada com sucesso para:', publicUrlData.publicUrl);
   return publicUrlData.publicUrl;
 };
