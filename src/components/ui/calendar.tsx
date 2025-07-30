@@ -1,4 +1,4 @@
-// Arquivo: src/pages/Calendar.tsx (VERSÃO FINAL E CORRIGIDA)
+// Arquivo: src/pages/Calendar.tsx (VERSÃO FINAL COM IMPORTAÇÃO CORRIGIDA)
 
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useNavigate } from 'react-router-dom';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { useIsMobile } from '@/hooks/use-mobile'; // Import corrigido
+import { useIsMobile } from '@/hooks/use-mobile'; // ✅ LINHA CORRIGIDA
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
