@@ -1,3 +1,4 @@
+// Arquivo: src/components/layout/AppLayout.tsx (VERSÃO FINAL E CORRIGIDA)
 
 import React from "react";
 import Navbar from "./Navbar";
@@ -5,6 +6,7 @@ import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { NotificationCenter } from "@/components/NotificationCenter"; // ✅ 1. Importamos o nosso novo componente
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,7 +37,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span className={isMobile ? "hidden sm:block" : ""}>GerenciadorDemandas</span>
               {isMobile && <span className="sm:hidden">GD</span>}
             </div>
-            <UserProfileMenu />
+
+            {/* ✅ 2. Adicionamos o sino de notificações aqui, ao lado do perfil */}
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <UserProfileMenu />
+            </div>
+
           </div>
         </header>
       )}
