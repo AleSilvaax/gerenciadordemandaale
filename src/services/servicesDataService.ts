@@ -1,6 +1,8 @@
+// Arquivo: src/services/servicesDataService.ts (VERSÃO FINAL E CORRIGIDA)
 
 export {
   getServicesFromDatabase as getServices,
+  getServiceByIdFromDatabase, // ✅ LINHA ADICIONADA AQUI
   createServiceInDatabase as createService,
   updateServiceInDatabase as updateService,
   deleteServiceFromDatabase as deleteService
