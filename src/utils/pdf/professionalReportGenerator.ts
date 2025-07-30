@@ -1,264 +1,134 @@
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { UserOptions } from 'jspdf-autotable';
 import { Service, Photo, User } from '@/types/serviceTypes';
 import { logger } from '@/utils/loggingService';
 
-// Paleta revisada
-const THEME_COLOR_DARK = [25, 70, 150];
-const THEME_COLOR_LIGHT = [80, 130, 210];
-const HEADING_COLOR = [35, 45, 55];
-const BODY_TEXT_COLOR = [80, 80, 80];
-const BORDER_COLOR = [200, 210, 220];
-const PAGE_MARGIN = 50;
-const LOGO_SIZE = 60;
-
-// Função para limpar texto e evitar erros no PDF
-const sanitizeText = (text: string | null | undefined): string => {
-  if (!text) return 'N/A';
-  return text.replace(/[^\p{L}\p{N}\s.,:;!?@#$%*()_+\-=[\]{}\/\\|"'`~]/gu, '');
+// reaproveito constantes originais
+const { THEME_COLOR_DARK, THEME_COLOR_LIGHT, HEADING_COLOR, BODY_TEXT_COLOR, BORDER_COLOR, PAGE_MARGIN } = {
+  THEME_COLOR_DARK: [30, 80, 160],
+  THEME_COLOR_LIGHT: [75, 125, 200],
+  HEADING_COLOR: [45, 52, 54],
+  BODY_TEXT_COLOR: [99, 110, 114],
+  BORDER_COLOR: [223, 230, 233],
+  PAGE_MARGIN: 50
 };
 
-// Cabeçalho e rodapé para todas páginas
-const addPageHeaderAndFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // Linha no topo
-  doc.setDrawColor(...BORDER_COLOR);
-  doc.setLineWidth(0.5);
-  doc.line(PAGE_MARGIN, 40, pageWidth - PAGE_MARGIN, 40);
-
-  // Logo no cabeçalho (troque a imagem pelo seu logo base64)
-  // Exemplo fictício: doc.addImage(base64Logo, 'PNG', PAGE_MARGIN, 10, LOGO_SIZE, LOGO_SIZE);
-
-  // Texto header (ex: nome da empresa)
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...HEADING_COLOR);
-  doc.text('Gerenciador de Demandas - Relatório', PAGE_MARGIN + LOGO_SIZE + 10, 35);
-
-  // Rodapé com paginação
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...BODY_TEXT_COLOR);
-  doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
-};
-
-// Título de seção com ícone unicode simples
-const addSectionTitle = (doc: jsPDF, title: string, y: number, icon = '▶') => {
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...HEADING_COLOR);
-  doc.text(`${icon} ${title}`, PAGE_MARGIN, y);
-
-  // Linha decorativa abaixo do título
-  doc.setDrawColor(...THEME_COLOR_DARK);
-  doc.setLineWidth(1.7);
-  doc.line(PAGE_MARGIN, y + 8, PAGE_MARGIN + 50, y + 8);
-
-  return y + 30;
-};
-
-const checkPageSpace = (doc: jsPDF, currentY: number, spaceNeeded: number): number => {
-  const pageHeight = doc.internal.pageSize.getHeight();
-  if (currentY + spaceNeeded > pageHeight - 60) {
-    doc.addPage();
-    return 70;
-  }
-  return currentY;
-};
-
-export const generateProfessionalServiceReport = async (
+async function generateBeautifulServiceReport(
   service: Service,
   photos: Photo[],
   user: User
-): Promise<void> => {
-  try {
-    logger.info(`Gerando Relatório para: ${service.id}`, 'PDF');
-    const doc = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
+): Promise<void> {
+  logger.info(`Gerando Relatório Bonito para: ${service.id}`, 'PDF');
+  const doc = new jsPDF('p', 'pt', 'a4');
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
 
-    // === PÁGINA 1 - CAPA MAIS MODERNA E EQUILIBRADA ===
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F');
-
-    // Retângulo colorido lateral direito
-    doc.setFillColor(...THEME_COLOR_LIGHT);
-    const rectWidth = 140;
-    doc.rect(pageWidth - rectWidth, 0, rectWidth, 250, 'F');
-
-    // Logo fictício na capa - substitua com seu logo base64
-    // doc.addImage(base64Logo, 'PNG', pageWidth - rectWidth + 20, 30, 100, 100);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(36);
-    doc.setTextColor(...HEADING_COLOR);
-    doc.text('Relatório de Serviço', PAGE_MARGIN, 90);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(22);
-    const titleLines = doc.splitTextToSize(sanitizeText(service.title), pageWidth - PAGE_MARGIN * 2 - rectWidth);
-    doc.text(titleLines, PAGE_MARGIN, 130);
-
-    // Info principal alinhada no retângulo colorido lateral
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    const infoX = pageWidth - rectWidth + 20;
-    const baseY = 150;
-    const lineHeight = 22;
-    doc.text('CLIENTE:', infoX, baseY);
-    doc.text('ORDEM DE SERVIÇO:', infoX, baseY + lineHeight);
-    doc.text('DATA DE GERAÇÃO:', infoX, baseY + 2 * lineHeight);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(12);
-    doc.text(sanitizeText(service.client), infoX, baseY + 15);
-    doc.text(sanitizeText(service.number), infoX, baseY + lineHeight + 15);
-    doc.text(new Date().toLocaleDateString('pt-BR'), infoX, baseY + 2 * lineHeight + 15);
-
-    // === PÁGINA 2 - SUMÁRIO SIMPLES ===
-    doc.addPage();
-    let currentY = 70;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
-    doc.setTextColor(...HEADING_COLOR);
-    doc.text('Sumário', PAGE_MARGIN, currentY);
-    currentY += 40;
-
-    const summaryItems = [
-      'Resumo da Demanda',
-      'Checklist Técnico',
-      'Registro Fotográfico',
-      'Assinaturas',
-    ];
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(14);
-    summaryItems.forEach((item, i) => {
-      doc.text(`${i + 1}. ${item}`, PAGE_MARGIN + 10, currentY);
-      currentY += 30;
-    });
-
-    // === PÁGINA 3 - RESUMO DA DEMANDA ===
-    doc.addPage();
-    currentY = 70;
-    currentY = addSectionTitle(doc, 'Resumo da Demanda', currentY, '📋');
-
-    // Corpo da tabela resumo
-    autoTable(doc, {
-      startY: currentY,
-      body: [
-        ['Cliente', sanitizeText(service.client)],
-        ['Local', sanitizeText(service.location)],
-        ['Endereço', sanitizeText(service.address)],
-        ['Status', sanitizeText(service.status)],
-        ['Tipo de Serviço', sanitizeText(service.serviceType)],
-        ['Técnico Responsável', service.technician?.name && service.technician.name !== 'Não atribuído'
-          ? sanitizeText(service.technician.name) : 'Nenhum técnico atribuído'],
-        ['Descrição', sanitizeText(service.description)],
-      ],
-      theme: 'striped',
-      styles: { fontSize: 11, cellPadding: { top: 6, right: 6, bottom: 6, left: 6 } },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 130 } }
-    });
-    currentY = (doc as any).lastAutoTable.finalY + 40;
-
-    // === CHECKLIST TÉCNICO ===
-    if (service.customFields && service.customFields.length > 0) {
-      currentY = checkPageSpace(doc, currentY, 120);
-      currentY = addSectionTitle(doc, 'Checklist Técnico', currentY, '✔');
-
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Item', 'Valor / Status']],
-        body: service.customFields.map(f => [
-          sanitizeText(f.label),
-          typeof f.value === 'boolean' ? (f.value ? 'Sim' : 'Não') : sanitizeText(f.value?.toString())
-        ]),
-        theme: 'grid',
-        headStyles: { fillColor: HEADING_COLOR, textColor: 255 },
-        styles: { fontSize: 11 }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 40;
-    }
-
-    // === REGISTRO FOTOGRÁFICO ===
-    if (photos && photos.length > 0) {
-      currentY = checkPageSpace(doc, currentY, 250);
-      currentY = addSectionTitle(doc, 'Registro Fotográfico', currentY, '📸');
-
-      const photoSize = (pageWidth - PAGE_MARGIN * 2 - 40) / 2;
-      let x = PAGE_MARGIN;
-      let photoCountInRow = 0;
-
-      for (const photo of photos) {
-        if (photoCountInRow >= 2) {
-          x = PAGE_MARGIN;
-          currentY += photoSize + 60;
-          photoCountInRow = 0;
-        }
-        if (currentY + photoSize > doc.internal.pageSize.getHeight() - 60) {
-          doc.addPage();
-          currentY = 70;
-        }
-        try {
-          doc.addImage(photo.url, 'JPEG', x, currentY, photoSize, photoSize);
-          doc.setFontSize(10);
-          doc.setTextColor(...BODY_TEXT_COLOR);
-          doc.text(sanitizeText(photo.title), x + photoSize / 2, currentY + photoSize + 18, { align: 'center' });
-        } catch {
-          // log se quiser
-        }
-        x += photoSize + 40;
-        photoCountInRow++;
-      }
-      currentY += photoSize + 70;
-    }
-
-    // === ASSINATURAS ===
-    if (service.signatures?.client || service.signatures?.technician) {
-      currentY = checkPageSpace(doc, currentY, 160);
-      doc.addPage();
-      currentY = 70;
-      currentY = addSectionTitle(doc, 'Assinaturas', currentY, '✍️');
-
-      const sigWidth = 220;
-      const sigHeight = 110;
-
-      if (service.signatures.client) {
-        const clientX = PAGE_MARGIN + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2;
-        doc.addImage(service.signatures.client, 'PNG', clientX, currentY, sigWidth, sigHeight);
-        doc.line(clientX, currentY + sigHeight + 5, clientX + sigWidth, currentY + sigHeight + 5);
-        doc.text(sanitizeText(service.client), clientX + sigWidth / 2, currentY + sigHeight + 25, { align: 'center' });
-      }
-
-      if (service.signatures.technician) {
-        const techX = (pageWidth / 2) + ((pageWidth / 2) - PAGE_MARGIN - sigWidth) / 2;
-        doc.addImage(service.signatures.technician, 'PNG', techX, currentY, sigWidth, sigHeight);
-        doc.line(techX, currentY + sigHeight + 5, techX + sigWidth, currentY + sigHeight + 5);
-        const techName = service.technician?.name && service.technician.name !== 'Não atribuído'
-          ? sanitizeText(service.technician.name)
-          : 'Técnico Responsável';
-        doc.text(techName, techX + sigWidth / 2, currentY + sigHeight + 25, { align: 'center' });
-      }
-    }
-
-    // === Aplicar header e footer em todas as páginas ===
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      addPageHeaderAndFooter(doc, i, pageCount);
-    }
-
-    // Salvar arquivo com nome limpo
-    const safeNumber = (service.number || service.id.substring(0, 6)).replace(/[^a-zA-Z0-9_-]/g, '');
-    const fileName = `Relatorio_OS_${safeNumber}.pdf`;
-    doc.save(fileName);
-    logger.info(`Relatório gerado: ${fileName}`, 'PDF');
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    logger.error(`Erro ao gerar Relatório: ${errorMessage}`, 'PDF');
-    throw new Error('Erro ao gerar PDF: ' + errorMessage);
+  // 1) Capa
+  doc.setFillColor(...THEME_COLOR_LIGHT);
+  doc.rect(0, 0, pw, ph, 'F');
+  // supondo que você tenha o logo em base64 em user.logoBase64
+  if (user.logoBase64) {
+    doc.addImage(user.logoBase64, 'PNG', pw / 2 - 50, 80, 100, 100, undefined, 'FAST');
   }
-};
+  doc.setFontSize(32);
+  doc.setTextColor(...THEME_COLOR_DARK);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Relatório de Serviço', pw / 2, ph / 2, { align: 'center' });
+  doc.addPage();
+
+  // 2) Marca d’água em todas as páginas
+  const watermark = async () => {
+    doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
+    if (user.logoBase64) {
+      doc.addImage(user.logoBase64, 'PNG', pw / 2 - 150, ph / 2 - 150, 300, 300);
+    }
+    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  };
+
+  // 3) Conteúdo principal
+  await watermark();
+  let cursorY = 70;
+
+  // Função para criar bloco de título com retângulo colorido atrás
+  const addSection = (title: string) => {
+    doc.setFillColor(...THEME_COLOR_LIGHT);
+    doc.rect(PAGE_MARGIN, cursorY - 5, pw - PAGE_MARGIN * 2, 30, 'F');
+    doc.setFontSize(16);
+    doc.setTextColor(...HEADING_COLOR);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, PAGE_MARGIN + 10, cursorY + 15);
+    cursorY += 50;
+  };
+
+  // Exemplo de seção
+  addSection('Dados do Serviço');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...BODY_TEXT_COLOR);
+  doc.text(`ID: ${service.id}`, PAGE_MARGIN, cursorY);
+  doc.text(`Cliente: ${service.clientName}`, PAGE_MARGIN, cursorY + 20);
+  cursorY += 50;
+
+  // 4) Tabela de custom fields
+  addSection('Campos Personalizados');
+  const tableOptions: UserOptions = {
+    startY: cursorY,
+    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+    styles: {
+      cellPadding: 8,
+      fontSize: 11,
+      textColor: BODY_TEXT_COLOR,
+      lineColor: BORDER_COLOR,
+      lineWidth: 0.5,
+    },
+    headStyles: {
+      fillColor: THEME_COLOR_DARK,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: { fillColor: [245, 245, 245] }
+  };
+  autoTable(doc, {
+    ...tableOptions,
+    head: [['Chave', 'Valor']],
+    body: service.customFields.map((cf) => [
+      cf.name,
+      cf.value || 'N/A'
+    ])
+  });
+  cursorY = (doc as any).lastAutoTable.finalY + 30;
+
+  // 5) Fotos (exemplo simplificado)
+  addSection('Fotos');
+  photos.forEach((p, idx) => {
+    if (idx > 0 && idx % 3 === 0) {
+      doc.addPage();
+      watermark();
+      cursorY = 70;
+    }
+    const imgSize = 100;
+    doc.addImage(p.base64, 'JPEG', PAGE_MARGIN + (idx % 3) * (imgSize + 10), cursorY, imgSize, imgSize);
+  });
+
+  // 6) Cabeçalho e rodapé em todas as páginas
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    // Cabeçalho
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.line(PAGE_MARGIN, 50, pw - PAGE_MARGIN, 50);
+    doc.setFontSize(10);
+    doc.text(user.companyName, PAGE_MARGIN, 40);
+    // Rodapé
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.line(PAGE_MARGIN, ph - 40, pw - PAGE_MARGIN, ph - 40);
+    doc.setFontSize(8);
+    doc.text(`Página ${i}/${pageCount}`, pw - PAGE_MARGIN, ph - 25, { align: 'right' });
+    doc.text(`Contatos: ${user.email} | ${user.phone}`, PAGE_MARGIN, ph - 25);
+  }
+
+  // Geração final
+  doc.save(`Relatorio_Servico_${service.id}.pdf`);
+}
+
+export { generateBeautifulServiceReport };
