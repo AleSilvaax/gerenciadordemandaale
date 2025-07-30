@@ -1,4 +1,4 @@
-// Arquivo: src/services/serviceCrud.ts (VERSÃO FINAL COM CONTROLE DE ACESSO CORRIGIDO)
+// Arquivo: src/services/serviceCrud.ts (VERSÃO FINAL E COMPLETA)
 
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
@@ -35,9 +35,6 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
         service_messages (*)
       `);
 
-    // ✅ A LÓGICA DE PERMISSÃO CORRIGIDA
-    // Se o usuário for um técnico, adicionamos o filtro. O "!inner" acima garante
-    // que apenas os serviços que passarem neste filtro serão retornados.
     if (user.role === 'tecnico') {
       query = query.filter('service_technicians.technician_id', 'eq', user.id);
     }
@@ -127,8 +124,92 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
   }
 };
 
+// ✅ NOVA FUNÇÃO ADICIONADA AQUI
+/**
+ * Busca um único serviço pelo seu ID, respeitando as permissões do usuário.
+ * - Gestores/Admins podem ver qualquer serviço.
+ * - Técnicos só podem ver serviços aos quais estão atribuídos.
+ */
+export const getServiceByIdFromDatabase = async (serviceId: string, user: AuthUser | null): Promise<Service | null> => {
+  if (!user) return null;
 
-// 👇 NENHUMA MUDANÇA NECESSÁRIA NO RESTANTE DO ARQUIVO 👇
+  console.log(`[SERVICE DETAIL] Buscando serviço ${serviceId} para usuário ${user.id} (${user.role})`);
+
+  // A consulta para um único item é ligeiramente diferente, não força o join.
+  let query = supabase
+    .from('services')
+    .select(`
+      *,
+      service_technicians (
+        technician_id,
+        profiles (
+          id,
+          name,
+          avatar
+        )
+      ),
+      service_messages (*)
+    `)
+    .eq('id', serviceId);
+
+  // Se o usuário for um técnico, a consulta é filtrada para garantir que ele esteja atribuído ao serviço.
+  if (user.role === 'tecnico') {
+    query = query.filter('service_technicians.technician_id', 'eq', user.id);
+  }
+
+  const { data: service, error } = await query.single(); // .single() garante que apenas um resultado é retornado.
+
+  if (error || !service) {
+    console.error(`[SERVICE DETAIL] Erro ou serviço não encontrado (ou sem permissão) para id ${serviceId}:`, error);
+    return null;
+  }
+
+  // A lógica de transformação dos dados é a mesma da função de busca em lista.
+  const techProfile = service.service_technicians?.[0]?.profiles;
+  const technician: TeamMember = techProfile ? {
+    id: techProfile.id,
+    name: techProfile.name || 'Técnico',
+    avatar: techProfile.avatar || '',
+    role: 'tecnico',
+  } : {
+    id: '0',
+    name: 'Não atribuído',
+    avatar: '',
+    role: 'tecnico',
+  };
+
+  const serviceMessages = (service.service_messages || []).map((m: any) => ({
+    senderId: m.sender_id, senderName: m.sender_name, senderRole: m.sender_role,
+    message: m.message, timestamp: m.timestamp
+  }));
+  
+  const parseJsonField = (field: any) => {
+    if (!field) return undefined;
+    if (typeof field === 'object') return field;
+    try { return JSON.parse(field); } catch { return undefined; }
+  };
+  
+  const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+    ? service.priority as ServicePriority : 'media' as ServicePriority;
+  const safeStatus = ['pendente', 'concluido', 'cancelado'].includes(service.status)
+    ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
+
+  return {
+    id: service.id, title: service.title || 'Sem título', location: service.location || 'Local não informado',
+    status: safeStatus, technician: technician, creationDate: service.created_at,
+    dueDate: service.due_date, priority: safePriority, serviceType: service.service_type || 'Vistoria',
+    number: service.number, description: service.description, createdBy: service.created_by,
+    client: service.client, address: service.address, city: service.city,
+    notes: service.notes, estimatedHours: service.estimated_hours,
+    customFields: parseJsonField(service.custom_fields), signatures: parseJsonField(service.signatures),
+    feedback: parseJsonField(service.feedback), messages: serviceMessages,
+    photos: Array.isArray(service.photos) ? service.photos : [],
+    photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
+    date: service.date,
+  };
+};
+
+
 export const createServiceInDatabase = async (
   service: Omit<Service, "id" | "number" | "creationDate"> & { serviceTypeId?: string }
 ): Promise<{ created: Service | null; technicianError?: string | null }> => {
