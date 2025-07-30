@@ -1,64 +1,118 @@
-// Arquivo: src/hooks/useCalendar.ts (VERSÃO DE RECONSTRUÇÃO - PASSO 1)
+// Arquivo: src/hooks/useCalendar.ts (VERSÃO FINAL E CORRIGIDA)
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { CalendarEvent } from '@/types/calendarTypes';
 import { useAuth } from '@/context/AuthContext';
-import { Service } from '@/types/serviceTypes'; // Usaremos o tipo Service por enquanto
+import { parseISO, isValid } from 'date-fns';
+
+const CALENDAR_QUERY_KEY = ['calendar-events'];
 
 export const useCalendar = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const {
-    data: rawServices = [], // Os dados brutos do banco
+    data: calendarEvents = [],
     isLoading,
     error,
     refetch
-  } = useQuery<Service[]>({ // Esperamos um array de Service
-    queryKey: ['calendar-raw-services', user?.id],
+  } = useQuery<CalendarEvent[]>({
+    queryKey: [...CALENDAR_QUERY_KEY, user?.id],
     
-    queryFn: async () => {
+    queryFn: async (): Promise<CalendarEvent[]> => {
       if (!user) return [];
 
-      // A mesma consulta segura que já validamos
+      console.log(`[Calendar] Buscando eventos para usuário: ${user.id} (${user.role})`);
+
       let query = supabase
         .from('services')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          status,
+          due_date,
+          number,
+          client,
+          location,
           service_technicians!inner (
             profiles (
               id,
-              name,
-              avatar
+              name
             )
           )
         `)
-        .not('due_date', 'is', null); // Apenas serviços com data são eventos
+        .not('due_date', 'is', null);
 
-      // Aplicando a lógica de permissão
       if (user.role === 'tecnico') {
         query = query.filter('service_technicians.technician_id', 'eq', user.id);
       }
 
-      const { data, error } = await query;
+      const { data: servicesData, error: servicesError } = await query;
 
-      if (error) {
-        console.error('[Calendar simplified] Erro ao buscar serviços:', error);
-        throw error;
+      if (servicesError) {
+        console.error('[Calendar] Erro ao buscar serviços:', servicesError);
+        throw servicesError;
       }
       
-      return data || [];
+      if (!servicesData) return [];
+
+      // ✅ Mapeamento preciso para o tipo CalendarEvent
+      const events = servicesData.map((service: any): CalendarEvent | null => {
+        const startDate = parseISO(service.due_date);
+        if (!isValid(startDate)) return null;
+
+        const technicianProfile = service.service_technicians?.[0]?.profiles;
+
+        // Mapeando o status do serviço para o status do evento
+        let eventStatus: CalendarEvent['status'] = 'agendado';
+        if (service.status === 'concluido') eventStatus = 'concluido';
+        if (service.status === 'cancelado') eventStatus = 'cancelado';
+
+        return {
+          id: service.id,
+          title: service.title,
+          start: startDate,
+          end: startDate,
+          description: service.description,
+          status: eventStatus,
+          location: service.location,
+          technician: technicianProfile ? {
+              id: technicianProfile.id,
+              name: technicianProfile.name || 'Técnico'
+          } : undefined,
+          service: {
+              id: service.id,
+              number: service.number,
+              client: service.client
+          }
+        };
+      }).filter((event): event is CalendarEvent => event !== null);
+
+      console.log(`[Calendar] ${events.length} eventos formatados.`);
+      return events;
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 
+  const dayEvents = useMemo(() => {
+    const selectedDayString = selectedDate.toISOString().split('T')[0];
+    return calendarEvents.filter(event => {
+      const eventDayString = event.start.toISOString().split('T')[0];
+      return eventDayString === selectedDayString;
+    });
+  }, [selectedDate, calendarEvents]);
+
   return {
-    rawServices, // Por enquanto, vamos expor os dados brutos
-    isLoading,
-    error,
+    calendarEvents,
+    dayEvents,
     selectedDate,
     setSelectedDate,
+    isLoading,
+    error,
     refetchCalendar: refetch,
   };
 };
