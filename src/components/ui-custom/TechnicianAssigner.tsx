@@ -1,30 +1,24 @@
-// Arquivo: src/components/ui-custom/TechnicianAssigner.tsx (VERSÃO ATUALIZADA)
+// Arquivo: src/components/ui-custom/TechnicianAssigner.tsx (VERSÃO FINAL E CORRIGIDA)
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { getTeamMembers } from "@/services/servicesDataService";
-import { TeamMember, Service } from "@/types/serviceTypes";
+import { TeamMember } from "@/types/serviceTypes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface TechnicianAssignerProps {
-  // ✅ ATUALIZADO: Agora recebe a lista de técnicos atuais
   currentTechnicians: TeamMember[];
-  // ✅ ATUALIZADO: A função de callback agora envia a lista completa de técnicos
   onAssign: (technicians: TeamMember[]) => Promise<void>;
 }
 
-export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
-  currentTechnicians,
-  onAssign
-}) => {
+export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentTechnicians, onAssign }) => {
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
-  // ✅ ATUALIZADO: O estado agora é uma lista de técnicos selecionados
-  const [selectedTechnicians, setSelectedTechnicians] = useState<TeamMember[]>(currentTechnicians);
+  const [selectedTechnicians, setSelectedTechnicians] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -34,9 +28,9 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
       .catch(() => toast.error("Erro ao carregar a lista de técnicos."));
   }, []);
 
-  // Sincroniza o estado interno se a prop externa mudar
   useEffect(() => {
-    setSelectedTechnicians(currentTechnicians);
+    // Garante que o estado seja sempre um array
+    setSelectedTechnicians(Array.isArray(currentTechnicians) ? currentTechnicians : []);
   }, [currentTechnicians]);
 
   const handleToggleSelection = (technician: TeamMember) => {
@@ -52,7 +46,7 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
     try {
       await onAssign(selectedTechnicians);
       toast.success("Equipe atualizada com sucesso!");
-      setIsOpen(false); // Fecha o popover após salvar
+      setIsOpen(false);
     } catch (e) {
       toast.error("Falha ao atualizar a equipe.");
     } finally {
@@ -66,24 +60,11 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
       <div className="flex gap-2 items-start">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={isOpen}
-              className="w-full justify-between h-auto min-h-[40px]"
-            >
+            <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-[40px]">
               <div className="flex flex-wrap gap-1">
                 {selectedTechnicians.length > 0 ? (
                   selectedTechnicians.map(tech => (
-                    <Badge
-                      variant="secondary"
-                      key={tech.id}
-                      className="mr-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleSelection(tech);
-                      }}
-                    >
+                    <Badge variant="secondary" key={tech.id} className="mr-1" onClick={(e) => { e.stopPropagation(); handleToggleSelection(tech); }}>
                       {tech.name}
                       <X className="ml-1 h-3 w-3" />
                     </Badge>
@@ -103,16 +84,8 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
                 {allTeamMembers.map((member) => {
                   const isSelected = selectedTechnicians.some(t => t.id === member.id);
                   return (
-                    <CommandItem
-                      key={member.id}
-                      onSelect={() => handleToggleSelection(member)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          isSelected ? "opacity-100" : "opacity-0"
-                        )}
-                      />
+                    <CommandItem key={member.id} onSelect={() => handleToggleSelection(member)}>
+                      <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                       {member.name}
                     </CommandItem>
                   );
