@@ -1,3 +1,4 @@
+// Arquivo: src/components/service-detail/ServiceDetailCard.tsx (VERSÃO ATUALIZADA)
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Calendar, Clock, User, FileText, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, Calendar, Clock, User, Users, FileText, CheckCircle, XCircle } from "lucide-react"; // Adicionado ícone 'Users'
 
 interface ServiceDetailCardProps {
   service: Service;
@@ -19,29 +20,21 @@ interface ServiceDetailCardProps {
 
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
   const { user } = useAuth();
-
-  // Função para verificar permissões - simplificada já que não temos hasPermission no AuthContext
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "concluido":
-        return <CheckCircle className="w-4 h-4" />;
-      case "cancelado":
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <Clock className="w-4 h-4" />;
+      case "concluido": return <CheckCircle className="w-4 h-4" />;
+      case "cancelado": return <XCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "concluido":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      case "cancelado":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+      case "concluido": return "bg-green-500/10 text-green-500 border-green-500/20";
+      case "cancelado": return "bg-red-500/10 text-red-500 border-red-500/20";
+      default: return "bg-orange-500/10 text-orange-500 border-orange-500/20";
     }
   };
 
@@ -64,8 +57,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           </div>
           <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
             {getStatusIcon(service.status)}
-            {service.status === "concluido" ? "Concluído" : 
-             service.status === "cancelado" ? "Cancelado" : "Pendente"}
+            {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
           </Badge>
         </div>
       </CardHeader>
@@ -77,7 +69,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             <div>
               <p className="text-sm font-medium">Criação</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
+                {service.creationDate ? format(new Date(service.creationDate), "PPP", { locale: ptBR }) : 'N/A'}
               </p>
             </div>
           </div>
@@ -94,33 +86,39 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           )}
         </div>
 
+        {/* ✅ SEÇÃO DE TÉCNICOS ATUALIZADA */}
         <div className="p-3 bg-background/30 rounded-lg border border-border/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-primary" />
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <Users className="w-5 h-5 text-primary mt-1" />
               <div>
-                <p className="text-sm font-medium">Técnico Responsável</p>
-                <p className="text-sm text-muted-foreground">
-                  {service.technician?.name ?? "Não atribuído"}
-                </p>
+                <p className="text-sm font-medium">Técnicos Responsáveis</p>
+                {service.technicians && service.technicians.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {service.technicians.map(tech => (
+                      <div key={tech.id} className="flex items-center gap-2 bg-background p-1 rounded-full">
+                        <TeamMemberAvatar src={tech.avatar || ""} name={tech.name} size="xs" />
+                        <span className="text-xs pr-2">{tech.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum técnico atribuído</p>
+                )}
               </div>
             </div>
-            {service.technician && (
-              <TeamMemberAvatar 
-                src={service.technician.avatar || ""} 
-                name={service.technician.name} 
-                size="sm"
-              />
-            )}
           </div>
         </div>
 
+        {/* Manteremos o TechnicianAssigner por enquanto, mas ele precisará ser atualizado */}
         {hasGestorPermission && (
           <TechnicianAssigner
-            currentTechnicianId={service.technician?.id}
+            // A prop 'currentTechnicianId' precisará ser alterada para uma lista de IDs
+            currentTechnicianId={service.technicians?.[0]?.id} // Placeholder
             onAssign={async (technician) => {
-              await updateService({ id: service.id, technician });
-              toast.success("Técnico atualizado!");
+              // A lógica aqui precisará ser atualizada para lidar com uma lista
+              await updateService({ id: service.id, technicians: [technician] }); // Placeholder
+              toast.success("Técnicos atualizados!");
               onServiceUpdate();
             }}
           />
