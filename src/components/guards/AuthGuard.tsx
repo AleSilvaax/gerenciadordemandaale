@@ -17,15 +17,17 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 size={40} className="animate-spin text-primary" />
       </div>
     );
   }
 
   if (!user) {
+    // Redireciona para o login se não houver usuário
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Se o usuário estiver logado, renderiza a página solicitada
   return <>{children}</>;
 };
