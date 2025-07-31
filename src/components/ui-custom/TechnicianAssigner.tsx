@@ -1,4 +1,4 @@
-// Arquivo: src/components/ui-custom/TechnicianAssigner.tsx (VERSÃO FINAL E CORRIGIDA)
+// Arquivo: src/components/ui-custom/TechnicianAssigner.tsx (VERSÃO DE RECONSTRUÇÃO SEGURA)
 
 import React, { useEffect, useState } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
@@ -12,30 +12,43 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface TechnicianAssignerProps {
-  currentTechnicians: TeamMember[];
+  // A propriedade agora é opcional para facilitar a integração inicial
+  currentTechnicians?: TeamMember[]; 
   onAssign: (technicians: TeamMember[]) => Promise<void>;
 }
 
-export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentTechnicians, onAssign }) => {
+export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
+  currentTechnicians,
+  onAssign
+}) => {
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [selectedTechnicians, setSelectedTechnicians] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  // Efeito para buscar a lista de todos os técnicos disponíveis
   useEffect(() => {
+    setIsLoading(true);
     getTeamMembers()
       .then(members => {
-        // Garante que members seja sempre um array antes de filtrar
+        // Garante que o retorno seja sempre um array antes de filtrar
         if (Array.isArray(members)) {
           setAllTeamMembers(members.filter(m => m.role === 'tecnico'));
         }
       })
-      .catch(() => toast.error("Erro ao carregar a lista de técnicos."));
+      .catch(() => toast.error("Erro ao carregar a lista de técnicos."))
+      .finally(() => setIsLoading(false));
   }, []);
 
+  // Efeito para sincronizar a seleção inicial de forma segura
   useEffect(() => {
-    // ✅ CORREÇÃO: Garante que o estado seja sempre um array, nunca undefined.
-    setSelectedTechnicians(Array.isArray(currentTechnicians) ? currentTechnicians : []);
+    // Apenas atualiza o estado se a prop 'currentTechnicians' for um array válido
+    if (Array.isArray(currentTechnicians)) {
+      setSelectedTechnicians(currentTechnicians);
+    } else {
+      setSelectedTechnicians([]); // Garante que nunca seja undefined
+    }
   }, [currentTechnicians]);
 
   const handleToggleSelection = (technician: TeamMember) => {
@@ -47,7 +60,7 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentT
   };
 
   const handleAssign = async () => {
-    setLoading(true);
+    setIsSaving(true);
     try {
       await onAssign(selectedTechnicians);
       toast.success("Equipe atualizada com sucesso!");
@@ -55,7 +68,7 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentT
     } catch (e) {
       toast.error("Falha ao atualizar a equipe.");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -65,17 +78,29 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentT
       <div className="flex gap-2 items-start">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-[40px]">
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between h-auto min-h-[40px]"
+              disabled={isLoading} // Desabilita o botão enquanto os técnicos carregam
+            >
               <div className="flex flex-wrap gap-1">
                 {selectedTechnicians.length > 0 ? (
                   selectedTechnicians.map(tech => (
-                    <Badge variant="secondary" key={tech.id} className="mr-1" onClick={(e) => { e.stopPropagation(); handleToggleSelection(tech); }}>
+                    <Badge
+                      variant="secondary"
+                      key={tech.id}
+                      className="mr-1"
+                      onClick={(e) => { e.stopPropagation(); handleToggleSelection(tech); }}
+                    >
                       {tech.name}
                       <X className="ml-1 h-3 w-3" />
                     </Badge>
                   ))
                 ) : (
-                  <span className="text-muted-foreground">Selecione um ou mais técnicos...</span>
+                  <span className="text-muted-foreground">
+                    {isLoading ? "Carregando técnicos..." : "Selecione um ou mais técnicos..."}
+                  </span>
                 )}
               </div>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -99,8 +124,8 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentT
             </Command>
           </PopoverContent>
         </Popover>
-        <Button onClick={handleAssign} disabled={loading}>
-          {loading ? "Salvando..." : "Salvar"}
+        <Button onClick={handleAssign} disabled={isSaving || isLoading}>
+          {isSaving ? "Salvando..." : "Salvar"}
         </Button>
       </div>
     </div>
