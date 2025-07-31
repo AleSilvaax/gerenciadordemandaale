@@ -1,12 +1,5 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-// Extend jsPDF interface
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: typeof autoTable;
-  }
-}
 import { Service } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
@@ -256,7 +249,7 @@ const createClientDetails = (doc: jsPDF, service: Service, startY: number): numb
     ['Local do Serviço', service.location || 'Não informado']
   ];
   
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: currentY + 5,
     head: [['Campo', 'Informação']],
     body: clientData,
@@ -295,7 +288,7 @@ const createTimelineSection = (doc: jsPDF, service: Service, startY: number): nu
     ['Finalização', service.status === 'concluido' ? 'Serviço finalizado' : 'Aguardando', service.status === 'concluido' ? '✓ Concluído' : '○ Pendente']
   ];
   
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: currentY + 5,
     head: [['Etapa', 'Detalhes', 'Status']],
     body: timelineData,
@@ -334,7 +327,7 @@ const createTechnicianSection = (doc: jsPDF, service: Service, startY: number): 
       ['Telefone', technician.phone || 'Não informado']
     ];
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: currentY + 5,
       head: [['Campo', 'Informação']],
       body: techData,
@@ -378,7 +371,7 @@ const createTechnicianFieldsSection = (doc: jsPDF, service: Service, startY: num
       'Configurado'
     ]);
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: currentY + 5,
       head: [['Campo', 'Tipo', 'Valor', 'Status']],
       body: fieldsData,
