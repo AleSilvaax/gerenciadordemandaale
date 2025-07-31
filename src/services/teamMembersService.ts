@@ -2,30 +2,34 @@ import { supabase } from '@/integrations/supabase/client';
 import { TeamMember, UserRole } from '@/types/serviceTypes';
 
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
-  // Get all profiles
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('*');
-  if (profileError) throw profileError;
-  if (!profiles || !Array.isArray(profiles)) return [];
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        name,
+        avatar,
+        user_roles (
+          role
+        )
+      `);
 
-  // Get all user_roles
-  const { data: roles, error: roleError } = await supabase
-    .from('user_roles')
-    .select('user_id, role');
-  if (roleError) throw roleError;
+    if (error) throw error;
+    if (!data) return []; // Garante que sempre retorne um array
 
-  // Merge profiles with their roles
-  const members: TeamMember[] = profiles.map(profile => {
-    const role = roles?.find(r => r.user_id === profile.id)?.role as UserRole || "tecnico";
-    return {
+    const members: TeamMember[] = data.map(profile => ({
       id: profile.id,
       name: profile.name || "Sem Nome",
       avatar: profile.avatar || "",
-      role
-    };
-  });
-  return members;
+      // @ts-ignore
+      role: profile.user_roles?.[0]?.role as UserRole || "tecnico",
+    }));
+
+    return members;
+  } catch (error) {
+    console.error("Erro ao buscar membros da equipe:", error);
+    return []; // Garante que retorne um array vazio em caso de erro
+  }
 };
 
 export const addTeamMember = async (member: {
