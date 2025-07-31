@@ -15,12 +15,13 @@ export interface TeamMember {
   signature?: string;
 }
 
-export interface ServiceMessage {
-  senderId: string;
-  senderName: string;
-  senderRole: string;
-  message: string;
-  timestamp?: string;
+export interface Service {
+  id: string;
+  title: string;
+  status: ServiceStatus;
+  location: string;
+  technicians: TeamMember[]; 
+  priority?: ServicePriority;
 }
 
 export interface ServiceFeedback {
