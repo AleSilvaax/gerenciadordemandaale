@@ -778,6 +778,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_organization_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
@@ -788,6 +792,10 @@ export type Database = {
       }
       has_permission: {
         Args: { user_id: string; required_role: string }
+        Returns: boolean
+      }
+      is_technician_for_service: {
+        Args: { service_uuid: string }
         Returns: boolean
       }
       join_team_by_code: {

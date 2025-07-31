@@ -117,19 +117,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const initializeAuth = async () => {
       try {
+        console.log('[AUTH] Inicializando autenticação...');
+        
         // Verificar sessão atual
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('[Auth] Erro ao obter sessão:', error);
+          console.error('[AUTH] Erro ao obter sessão:', error);
           cleanAuthState();
         }
+        
+        console.log('[AUTH] Sessão atual:', currentSession ? 'Existe' : 'Não existe');
+        console.log('[AUTH] User ID da sessão:', currentSession?.user?.id || 'Não disponível');
         
         if (mounted) {
           if (currentSession?.user) {
             setSession(currentSession);
             const userProfile = await buildUserProfile(currentSession.user);
             setUser(userProfile);
+            
+            // Testar se auth.uid() funciona no Supabase
+            try {
+              const { data: authTest, error: authError } = await supabase.rpc('get_current_user_role');
+              console.log('[AUTH] Teste auth.uid() no servidor - Role:', authTest);
+              console.log('[AUTH] Teste auth.uid() no servidor - Erro:', authError);
+            } catch (testError) {
+              console.error('[AUTH] Erro no teste auth.uid():', testError);
+            }
           } else {
             setSession(null);
             setUser(null);
@@ -138,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setInitialized(true);
         }
       } catch (error) {
-        console.error('[Auth] Erro na inicialização:', error);
+        console.error('[AUTH] Erro na inicialização:', error);
         if (mounted) {
           setSession(null);
           setUser(null);

@@ -70,23 +70,12 @@ const transformServiceData = (service: any): Service => {
  */
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
-    console.log('[SERVICES] Iniciando busca de serviços...');
+    console.log('[SERVICES] Iniciando busca simplificada de serviços...');
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log('[SERVICES] Usuário autenticado:', user?.id, userError);
-    
-    if (!user) {
-      console.warn('[SERVICES] Nenhum usuário autenticado encontrado');
-      return [];
-    }
-
-    // Query simplificada sem JOIN complexo para evitar recursão
-    let query = supabase
+    const { data: servicesData, error: servicesError } = await supabase
       .from('services')
-      .select('*');
-    
-    console.log('[SERVICES] Executando query de serviços...');
-    const { data: servicesData, error: servicesError } = await query.order('created_at', { ascending: false });
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (servicesError) {
       console.error('[SERVICES] Erro na query:', servicesError);
@@ -97,61 +86,48 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
     
     if (!servicesData) return [];
 
-    // Buscar técnicos separadamente para cada serviço
-    const servicesWithTechnicians = await Promise.all(
-      servicesData.map(async (service) => {
-        try {
-          const { data: techniciansData } = await supabase
-            .from('service_technicians')
-            .select(`
-              technician_id,
-              profiles!inner(id, name, avatar)
-            `)
-            .eq('service_id', service.id);
+    // Transformação básica sem buscar dados relacionados para evitar problemas de RLS
+    const transformedServices = servicesData.map((service) => {
+      const parseJsonField = (field: any) => {
+        if (!field) return undefined;
+        if (typeof field === 'object') return field;
+        try { return JSON.parse(field); } catch { return undefined; }
+      };
+      
+      const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+        ? service.priority as ServicePriority : 'media' as ServicePriority;
+      const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
+        ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
 
-          const technicians = (techniciansData || []).map((st: any) => ({
-            id: st.profiles.id,
-            name: st.profiles.name || 'Técnico',
-            avatar: st.profiles.avatar || '',
-            role: 'tecnico',
-          }));
+      return {
+        id: service.id,
+        title: service.title || 'Sem título',
+        location: service.location || 'Local não informado',
+        status: safeStatus,
+        technicians: [], // Vazio para evitar problemas de RLS
+        creationDate: service.created_at,
+        dueDate: service.due_date,
+        priority: safePriority,
+        serviceType: service.service_type || 'Vistoria',
+        number: service.number,
+        description: service.description,
+        createdBy: service.created_by,
+        client: service.client,
+        address: service.address,
+        city: service.city,
+        notes: service.notes,
+        estimatedHours: service.estimated_hours,
+        customFields: parseJsonField(service.custom_fields),
+        signatures: parseJsonField(service.signatures),
+        feedback: parseJsonField(service.feedback),
+        messages: [], // Vazio para evitar problemas de RLS
+        photos: Array.isArray(service.photos) ? service.photos : [],
+        photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
+        date: service.date,
+      } as Service;
+    });
 
-          return { ...service, technicians };
-        } catch (error) {
-          console.warn('[SERVICES] Erro ao buscar técnicos para serviço', service.id, error);
-          return { ...service, technicians: [] };
-        }
-      })
-    );
-
-    // Buscar mensagens separadamente
-    const servicesWithMessages = await Promise.all(
-      servicesWithTechnicians.map(async (service) => {
-        try {
-          const { data: messagesData } = await supabase
-            .from('service_messages')
-            .select('*')
-            .eq('service_id', service.id)
-            .order('timestamp', { ascending: true });
-
-          const messages = (messagesData || []).map((m: any) => ({
-            senderId: m.sender_id,
-            senderName: m.sender_name,
-            senderRole: m.sender_role,
-            message: m.message,
-            timestamp: m.timestamp
-          }));
-
-          return { ...service, messages };
-        } catch (error) {
-          console.warn('[SERVICES] Erro ao buscar mensagens para serviço', service.id, error);
-          return { ...service, messages: [] };
-        }
-      })
-    );
-
-    const transformedServices = servicesWithMessages.map(transformServiceData);
-    console.log('[SERVICES] Serviços transformados:', transformedServices.length);
+    console.log('[SERVICES] Serviços transformados (versão simplificada):', transformedServices.length);
     
     return transformedServices;
   } catch (error: any) {
