@@ -99,29 +99,28 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         {isMobile && (
-          <div className="flex justify-around items-center py-2 h-16">
-            {filteredNavItems.map((item) => { // Alterado para usar todos os itens filtrados, sem o slice.
+          <div className="flex justify-around items-center h-16">
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex flex-col items-center justify-center space-y-1 px-2 py-1 rounded-lg transition-all duration-200 min-w-0 flex-1
+                    flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
                     ${isActive(item.path)
-                      ? 'text-primary bg-primary/10'
+                      ? 'text-primary'
                       : 'text-muted-foreground hover:text-foreground'
                     }
                   `}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-xs font-medium truncate max-w-full">
-                    {item.name}
-                  </span>
+                  <Icon className="w-6 h-6 flex-shrink-0" />
+                  {isActive(item.path) && (
+                    <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
+                  )}
                 </Link>
               );
             })}
-            {/* O BOTÃO DE '+' QUE ESTAVA AQUI FOI REMOVIDO */}
           </div>
         )}
       </div>

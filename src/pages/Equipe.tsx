@@ -48,10 +48,13 @@ import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { CompactTeamMemberCard } from "@/components/ui-custom/CompactTeamMemberCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Equipe: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [teamStats, setTeamStats] = useState({
     total: 0,
@@ -454,104 +457,116 @@ const Equipe: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Team Members List View */}
-                <div className="space-y-3 md:space-y-4 mobile-team-scroll">
-                  {filteredTeam.map((member, index) => (
-                    <motion.div
-                      key={member.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="mobile-team-layout"
-                    >
-                      <Card className="bg-background/30 border border-border/30 hover:bg-background/50 transition-all duration-200 mobile-team-item">
-                        <CardContent className="p-3 md:p-6 card-content-mobile">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                              <div className="relative flex-shrink-0">
-                                <TeamMemberAvatar 
-                                  src={member.avatar} 
-                                  name={member.name} 
-                                  size="md"
-                                  className="ring-2 ring-border/20 w-10 h-10 md:w-12 md:h-12"
-                                />
-                                {uploadingAvatar === member.id && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
-                                    <Loader2 className="w-4 h-4 md:w-6 md:h-6 animate-spin text-white" />
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="space-y-1 min-w-0 flex-1">
-                                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
-                                  <h3 className="text-sm md:text-lg font-semibold mobile-truncate">{member.name}</h3>
-                                  <Badge className={`inline-flex items-center gap-1 text-xs w-fit ${getRoleColor(member.role)}`}>
-                                    {getRoleIcon(member.role)}
-                                    <span className="hidden md:inline">{getRoleDisplayName(member.role)}</span>
-                                    <span className="md:hidden">{member.role}</span>
-                                  </Badge>
+                {/* Desktop Team Members */}
+                {!isMobile && (
+                  <div className="space-y-4">
+                    {filteredTeam.map((member, index) => (
+                      <motion.div
+                        key={member.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <Card className="bg-background/30 border border-border/30 hover:bg-background/50 transition-all duration-200">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4 min-w-0 flex-1">
+                                <div className="relative flex-shrink-0">
+                                  <TeamMemberAvatar 
+                                    src={member.avatar} 
+                                    name={member.name} 
+                                    size="md"
+                                    className="ring-2 ring-border/20 w-12 h-12"
+                                  />
+                                  {uploadingAvatar === member.id && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 
-                                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs md:text-sm text-muted-foreground">
-                                  {member.email && (
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <h3 className="text-lg font-semibold truncate">{member.name}</h3>
+                                    <Badge className={`inline-flex items-center gap-1 text-xs ${getRoleColor(member.role)}`}>
+                                      {getRoleIcon(member.role)}
+                                      <span>{getRoleDisplayName(member.role)}</span>
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    {member.email && (
+                                      <div className="flex items-center gap-1">
+                                        <Mail className="w-4 h-4 flex-shrink-0" />
+                                        <span className="truncate">{member.email}</span>
+                                      </div>
+                                    )}
+                                    {member.phone && (
+                                      <div className="flex items-center gap-1">
+                                        <Phone className="w-4 h-4 flex-shrink-0" />
+                                        <span className="truncate">{member.phone}</span>
+                                      </div>
+                                    )}
                                     <div className="flex items-center gap-1">
-                                      <Mail className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                      <span className="mobile-truncate">{member.email}</span>
+                                      <Calendar className="w-4 h-4 flex-shrink-0" />
+                                      <span>Membro desde {new Date().toLocaleDateString()}</span>
                                     </div>
-                                  )}
-                                  {member.phone && (
-                                    <div className="flex items-center gap-1">
-                                      <Phone className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                      <span className="mobile-truncate">{member.phone}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                    <span className="hidden md:inline">Membro desde</span>
-                                    <span>{new Date().toLocaleDateString()}</span>
                                   </div>
                                 </div>
                               </div>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="flex-shrink-0">
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-md border border-border/50">
+                                  <DropdownMenuItem onClick={() => setEditingMember(member)}>
+                                    <Edit size={16} className="mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
+                                    <Upload size={16} className="mr-2" />
+                                    Trocar foto
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteMember(member.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 size={16} className="mr-2" />
+                                    Remover
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              
+                              <input
+                                type="file"
+                                accept="image/*"
+                                ref={(el) => fileInputRefs.current[member.id] = el}
+                                onChange={(e) => handleFileChange(member.id, e)}
+                                className="hidden"
+                              />
                             </div>
-                            
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="button-mobile flex-shrink-0">
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-md border border-border/50">
-                                <DropdownMenuItem onClick={() => setEditingMember(member)}>
-                                  <Edit size={16} className="mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => fileInputRefs.current[member.id]?.click()}>
-                                  <Upload size={16} className="mr-2" />
-                                  Trocar foto
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteMember(member.id)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 size={16} className="mr-2" />
-                                  Remover
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            
-                            <input
-                              type="file"
-                              accept="image/*"
-                              ref={(el) => fileInputRefs.current[member.id] = el}
-                              onChange={(e) => handleFileChange(member.id, e)}
-                              className="hidden"
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Mobile Team Members */}
+                {isMobile && (
+                  <div className="space-y-3">
+                    {filteredTeam.map((member) => (
+                      <CompactTeamMemberCard
+                        key={member.id}
+                        member={member}
+                        onEdit={setEditingMember}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {filteredTeam.length === 0 && (
                   <motion.div 

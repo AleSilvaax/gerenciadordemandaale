@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
 import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
+import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
 import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
 import { MobileHeader } from "@/components/layout/MobileHeader";
@@ -285,7 +286,7 @@ const Demandas = () => {
                   transition={{ delay: index * 0.05 }}
                 >
                   {isMobile ? (
-                    <MobileServiceCard service={service} />
+                    <CompactMobileServiceCard service={service} />
                   ) : (
                     <CompactServiceCard service={service} />
                   )}
