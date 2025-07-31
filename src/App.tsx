@@ -19,6 +19,7 @@ import Equipe from '@/pages/Equipe';
 import Calendar from '@/pages/Calendar';
 import Settings from '@/pages/Settings';
 import AdminPage from '@/pages/Admin';
+import DebugPage from '@/pages/Debug';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 import NotFound from '@/pages/NotFound';
 import { ServiceErrorBoundary } from '@/components/common/ServiceErrorBoundary';
@@ -58,6 +59,7 @@ function App() {
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/debug" element={<DebugPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
