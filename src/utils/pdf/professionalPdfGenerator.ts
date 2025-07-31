@@ -587,75 +587,80 @@ const createSignaturesSection = async (doc: jsPDF, service: Service, startY: num
 
 const createPhotosSection = async (doc: jsPDF, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
-  
+
   currentY = addText(doc, '9. ANEXOS FOTOGRÁFICOS', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
   });
-  
+
+  // --- DEBUG INÍCIO ---
+  console.log('[DEBUG PDF] Verificando a seção de fotos. O array service.photos é:', service.photos);
+  // --- DEBUG FIM ---
+
   if (service.photos && service.photos.length > 0) {
-    let photosPerRow = 2;
-    let photoWidth = (PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2) - 10) / photosPerRow;
-    let photoHeight = photoWidth * 0.75;
-    
+    const photosPerRow = 2;
+    const photoWidth = (PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2) - 10) / photosPerRow;
+    const photoHeight = photoWidth * 0.75;
+
     for (let i = 0; i < service.photos.length; i++) {
-      if (i % photosPerRow === 0) {
-        currentY = checkPageBreak(doc, currentY, photoHeight + 20);
-        currentY += 10;
-      }
-      
-      const col = i % photosPerRow;
-      const xPos = PDF_DIMENSIONS.margin + (col * (photoWidth + 5));
-      
-      currentY = addText(doc, `Foto ${i + 1}:`, xPos, currentY, {
-        fontSize: 10,
-        fontStyle: 'bold',
-        color: [...PDF_COLORS.secondary] as [number, number, number]
-      });
-      
-      try {
-        const imageData = await processImage(service.photos[i]);
-        if (imageData) {
-          doc.addImage(
-            imageData,
-            'JPEG',
-            xPos,
-            currentY + 5,
-            photoWidth,
-            photoHeight
-          );
-        } else {
-          // Placeholder para foto não carregada
-          doc.setDrawColor(...PDF_COLORS.border);
-          doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
-          
-          addText(doc, '[Imagem não disponível]', xPos + 5, currentY + photoHeight / 2, {
-            fontSize: 8,
-            color: [...PDF_COLORS.secondary] as [number, number, number]
-          });
-        }
-      } catch (error) {
-        console.error(`Erro ao processar foto ${i + 1}:`, error);
-        // Placeholder para erro
-        doc.setDrawColor(...PDF_COLORS.border);
-        doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
+        const imageUrl = service.photos[i];
+
+        // --- DEBUG INÍCIO ---
+        console.log(`[DEBUG PDF] Processando item ${i} do array. URL recebida:`, imageUrl);
+        // --- DEBUG FIM ---
         
-        addText(doc, '[Erro ao carregar imagem]', xPos + 5, currentY + photoHeight / 2, {
-          fontSize: 8,
-          color: [...PDF_COLORS.secondary] as [number, number, number]
-        });
-      }
-      
-      if (col === photosPerRow - 1 || i === service.photos.length - 1) {
-        currentY += photoHeight + 15;
-      }
+        // Pula o item se a URL for nula, indefinida ou vazia
+        if (!imageUrl) {
+            console.warn(`[DEBUG PDF] Item ${i} ignorado por ter uma URL inválida.`);
+            continue;
+        }
+
+        const col = i % photosPerRow;
+        const xPos = PDF_DIMENSIONS.margin + (col * (photoWidth + 5));
+
+        if (col === 0) {
+            currentY = checkPageBreak(doc, currentY, photoHeight + 20);
+            currentY += 10;
+        }
+        
+        try {
+            const imageData = await processImage(imageUrl);
+
+            // --- DEBUG INÍCIO ---
+            console.log(`[DEBUG PDF] Resultado do processamento para a imagem ${i}:`, imageData ? `Sucesso (Base64 gerado com ${imageData.length} caracteres)` : 'Falha (Retornou null)');
+            // --- DEBUG FIM ---
+
+            if (imageData) {
+                doc.addImage(
+                    imageData,
+                    '', // Deixar o formato em branco para detecção automática
+                    xPos,
+                    currentY,
+                    photoWidth,
+                    photoHeight
+                );
+            } else {
+                doc.setDrawColor(...PDF_COLORS.border);
+                doc.rect(xPos, currentY, photoWidth, photoHeight, 'S');
+                addText(doc, '[Imagem nula ou vazia]', xPos + 5, currentY + photoHeight / 2, { fontSize: 8, color: [...PDF_COLORS.secondary] as [number, number, number] });
+            }
+        } catch (error) {
+            console.error(`[DEBUG PDF] Erro catastrófico ao tentar adicionar a imagem ${i} ao PDF.`, error);
+        }
+
+        if (col === photosPerRow - 1 || i === service.photos.length - 1) {
+            currentY += photoHeight + 15;
+        }
     }
   } else {
-    currentY = addText(doc, 'Nenhuma foto anexada.', PDF_DIMENSIONS.margin, currentY + 5, {
-      fontSize: 10,
-      color: [...PDF_COLORS.secondary] as [number, number, number]
+    currentY = addText(doc, 'Nenhuma foto anexada ou array de fotos vazio.', PDF_DIMENSIONS.margin, currentY + 5, {
+        fontSize: 10,
+        color: [...PDF_COLORS.secondary] as [number, number, number]
     });
+    // --- DEBUG INÍCIO ---
+    console.log('[DEBUG PDF] A condição if (service.photos && service.photos.length > 0) foi falsa. A seção de fotos não foi renderizada.');
+    // --- DEBUG FIM ---
     currentY += 20;
   }
   
