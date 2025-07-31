@@ -44,6 +44,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   } = useServiceDetail();
 
   const handleGenerateReport = async () => {
+    // Adicione esta linha no início da função
+    console.log("handleGenerateReport: Função iniciada.");
+
     if (!service || !user) {
       toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
       return;
