@@ -1,3 +1,5 @@
+// Arquivo: src/types/serviceTypes.ts (VERSÃO ATUALIZADA E COMPLETA)
+
 export type ServiceStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado' | 'agendado';
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
 export type UserRole = "tecnico" | "administrador" | "gestor";
@@ -40,7 +42,8 @@ export interface Service {
   title: string;
   status: ServiceStatus;
   location: string;
-  technician: TeamMember;
+  // ✅ MUDANÇA PRINCIPAL: De um técnico para uma lista de técnicos.
+  technicians: TeamMember[]; 
   priority?: ServicePriority;
   dueDate?: string;
   creationDate?: string;
