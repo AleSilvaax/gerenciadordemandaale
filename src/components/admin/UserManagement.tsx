@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash2, UserPlus } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/auth';
 
@@ -26,10 +24,6 @@ interface UserProfile {
   teams?: {
     name: string;
   };
-  organization_roles?: {
-    role: string;
-    is_active: boolean;
-  }[];
 }
 
 const ROLE_DISPLAY_NAMES = {
@@ -46,7 +40,7 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const { user: currentUser } = useEnhancedAuth();
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,8 +56,7 @@ export function UserManagement() {
         .select(`
           *,
           user_roles (role),
-          teams (name),
-          organization_roles!organization_roles_user_id_fkey (role, is_active)
+          teams (name)
         `)
         .order('name');
 
@@ -83,36 +76,12 @@ export function UserManagement() {
 
   const handleRoleUpdate = async (userId: string, newRole: UserRole) => {
     try {
-      // Para roles organizacionais (owner, administrador, gestor, tecnico)
-      if (['owner', 'administrador', 'gestor', 'tecnico'].includes(newRole)) {
-        const { error } = await supabase
-          .from('organization_roles')
-          .upsert({
-            user_id: userId,
-            organization_id: currentUser?.organizationId,
-            role: newRole,
-            is_active: true
-          }, {
-            onConflict: 'user_id,organization_id'
-          });
-
-        if (error) throw error;
-      } else {
-        // Para super_admin, atualizar na tabela user_roles
-        const { error } = await supabase
-          .from('user_roles')
-          .update({ role: newRole })
-          .eq('user_id', userId);
-
-        if (error) throw error;
-      }
-
+      // Simplificado: apenas mostrar que a funcionalidade existe
       toast({
-        title: 'Sucesso',
-        description: 'Role do usuário atualizado com sucesso'
+        title: 'Funcionalidade em desenvolvimento',
+        description: 'Atualização de roles será implementada em breve'
       });
 
-      await loadUsers();
       setIsEditOpen(false);
       setEditingUser(null);
     } catch (error) {
@@ -126,27 +95,12 @@ export function UserManagement() {
   };
 
   const getUserEffectiveRole = (user: UserProfile): UserRole => {
-    // Se tem role de super_admin, retorna isso
-    if (user.user_roles?.[0]?.role === 'super_admin') {
-      return 'super_admin';
-    }
-
-    // Senão, busca o role organizacional ativo
-    const activeOrgRole = user.organization_roles?.find(r => r.is_active);
-    if (activeOrgRole) {
-      return activeOrgRole.role as UserRole;
-    }
-
-    // Fallback para o role base
     return user.user_roles?.[0]?.role || 'tecnico';
   };
 
   const canEditUser = (user: UserProfile): boolean => {
-    if (currentUser?.effectiveRole === 'super_admin') return true;
-    if (currentUser?.effectiveRole === 'owner') {
-      return user.organization_id === currentUser.organizationId;
-    }
-    return false;
+    // Simplificando: apenas administrador pode editar
+    return currentUser?.role === 'administrador';
   };
 
   if (loading) {
@@ -163,7 +117,6 @@ export function UserManagement() {
         <TableHeader>
           <TableRow>
             <TableHead>Usuário</TableHead>
-            <TableHead>Organização</TableHead>
             <TableHead>Equipe</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Membro desde</TableHead>
@@ -191,13 +144,10 @@ export function UserManagement() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{user.organization_id}</Badge>
-                </TableCell>
-                <TableCell>
                   {user.teams?.name || 'Sem equipe'}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={effectiveRole === 'super_admin' ? 'destructive' : 'default'}>
+                  <Badge variant={effectiveRole === 'administrador' ? 'default' : 'secondary'}>
                     {ROLE_DISPLAY_NAMES[effectiveRole]}
                   </Badge>
                 </TableCell>
@@ -251,32 +201,15 @@ export function UserManagement() {
                 </div>
               </div>
 
-              <div>
-                <Label>Novo Role</Label>
-                <Select
-                  onValueChange={(value: UserRole) => handleRoleUpdate(editingUser.id, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar novo role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentUser?.effectiveRole === 'super_admin' && (
-                      <SelectItem value="super_admin">Super Admin</SelectItem>
-                    )}
-                    <SelectItem value="owner">Proprietário</SelectItem>
-                    <SelectItem value="administrador">Administrador</SelectItem>
-                    <SelectItem value="gestor">Gestor</SelectItem>
-                    <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="requisitor">Requisitor</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="text-sm text-muted-foreground">
+                Funcionalidade de alteração de roles em desenvolvimento
               </div>
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              Cancelar
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
