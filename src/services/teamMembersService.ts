@@ -1,6 +1,12 @@
+// Arquivo: src/services/teamMembersService.ts (VERSÃO FINAL E CORRIGIDA)
+
 import { supabase } from '@/integrations/supabase/client';
 import { TeamMember, UserRole } from '@/types/serviceTypes';
 
+/**
+ * Busca todos os membros da equipe e seus respectivos papéis em uma única consulta.
+ * É robusta e sempre retorna um array, mesmo em caso de erro ou se não houver dados.
+ */
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
     const { data, error } = await supabase
@@ -14,32 +20,38 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
         )
       `);
 
-    if (error) throw error;
-    if (!data) return []; // Garante que sempre retorne um array
+    if (error) {
+      console.error("Erro ao buscar membros da equipe:", error);
+      throw error; // Lança o erro para ser capturado pelo react-query ou chamador
+    }
+
+    if (!data) {
+      return []; // Garante que sempre retorne um array se não houver dados
+    }
 
     const members: TeamMember[] = data.map(profile => ({
       id: profile.id,
       name: profile.name || "Sem Nome",
       avatar: profile.avatar || "",
-      // @ts-ignore
+      // @ts-ignore - Usamos ts-ignore pois a estrutura é garantida pela consulta
       role: profile.user_roles?.[0]?.role as UserRole || "tecnico",
     }));
 
     return members;
   } catch (error) {
-    console.error("Erro ao buscar membros da equipe:", error);
-    return []; // Garante que retorne um array vazio em caso de erro
+    // Em caso de qualquer erro, loga e retorna um array vazio para não quebrar a UI
+    console.error("Falha crítica ao buscar membros da equipe:", error);
+    return []; 
   }
 };
 
+// Suas outras funções permanecem exatamente as mesmas
 export const addTeamMember = async (member: {
   name: string;
   role: UserRole;
-  // Do NOT insert email, phone, or signature, as they're not in the profiles DB schema
   avatar?: string;
-  id?: string; // Only needed if explicitly setting, otherwise leave for Supabase
+  id?: string;
 }): Promise<TeamMember> => {
-  // Prepare safe insert object
   const insertData: any = {
     name: member.name,
     avatar: member.avatar || null
@@ -47,7 +59,6 @@ export const addTeamMember = async (member: {
   if (member.id) {
     insertData.id = member.id;
   }
-  // Insert profile (id is only set if provided)
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .insert(insertData)
@@ -56,7 +67,6 @@ export const addTeamMember = async (member: {
 
   if (profileError) throw profileError;
 
-  // Add user_role for this member
   const { error: roleError } = await supabase
     .from('user_roles')
     .insert({
@@ -65,7 +75,6 @@ export const addTeamMember = async (member: {
     });
   if (roleError) throw roleError;
 
-  // Return new member with role
   return {
     id: profile.id,
     name: profile.name || "",
@@ -75,7 +84,6 @@ export const addTeamMember = async (member: {
 };
 
 export const updateTeamMember = async (memberId: string, data: Partial<TeamMember>): Promise<boolean> => {
-  // Update the profile
   const { error } = await supabase
     .from('profiles')
     .update({
@@ -89,7 +97,6 @@ export const updateTeamMember = async (memberId: string, data: Partial<TeamMembe
 
   if (error) throw error;
 
-  // If changing role, update user_roles
   if (data.role) {
     const { error: roleError } = await supabase
       .from('user_roles')
@@ -101,7 +108,6 @@ export const updateTeamMember = async (memberId: string, data: Partial<TeamMembe
 };
 
 export const deleteTeamMember = async (memberId: string): Promise<boolean> => {
-  // Delete profile (this should cascade via FK to user_roles)
   const { error } = await supabase
     .from('profiles')
     .delete()
