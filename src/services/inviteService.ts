@@ -232,7 +232,7 @@ export const getExpiredInvites = async (): Promise<UserInvite[]> => {
       .lt('expires_at', new Date().toISOString());
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as UserInvite[];
   } catch (error) {
     console.error('Erro ao buscar convites expirados:', error);
     return [];

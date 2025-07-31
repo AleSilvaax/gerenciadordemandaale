@@ -25,5 +25,8 @@ enabled = true
 [functions.add_service_message]
 verify_jwt = true
 
+[functions.send-invite]
+verify_jwt = true
+
 [storage]
 enabled = true
