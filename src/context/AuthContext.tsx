@@ -50,12 +50,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const buildUserProfile = useCallback(async (authUser: User): Promise<AuthUser> => {
     try {
+      console.log('[Auth] Construindo perfil para usuário:', authUser.id);
+      
       // Buscar perfil do usuário
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      console.log('[Auth] Dados do perfil:', profileData, profileError);
 
       // Buscar role do usuário (com timeout)
       let role = 'tecnico';
@@ -71,6 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
         ]) as any;
 
+        console.log('[Auth] Dados do role:', roleData, roleError);
+
         if (!roleError && roleData) {
           role = roleData.role;
         }
@@ -78,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('[Auth] Usando role padrão devido a erro:', error);
       }
 
-      return {
+      const userProfile = {
         id: authUser.id,
         email: authUser.email!,
         name: profileData?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
@@ -87,6 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamId: profileData?.team_id || null,
         permissions: []
       };
+
+      console.log('[Auth] Perfil construído:', userProfile);
+      return userProfile;
     } catch (error) {
       console.error('[Auth] Erro ao construir perfil:', error);
       // Retorna perfil básico em caso de erro

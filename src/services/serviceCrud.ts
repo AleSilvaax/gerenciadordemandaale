@@ -70,28 +70,90 @@ const transformServiceData = (service: any): Service => {
  */
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return []; // Se não houver usuário logado, retorna uma lista vazia.
+    console.log('[SERVICES] Iniciando busca de serviços...');
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log('[SERVICES] Usuário autenticado:', user?.id, userError);
+    
+    if (!user) {
+      console.warn('[SERVICES] Nenhum usuário autenticado encontrado');
+      return [];
+    }
 
+    // Query simplificada sem JOIN complexo para evitar recursão
     let query = supabase
       .from('services')
-      .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`);
-
-    // Busca o cargo do usuário para aplicar a regra especial para técnicos.
-    const { data: userRole } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-
-    if (userRole?.role === 'tecnico') {
-      // Mantém a regra para técnicos verem apenas seus serviços atribuídos.
-      query = query.filter('service_technicians.technician_id', 'eq', user.id);
-    }
+      .select('*');
     
-    // Para administradores e gestores, a RLS já faz o trabalho de filtrar por organização.
+    console.log('[SERVICES] Executando query de serviços...');
     const { data: servicesData, error: servicesError } = await query.order('created_at', { ascending: false });
 
-    if (servicesError) throw servicesError;
+    if (servicesError) {
+      console.error('[SERVICES] Erro na query:', servicesError);
+      throw servicesError;
+    }
+    
+    console.log('[SERVICES] Serviços encontrados:', servicesData?.length || 0);
+    
     if (!servicesData) return [];
 
-    return servicesData.map(transformServiceData);
+    // Buscar técnicos separadamente para cada serviço
+    const servicesWithTechnicians = await Promise.all(
+      servicesData.map(async (service) => {
+        try {
+          const { data: techniciansData } = await supabase
+            .from('service_technicians')
+            .select(`
+              technician_id,
+              profiles!inner(id, name, avatar)
+            `)
+            .eq('service_id', service.id);
+
+          const technicians = (techniciansData || []).map((st: any) => ({
+            id: st.profiles.id,
+            name: st.profiles.name || 'Técnico',
+            avatar: st.profiles.avatar || '',
+            role: 'tecnico',
+          }));
+
+          return { ...service, technicians };
+        } catch (error) {
+          console.warn('[SERVICES] Erro ao buscar técnicos para serviço', service.id, error);
+          return { ...service, technicians: [] };
+        }
+      })
+    );
+
+    // Buscar mensagens separadamente
+    const servicesWithMessages = await Promise.all(
+      servicesWithTechnicians.map(async (service) => {
+        try {
+          const { data: messagesData } = await supabase
+            .from('service_messages')
+            .select('*')
+            .eq('service_id', service.id)
+            .order('timestamp', { ascending: true });
+
+          const messages = (messagesData || []).map((m: any) => ({
+            senderId: m.sender_id,
+            senderName: m.sender_name,
+            senderRole: m.sender_role,
+            message: m.message,
+            timestamp: m.timestamp
+          }));
+
+          return { ...service, messages };
+        } catch (error) {
+          console.warn('[SERVICES] Erro ao buscar mensagens para serviço', service.id, error);
+          return { ...service, messages: [] };
+        }
+      })
+    );
+
+    const transformedServices = servicesWithMessages.map(transformServiceData);
+    console.log('[SERVICES] Serviços transformados:', transformedServices.length);
+    
+    return transformedServices;
   } catch (error: any) {
     console.error('[SERVICES] Erro na busca de serviços:', error);
     toast.error("Erro ao buscar as demandas", { description: "Verifique sua conexão ou tente novamente mais tarde." });
