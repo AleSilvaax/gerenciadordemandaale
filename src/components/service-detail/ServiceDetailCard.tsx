@@ -8,7 +8,7 @@ import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { updateService } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Service } from "@/types/serviceTypes";
+import { Service, TeamMember } from "@/types/serviceTypes"; // Adicionado TeamMember
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Calendar, Clock, Users, FileText, CheckCircle, XCircle } from "lucide-react";
@@ -92,7 +92,8 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <Users className="w-5 h-5 text-primary mt-1" />
               <div>
                 <p className="text-sm font-medium">Técnicos Responsáveis</p>
-                {service.technicians && service.technicians.length > 0 ? (
+                {/* Garante que service.technicians seja um array antes de mapear */}
+                {Array.isArray(service.technicians) && service.technicians.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {service.technicians.map(tech => (
                       <div key={tech.id} className="flex items-center gap-2 bg-background p-1 rounded-full border">
@@ -109,11 +110,11 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           </div>
         </div>
 
-        {/* ✅ CONEXÃO FINAL E CORRIGIDA */}
+        {/* ✅ CORREÇÃO FINAL APLICADA AQUI */}
         {hasGestorPermission && (
           <TechnicianAssigner
-            currentTechnicians={service.technicians}
-            onAssign={async (newTechnicians) => {
+            currentTechnicians={service.technicians || []} // Garante que seja sempre um array
+            onAssign={async (newTechnicians: TeamMember[]) => {
               await updateService({ id: service.id, technicians: newTechnicians });
               onServiceUpdate(); // Recarrega os dados da página
             }}
