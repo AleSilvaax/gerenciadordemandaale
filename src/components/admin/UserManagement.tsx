@@ -55,8 +55,7 @@ export function UserManagement() {
         .from('profiles')
         .select(`
           *,
-          user_roles (role),
-          teams (name)
+          user_roles (role)
         `)
         .order('name');
 
@@ -76,14 +75,21 @@ export function UserManagement() {
 
   const handleRoleUpdate = async (userId: string, newRole: UserRole) => {
     try {
-      // Simplificado: apenas mostrar que a funcionalidade existe
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
       toast({
-        title: 'Funcionalidade em desenvolvimento',
-        description: 'Atualização de roles será implementada em breve'
+        title: 'Sucesso',
+        description: 'Role do usuário atualizado com sucesso'
       });
 
       setIsEditOpen(false);
       setEditingUser(null);
+      loadUsers(); // Recarregar lista
     } catch (error) {
       console.error('Erro ao atualizar role:', error);
       toast({
@@ -144,7 +150,7 @@ export function UserManagement() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {user.teams?.name || 'Sem equipe'}
+                  Sem equipe
                 </TableCell>
                 <TableCell>
                   <Badge variant={effectiveRole === 'administrador' ? 'default' : 'secondary'}>
@@ -201,8 +207,18 @@ export function UserManagement() {
                 </div>
               </div>
 
-              <div className="text-sm text-muted-foreground">
-                Funcionalidade de alteração de roles em desenvolvimento
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Novo Role:</label>
+                <Select onValueChange={(value: UserRole) => handleRoleUpdate(editingUser.id, value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar novo role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tecnico">Técnico</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                    <SelectItem value="administrador">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}

@@ -7,8 +7,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import * as organizationService from '@/services/organizationService';
-import type { Organization } from '@/services/organizationService';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export function OrganizationManagement() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -28,8 +36,13 @@ export function OrganizationManagement() {
   const loadOrganizations = async () => {
     try {
       setLoading(true);
-      const data = await organizationService.getAllOrganizations();
-      setOrganizations(data);
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setOrganizations(data || []);
     } catch (error) {
       console.error('Erro ao carregar organizações:', error);
       toast({
@@ -47,13 +60,31 @@ export function OrganizationManagement() {
     
     try {
       if (editingOrg) {
-        await organizationService.updateOrganization(editingOrg.id, formData);
+        const { error } = await supabase
+          .from('organizations')
+          .update({
+            name: formData.name,
+            slug: formData.slug,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingOrg.id);
+        
+        if (error) throw error;
+        
         toast({
           title: 'Sucesso',
           description: 'Organização atualizada com sucesso'
         });
       } else {
-        await organizationService.createOrganization(formData);
+        const { error } = await supabase
+          .from('organizations')
+          .insert({
+            name: formData.name,
+            slug: formData.slug
+          });
+        
+        if (error) throw error;
+        
         toast({
           title: 'Sucesso',
           description: 'Organização criada com sucesso'
@@ -84,20 +115,29 @@ export function OrganizationManagement() {
   };
 
   const handleDelete = async (orgId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta organização?')) return;
+    if (!confirm('Tem certeza que deseja desativar esta organização?')) return;
     
     try {
-      await organizationService.deactivateOrganization(orgId);
+      const { error } = await supabase
+        .from('organizations')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orgId);
+      
+      if (error) throw error;
+      
       toast({
         title: 'Sucesso',
-        description: 'Organização excluída com sucesso'
+        description: 'Organização desativada com sucesso'
       });
       await loadOrganizations();
     } catch (error) {
-      console.error('Erro ao excluir organização:', error);
+      console.error('Erro ao desativar organização:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível excluir a organização',
+        description: 'Não foi possível desativar a organização',
         variant: 'destructive'
       });
     }
