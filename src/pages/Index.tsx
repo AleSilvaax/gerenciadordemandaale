@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock } from "lucide-react";
+import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
@@ -177,12 +177,72 @@ const Index: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Métricas em Tempo Real */}
+        {/* Cards de Estatísticas Principais - Simplificados */}
         <motion.div variants={itemVariants}>
-          <RealtimeMetrics />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
+            <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-lg transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                  </div>
+                  Total de Demandas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600 mb-1">{services.length}</div>
+                <p className="text-sm text-muted-foreground">Demandas no sistema</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-lg transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <Users className="h-4 w-4 text-green-600" />
+                  </div>
+                  Concluídas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600 mb-1">{services.filter(s => s.status === 'concluido').length}</div>
+                <p className="text-sm text-muted-foreground">Demandas finalizadas</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 hover:shadow-lg transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                  </div>
+                  Pendentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-orange-600 mb-1">{services.filter(s => s.status === 'pendente').length}</div>
+                <p className="text-sm text-muted-foreground">Aguardando execução</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-red-50/50 to-red-100/30 border-red-200/50 hover:shadow-lg transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 bg-red-500/10 rounded-lg">
+                    <Clock className="h-4 w-4 text-red-600" />
+                  </div>
+                  Alta Prioridade
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
+                <p className="text-sm text-muted-foreground">Demandas urgentes</p>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
 
-        {/* Busca Avançada */}
+        {/* Busca Avançada - Simplificada */}
         <motion.div variants={itemVariants}>
           <AdvancedSearch
             filters={filters}
@@ -192,152 +252,124 @@ const Index: React.FC = () => {
           />
         </motion.div>
 
-        {/* Main Content */}
+        {/* Conteúdo Principal - Simplificado */}
         <motion.div variants={itemVariants}>
-          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-card/60 backdrop-blur-sm border border-border/50">
-              <TabsTrigger value="overview" className="text-sm">Visão Geral</TabsTrigger>
-              <TabsTrigger value="recent" className="text-sm">
-                Recentes 
-                {filteredServices.length !== services.length && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {filteredServices.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="quick-actions" className="text-sm">Ações Rápidas</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-lg transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <TrendingUp className="h-4 w-4 text-blue-600" />
-                      </div>
-                      Desempenho
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-blue-600 mb-1">87%</div>
-                    <p className="text-sm text-muted-foreground">Taxa de conclusão</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-lg transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <div className="p-2 bg-green-500/10 rounded-lg">
-                        <Users className="h-4 w-4 text-green-600" />
-                      </div>
-                      Equipe Ativa
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600 mb-1">{services.filter(s => s.technicians?.length > 0).length}</div>
-                    <p className="text-sm text-muted-foreground">Técnicos trabalhando</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 hover:shadow-lg transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Clock className="h-4 w-4 text-orange-600" />
-                      </div>
-                      Urgentes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-orange-600 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
-                    <p className="text-sm text-muted-foreground">Alta prioridade</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="recent" className="space-y-6">
-              <Card className="card-enhanced">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
-                      Demandas {filteredServices.length !== services.length ? 'Filtradas' : 'Recentes'}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Link to="/demandas">
-                        <Button variant="outline" size="sm" className="text-sm">
-                          Ver Todas ({services.length})
-                        </Button>
-                      </Link>
+          <div className="space-y-6">
+            {/* Demandas Recentes */}
+            <Card className="bg-gradient-to-br from-background/95 via-background/90 to-primary/5 backdrop-blur-xl border border-border/30 shadow-xl">
+              <CardHeader className="pb-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/20">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
+                      <Calendar className="w-5 h-5 text-primary" />
                     </div>
+                    Demandas {filteredServices.length !== services.length ? 'Filtradas' : 'Recentes'}
+                    {filteredServices.length !== services.length && (
+                      <Badge variant="secondary" className="ml-2">
+                        {filteredServices.length} de {services.length}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <Link to="/demandas">
+                      <Button variant="outline" size="sm" className="gap-2">
+                        Ver Todas
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {recentServices.length > 0 ? (
-                    <div className="space-y-3">
-                      {recentServices.map((service, index) => (
-                        <motion.div
-                          key={service.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                        >
-                          <CompactServiceCard service={service} />
-                        </motion.div>
-                      ))}
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {recentServices.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentServices.map((service, index) => (
+                      <motion.div
+                        key={service.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <CompactServiceCard service={service} />
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="p-4 bg-muted/20 rounded-2xl w-fit mx-auto mb-4">
+                      <Search className="w-8 h-8 text-muted-foreground" />
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground text-left-force">
-                        {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all'
-                          ? 'Nenhuma demanda encontrada com os filtros aplicados'
-                          : 'Nenhuma demanda encontrada'}
-                      </p>
+                    <h3 className="text-lg font-semibold mb-2">Nenhuma demanda encontrada</h3>
+                    <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
+                      {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all'
+                        ? 'Tente ajustar os filtros de busca para encontrar demandas.'
+                        : 'Não há demandas no sistema. Que tal criar a primeira?'}
+                    </p>
+                    <Link to="/nova-demanda">
+                      <Button className="gap-2">
+                        <Plus className="w-4 h-4" />
+                        Nova Demanda
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ações Rápidas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+                <Link to="/estatisticas" className="block">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                        <TrendingUp className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">Relatórios</h3>
+                        <p className="text-sm text-muted-foreground">Estatísticas detalhadas</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                     </div>
-                  )}
-                </CardContent>
+                  </CardContent>
+                </Link>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="quick-actions" className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/estatisticas" className="block">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
-                          <TrendingUp className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-1">Relatórios & Analytics</h3>
-                          <p className="text-sm text-muted-foreground">Visualizar estatísticas detalhadas</p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+              <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+                <Link to="/equipe" className="block">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-green-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                        <Users className="h-6 w-6 text-green-600" />
                       </div>
-                    </CardContent>
-                  </Link>
-                </Card>
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">Equipe</h3>
+                        <p className="text-sm text-muted-foreground">Gerenciar membros</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
 
-                <Card className="bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                  <Link to="/equipe" className="block">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-secondary/10 rounded-xl group-hover:scale-110 transition-transform">
-                          <Users className="h-6 w-6 text-secondary-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-1">Gerenciar Equipe</h3>
-                          <p className="text-sm text-muted-foreground">Configurar membros e permissões</p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+              <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+                <Link to="/calendar" className="block">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-blue-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                        <Calendar className="h-6 w-6 text-blue-600" />
                       </div>
-                    </CardContent>
-                  </Link>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">Calendário</h3>
+                        <p className="text-sm text-muted-foreground">Agenda completa</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </div>
