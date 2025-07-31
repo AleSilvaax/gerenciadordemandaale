@@ -1,5 +1,5 @@
 
-export type UserRole = 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
+export type UserRole = 'super_admin' | 'owner' | 'administrador' | 'gestor' | 'tecnico' | 'requisitor';
 
 export interface AuthUser {
   id: string;
