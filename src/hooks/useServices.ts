@@ -18,7 +18,7 @@ export const useServices = () => {
     refetch
   } = useQuery({
     queryKey: ['services-list', user?.id], 
-    queryFn: () => getServices(user),
+    queryFn: () => getServices(),
     enabled: !!user, 
     staleTime: 5 * 60 * 1000,
     placeholderData: (previousData) => previousData,

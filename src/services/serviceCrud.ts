@@ -78,9 +78,9 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
       .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`);
 
     // Busca o cargo do usuário para aplicar a regra especial para técnicos.
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    const { data: userRole } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
 
-    if (profile?.role === 'tecnico') {
+    if (userRole?.role === 'tecnico') {
       // Mantém a regra para técnicos verem apenas seus serviços atribuídos.
       query = query.filter('service_technicians.technician_id', 'eq', user.id);
     }

@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          service_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          service_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          service_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -50,7 +85,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string | null
-          organization_id: string | null
+          organization_id: string
           team_id: string | null
           updated_at: string | null
         }
@@ -59,7 +94,7 @@ export type Database = {
           created_at?: string | null
           id: string
           name?: string | null
-          organization_id?: string | null
+          organization_id: string
           team_id?: string | null
           updated_at?: string | null
         }
@@ -68,7 +103,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string | null
-          organization_id?: string | null
+          organization_id?: string
           team_id?: string | null
           updated_at?: string | null
         }
@@ -296,7 +331,7 @@ export type Database = {
           estimated_hours: number | null
           id: string
           name: string
-          organization_id: string | null
+          organization_id: string
           updated_at: string
         }
         Insert: {
@@ -306,7 +341,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           name: string
-          organization_id?: string | null
+          organization_id: string
           updated_at?: string
         }
         Update: {
@@ -316,7 +351,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: string
           name?: string
-          organization_id?: string | null
+          organization_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -346,7 +381,7 @@ export type Database = {
           location: string
           notes: string | null
           number: string
-          organization_id: string | null
+          organization_id: string
           photo_titles: string[] | null
           photos: string[] | null
           priority: string | null
@@ -374,7 +409,7 @@ export type Database = {
           location: string
           notes?: string | null
           number: string
-          organization_id?: string | null
+          organization_id: string
           photo_titles?: string[] | null
           photos?: string[] | null
           priority?: string | null
@@ -402,7 +437,7 @@ export type Database = {
           location?: string
           notes?: string | null
           number?: string
-          organization_id?: string | null
+          organization_id?: string
           photo_titles?: string[] | null
           photos?: string[] | null
           priority?: string | null
@@ -445,7 +480,7 @@ export type Database = {
           id: string
           invite_code: string
           name: string
-          organization_id: string | null
+          organization_id: string
         }
         Insert: {
           created_at?: string
@@ -453,7 +488,7 @@ export type Database = {
           id?: string
           invite_code: string
           name: string
-          organization_id?: string | null
+          organization_id: string
         }
         Update: {
           created_at?: string
@@ -461,7 +496,7 @@ export type Database = {
           id?: string
           invite_code?: string
           name?: string
-          organization_id?: string | null
+          organization_id?: string
         }
         Relationships: [
           {
@@ -683,6 +718,14 @@ export type Database = {
         Args: { org_name: string; admin_email: string; admin_name: string }
         Returns: string
       }
+      create_notification: {
+        Args: {
+          target_user_id: string
+          notification_message: string
+          target_service_id?: string
+        }
+        Returns: undefined
+      }
       create_service_messages_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -692,6 +735,10 @@ export type Database = {
         Returns: string
       }
       generate_random_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_organization_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
