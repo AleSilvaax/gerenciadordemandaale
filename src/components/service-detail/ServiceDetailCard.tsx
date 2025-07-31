@@ -1,16 +1,18 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
+import { ServiceEditForm } from "./ServiceEditForm";
 import { updateService } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Calendar, Clock, User, FileText, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, Calendar, Clock, User, FileText, CheckCircle, XCircle, Edit2 } from "lucide-react";
 
 interface ServiceDetailCardProps {
   service: Service;
@@ -19,9 +21,25 @@ interface ServiceDetailCardProps {
 
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const canEdit = user?.role === 'gestor' || user?.role === 'administrador';
 
   // Função para verificar permissões - simplificada já que não temos hasPermission no AuthContext
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
+
+  if (isEditing) {
+    return (
+      <ServiceEditForm
+        service={service}
+        onServiceUpdate={() => {
+          onServiceUpdate();
+          setIsEditing(false);
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -58,15 +76,28 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-xs text-muted-foreground font-medium">
-              OS #{service.number || 'N/A'}
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="h-8 px-2"
+              >
+                <Edit2 className="w-3 h-3 mr-1" />
+                Editar
+              </Button>
+            )}
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-xs text-muted-foreground font-medium">
+                OS #{service.number || 'N/A'}
+              </div>
+              <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
+                {getStatusIcon(service.status)}
+                {service.status === "concluido" ? "Concluído" : 
+                 service.status === "cancelado" ? "Cancelado" : "Pendente"}
+              </Badge>
             </div>
-            <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
-              {getStatusIcon(service.status)}
-              {service.status === "concluido" ? "Concluído" : 
-               service.status === "cancelado" ? "Cancelado" : "Pendente"}
-            </Badge>
           </div>
         </div>
       </CardHeader>

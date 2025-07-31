@@ -43,7 +43,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handlePhotosChange
   } = useServiceDetail();
 
-  // FUNÇÃO DESABILITADA TEMPORARIAMENTE
   const handleGenerateReport = async () => {
     if (!service || !user) {
       toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
@@ -51,12 +50,13 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
 
     try {
+      toast.loading("Gerando relatório PDF...");
       const { generateProfessionalServiceReport } = await import("@/utils/pdf/professionalPdfGenerator");
       await generateProfessionalServiceReport(service);
       toast.success("Relatório PDF gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório PDF");
+      toast.error("Erro ao gerar relatório PDF. Verifique o console para mais detalhes.");
     }
   };
 
@@ -145,25 +145,6 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               </Card>
             </motion.div>
 
-            {/* Botão único para gerar relatório */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-                <CardContent className="p-4">
-                  <Button
-                    onClick={handleGenerateReport}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Gerar Relatório PDF
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
 
             <motion.div
               initial={{ y: 20, opacity: 0 }}
@@ -174,6 +155,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 service={service}
                 onStatusChange={handleStatusChange}
                 editMode={editMode}
+                onGenerateReport={handleGenerateReport}
               />
             </motion.div>
           </div>

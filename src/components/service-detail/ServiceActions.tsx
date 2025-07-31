@@ -94,19 +94,21 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
         )}
 
         {/* Gerar Relatório */}
-        <div className="pt-4 border-t">
-          <Button 
-            onClick={onGenerateReport} 
-            className="w-full"
-            variant="outline"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Gerar Relatório PDF
-          </Button>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Inclui todas as informações, fotos e assinaturas
-          </p>
-        </div>
+        {onGenerateReport && (
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={onGenerateReport} 
+              className="w-full"
+              variant="outline"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Gerar Relatório PDF
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Inclui todas as informações, fotos e assinaturas
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
