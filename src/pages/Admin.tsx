@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrganizationManagement } from '@/components/admin/OrganizationManagement';
@@ -8,7 +8,7 @@ import { InviteManagement } from '@/components/admin/InviteManagement';
 import { Users, Building2, Mail, Settings } from 'lucide-react';
 
 export default function AdminPage() {
-  const { user, isLoading } = useEnhancedAuth();
+  const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('organizations');
 
   // Loading state
