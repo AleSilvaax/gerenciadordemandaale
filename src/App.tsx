@@ -1,8 +1,10 @@
+// Arquivo: src/App.tsx (VERSÃO CORRIGIDA E FINAL)
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/context/AuthContext';
+// ✅ ALTERAÇÃO 1: Importamos o provedor de autenticação correto e unificado.
+import { OptimizedAuthProvider } from '@/context/OptimizedAuthContext'; 
 import { AuthGuard } from '@/components/guards/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -35,13 +37,17 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
+        {/* ✅ ALTERAÇÃO 2: Substituímos o AuthProvider antigo pelo OptimizedAuthProvider.
+            Agora, toda a aplicação, incluindo a página de Equipe, usará a mesma lógica
+            de autenticação, com organizationId e permissões.
+        */}
+        <OptimizedAuthProvider>
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* Rotas protegidas */}
+            {/* Rotas protegidas (nenhuma alteração necessária aqui) */}
             <Route path="/" element={
               <AuthGuard>
                 <AppLayout>
@@ -128,7 +134,7 @@ function App() {
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
-        </AuthProvider>
+        </OptimizedAuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
