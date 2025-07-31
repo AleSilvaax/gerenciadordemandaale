@@ -1,24 +1,21 @@
-// Arquivo: src/services/serviceCrud.ts (VERSÃO ATUALIZADA)
+// Arquivo: src/services/serviceCrud.ts (VERSÃO COMPLETA E CORRIGIDA)
 
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
-import { AuthUser } from '@/context/AuthContext';
 
-// Função auxiliar para transformar os dados do Supabase no tipo Service, evitando repetição de código.
+// A função de transformação dos dados foi mantida, pois está correta.
 const transformServiceData = (service: any): Service => {
-  const techProfile = service.service_technicians?.[0]?.profiles;
-  const technician: TeamMember = techProfile ? {
-    id: techProfile.id,
-    name: techProfile.name || 'Técnico',
-    avatar: techProfile.avatar || '',
-    role: 'tecnico',
-  } : {
-    id: '0',
-    name: 'Não atribuído',
-    avatar: '',
-    role: 'tecnico',
-  };
+  const technicians = (service.service_technicians || []).map((st: any) => {
+    const techProfile = st.profiles;
+    if (!techProfile) return null;
+    return {
+      id: techProfile.id,
+      name: techProfile.name || 'Técnico',
+      avatar: techProfile.avatar || '',
+      role: 'tecnico',
+    } as TeamMember;
+  }).filter(Boolean); // Remove quaisquer nulos se um perfil não for encontrado
 
   const serviceMessages = (service.service_messages || []).map((m: any) => ({
     senderId: m.sender_id, senderName: m.sender_name, senderRole: m.sender_role,
@@ -33,41 +30,62 @@ const transformServiceData = (service: any): Service => {
   
   const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
     ? service.priority as ServicePriority : 'media' as ServicePriority;
-  const safeStatus = ['pendente', 'concluido', 'cancelado'].includes(service.status)
+  const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
     ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
 
   return {
-    id: service.id, title: service.title || 'Sem título', location: service.location || 'Local não informado',
-    status: safeStatus, technician: technician, creationDate: service.created_at,
-    dueDate: service.due_date, priority: safePriority, serviceType: service.service_type || 'Vistoria',
-    number: service.number, description: service.description, createdBy: service.created_by,
-    client: service.client, address: service.address, city: service.city,
-    notes: service.notes, estimatedHours: service.estimated_hours,
-    customFields: parseJsonField(service.custom_fields), signatures: parseJsonField(service.signatures),
-    feedback: parseJsonField(service.feedback), messages: serviceMessages,
+    id: service.id,
+    title: service.title || 'Sem título',
+    location: service.location || 'Local não informado',
+    status: safeStatus,
+    technicians: technicians, // Usa o array de técnicos
+    creationDate: service.created_at,
+    dueDate: service.due_date,
+    priority: safePriority,
+    serviceType: service.service_type || 'Vistoria',
+    number: service.number,
+    description: service.description,
+    createdBy: service.created_by,
+    client: service.client,
+    address: service.address,
+    city: service.city,
+    notes: service.notes,
+    estimatedHours: service.estimated_hours,
+    customFields: parseJsonField(service.custom_fields),
+    signatures: parseJsonField(service.signatures),
+    feedback: parseJsonField(service.feedback),
+    messages: serviceMessages,
     photos: Array.isArray(service.photos) ? service.photos : [],
     photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
     date: service.date,
   };
 }
 
+
 /**
- * Busca uma lista de serviços com base no perfil do usuário.
- * - Administradores e Gestores veem todos os serviços.
- * - Técnicos veem apenas os serviços atribuídos a eles.
+ * ✅ FUNÇÃO CORRIGIDA
+ * Busca uma lista de serviços. A segurança por organização é garantida pelas
+ * Políticas de Acesso (RLS) do Supabase. A função agora busca o cargo do
+ * usuário internamente para aplicar filtros específicos.
  */
-export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Service[]> => {
+export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
-    if (!user) return [];
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return []; // Se não houver usuário logado, retorna uma lista vazia.
 
     let query = supabase
       .from('services')
-      .select(`*, service_technicians!inner(profiles(id, name, avatar)), service_messages(*)`);
+      .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`);
 
-    if (user.role === 'tecnico') {
+    // Busca o cargo do usuário para aplicar a regra especial para técnicos.
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+
+    if (profile?.role === 'tecnico') {
+      // Mantém a regra para técnicos verem apenas seus serviços atribuídos.
       query = query.filter('service_technicians.technician_id', 'eq', user.id);
     }
     
+    // Para administradores e gestores, a RLS já faz o trabalho de filtrar por organização.
     const { data: servicesData, error: servicesError } = await query.order('created_at', { ascending: false });
 
     if (servicesError) throw servicesError;
@@ -75,89 +93,101 @@ export const getServicesFromDatabase = async (user: AuthUser | null): Promise<Se
 
     return servicesData.map(transformServiceData);
   } catch (error: any) {
-    console.error('[SERVICES] Erro geral na busca de serviços:', error);
-    toast.error(`Erro ao buscar demandas: ${error.message || 'Erro desconhecido'}`);
+    console.error('[SERVICES] Erro na busca de serviços:', error);
+    toast.error("Erro ao buscar as demandas", { description: "Verifique sua conexão ou tente novamente mais tarde." });
     return [];
   }
 };
 
+
 /**
- * ✅ NOVA FUNÇÃO
- * Busca um único serviço pelo seu ID, respeitando as permissões do usuário.
+ * ✅ FUNÇÃO CORRIGIDA
+ * Busca um único serviço pelo seu ID. A segurança é garantida pelas RLS.
  */
-export const getServiceByIdFromDatabase = async (serviceId: string, user: AuthUser | null): Promise<Service | null> => {
-  if (!user) return null;
+export const getServiceByIdFromDatabase = async (serviceId: string): Promise<Service | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`)
+      .eq('id', serviceId)
+      .single();
 
-  let query = supabase
-    .from('services')
-    .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`)
-    .eq('id', serviceId);
-
-  // A lógica de permissão para a página de detalhes
-  if (user.role === 'tecnico') {
-    query = query.filter('service_technicians.technician_id', 'eq', user.id);
-  }
-
-  const { data, error } = await query.single();
-
-  if (error || !data) {
-    console.error(`[SERVICE DETAIL] Erro ou serviço não encontrado (ou sem permissão) para id ${serviceId}:`, error);
+    if (error) {
+      // Não mostra o erro no toast para não poluir a interface, apenas no console.
+      console.error(`[SERVICE DETAIL] Serviço não encontrado ou sem permissão para id ${serviceId}:`, error);
+      return null;
+    }
+    
+    return transformServiceData(data);
+  } catch (error) {
+    console.error('[SERVICE DETAIL] Erro ao buscar detalhe do serviço:', error);
     return null;
   }
-  
-  return transformServiceData(data);
 };
 
 
+/**
+ * ✅ FUNÇÃO CORRIGIDA
+ * Ajustada para incluir o 'organization_id' do usuário criador.
+ */
 export const createServiceInDatabase = async (
   service: Omit<Service, "id" | "number" | "creationDate"> & { serviceTypeId?: string }
 ): Promise<{ created: Service | null; technicianError?: string | null }> => {
   try {
-    if (!service.createdBy) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       throw new Error("Usuário não autenticado.");
     }
 
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profileData?.organization_id) {
+      throw new Error("Usuário não está associado a uma organização.");
+    }
+
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
-    const timestamp = Date.now();
-    const number = `SRV-${timestamp}-${random}`;
+    const number = `SRV-${Date.now()}-${random}`;
 
     const insertData = {
       title: service.title, location: service.location, status: service.status, number,
       due_date: service.dueDate ?? null, priority: service.priority ?? 'media',
       service_type: service.serviceType ?? 'Vistoria', service_type_id: service.serviceTypeId ?? null,
-      description: service.description ?? null, created_by: service.createdBy ?? null,
+      description: service.description ?? null,
       client: service.client ?? null, address: service.address ?? null, city: service.city ?? null,
       notes: service.notes ?? null, estimated_hours: service.estimatedHours ?? null,
       custom_fields: service.customFields ? JSON.stringify(service.customFields) : null,
       signatures: service.signatures ? JSON.stringify(service.signatures) : null,
       feedback: service.feedback ? JSON.stringify(service.feedback) : null,
       photos: service.photos ?? null, photo_titles: service.photoTitles ?? null,
-      date: service.date ?? null
+      date: service.date ?? null,
+      created_by: user.id,
+      organization_id: profileData.organization_id // <-- Chave da correção
     };
 
     const { data, error } = await supabase.from('services').insert(insertData).select().single();
-
     if (error) throw error;
 
     let technicianError: string | null = null;
-    if (service.technician?.id && service.technician.id !== '0' && data.id) {
-      try {
-        await assignTechnician(data.id, service.technician.id);
-      } catch (err: any) {
-        technicianError = "Erro ao atribuir técnico.";
-      }
+    if (service.technicians?.[0]?.id && service.technicians[0].id !== '0' && data.id) {
+        await assignTechnician(data.id, service.technicians[0].id).catch(() => {
+            technicianError = "Serviço criado, mas falha ao atribuir técnico.";
+        });
     }
 
-    // ✅ CORREÇÃO: Busca o serviço recém-criado com a nova função
-    const currentUser = { id: service.createdBy, role: 'gestor' } as AuthUser; // Simula um usuário para a busca
-    const createdService = await getServiceByIdFromDatabase(data.id, currentUser);
-
+    const createdService = await getServiceByIdFromDatabase(data.id);
     return { created: createdService, technicianError };
   } catch (error: any) {
-    toast.error("Falha ao criar serviço.");
+    toast.error("Falha ao criar serviço.", { description: error.message });
     return { created: null, technicianError: null };
   }
 };
+
+
+// As funções abaixo foram mantidas como no original, pois as RLS já as protegem.
 
 export const updateServiceInDatabase = async (service: Partial<Service> & { id: string }): Promise<Service | null> => {
   try {
@@ -185,14 +215,11 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     
     if (error) throw error;
     
-    if (service.technician !== undefined) {
-      await assignTechnician(service.id, service.technician.id);
+    if (service.technicians !== undefined && service.technicians[0]) {
+      await assignTechnician(service.id, service.technicians[0].id);
     }
     
-    // ✅ CORREÇÃO: Busca o serviço atualizado com a nova função
-    const adminUser = { id: '', role: 'administrador' } as AuthUser; // Simula um admin para a busca
-    const updatedService = await getServiceByIdFromDatabase(data.id, adminUser);
-
+    const updatedService = await getServiceByIdFromDatabase(data.id);
     return updatedService;
   } catch (error: any) {
     toast.error("Falha ao atualizar serviço.");
