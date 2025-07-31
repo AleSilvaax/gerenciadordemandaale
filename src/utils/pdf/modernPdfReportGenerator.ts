@@ -366,13 +366,13 @@ const createMessagesSection = async (doc: jsPDF, service: Service, yPosition: nu
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(colors.muted.r, colors.muted.g, colors.muted.b);
-    doc.text(`${formatDate(message.createdAt)} - ${message.senderId || 'Sistema'}:`, margins.left, yPosition);
+    doc.text(`${formatDate(message.timestamp)} - ${message.senderName}:`, margins.left, yPosition);
     
     yPosition += 8;
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-    const messageLines = doc.splitTextToSize(sanitizeText(message.content || ''), pageWidth - margins.left - margins.right);
+    const messageLines = doc.splitTextToSize(sanitizeText(message.message), pageWidth - margins.left - margins.right);
     doc.text(messageLines, margins.left, yPosition);
     
     yPosition += messageLines.length * 5 + 8;
@@ -399,7 +399,7 @@ const createFeedbackSection = async (doc: jsPDF, service: Service, yPosition: nu
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-    const feedbackText = typeof service.feedback === 'string' ? service.feedback : service.feedback.comment || '';
+    const feedbackText = service.feedback.clientComment || service.feedback.technicianFeedback || '';
     const feedbackLines = doc.splitTextToSize(sanitizeText(feedbackText), pageWidth - margins.left - margins.right);
     doc.text(feedbackLines, margins.left, yPosition);
     yPosition += feedbackLines.length * 6 + 15;
