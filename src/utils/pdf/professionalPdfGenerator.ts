@@ -60,6 +60,8 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
     currentY = await createSignaturesSection(doc, service, currentY);
   }
   
+  console.log('Dados do serviço para o PDF:', service);
+  
   // Fotos
   if (service.photos && service.photos.length > 0) {
     currentY = checkPageBreak(doc, currentY, 80);
