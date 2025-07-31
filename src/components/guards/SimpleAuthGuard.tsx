@@ -1,13 +1,13 @@
 import React, { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface Props {
   children: ReactNode;
 }
 
 const SimpleAuthGuard = ({ children }: Props) => {
-  const { user, isLoading } = useOptimizedAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
   // Show loading while checking auth state

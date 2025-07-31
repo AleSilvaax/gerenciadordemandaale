@@ -6,7 +6,8 @@ import {
     Users, 
     BarChart3, 
     Plus,
-    Calendar
+    Calendar,
+    Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,12 +32,13 @@ const Navbar = () => {
     { name: "Agenda", path: "/calendar", icon: Calendar, badge: null },
     { name: "Estatísticas", path: "/estatisticas", icon: BarChart3, badge: null },
     { name: "Equipe", path: "/equipe", icon: Users, badge: null },
+    { name: "Admin", path: "/admin", icon: Shield, badge: null },
   ];
   
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
     const { role } = user;
-    if (["/estatisticas", "/equipe"].includes(item.path)) {
+    if (["/estatisticas", "/equipe", "/admin"].includes(item.path)) {
       return role === 'administrador' || role === 'gestor';
     }
     return true;

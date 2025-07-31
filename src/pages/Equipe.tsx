@@ -122,35 +122,38 @@ const Equipe: React.FC = () => {
   );
 
   const handleAddMember = async () => {
-    if (newMember.name.trim()) {
+    if (newMember.email.trim() && newMember.role) {
       setIsSaving(true);
       
       try {
-        const newTeamMember = await addTeamMember({
-          name: newMember.name,
-          role: newMember.role,
-          avatar: ""
-        });
+        // Em vez de adicionar diretamente, vamos criar um convite
+        const { data, error } = await supabase
+          .from('user_invites')
+          .insert({
+            email: newMember.email,
+            role: newMember.role,
+            organization_id: '00000000-0000-0000-0000-000000000001',
+            invited_by: user?.id
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
         
-        const updatedTeam = [...team, newTeamMember];
-        setTeam(updatedTeam);
-        calculateTeamStats(updatedTeam);
         setNewMember({ name: "", role: "tecnico", email: "", phone: "", bio: "" });
         setIsAddingMember(false);
         
-        toast.success(`Membro adicionado`,
-          {
-            description: `${newMember.name} foi adicionado à equipe como ${newMember.role}.`
-          }
-        );
-      } catch (error) {
-        console.error("Error adding team member:", error);
-        toast.error("Falha ao adicionar novo membro.");
+        toast.success("Convite enviado!", {
+          description: `Um convite foi enviado para ${newMember.email} com o papel de ${getRoleDisplayName(newMember.role)}.`
+        });
+      } catch (error: any) {
+        console.error("Error sending invite:", error);
+        toast.error("Falha ao enviar convite: " + (error.message || "Erro desconhecido"));
       } finally {
         setIsSaving(false);
       }
     } else {
-      toast.error("Preencha nome do membro.");
+      toast.error("Preencha o email e selecione um papel.");
     }
   };
 
@@ -653,26 +656,15 @@ const Equipe: React.FC = () => {
       <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
         <DialogContent className="bg-card/95 backdrop-blur-md border border-border/50 max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar novo membro</DialogTitle>
+            <DialogTitle>Convidar novo membro</DialogTitle>
             <DialogDescription>
-              Preencha as informações para adicionar um novo membro à equipe.
+              Envie um convite por email para adicionar um novo membro à equipe.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
-              <Input
-                id="name"
-                placeholder="Nome completo"
-                value={newMember.name}
-                onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                className="bg-background/50"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -728,9 +720,9 @@ const Equipe: React.FC = () => {
             <Button variant="outline" onClick={() => setIsAddingMember(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleAddMember} disabled={isSaving || !newMember.name.trim()}>
+            <Button onClick={handleAddMember} disabled={isSaving || !newMember.email.trim()}>
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Adicionar
+              Enviar Convite
             </Button>
           </DialogFooter>
         </DialogContent>

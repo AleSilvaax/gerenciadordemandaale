@@ -11,7 +11,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useMobile } from '@/hooks/use-mobile';
 import {
   Sheet,
@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from '@/lib/utils';
 
 export const EnhancedNavbar: React.FC = () => {
-  const { user, logout, canAccessRoute } = useOptimizedAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMobile();
@@ -101,7 +101,7 @@ export const EnhancedNavbar: React.FC = () => {
 
   const filteredMenuItems = menuItems.filter(item => {
     return item.roles.includes(user?.role || '');
-  }).filter(item => canAccessRoute ? canAccessRoute(item.path) : true);
+  });
 
   return (
     <nav className="bg-background/90 backdrop-blur-md border-b border-border/40 fixed top-0 left-0 w-full z-40">
