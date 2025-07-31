@@ -51,13 +51,23 @@ export function UserManagement() {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Verificar se é super admin - pode ver todos os usuários
+      const isSuperAdmin = currentUser?.role === 'super_admin';
+      
+      let query = supabase
         .from('profiles')
         .select(`
           *,
-          user_roles (role)
-        `)
-        .order('name');
+          user_roles (role),
+          teams (name)
+        `);
+      
+      // Se não for super admin, filtrar por organização
+      if (!isSuperAdmin && currentUser?.organizationId) {
+        query = query.eq('organization_id', currentUser.organizationId);
+      }
+      
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       setUsers((data as unknown as UserProfile[]) || []);
@@ -105,8 +115,23 @@ export function UserManagement() {
   };
 
   const canEditUser = (user: UserProfile): boolean => {
-    // Simplificando: apenas administrador pode editar
-    return currentUser?.role === 'administrador';
+    if (!currentUser) return false;
+    
+    // Super admin pode editar qualquer um
+    if (currentUser.role === 'super_admin') return true;
+    
+    // Owner e admin podem editar usuários da própria organização
+    if (['owner', 'administrador'].includes(currentUser.role)) {
+      return user.organization_id === currentUser.organizationId;
+    }
+    
+    // Gestor pode editar apenas técnicos da sua equipe
+    if (currentUser.role === 'gestor') {
+      return user.team_id === currentUser.teamId && 
+             getUserEffectiveRole(user) === 'tecnico';
+    }
+    
+    return false;
   };
 
   if (loading) {
@@ -150,7 +175,7 @@ export function UserManagement() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  Sem equipe
+                  {user.teams?.name || 'Sem equipe'}
                 </TableCell>
                 <TableCell>
                   <Badge variant={effectiveRole === 'administrador' ? 'default' : 'secondary'}>
@@ -214,9 +239,20 @@ export function UserManagement() {
                     <SelectValue placeholder="Selecionar novo role" />
                   </SelectTrigger>
                   <SelectContent>
+                    {currentUser?.role === 'super_admin' && (
+                      <>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        <SelectItem value="owner">Proprietário</SelectItem>
+                      </>
+                    )}
+                    {['super_admin', 'owner'].includes(currentUser?.role || '') && (
+                      <SelectItem value="administrador">Administrador</SelectItem>
+                    )}
+                    {['super_admin', 'owner', 'administrador'].includes(currentUser?.role || '') && (
+                      <SelectItem value="gestor">Gestor</SelectItem>
+                    )}
                     <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="gestor">Gestor</SelectItem>
-                    <SelectItem value="administrador">Administrador</SelectItem>
+                    <SelectItem value="requisitor">Requisitor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -1,17 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
-import React from "npm:react@18.3.1";
-import { renderAsync } from "npm:@react-email/components@0.0.22";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { InviteEmail } from "./_templates/invite-email.tsx";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
 interface InviteRequest {
-  inviteId: string;
+  email: string;
+  role: string;
+  organizationId: string;
+  teamId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,132 +23,135 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verificar autenticação
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { email, role, organizationId, teamId }: InviteRequest = await req.json();
+
+    // Validar dados do convite
+    if (!email || !role || !organizationId) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ error: "Dados obrigatórios faltando" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Configurar Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
-    });
-
-    // Verificar usuário autenticado
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const { inviteId }: InviteRequest = await req.json();
-
-    if (!inviteId) {
-      return new Response(
-        JSON.stringify({ error: 'Invite ID is required' }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log(`[SEND-INVITE] Enviando convite: ${inviteId}`);
-
-    // Buscar dados do convite
-    const { data: invite, error: inviteError } = await supabase
-      .from('user_invites')
-      .select(`
-        *,
-        organizations!inner(name),
-        profiles!user_invites_invited_by_fkey(name)
-      `)
-      .eq('id', inviteId)
-      .is('used_at', null)
-      .gte('expires_at', new Date().toISOString())
+    // Buscar informações da organização
+    const { data: organization, error: orgError } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', organizationId)
       .single();
 
-    if (inviteError || !invite) {
-      console.error('[SEND-INVITE] Convite não encontrado:', inviteError);
-      return new Response(
-        JSON.stringify({ error: 'Invite not found or expired' }),
-        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    if (orgError) {
+      throw new Error("Organização não encontrada");
     }
 
-    // Verificar se o usuário tem permissão para enviar este convite
-    const { data: hasPermission } = await supabase.rpc('is_organization_owner', {
-      check_user_id: user.id,
-      org_id: invite.organization_id
-    });
+    // Buscar convite existente
+    const { data: existingInvite } = await supabase
+      .from('user_invites')
+      .select('*')
+      .eq('email', email)
+      .eq('organization_id', organizationId)
+      .is('used_at', null)
+      .single();
 
-    if (!hasPermission) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient permissions' }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    let inviteToken;
+    
+    if (existingInvite) {
+      inviteToken = existingInvite.token;
+    } else {
+      // Criar novo convite
+      const { data: newInvite, error: inviteError } = await supabase
+        .from('user_invites')
+        .insert({
+          email,
+          role,
+          organization_id: organizationId,
+          team_id: teamId || null,
+          invited_by: '00000000-0000-0000-0000-000000000000'  // Placeholder
+        })
+        .select('token')
+        .single();
+
+      if (inviteError) {
+        throw new Error("Erro ao criar convite");
+      }
+
+      inviteToken = newInvite.token;
     }
 
-    // Configurar Resend
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    // Construir URL de registro
+    const frontendUrl = 'https://9baeb7cd-02b2-4ec6-b4a2-9e66f9f88776.lovableproject.com';
+    const registerUrl = `${frontendUrl}/register?invite=${inviteToken}`;
 
-    // Criar URL de convite
-    const baseUrl = Deno.env.get('SITE_URL') || 'http://localhost:5173';
-    const inviteUrl = `${baseUrl}/register?invite=${invite.token}`;
+    // Definir papel em português
+    const roleNames = {
+      'super_admin': 'Super Administrador',
+      'owner': 'Proprietário',
+      'administrador': 'Administrador',
+      'gestor': 'Gestor',
+      'tecnico': 'Técnico',
+      'requisitor': 'Requisitor'
+    };
 
-    // Renderizar template do email
-    const emailHtml = await renderAsync(
-      React.createElement(InviteEmail, {
-        organizationName: invite.organizations.name,
-        inviterName: invite.profiles.name || 'Alguém',
-        role: invite.role,
-        inviteUrl,
-        expiresAt: invite.expires_at
-      })
-    );
+    const roleName = roleNames[role as keyof typeof roleNames] || role;
 
     // Enviar email
     const emailResponse = await resend.emails.send({
-      from: "Sistema de Gestão <convites@resend.dev>",
-      to: [invite.email],
-      subject: `Convite para ${invite.organizations.name}`,
-      html: emailHtml,
+      from: "Sistema de Gestão <noreply@resend.dev>",
+      to: [email],
+      subject: `Convite para ${organization.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333; text-align: center;">Convite para ${organization.name}</h1>
+          
+          <p>Olá!</p>
+          
+          <p>Você foi convidado(a) para fazer parte da equipe da <strong>${organization.name}</strong> como <strong>${roleName}</strong>.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${registerUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Aceitar Convite
+            </a>
+          </div>
+          
+          <p>Ou copie e cole este link no seu navegador:</p>
+          <p style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all;">
+            ${registerUrl}
+          </p>
+          
+          <p style="margin-top: 30px; font-size: 14px; color: #666;">
+            Este convite expira em 7 dias. Se você não desejava receber este email, pode ignorá-lo com segurança.
+          </p>
+        </div>
+      `,
     });
 
-    if (emailResponse.error) {
-      console.error('[SEND-INVITE] Erro ao enviar email:', emailResponse.error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to send email' }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log(`[SEND-INVITE] Email enviado com sucesso para: ${invite.email}`);
+    console.log("Email enviado:", emailResponse);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Invite sent successfully',
-        emailId: emailResponse.data?.id 
+        message: "Convite enviado com sucesso!",
+        inviteToken 
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error: any) {
-    console.error("[SEND-INVITE] Erro:", error);
+
+  } catch (error) {
+    console.error("Erro ao enviar convite:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || "Erro interno do servidor" 
+      }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }

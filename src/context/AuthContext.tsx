@@ -8,9 +8,10 @@ interface AuthUser {
   email: string;
   name: string;
   avatar?: string;
-  role: 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
+  role: 'super_admin' | 'owner' | 'administrador' | 'gestor' | 'tecnico' | 'requisitor';
   teamId?: string;
   permissions: string[];
+  organizationId?: string;
 }
 
 interface AuthContextType {
@@ -61,24 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('[Auth] Dados do perfil:', profileData, profileError);
 
-      // Buscar role do usuário (com timeout)
+      // Buscar role efetivo usando a função do banco
       let role = 'tecnico';
       try {
-        const { data: roleData, error: roleError } = await Promise.race([
-          supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', authUser.id)
-            .single(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('timeout')), 2000)
-          )
-        ]) as any;
+        const { data: effectiveRole, error: roleError } = await supabase.rpc('get_effective_user_role');
+        
+        console.log('[Auth] Role efetivo:', effectiveRole, roleError);
 
-        console.log('[Auth] Dados do role:', roleData, roleError);
-
-        if (!roleError && roleData) {
-          role = roleData.role;
+        if (!roleError && effectiveRole) {
+          role = effectiveRole;
         }
       } catch (error) {
         console.warn('[Auth] Usando role padrão devido a erro:', error);
@@ -91,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: profileData?.avatar || null,
         role: role as any,
         teamId: profileData?.team_id || null,
+        organizationId: profileData?.organization_id || null,
         permissions: []
       };
 
@@ -106,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: null,
         role: 'tecnico',
         teamId: null,
+        organizationId: null,
         permissions: []
       };
     }

@@ -47,55 +47,55 @@ export const EnhancedNavbar: React.FC = () => {
       name: 'Dashboard', 
       path: '/', 
       icon: Home, 
-      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor', 'tecnico', 'requisitor'] 
     },
     { 
       name: 'Nova Demanda', 
       path: '/nova-demanda', 
       icon: Plus, 
-      roles: ['gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor', 'requisitor'] 
     },
     { 
       name: 'Demandas', 
       path: '/demandas', 
       icon: FileText, 
-      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor', 'tecnico', 'requisitor'] 
     },
     { 
       name: 'Buscar', 
       path: '/buscar', 
       icon: Search, 
-      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor', 'tecnico', 'requisitor'] 
     },
     { 
       name: 'Calendário', 
       path: '/calendar', 
       icon: Calendar, 
-      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor', 'tecnico'] 
     },
     { 
       name: 'Estatísticas', 
       path: '/estatisticas', 
       icon: BarChart3, 
-      roles: ['gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor'] 
     },
     { 
       name: 'Equipe', 
       path: '/equipe', 
       icon: Users, 
-      roles: ['gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor'] 
     },
     { 
       name: 'Administração', 
       path: '/admin', 
       icon: Shield, 
-      roles: ['administrador', 'gestor', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador'] 
     },
     { 
       name: 'Configurações', 
       path: '/settings', 
       icon: Settings, 
-      roles: ['gestor', 'administrador', 'super_admin'] 
+      roles: ['super_admin', 'owner', 'administrador', 'gestor'] 
     }
   ];
 

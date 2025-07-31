@@ -39,10 +39,12 @@ export function InviteManagement() {
   const loadInvites = async () => {
     try {
       setLoading(true);
+      const organizationId = user?.organizationId || '00000000-0000-0000-0000-000000000001';
+      
       const { data, error } = await supabase
         .from('user_invites')
         .select('*')
-        .eq('organization_id', '00000000-0000-0000-0000-000000000001')
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -63,32 +65,31 @@ export function InviteManagement() {
     e.preventDefault();
     
     try {
-      const { data, error } = await supabase
-        .from('user_invites')
-        .insert({
+      // Chamar Edge Function para enviar convite por email
+      const { data, error } = await supabase.functions.invoke('send-invite', {
+        body: {
           email: formData.email,
           role: formData.role,
-          organization_id: '00000000-0000-0000-0000-000000000001',
-          invited_by: user?.id
-        })
-        .select()
-        .single();
+          organizationId: user?.organizationId || '00000000-0000-0000-0000-000000000001',
+          teamId: null
+        }
+      });
 
       if (error) throw error;
 
       toast({
         title: 'Sucesso',
-        description: `Convite enviado para ${formData.email}`
+        description: 'Convite enviado por email com sucesso!'
       });
-      
-      loadInvites();
-      setIsCreateOpen(false);
+
       setFormData({ email: '', role: 'tecnico' });
+      setIsCreateOpen(false);
+      loadInvites();
     } catch (error: any) {
-      console.error('Erro ao criar convite:', error);
+      console.error('Erro ao enviar convite:', error);
       toast({
         title: 'Erro',
-        description: error.message || 'Não foi possível criar o convite',
+        description: 'Não foi possível enviar o convite',
         variant: 'destructive'
       });
     }
