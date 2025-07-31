@@ -1,3 +1,4 @@
+// Arquivo: src/pages/Login.tsx (VERSÃO CORRIGIDA)
 
 import React, { useState, useEffect } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
@@ -6,16 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { LogIn, Loader2, UserPlus, Info } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+// ✅ ALTERAÇÃO: Trocamos o hook de autenticação para o unificado e correto.
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { login, user, isLoading } = useAuth();
+  // ✅ ALTERAÇÃO: Usamos o hook correto para obter as funções e o estado do usuário.
+  const { login, user, isLoading } = useOptimizedAuth();
   const navigate = useNavigate();
   
   // Se usuário já está logado, redirecionar
@@ -64,6 +66,8 @@ const Login: React.FC = () => {
         console.log("Login bem-sucedido, redirecionando...");
         navigate('/', { replace: true });
       } else {
+        // A mensagem de erro específica já é mostrada pelo 'toast' dentro da função de login.
+        // Podemos manter esta mensagem genérica como fallback.
         setErrorMsg("Email ou senha inválidos");
       }
     } catch (error) {
