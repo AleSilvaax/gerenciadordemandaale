@@ -1,11 +1,8 @@
-// Arquivo: src/context/AuthContext.tsx (VERSÃO COMPLETA E ATUALIZADA)
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// ✅ 1. ATUALIZADO: Adicionamos a organizationId à "planta" do nosso usuário
 interface AuthUser {
   id: string;
   email: string;
@@ -13,7 +10,6 @@ interface AuthUser {
   avatar?: string;
   role: 'tecnico' | 'gestor' | 'administrador' | 'requisitor';
   teamId?: string;
-  organizationId?: string; // <-- ADICIONADO AQUI
   permissions: string[];
 }
 
@@ -29,12 +25,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Função para limpar completamente o estado de autenticação
 const cleanAuthState = () => {
+  // Limpar localStorage
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith('supabase.') || key.includes('sb-')) {
       localStorage.removeItem(key);
     }
   });
+  
+  // Limpar sessionStorage
   Object.keys(sessionStorage || {}).forEach(key => {
     if (key.startsWith('supabase.') || key.includes('sb-')) {
       sessionStorage.removeItem(key);
@@ -46,100 +46,286 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  const buildUserProfile = useCallback(async (authUser: User): Promise<AuthUser | null> => {
+  const buildUserProfile = useCallback(async (authUser: User): Promise<AuthUser> => {
     try {
-      const { data: profileData, error: profileError } = await supabase
+      // Buscar perfil do usuário
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
-        
-      if (profileError || !profileData) {
-          throw new Error("Perfil de usuário não encontrado.");
+
+      // Buscar role do usuário (com timeout)
+      let role = 'tecnico';
+      try {
+        const { data: roleData, error: roleError } = await Promise.race([
+          supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', authUser.id)
+            .single(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 2000)
+          )
+        ]) as any;
+
+        if (!roleError && roleData) {
+          role = roleData.role;
+        }
+      } catch (error) {
+        console.warn('[Auth] Usando role padrão devido a erro:', error);
       }
 
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', authUser.id)
-        .single();
-
-      // ✅ 2. ATUALIZADO: Agora retornamos a organization_id junto com os outros dados.
       return {
         id: authUser.id,
         email: authUser.email!,
-        name: profileData.name || 'Usuário',
-        avatar: profileData.avatar || null,
-        role: roleError ? 'tecnico' : roleData.role as any,
-        teamId: profileData.team_id || null,
-        organizationId: profileData.organization_id || null, // <-- ADICIONADO AQUI
+        name: profileData?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+        avatar: profileData?.avatar || null,
+        role: role as any,
+        teamId: profileData?.team_id || null,
         permissions: []
       };
     } catch (error) {
-      console.error('[Auth] Erro ao construir perfil, fazendo logout forçado:', error);
-      // Se não conseguirmos construir um perfil válido, é mais seguro deslogar o usuário.
-      await supabase.auth.signOut();
-      return null;
+      console.error('[Auth] Erro ao construir perfil:', error);
+      // Retorna perfil básico em caso de erro
+      return {
+        id: authUser.id,
+        email: authUser.email!,
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+        avatar: null,
+        role: 'tecnico',
+        teamId: null,
+        permissions: []
+      };
     }
   }, []);
 
+  // Inicializar autenticação
   useEffect(() => {
+    let mounted = true;
+    
     const initializeAuth = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession?.user) {
-        const userProfile = await buildUserProfile(currentSession.user);
-        setUser(userProfile);
-        setSession(currentSession);
+      try {
+        // Verificar sessão atual
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[Auth] Erro ao obter sessão:', error);
+          cleanAuthState();
+        }
+        
+        if (mounted) {
+          if (currentSession?.user) {
+            setSession(currentSession);
+            const userProfile = await buildUserProfile(currentSession.user);
+            setUser(userProfile);
+          } else {
+            setSession(null);
+            setUser(null);
+          }
+          setIsLoading(false);
+          setInitialized(true);
+        }
+      } catch (error) {
+        console.error('[Auth] Erro na inicialização:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          setInitialized(true);
+        }
       }
-      setIsLoading(false);
     };
 
     initializeAuth();
+    return () => { mounted = false; };
+  }, [buildUserProfile]);
+
+  // Listener para mudanças de estado de autenticação
+  useEffect(() => {
+    if (!initialized) return;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
+        console.log('[Auth] Evento:', event);
+        
+        try {
+          // ===== INÍCIO DA ALTERAÇÃO =====
+          if (event === 'SIGNED_OUT') {
+            setSession(null);
+            setUser(null);
+            cleanAuthState();
+          } else if (newSession?.user) {
+            // Esta condição agora lida com SIGNED_IN, TOKEN_REFRESHED, e USER_UPDATED
+            // Apenas atualiza o perfil se o usuário for diferente do atual para otimizar
+            if (newSession.user.id !== user?.id) {
+              const userProfile = await buildUserProfile(newSession.user);
+              setUser(userProfile);
+            }
+            setSession(newSession); // Sempre atualiza a sessão
+          }
+          // ===== FIM DA ALTERAÇÃO =====
+        } catch (error) {
+          console.error('[Auth] Erro no listener:', error);
           setSession(null);
-        } else if (newSession?.user) {
-          const userProfile = await buildUserProfile(newSession.user);
-          setUser(userProfile);
-          setSession(newSession);
+          setUser(null);
         }
+        
+        setIsLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [buildUserProfile]);
-  
+  }, [initialized, buildUserProfile, user]); // Adicionado 'user' à dependência para a comparação
+
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setIsLoading(false);
-    if (error) {
-      toast.error("Erro no login", { description: "Email ou senha inválidos." });
+    try {
+      setIsLoading(true);
+      
+      // Limpar estado antes do login
+      cleanAuthState();
+      
+      // Tentativa de logout preventivo
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+        await new Promise(resolve => setTimeout(resolve, 100)); // Pequena pausa
+      } catch (e) {
+        // Ignorar erros de logout preventivo
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (error) {
+        console.error('[Auth] Erro no login:', error);
+        toast.error("Erro no login", { 
+          description: error.message.includes('Invalid') 
+            ? "Email ou senha inválidos" 
+            : error.message 
+        });
+        return false;
+      }
+
+      if (data.user) {
+        // O listener onAuthStateChange cuidará do resto
+        toast.success("Login realizado com sucesso!");
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      console.error('[Auth] Erro inesperado no login:', error);
+      toast.error("Erro no login", { description: "Tente novamente" });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const register = useCallback(async (userData: any): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      
+      // Limpar estado antes do registro
+      cleanAuthState();
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: userData.role,
+            team_id: userData.team_id
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        console.error('[Auth] Erro no registro:', error);
+        toast.error("Erro no cadastro", { description: error.message });
+        return false;
+      }
+
+      if (data.user) {
+        toast.success("Cadastro realizado!", { 
+          description: "Verifique seu email para confirmar a conta." 
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      console.error('[Auth] Erro inesperado no registro:', error);
+      toast.error("Erro no cadastro", { description: "Tente novamente" });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      cleanAuthState();
+      await supabase.auth.signOut({ scope: 'global' });
+      setSession(null);
+      setUser(null);
+      toast.success("Logout realizado com sucesso!");
+      // Força recarregamento da página para limpeza completa
+      window.location.href = '/login';
+    } catch (error: any) {
+      console.error('[Auth] Erro no logout:', error);
+      // Mesmo com erro, força a limpeza
+      setSession(null);
+      setUser(null);
+      cleanAuthState();
+      window.location.href = '/login';
+    }
+  }, []);
+
+  const updateUser = useCallback(async (userData: Partial<AuthUser>): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: userData.name,
+          avatar: userData.avatar,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        toast.error("Erro ao atualizar perfil", { description: error.message });
+        return false;
+      }
+
+      setUser(prev => prev ? { ...prev, ...userData } : null);
+      toast.success("Perfil atualizado com sucesso!");
+      return true;
+    } catch (error: any) {
+      console.error('[Auth] Erro ao atualizar usuário:', error);
+      toast.error("Erro ao atualizar perfil");
       return false;
     }
-    toast.success("Login realizado com sucesso!");
-    return true;
-  }, []);
-  
-  const logout = useCallback(async (): Promise<void> => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    cleanAuthState();
-    window.location.href = '/login'; // Força o redirecionamento
-  }, []);
-
-  // As funções 'register' e 'updateUser' permanecem as mesmas
-  const register = async (userData: any): Promise<boolean> => { /* ...seu código original... */ return false; };
-  const updateUser = async (userData: Partial<AuthUser>): Promise<boolean> => { /* ...seu código original... */ return false; };
+  }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, login, register, logout, updateUser }}>
-      {!isLoading && children}
+    <AuthContext.Provider value={{
+      user,
+      session,
+      isLoading,
+      login,
+      register,
+      logout,
+      updateUser,
+    }}>
+      {children}
     </AuthContext.Provider>
   );
 };
