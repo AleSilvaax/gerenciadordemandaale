@@ -109,11 +109,11 @@ export function InviteManagement() {
   };
 
   const copyInviteLink = (token: string) => {
-    const inviteUrl = `${window.location.origin}/register?token=${token}`;
+    const inviteUrl = `${window.location.origin}/register?invite=${token}`;
     navigator.clipboard.writeText(inviteUrl);
     toast({
       title: 'Sucesso',
-      description: 'Link do convite copiado para a área de transferência'
+      description: 'Link do convite copiado! Compartilhe manualmente com o usuário.'
     });
   };
 
