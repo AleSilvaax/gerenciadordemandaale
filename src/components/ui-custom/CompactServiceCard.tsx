@@ -82,42 +82,43 @@ export const CompactServiceCard: React.FC<CompactServiceCardProps> = ({ service 
     >
       <CardContent className="p-6">
         <div className="space-y-4">
-          {/* Linha 1: Número, Título e Status */}
+          {/* Linha 1: Título, Status e Número */}
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              {service.number && (
-                <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl border border-primary/20">
-                  <span className="text-sm font-bold text-primary">#{service.number}</span>
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-semibold text-lg truncate group-hover:text-primary transition-colors">
-                    {service.title}
-                  </h3>
-                  {service.priority === 'alta' && (
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">{service.serviceType || 'Serviço Geral'}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-semibold text-lg truncate group-hover:text-primary transition-colors">
+                  {service.title}
+                </h3>
+                {service.priority === 'alta' && (
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                )}
               </div>
+              <p className="text-sm text-muted-foreground">{service.serviceType || 'Serviço Geral'}</p>
             </div>
             
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Badge 
-                variant="outline" 
-                className={`text-xs px-3 py-1.5 font-medium ${getStatusColor(service.status)}`}
-              >
-                {getStatusLabel(service.status)}
-              </Badge>
-              
-              {service.priority && (
+            <div className="flex items-start gap-3 flex-shrink-0">
+              <div className="flex items-center gap-2">
                 <Badge 
                   variant="outline" 
-                  className={`text-xs px-3 py-1.5 font-medium ${getPriorityColor(service.priority)}`}
+                  className={`text-xs px-2 py-1 font-medium ${getStatusColor(service.status)}`}
                 >
-                  {service.priority.charAt(0).toUpperCase() + service.priority.slice(1)}
+                  {getStatusLabel(service.status)}
                 </Badge>
+                
+                {service.priority && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-2 py-1 font-medium ${getPriorityColor(service.priority)}`}
+                  >
+                    {service.priority.charAt(0).toUpperCase() + service.priority.slice(1)}
+                  </Badge>
+                )}
+              </div>
+              
+              {service.number && (
+                <div className="flex items-center justify-center min-w-[2.5rem] h-8 bg-primary/10 rounded-lg border border-primary/20">
+                  <span className="text-xs font-bold text-primary">#{service.number}</span>
+                </div>
               )}
             </div>
           </div>

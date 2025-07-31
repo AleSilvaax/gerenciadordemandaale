@@ -49,18 +49,20 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
     <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold">{service.title}</CardTitle>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              <span>{service.location}</span>
-            </div>
-            {service.number && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="w-4 h-4" />
-                <span>#{service.number}</span>
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-bold">{service.title}</CardTitle>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span>{service.location}</span>
               </div>
-            )}
+              {service.number && (
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span>OS #{service.number}</span>
+                </div>
+              )}
+            </div>
           </div>
           <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
             {getStatusIcon(service.status)}
@@ -132,30 +134,30 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
             Cronograma do Serviço
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-background/60 to-background/30 rounded-xl border border-border/30 shadow-sm">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Calendar className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold mb-1">Data de Criação</p>
-                <p className="text-muted-foreground">
-                  {format(new Date(service.creationDate!), "PPP 'às' p", { locale: ptBR })}
-                </p>
-              </div>
-            </div>
-            {service.dueDate && (
               <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-background/60 to-background/30 rounded-xl border border-border/30 shadow-sm">
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <Clock className="w-5 h-5 text-orange-600" />
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <Calendar className="w-5 h-5 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold mb-1">Prazo de Vencimento</p>
+                  <p className="font-semibold mb-1">Data de Criação</p>
                   <p className="text-muted-foreground">
-                    {format(new Date(service.dueDate), "PPP 'às' p", { locale: ptBR })}
+                    {format(new Date(service.creationDate!), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                 </div>
               </div>
-            )}
+              {service.dueDate && (
+                <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-background/60 to-background/30 rounded-xl border border-border/30 shadow-sm">
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Clock className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">Prazo de Vencimento</p>
+                    <p className="text-muted-foreground">
+                      {format(new Date(service.dueDate), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+              )}
           </div>
         </div>
 

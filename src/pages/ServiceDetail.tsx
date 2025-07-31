@@ -51,8 +51,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
 
     try {
-      console.log('[ServiceDetail] Geração de relatório temporariamente desabilitada');
-      toast.info("Funcionalidade de relatório em manutenção...");
+      const { generateModernServiceReport } = await import("@/utils/pdf/modernPdfReportGenerator");
+      await generateModernServiceReport(service);
+      toast.success("Relatório gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
       toast.error("Erro ao gerar relatório");

@@ -28,8 +28,9 @@ interface ServiceFormData {
   description: string;
   notes: string;
   dueDate: string;
+  dueTime: string;
   technicianId: string;
-  priority: ServicePriority; // <-- ADICIONADO
+  priority: ServicePriority;
 }
 
 const NewService: React.FC = () => {
@@ -52,8 +53,9 @@ const NewService: React.FC = () => {
       description: "",
       notes: "",
       dueDate: "",
+      dueTime: "",
       technicianId: "none",
-      priority: "media", // <-- 2. ADICIONADO VALOR PADRÃO PARA 'priority'
+      priority: "media",
     },
   });
 
@@ -116,7 +118,7 @@ const NewService: React.FC = () => {
         city: data.city,
         description: data.description,
         notes: data.notes,
-        dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
+        dueDate: data.dueDate ? new Date(data.dueDate + 'T' + (data.dueTime || '00:00:00')).toISOString() : undefined,
         technicians: selectedTechnician ? [selectedTechnician] : [],
         status: "pendente" as const,
         priority: data.priority,
@@ -356,6 +358,28 @@ const NewService: React.FC = () => {
                                   field.onChange('');
                                 }
                               }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Hora de Vencimento */}
+                    <FormField
+                      control={form.control}
+                      name="dueTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            Hora de Vencimento
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="time"
+                              className="bg-background/50"
+                              placeholder="00:00"
                             />
                           </FormControl>
                         </FormItem>
