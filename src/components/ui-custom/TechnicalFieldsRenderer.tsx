@@ -129,8 +129,8 @@ export const TechnicalFieldsRenderer: React.FC<TechnicalFieldsRendererProps> = (
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 pb-4 border-b border-border/30">
-        <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
-          <span className="text-lg">🔧</span>
+        <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
+          <span className="text-xl">🔧</span>
         </div>
         <div>
           <h3 className="text-lg font-bold text-foreground">Checklist Técnico</h3>
@@ -138,25 +138,34 @@ export const TechnicalFieldsRenderer: React.FC<TechnicalFieldsRendererProps> = (
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {fields.map((field) => (
           <div key={field.id} className="group">
-            <div className="relative p-4 bg-gradient-to-br from-background/80 to-background/40 rounded-xl border border-border/30 hover:border-primary/40 transition-all duration-300 hover:shadow-lg">
+            <div className="relative p-4 bg-gradient-to-br from-card/80 to-card/40 rounded-xl border border-border/30 hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
               <div className="flex items-start gap-3 mb-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-sm">
+                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center text-base border border-primary/20">
                   {getFieldIcon(field.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <Label htmlFor={field.id} className="font-semibold text-foreground flex items-center gap-2">
+                  <Label htmlFor={field.id} className="font-semibold text-foreground flex items-center gap-2 text-base">
                     {field.name}
                     {field.required && (
-                      <span className="flex items-center justify-center w-4 h-4 bg-red-500/20 text-red-600 rounded-full text-xs font-bold">
+                      <span className="flex items-center justify-center w-5 h-5 bg-red-500/20 text-red-600 rounded-full text-xs font-bold animate-pulse">
                         *
                       </span>
                     )}
                   </Label>
                   {field.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{field.description}</p>
+                  )}
+                </div>
+                
+                {/* Indicador visual de preenchimento */}
+                <div className="flex-shrink-0">
+                  {values[field.id] ? (
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/30" />
+                  ) : (
+                    <div className="w-3 h-3 bg-muted/30 rounded-full" />
                   )}
                 </div>
               </div>
@@ -165,15 +174,29 @@ export const TechnicalFieldsRenderer: React.FC<TechnicalFieldsRendererProps> = (
                 {renderField(field)}
               </div>
               
-              {/* Indicador visual de preenchimento */}
-              <div className="absolute top-2 right-2">
-                {values[field.id] && (
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                )}
-              </div>
+              {/* Borda animada para campos obrigatórios não preenchidos */}
+              {field.required && !values[field.id] && (
+                <div className="absolute inset-0 rounded-xl border-2 border-red-500/20 animate-pulse pointer-events-none" />
+              )}
             </div>
           </div>
         ))}
+      </div>
+      
+      {/* Progresso do preenchimento */}
+      <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl border border-primary/20">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Progresso do Checklist</span>
+          <span className="text-sm text-muted-foreground">
+            {Object.values(values).filter(v => v).length} de {fields.length} campos preenchidos
+          </span>
+        </div>
+        <div className="w-full bg-background/50 rounded-full h-2">
+          <div 
+            className="bg-gradient-to-r from-primary to-accent h-2 rounded-full transition-all duration-500"
+            style={{ width: `${(Object.values(values).filter(v => v).length / fields.length) * 100}%` }}
+          />
+        </div>
       </div>
     </div>
   );
