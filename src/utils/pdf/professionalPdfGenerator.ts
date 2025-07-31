@@ -6,6 +6,11 @@ import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
 import { processImage } from './imageProcessor';
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
+  // --- DEBUG DECISIVO ---
+  // A linha abaixo é a única alteração. Ela vai nos mostrar o que a função realmente recebeu.
+  console.log('[DEBUG PDF] Objeto "service" recebido pela função generateProfessionalServiceReport:', service);
+  // --- FIM DO DEBUG ---
+
   const doc = new jsPDF('portrait', 'mm', 'a4');
   
   let currentY = 0;
