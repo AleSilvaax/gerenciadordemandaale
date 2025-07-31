@@ -3,45 +3,27 @@
 import { supabase } from '@/integrations/supabase/client';
 import { TeamMember, UserRole } from '@/types/serviceTypes';
 
-/**
- * Busca todos os membros da equipe e seus respectivos papéis em uma única consulta.
- * É robusta e sempre retorna um array, mesmo em caso de erro ou se não houver dados.
- */
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        name,
-        avatar,
-        user_roles (
-          role
-        )
-      `);
+      .select(`id, name, avatar, user_roles (role)`);
 
-    if (error) {
-      console.error("Erro ao buscar membros da equipe:", error);
-      throw error; // Lança o erro para ser capturado pelo react-query ou chamador
-    }
-
-    if (!data) {
-      return []; // Garante que sempre retorne um array se não houver dados
-    }
+    if (error) throw error;
+    if (!data) return []; 
 
     const members: TeamMember[] = data.map(profile => ({
       id: profile.id,
       name: profile.name || "Sem Nome",
       avatar: profile.avatar || "",
-      // @ts-ignore - Usamos ts-ignore pois a estrutura é garantida pela consulta
+      // @ts-ignore
       role: profile.user_roles?.[0]?.role as UserRole || "tecnico",
     }));
 
     return members;
   } catch (error) {
-    // Em caso de qualquer erro, loga e retorna um array vazio para não quebrar a UI
-    console.error("Falha crítica ao buscar membros da equipe:", error);
-    return []; 
+    console.error("Erro ao buscar membros da equipe:", error);
+    return []; // Garante que retorne um array vazio em caso de erro.
   }
 };
 
