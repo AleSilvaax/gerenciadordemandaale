@@ -7,7 +7,8 @@ import {
   Settings,
   Users,
   BarChart3,
-  Calendar
+  Calendar,
+  Shield
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
@@ -83,6 +84,12 @@ export const EnhancedNavbar: React.FC = () => {
       path: '/equipe', 
       icon: Users, 
       roles: ['gestor', 'administrador'] 
+    },
+    { 
+      name: 'Administração', 
+      path: '/admin', 
+      icon: Shield, 
+      roles: ['administrador', 'gestor'] 
     },
     { 
       name: 'Configurações', 
