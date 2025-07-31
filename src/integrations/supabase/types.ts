@@ -49,6 +49,42 @@ export type Database = {
           },
         ]
       }
+      organization_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          organization_id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           created_at: string
@@ -750,6 +786,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_effective_user_role: {
+        Args: { check_org_id?: string }
+        Returns: string
+      }
       get_service_messages: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -778,6 +818,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_organization_role: {
+        Args: { target_user_id: string; target_org_id: string }
+        Returns: string
+      }
       get_user_organization_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -794,6 +838,14 @@ export type Database = {
         Args: { user_id: string; required_role: string }
         Returns: boolean
       }
+      is_organization_owner: {
+        Args: { check_user_id: string; org_id: string }
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: { check_user_id?: string }
+        Returns: boolean
+      }
       is_technician_for_service: {
         Args: { service_uuid: string }
         Returns: boolean
@@ -806,9 +858,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      setup_initial_hierarchy: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role:
+        | "super_admin"
+        | "owner"
+        | "administrador"
+        | "gestor"
+        | "tecnico"
+        | "requisitor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -935,6 +997,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: [
+        "super_admin",
+        "owner",
+        "administrador",
+        "gestor",
+        "tecnico",
+        "requisitor",
+      ],
+    },
   },
 } as const
