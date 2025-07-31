@@ -51,12 +51,12 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     }
 
     try {
-      const { generateModernServiceReport } = await import("@/utils/pdf/modernPdfReportGenerator");
-      await generateModernServiceReport(service);
-      toast.success("Relatório gerado com sucesso!");
+      const { generateProfessionalServiceReport } = await import("@/utils/pdf/professionalPdfGenerator");
+      await generateProfessionalServiceReport(service);
+      toast.success("Relatório PDF gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório");
+      toast.error("Erro ao gerar relatório PDF");
     }
   };
 
