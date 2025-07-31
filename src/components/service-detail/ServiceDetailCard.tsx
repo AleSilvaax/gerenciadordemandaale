@@ -70,48 +70,93 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
-            <Calendar className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">Criação</p>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
-              </p>
+      <CardContent className="space-y-6">
+        {/* Seção do Cliente */}
+        {(service.client || service.address || service.city) && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-foreground border-b border-border/50 pb-2">
+              Informações do Cliente
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.client && (
+                <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
+                  <User className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Cliente</p>
+                    <p className="text-sm text-muted-foreground">{service.client}</p>
+                  </div>
+                </div>
+              )}
+              {(service.address || service.city) && (
+                <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Endereço</p>
+                    <p className="text-sm text-muted-foreground">
+                      {service.address && service.city 
+                        ? `${service.address}, ${service.city}`
+                        : service.address || service.city}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          {service.dueDate && (
+        )}
+
+        {/* Seção de Datas */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground border-b border-border/50 pb-2">
+            Cronograma
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
-              <Clock className="w-5 h-5 text-orange-500" />
+              <Calendar className="w-5 h-5 text-primary" />
               <div>
-                <p className="text-sm font-medium">Vencimento</p>
+                <p className="text-sm font-medium">Criação</p>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
+                  {format(new Date(service.creationDate!), "PPP", { locale: ptBR })}
                 </p>
               </div>
             </div>
-          )}
+            {service.dueDate && (
+              <div className="flex items-center gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
+                <Clock className="w-5 h-5 text-orange-500" />
+                <div>
+                  <p className="text-sm font-medium">Vencimento</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(service.dueDate), "PPP", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="p-3 bg-background/30 rounded-lg border border-border/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium">Técnico Responsável</p>
-                <p className="text-sm text-muted-foreground">
-                  {service.technicians?.[0]?.name ?? "Não atribuído"}
-                </p>
+        {/* Seção do Técnico */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground border-b border-border/50 pb-2">
+            Responsável
+          </h4>
+          <div className="p-3 bg-background/30 rounded-lg border border-border/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Técnico Responsável</p>
+                  <p className="text-sm text-muted-foreground">
+                    {service.technicians?.[0]?.name ?? "Não atribuído"}
+                  </p>
+                </div>
               </div>
+              {service.technicians?.[0] && (
+                <TeamMemberAvatar 
+                  src={service.technicians[0].avatar || ""} 
+                  name={service.technicians[0].name} 
+                  size="sm"
+                />
+              )}
             </div>
-            {service.technicians?.[0] && (
-              <TeamMemberAvatar 
-                src={service.technicians[0].avatar || ""} 
-                name={service.technicians[0].name} 
-                size="sm"
-              />
-            )}
           </div>
         </div>
 

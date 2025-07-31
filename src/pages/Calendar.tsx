@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCalendar } from '@/hooks/useCalendar';
@@ -13,8 +13,8 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
-// Componente do Calendário Visual Interativo
-const InteractiveCalendar = ({ selectedDate, setSelectedDate, events }) => {
+// Componente do Calendário Visual Moderno
+const ModernCalendar = ({ selectedDate, setSelectedDate, events }) => {
   const start = startOfMonth(selectedDate);
   const end = endOfMonth(selectedDate);
   const days = eachDayOfInterval({ start, end });
@@ -23,42 +23,81 @@ const InteractiveCalendar = ({ selectedDate, setSelectedDate, events }) => {
   const handlePrevMonth = () => setSelectedDate(subMonths(selectedDate, 1));
   const handleNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
 
+  const getEventTypeColor = (eventType: string) => {
+    switch (eventType) {
+      case 'alta': return 'bg-red-500';
+      case 'media': return 'bg-yellow-500';
+      case 'baixa': return 'bg-green-500';
+      default: return 'bg-primary';
+    }
+  };
+
+  const getDayEvents = (day: Date) => {
+    return events.filter(event => isSameDay(event.start, day));
+  };
+
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium capitalize">
-          {format(selectedDate, 'MMMM yyyy', { locale: ptBR })}
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+    <Card className="bg-gradient-to-br from-card/80 to-card/60 backdrop-blur-sm border border-border/30 shadow-xl">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl font-bold capitalize bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            {format(selectedDate, 'MMMM yyyy', { locale: ptBR })}
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-2 text-center text-xs text-muted-foreground">
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => <div key={day}>{day}</div>)}
+      <CardContent className="p-4">
+        <div className="grid grid-cols-7 gap-2 mb-3">
+          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-muted-foreground p-2">
+              {day}
+            </div>
+          ))}
         </div>
-        <div className="grid grid-cols-7 gap-1 mt-2">
-          {Array.from({ length: startingDayIndex }).map((_, i) => <div key={`empty-${i}`} />)}
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: startingDayIndex }).map((_, i) => <div key={`empty-${i}`} className="h-10" />)}
           {days.map(day => {
-            const dayHasEvent = events.some(event => isSameDay(event.start, day));
+            const dayEvents = getDayEvents(day);
+            const hasEvents = dayEvents.length > 0;
+            const isToday = isSameDay(day, new Date());
+            const isSelected = isSameDay(day, selectedDate);
+            
             return (
               <button
                 key={day.toString()}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center transition-colors text-sm relative",
-                  isSameDay(day, new Date()) && "bg-muted text-foreground",
-                  isSameDay(day, selectedDate) && "bg-primary text-primary-foreground",
-                  !isSameDay(day, selectedDate) && "hover:bg-accent hover:text-accent-foreground",
+                  "h-10 rounded-lg flex flex-col items-center justify-center transition-all duration-200 text-sm relative group",
+                  isToday && !isSelected && "bg-primary/20 text-primary font-semibold ring-1 ring-primary/30",
+                  isSelected && "bg-primary text-primary-foreground shadow-lg scale-105",
+                  !isSelected && !isToday && "hover:bg-accent/50 hover:scale-105",
+                  hasEvents && !isSelected && "ring-1 ring-primary/20"
                 )}
               >
-                {format(day, 'd')}
-                {dayHasEvent && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
+                <span className="relative z-10">{format(day, 'd')}</span>
+                {hasEvents && (
+                  <div className="absolute bottom-1 flex gap-0.5">
+                    {dayEvents.slice(0, 3).map((event, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          getEventTypeColor(event.status || 'default')
+                        )}
+                      />
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground opacity-50" />
+                    )}
+                  </div>
+                )}
               </button>
             )
           })}
@@ -137,7 +176,7 @@ const Calendar: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <InteractiveCalendar 
+            <ModernCalendar 
               selectedDate={selectedDate} 
               setSelectedDate={setSelectedDate} 
               events={calendarEvents} 
@@ -150,40 +189,63 @@ const Calendar: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="w-5 h-5" />
-                  Eventos para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-                  <span className="text-sm text-muted-foreground">({dayEvents.length})</span>
+            <Card className="bg-gradient-to-br from-card/80 to-card/60 backdrop-blur-sm border border-border/30 shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <CalendarIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-bold">
+                      {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-normal">
+                      {dayEvents.length === 0 ? 'Nenhum evento' : `${dayEvents.length} evento(s)`}
+                    </div>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {dayEvents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nenhum evento para este dia</p>
+                  <div className="text-center py-12">
+                    <div className="p-4 bg-muted/20 rounded-full w-fit mx-auto mb-4">
+                      <CalendarIcon className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground mb-2">Nenhum evento agendado</p>
+                    <p className="text-sm text-muted-foreground">Que tal criar uma nova demanda?</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {dayEvents.map((event) => (
-                      <div
+                    {dayEvents.map((event, index) => (
+                      <motion.div
                         key={event.id}
-                        className="p-3 bg-background/30 rounded-lg border border-border/30 cursor-pointer hover:bg-background/50 transition-colors"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="group p-4 bg-gradient-to-r from-background/60 to-background/40 rounded-xl border border-border/30 cursor-pointer hover:border-primary/30 hover:shadow-lg transition-all duration-200"
                         onClick={() => event.service?.id && navigate(`/demanda/${event.service.id}`)}
                       >
-                        <h4 className="font-medium">{event.title}</h4>
-                        {event.technician && (
-                           <p className="text-xs text-muted-foreground mt-1">
-                             Técnico: {event.technician.name}
-                           </p>
-                        )}
-                        {event.location && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            📍 {event.location}
-                          </p>
-                        )}
-                      </div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
+                              {event.title}
+                            </h4>
+                            {event.technician && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                                <User className="w-3 h-3" />
+                                {event.technician.name}
+                              </p>
+                            )}
+                            {event.location && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {event.location}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
 import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
 import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
@@ -287,7 +287,7 @@ const Demandas = () => {
                   {isMobile ? (
                     <MobileServiceCard service={service} />
                   ) : (
-                    <ServiceCard service={service} />
+                    <CompactServiceCard service={service} />
                   )}
                 </motion.div>
               ))}

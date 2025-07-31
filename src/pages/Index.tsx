@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Settings, Search, Filter, Calendar, ChevronRight } from "lucide-react";
+import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ServiceCard } from "@/components/ui-custom/ServiceCard";
+import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,46 +209,49 @@ const Index: React.FC = () => {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      Agenda Hoje
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Desempenho
                     </CardTitle>
-                    <CardDescription className="text-left-force">Demandas agendadas para hoje</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-primary text-left-force">3</div>
-                    <p className="text-sm text-muted-foreground mt-2 text-left-force">demandas pendentes</p>
+                    <div className="text-2xl font-bold text-blue-600 mb-1">87%</div>
+                    <p className="text-sm text-muted-foreground">Taxa de conclusão</p>
                   </CardContent>
                 </Card>
 
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
-                      <Filter className="h-5 w-5 text-primary" />
-                      Em Andamento
+                <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <Users className="h-4 w-4 text-green-600" />
+                      </div>
+                      Equipe Ativa
                     </CardTitle>
-                    <CardDescription className="text-left-force">Serviços sendo executados</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-yellow-600 text-left-force">5</div>
-                    <p className="text-sm text-muted-foreground mt-2 text-left-force">em progresso</p>
+                    <div className="text-2xl font-bold text-green-600 mb-1">{services.filter(s => s.technicians?.length > 0).length}</div>
+                    <p className="text-sm text-muted-foreground">Técnicos trabalhando</p>
                   </CardContent>
                 </Card>
 
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2 text-left-force">
-                      <ChevronRight className="h-5 w-5 text-primary" />
-                      Próximas
+                <Card className="bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                        <Clock className="h-4 w-4 text-orange-600" />
+                      </div>
+                      Urgentes
                     </CardTitle>
-                    <CardDescription className="text-left-force">Demandas da próxima semana</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-blue-600 text-left-force">8</div>
-                    <p className="text-sm text-muted-foreground mt-2 text-left-force">agendadas</p>
+                    <div className="text-2xl font-bold text-orange-600 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
+                    <p className="text-sm text-muted-foreground">Alta prioridade</p>
                   </CardContent>
                 </Card>
               </div>
@@ -280,7 +283,7 @@ const Index: React.FC = () => {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
                         >
-                          <ServiceCard service={service} />
+                          <CompactServiceCard service={service} />
                         </motion.div>
                       ))}
                     </div>
@@ -298,25 +301,37 @@ const Index: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="quick-actions" className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* O CARD "NOVA DEMANDA" FOI REMOVIDO DESTA SEÇÃO */}
-
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/estatisticas" className="block">
-                    <CardContent className="p-8 text-center">
-                      <Search className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="font-semibold mb-2 text-left-force">Relatórios</h3>
-                      <p className="text-sm text-muted-foreground text-left-force">Visualizar estatísticas e dados</p>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                          <TrendingUp className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1">Relatórios & Analytics</h3>
+                          <p className="text-sm text-muted-foreground">Visualizar estatísticas detalhadas</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </CardContent>
                   </Link>
                 </Card>
 
-                <Card className="card-enhanced hover:shadow-xl transition-all duration-300 cursor-pointer group">
+                <Card className="bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
                   <Link to="/equipe" className="block">
-                    <CardContent className="p-8 text-center">
-                      <Settings className="h-10 w-10 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                      <h3 className="font-semibold mb-2 text-left-force">Gerenciar Equipe</h3>
-                      <p className="text-sm text-muted-foreground text-left-force">Configurar membros e permissões</p>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-secondary/10 rounded-xl group-hover:scale-110 transition-transform">
+                          <Users className="h-6 w-6 text-secondary-foreground" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1">Gerenciar Equipe</h3>
+                          <p className="text-sm text-muted-foreground">Configurar membros e permissões</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </CardContent>
                   </Link>
                 </Card>
