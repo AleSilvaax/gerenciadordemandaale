@@ -1,9 +1,7 @@
-// Arquivo: src/components/guards/AuthGuard.tsx (VERSÃO CORRIGIDA)
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-// ✅ ALTERAÇÃO: Trocamos para o hook de autenticação correto
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
@@ -11,23 +9,26 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  // ✅ ALTERAÇÃO: Usamos o hook correto
-  const { user, isLoading } = useOptimizedAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
+  // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 size={40} className="animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={40} className="animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
 
+  // Se não há usuário, redirecionar para login
   if (!user) {
-    // Redireciona para o login se não houver usuário
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Se o usuário estiver logado, renderiza a página solicitada
+  // Usuário autenticado, renderizar children
   return <>{children}</>;
 };

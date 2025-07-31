@@ -1,43 +1,127 @@
-// Arquivo: src/components/layout/Navbar.tsx (VERSÃO CORRIGIDA)
-
 import React from "react";
-import { NavLink } from "react-router-dom";
-import { Home, ListChecks, PlusCircle, BarChart2, Users, Calendar } from "lucide-react";
-// ✅ ALTERAÇÃO: Trocamos para o hook de autenticação correto
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { Link, useLocation } from "react-router-dom";
+import { 
+    Home, 
+    FileText, 
+    Users, 
+    BarChart3, 
+    Plus,
+    Calendar
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-const Navbar: React.FC = () => {
-  // ✅ ALTERAÇÃO: Usamos o hook correto
-  const { user } = useOptimizedAuth();
+const Navbar = () => {
+  const location = useLocation();
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
 
-  if (!user) {
-    return null; // Não renderiza a navbar se não houver usuário
-  }
+  const isActive = (path: string) => {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const navItems = [
-    { to: "/", icon: <Home size={22} />, label: "Início" },
-    { to: "/demandas", icon: <ListChecks size={22} />, label: "Demandas" },
-    { to: "/nova-demanda", icon: <PlusCircle size={28} />, label: "Adicionar" },
-    { to: "/estatisticas", icon: <BarChart2 size={22} />, label: "Gráficos" },
-    { to: "/equipe", icon: <Users size={22} />, label: "Equipe" },
+    { name: "Início", path: "/", icon: Home, badge: null },
+    { name: "Demandas", path: "/demandas", icon: FileText, badge: null },
+    { name: "Agenda", path: "/calendar", icon: Calendar, badge: null },
+    { name: "Estatísticas", path: "/estatisticas", icon: BarChart3, badge: null },
+    { name: "Equipe", path: "/equipe", icon: Users, badge: null },
   ];
-
-  const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col items-center justify-center space-y-1 transition-colors duration-200 ${
-      isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-primary"
-    }`;
+  
+  const filteredNavItems = navItems.filter(item => {
+    if (!user) return false;
+    const { role } = user;
+    if (["/estatisticas", "/equipe"].includes(item.path)) {
+      return role === 'administrador' || role === 'gestor';
+    }
+    return true;
+  });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 md:hidden h-16 bg-card/80 backdrop-blur-sm border-t border-border/50 shadow-t-lg z-50">
-      <div className="flex justify-around items-center h-full max-w-md mx-auto">
-        {navItems.map((item) => (
-          <NavLink to={item.to} key={item.to} className={getNavLinkClass}>
-            {item.icon}
-            {item.to === "/nova-demanda" ? null : (
-              <span className="text-xs font-medium">{item.label}</span>
-            )}
-          </NavLink>
-        ))}
+    <nav className={`
+      fixed bottom-0 left-0 right-0 z-50 h-16
+      bg-card/95 backdrop-blur-sm border-t border-border/50
+    `}>
+      <div className="container mx-auto px-2 md:px-4">
+        {/* Desktop Navigation */}
+        {!isMobile && (
+          <div className="flex items-center justify-between h-16">
+            <Link 
+              to="/" 
+              className="flex items-center space-x-2 font-bold text-lg xl:text-xl text-primary"
+            >
+              <div className="w-7 h-7 xl:w-8 xl:h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground text-xs xl:text-sm font-bold">GD</span>
+              </div>
+              <span className="hidden sm:block text-sm xl:text-base">GerenciadorDemandas</span>
+            </Link>
+
+            <div className="flex items-center space-x-1">
+              {filteredNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`
+                      flex items-center space-x-2 px-2 xl:px-3 py-2 rounded-lg transition-all duration-200 text-sm
+                      ${isActive(item.path)
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                      }
+                    `}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="font-medium">{item.name}</span>
+                    {item.badge && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* O BOTÃO 'NOVA DEMANDA' QUE ESTAVA AQUI FOI REMOVIDO */}
+            <div className="flex items-center space-x-2">
+                {/* Vazio agora */}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Navigation */}
+        {isMobile && (
+          <div className="flex justify-around items-center py-2 h-16">
+            {filteredNavItems.map((item) => { // Alterado para usar todos os itens filtrados, sem o slice.
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`
+                    flex flex-col items-center justify-center space-y-1 px-2 py-1 rounded-lg transition-all duration-200 min-w-0 flex-1
+                    ${isActive(item.path)
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground'
+                    }
+                  `}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate max-w-full">
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+            {/* O BOTÃO DE '+' QUE ESTAVA AQUI FOI REMOVIDO */}
+          </div>
+        )}
       </div>
     </nav>
   );
