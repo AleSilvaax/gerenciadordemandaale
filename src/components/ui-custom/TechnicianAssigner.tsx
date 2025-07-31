@@ -1,91 +1,67 @@
-// Arquivo: src/components/ui-custom/TechnicianAssigner.tsx (VERSÃO COMPLETA E CORRIGIDA)
 
 import React, { useEffect, useState } from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
 import { getTeamMembers } from "@/services/servicesDataService";
 import { TeamMember } from "@/types/serviceTypes";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface TechnicianAssignerProps {
-  currentTechnicians?: TeamMember[];
-  onAssign: (technicians: TeamMember[]) => void; // A prop foi simplificada
+  currentTechnicianId?: string;
+  onAssign: (technician: TeamMember | null) => Promise<void>;
 }
 
-export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentTechnicians, onAssign }) => {
-  const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
-  const [selectedTechnicians, setSelectedTechnicians] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({
+  currentTechnicianId,
+  onAssign
+}) => {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>(currentTechnicianId ?? "none");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getTeamMembers()
-      .then(members => {
-        if (Array.isArray(members)) {
-          setAllTeamMembers(members.filter(m => m.role === 'tecnico'));
-        }
-      })
-      .catch(() => toast.error("Erro ao carregar a lista de técnicos."))
-      .finally(() => setIsLoading(false));
+    getTeamMembers().then(setTeamMembers).catch(() => toast.error("Erro ao carregar técnicos."));
   }, []);
 
   useEffect(() => {
-    setSelectedTechnicians(Array.isArray(currentTechnicians) ? currentTechnicians : []);
-  }, [currentTechnicians]);
+    setSelectedTechnicianId(currentTechnicianId ?? "none");
+  }, [currentTechnicianId]);
 
-  const handleToggleSelection = (technician: TeamMember) => {
-    const newSelection = selectedTechnicians.some(t => t.id === technician.id)
-      ? selectedTechnicians.filter(t => t.id !== technician.id)
-      : [...selectedTechnicians, technician];
-    setSelectedTechnicians(newSelection);
-    // Chama o onAssign imediatamente para formulários reativos
-    onAssign(newSelection);
+  const handleAssign = async () => {
+    setLoading(true);
+    try {
+      const chosen = selectedTechnicianId === "none"
+        ? null
+        : teamMembers.find(t => t.id === selectedTechnicianId) ?? null;
+      await onAssign(chosen);
+      toast.success("Técnico atribuído com sucesso!");
+    } catch (e) {
+      toast.error("Falha ao atribuir técnico");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Técnicos Responsáveis</p>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-[40px]" disabled={isLoading}>
-            <div className="flex flex-wrap gap-1">
-              {selectedTechnicians.length > 0 ? (
-                selectedTechnicians.map(tech => (
-                  <Badge variant="secondary" key={tech.id} className="mr-1">
-                    {tech.name}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground">
-                  {isLoading ? "Carregando..." : "Selecione um ou mais técnicos..."}
-                </span>
-              )}
-            </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-          <Command>
-            <CommandInput placeholder="Buscar técnico..." />
-            <CommandEmpty>Nenhum técnico encontrado.</CommandEmpty>
-            <CommandGroup>
-              {allTeamMembers.map((member) => {
-                const isSelected = selectedTechnicians.some(t => t.id === member.id);
-                return (
-                  <CommandItem key={member.id} onSelect={() => handleToggleSelection(member)}>
-                    <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                    {member.name}
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+    <div className="flex gap-2 items-end mt-2">
+      <div className="flex-1">
+        <Select value={selectedTechnicianId} onValueChange={setSelectedTechnicianId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um técnico" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Não atribuído</SelectItem>
+            {teamMembers.map((member) => (
+              <SelectItem key={member.id} value={member.id}>
+                {member.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button onClick={handleAssign} disabled={loading}>
+        {loading ? "Salvando..." : "Atribuir"}
+      </Button>
     </div>
   );
 };
