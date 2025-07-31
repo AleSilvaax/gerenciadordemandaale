@@ -44,21 +44,34 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   } = useServiceDetail();
 
   const handleGenerateReport = async () => {
-    if (!service || !user) {
-      toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
-      return;
-    }
+  if (!service || !user) {
+    toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
+    return;
+  }
 
-    try {
-      toast.loading("Gerando relatório PDF...");
-      const { generateProfessionalServiceReport } = await import("@/utils/pdf/professionalPdfGenerator");
-      await generateProfessionalServiceReport(service);
-      toast.success("Relatório PDF gerado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório PDF. Verifique o console para mais detalhes.");
-    }
-  };
+  try {
+    toast.loading("Gerando relatório PDF...");
+
+    // Importa o gerador dinamicamente
+    const { generateProfessionalServiceReport } = await import("@/utils/pdf/professionalPdfGenerator");
+
+    // Garante que estamos enviando também as fotos (formatadas como array de URLs)
+    const formattedPhotos = photos.map(photo =>
+      typeof photo === "string" ? photo : photo.url
+    );
+
+    // Passa o objeto `service` com as fotos embutidas
+    await generateProfessionalServiceReport({
+      ...service,
+      photos: formattedPhotos,
+    });
+
+    toast.success("Relatório PDF gerado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao gerar relatório:", error);
+    toast.error("Erro ao gerar relatório PDF. Verifique o console para mais detalhes.");
+  }
+};
 
   if (isLoading) {
     return (
