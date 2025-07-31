@@ -24,12 +24,17 @@ export const TechnicianAssigner: React.FC<TechnicianAssignerProps> = ({ currentT
 
   useEffect(() => {
     getTeamMembers()
-      .then(members => setAllTeamMembers(members.filter(m => m.role === 'tecnico')))
+      .then(members => {
+        // Garante que members seja sempre um array antes de filtrar
+        if (Array.isArray(members)) {
+          setAllTeamMembers(members.filter(m => m.role === 'tecnico'));
+        }
+      })
       .catch(() => toast.error("Erro ao carregar a lista de técnicos."));
   }, []);
 
   useEffect(() => {
-    // Garante que o estado seja sempre um array
+    // ✅ CORREÇÃO: Garante que o estado seja sempre um array, nunca undefined.
     setSelectedTechnicians(Array.isArray(currentTechnicians) ? currentTechnicians : []);
   }, [currentTechnicians]);
 
