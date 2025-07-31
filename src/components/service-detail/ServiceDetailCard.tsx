@@ -1,4 +1,4 @@
-// Arquivo: src/components/service-detail/ServiceDetailCard.tsx (VERSÃO ATUALIZADA)
+// Arquivo: src/components/service-detail/ServiceDetailCard.tsx (VERSÃO FINAL E CORRIGIDA)
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Calendar, Clock, User, Users, FileText, CheckCircle, XCircle } from "lucide-react"; // Adicionado ícone 'Users'
+import { MapPin, Calendar, Clock, Users, FileText, CheckCircle, XCircle } from "lucide-react";
 
 interface ServiceDetailCardProps {
   service: Service;
@@ -86,7 +86,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           )}
         </div>
 
-        {/* ✅ SEÇÃO DE TÉCNICOS ATUALIZADA */}
         <div className="p-3 bg-background/30 rounded-lg border border-border/30">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
@@ -96,7 +95,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
                 {service.technicians && service.technicians.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {service.technicians.map(tech => (
-                      <div key={tech.id} className="flex items-center gap-2 bg-background p-1 rounded-full">
+                      <div key={tech.id} className="flex items-center gap-2 bg-background p-1 rounded-full border">
                         <TeamMemberAvatar src={tech.avatar || ""} name={tech.name} size="xs" />
                         <span className="text-xs pr-2">{tech.name}</span>
                       </div>
@@ -110,16 +109,13 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           </div>
         </div>
 
-        {/* Manteremos o TechnicianAssigner por enquanto, mas ele precisará ser atualizado */}
+        {/* ✅ CONEXÃO FINAL E CORRIGIDA */}
         {hasGestorPermission && (
           <TechnicianAssigner
-            // A prop 'currentTechnicianId' precisará ser alterada para uma lista de IDs
-            currentTechnicianId={service.technicians?.[0]?.id} // Placeholder
-            onAssign={async (technician) => {
-              // A lógica aqui precisará ser atualizada para lidar com uma lista
-              await updateService({ id: service.id, technicians: [technician] }); // Placeholder
-              toast.success("Técnicos atualizados!");
-              onServiceUpdate();
+            currentTechnicians={service.technicians}
+            onAssign={async (newTechnicians) => {
+              await updateService({ id: service.id, technicians: newTechnicians });
+              onServiceUpdate(); // Recarrega os dados da página
             }}
           />
         )}
@@ -130,7 +126,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <FileText className="w-4 h-4" />
               Descrição
             </h4>
-            <p className="text-sm text-muted-foreground p-3 bg-background/30 rounded-lg border border-border/30">
+            <p className="text-sm text-muted-foreground p-3 bg-background/30 rounded-lg border border-border/30 whitespace-pre-wrap">
               {service.description}
             </p>
           </div>
