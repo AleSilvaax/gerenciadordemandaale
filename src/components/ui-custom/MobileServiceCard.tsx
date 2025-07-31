@@ -1,12 +1,10 @@
-
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Calendar, User, MapPin, Wrench, AlertTriangle } from "lucide-react";
+import { Clock, Calendar, User, MapPin, Wrench, AlertTriangle, Building2, Users } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
 import { StatusBadge } from "./StatusBadge";
-import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 interface MobileServiceCardProps {
@@ -18,7 +16,6 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
   service, 
   onClick 
 }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const formatDate = (dateStr: string) => {
@@ -53,113 +50,167 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
 
   return (
     <Card 
-      className="hover:shadow-md transition-all duration-200 cursor-pointer bg-card/50 backdrop-blur-sm border border-border/50"
+      className="hover:shadow-lg transition-all duration-300 border border-border/50 bg-gradient-to-br from-card/90 to-card backdrop-blur-sm cursor-pointer active:scale-[0.98] hover:border-primary/30"
       onClick={handleCardClick}
     >
-      <CardContent className="p-4">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex-1 mr-2">
-            <h3 className="font-semibold text-sm text-card-foreground line-clamp-2 mb-1">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg font-bold text-card-foreground line-clamp-2 mb-2">
               {service.title}
-            </h3>
-            {service.number && (
-              <p className="text-xs text-muted-foreground">#{service.number}</p>
-            )}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {service.number && (
+                <Badge variant="outline" className="text-xs font-mono">
+                  #{service.number}
+                </Badge>
+              )}
+              {service.creationDate && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {formatDate(service.creationDate)}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1">
             <StatusBadge status={service.status} />
             {service.priority && (
-              <Badge className={`${getPriorityColor(service.priority)} border text-xs`}>
+              <Badge className={`${getPriorityColor(service.priority)} border text-xs font-medium`}>
                 {service.priority === 'urgente' && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {service.priority}
               </Badge>
             )}
           </div>
         </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Cliente */}
+        {service.client && (
+          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <Building2 className="w-4 h-4 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-primary/80 uppercase tracking-wide">Cliente</p>
+              <p className="text-sm font-semibold">{service.client}</p>
+              {(service.address || service.city) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {[service.address, service.city].filter(Boolean).join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         {service.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+          <p className="text-sm text-muted-foreground line-clamp-2 bg-muted/30 p-2 rounded-md">
             {service.description}
           </p>
         )}
-
-        {/* Service Info */}
-        <div className="space-y-2 mb-3">
+        
+        {/* Service Type e Location */}
+        <div className="space-y-2">
           {service.serviceType && (
-            <div className="flex items-center gap-2 p-2 bg-background/30 rounded-md border border-border/30">
-              <Wrench className="w-3 h-3 text-primary shrink-0" />
+            <div className="flex items-center gap-3 p-2 bg-background/50 rounded-md">
+              <div className="p-1 bg-primary/10 rounded">
+                <Wrench className="w-3 h-3 text-primary" />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Tipo</p>
-                <p className="text-xs font-medium truncate">{service.serviceType}</p>
+                <p className="text-xs text-muted-foreground">Tipo de Serviço</p>
+                <p className="text-sm font-medium truncate">{service.serviceType}</p>
               </div>
             </div>
           )}
           
           {service.location && (
-            <div className="flex items-center gap-2 p-2 bg-background/30 rounded-md border border-border/30">
-              <MapPin className="w-3 h-3 text-primary shrink-0" />
+            <div className="flex items-center gap-3 p-2 bg-background/50 rounded-md">
+              <div className="p-1 bg-primary/10 rounded">
+                <MapPin className="w-3 h-3 text-primary" />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Local</p>
-                <p className="text-xs font-medium truncate">{service.location}</p>
+                <p className="text-xs text-muted-foreground">Localização</p>
+                <p className="text-sm font-medium truncate">{service.location}</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="flex items-center gap-1 p-2 bg-background/30 rounded-md border border-border/30">
-            <Calendar className="w-3 h-3 text-muted-foreground shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Criado</p>
-              <p className="text-xs">{service.creationDate ? formatDate(service.creationDate) : 'N/A'}</p>
-            </div>
-          </div>
-          
-          {service.dueDate && (
-            <div className={`flex items-center gap-1 p-2 rounded-md border border-border/30 ${
-              isDeadlineNear(service.dueDate) 
-                ? 'bg-red-50 dark:bg-red-950/20' 
-                : 'bg-background/30'
+        {/* Prazo */}
+        {service.dueDate && (
+          <div className={`flex items-center gap-3 p-3 rounded-md transition-all ${
+            isDeadlineNear(service.dueDate) 
+              ? 'bg-destructive/5 border border-destructive/20' 
+              : 'bg-background/50'
+          }`}>
+            <div className={`p-1 rounded ${
+              isDeadlineNear(service.dueDate) ? 'bg-destructive/10' : 'bg-primary/10'
             }`}>
-              <Clock className={`w-3 h-3 shrink-0 ${
-                isDeadlineNear(service.dueDate) ? 'text-red-500' : 'text-muted-foreground'
+              <Clock className={`w-3 h-3 ${
+                isDeadlineNear(service.dueDate) ? 'text-destructive' : 'text-primary'
               }`} />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Prazo</p>
-                <p className={`text-xs ${isDeadlineNear(service.dueDate) ? "text-red-600 font-medium" : ""}`}>
-                  {formatDate(service.dueDate)}
-                </p>
-              </div>
             </div>
-          )}
-        </div>
-
-        {/* Technician */}
-        <div className="flex items-center justify-between p-2 bg-background/30 rounded-md border border-border/30">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <User className="w-3 h-3 text-primary shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Técnico</p>
-              <p className="text-xs font-medium truncate">
-                {service.technicians?.[0]?.name || "Não atribuído"}
+              <p className="text-xs text-muted-foreground">
+                {isDeadlineNear(service.dueDate) ? 'Prazo Próximo!' : 'Prazo'}
+              </p>
+              <p className={`text-sm font-medium ${
+                isDeadlineNear(service.dueDate) ? 'text-destructive' : ''
+              }`}>
+                {formatDate(service.dueDate)}
+              </p>
+            </div>
+            {isDeadlineNear(service.dueDate) && (
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+            )}
+          </div>
+        )}
+
+        {/* Técnicos */}
+        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-background/50 to-muted/30 rounded-md">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="p-1 bg-primary/10 rounded">
+              {service.technicians && service.technicians.length > 1 ? (
+                <Users className="w-3 h-3 text-primary" />
+              ) : (
+                <User className="w-3 h-3 text-primary" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">
+                {service.technicians && service.technicians.length > 1 ? 'Técnicos' : 'Técnico'}
+              </p>
+              <p className="text-sm font-medium truncate">
+                {service.technicians && service.technicians.length > 0
+                  ? service.technicians.length > 1
+                    ? `${service.technicians[0].name} +${service.technicians.length - 1}`
+                    : service.technicians[0].name
+                  : "Não atribuído"
+                }
               </p>
             </div>
           </div>
           
-          {/* Technician Avatar */}
-          {service.technicians?.[0] && (
-            <Avatar className="w-6 h-6 border border-primary/20">
-              <AvatarImage 
-                src={service.technicians[0].avatar} 
-                alt={service.technicians[0].name}
-              />
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                {service.technicians[0].name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'T'}
-              </AvatarFallback>
-            </Avatar>
+          {/* Avatares dos Técnicos */}
+          {service.technicians && service.technicians.length > 0 && (
+            <div className="flex -space-x-1">
+              {service.technicians.slice(0, 2).map((technician, index) => (
+                <Avatar key={technician.id} className="w-8 h-8 border-2 border-background">
+                  <AvatarImage 
+                    src={technician.avatar} 
+                    alt={technician.name}
+                  />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {technician.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'T'}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {service.technicians.length > 2 && (
+                <div className="w-8 h-8 bg-muted border-2 border-background rounded-full flex items-center justify-center text-xs font-medium text-muted-foreground">
+                  +{service.technicians.length - 2}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </CardContent>

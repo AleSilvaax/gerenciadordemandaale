@@ -70,7 +70,7 @@ const transformServiceData = (service: any): Service => {
  */
 export const getServicesFromDatabase = async (): Promise<Service[]> => {
   try {
-    console.log('[SERVICES] Iniciando busca simplificada de serviços...');
+    console.log('[SERVICES] Iniciando busca de serviços com técnicos...');
     
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
@@ -86,50 +86,72 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
     
     if (!servicesData) return [];
 
-    // Transformação básica sem buscar dados relacionados para evitar problemas de RLS
-    const transformedServices = servicesData.map((service) => {
-      const parseJsonField = (field: any) => {
-        if (!field) return undefined;
-        if (typeof field === 'object') return field;
-        try { return JSON.parse(field); } catch { return undefined; }
-      };
-      
-      const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
-        ? service.priority as ServicePriority : 'media' as ServicePriority;
-      const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
-        ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
+    // Buscar técnicos para todos os serviços
+    const servicesWithTechnicians = await Promise.all(
+      servicesData.map(async (service) => {
+        const parseJsonField = (field: any) => {
+          if (!field) return undefined;
+          if (typeof field === 'object') return field;
+          try { return JSON.parse(field); } catch { return undefined; }
+        };
+        
+        const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+          ? service.priority as ServicePriority : 'media' as ServicePriority;
+        const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
+          ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
 
-      return {
-        id: service.id,
-        title: service.title || 'Sem título',
-        location: service.location || 'Local não informado',
-        status: safeStatus,
-        technicians: [], // Vazio para evitar problemas de RLS
-        creationDate: service.created_at,
-        dueDate: service.due_date,
-        priority: safePriority,
-        serviceType: service.service_type || 'Vistoria',
-        number: service.number,
-        description: service.description,
-        createdBy: service.created_by,
-        client: service.client,
-        address: service.address,
-        city: service.city,
-        notes: service.notes,
-        estimatedHours: service.estimated_hours,
-        customFields: parseJsonField(service.custom_fields),
-        signatures: parseJsonField(service.signatures),
-        feedback: parseJsonField(service.feedback),
-        messages: [], // Vazio para evitar problemas de RLS
-        photos: Array.isArray(service.photos) ? service.photos : [],
-        photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
-        date: service.date,
-      } as Service;
-    });
+        // Buscar técnicos atribuídos a este serviço
+        const { data: technicianData } = await supabase
+          .from('service_technicians')
+          .select(`
+            technician_id,
+            profiles!inner(
+              id,
+              name,
+              avatar
+            )
+          `)
+          .eq('service_id', service.id);
 
-    console.log('[SERVICES] Serviços transformados (versão simplificada):', transformedServices.length);
+        const technicians = technicianData?.map((st: any) => ({
+          id: st.profiles.id,
+          name: st.profiles.name,
+          avatar: st.profiles.avatar,
+          role: 'tecnico' as const
+        })) || [];
+
+        return {
+          id: service.id,
+          title: service.title || 'Sem título',
+          location: service.location || 'Local não informado',
+          status: safeStatus,
+          technicians,
+          creationDate: service.created_at,
+          dueDate: service.due_date,
+          priority: safePriority,
+          serviceType: service.service_type || 'Vistoria',
+          number: service.number,
+          description: service.description,
+          createdBy: service.created_by,
+          client: service.client,
+          address: service.address,
+          city: service.city,
+          notes: service.notes,
+          estimatedHours: service.estimated_hours,
+          customFields: parseJsonField(service.custom_fields) || [],
+          signatures: parseJsonField(service.signatures) || {},
+          feedback: parseJsonField(service.feedback),
+          messages: [], // Vazio para evitar problemas de RLS
+          photos: Array.isArray(service.photos) ? service.photos : [],
+          photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
+          date: service.date,
+        } as Service;
+      })
+    );
+
+    console.log('[SERVICES] Serviços transformados:', servicesWithTechnicians.length);
     
-    return transformedServices;
+    return servicesWithTechnicians;
   } catch (error: any) {
     console.error('[SERVICES] Erro na busca de serviços:', error);
     toast.error("Erro ao buscar as demandas", { description: "Verifique sua conexão ou tente novamente mais tarde." });
