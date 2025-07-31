@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/context/AuthContext';
+// ✅ Garante que estamos a usar o AuthProvider da sua versão estável.
+import { AuthProvider } from '@/context/AuthContext'; 
 import { AuthGuard } from '@/components/guards/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -35,6 +35,7 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
+        {/* ✅ Garante que o provedor correto está a "abraçar" toda a aplicação. */}
         <AuthProvider>
           <Routes>
             {/* Rotas públicas */}
@@ -42,91 +43,25 @@ function App() {
             <Route path="/register" element={<Register />} />
             
             {/* Rotas protegidas */}
-            <Route path="/" element={
+            <Route path="/*" element={
               <AuthGuard>
                 <AppLayout>
-                  <Index />
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/nova-demanda" element={<NewService />} />
+                    <Route path="/demandas" element={<Demandas />} />
+                    <Route path="/demanda/:id" element={<ServiceErrorBoundary><ServiceDetail /></ServiceErrorBoundary>} />
+                    <Route path="/buscar" element={<Search />} />
+                    <Route path="/estatisticas" element={<Statistics />} />
+                    <Route path="/equipe" element={<Equipe />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
                 </AppLayout>
               </AuthGuard>
             } />
-            
-            <Route path="/nova-demanda" element={
-              <AuthGuard>
-                <AppLayout>
-                  <NewService />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/demandas" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Demandas />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/demanda/:id" element={
-              <AuthGuard>
-                <AppLayout>
-                  <ServiceErrorBoundary>
-                    <ServiceDetail />
-                  </ServiceErrorBoundary>
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/buscar" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Search />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/estatisticas" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Statistics />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/equipe" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Equipe />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/calendar" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Calendar />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/settings" element={
-              <AuthGuard>
-                <AppLayout>
-                  <Settings />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            <Route path="/profile" element={
-              <AuthGuard>
-                <AppLayout>
-                  <ProfilePage />
-                </AppLayout>
-              </AuthGuard>
-            } />
-            
-            {/* Rota 404 */}
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </AuthProvider>
       </QueryClientProvider>
