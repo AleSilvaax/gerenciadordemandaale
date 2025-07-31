@@ -733,3 +733,39 @@ const getExecutionIcon = (status: string): string => {
     default: return '○ Pendente';
   }
 };
+
+doc.addPage();
+  let currentY = 20;
+
+  doc.setFontSize(18);
+  doc.text('Fotos da Demanda', 15, currentY);
+  currentY += 10;
+
+  const maxWidth = 180;
+  const maxHeight = 100;
+
+  for (const photoUrl of service.photos) {
+    try {
+      const imgData = await fetch(photoUrl)
+        .then(res => res.blob())
+        .then(blob => new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+          reader.readAsDataURL(blob);
+        }));
+
+      // Adiciona imagem ao PDF
+      if (currentY + maxHeight > 280) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.addImage(imgData, 'JPEG', 15, currentY, maxWidth, maxHeight);
+      currentY += maxHeight + 10;
+
+    } catch (error) {
+      console.error('Erro ao carregar imagem:', error);
+    }
+  }
+}
