@@ -39,7 +39,7 @@ const Navbar = () => {
     if (!user) return false;
     const { role } = user;
     if (["/estatisticas", "/equipe", "/admin"].includes(item.path)) {
-      return role === 'administrador' || role === 'gestor';
+      return ['super_admin', 'administrador', 'gestor'].includes(role);
     }
     return true;
   });

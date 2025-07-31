@@ -40,14 +40,19 @@ const EnhancedPermissionGuard: React.FC<PermissionGuardProps> = ({
       try {
         let accessGranted = true;
 
-        // Verificar permissão específica
-        if (requiredPermission) {
-          accessGranted = user.permissions.includes(requiredPermission);
-        }
+        // Super admin sempre tem acesso total
+        if (user.role === 'super_admin') {
+          accessGranted = true;
+        } else {
+          // Verificar permissão específica
+          if (requiredPermission) {
+            accessGranted = user.permissions.includes(requiredPermission);
+          }
 
-        // Verificar role mínimo necessário
-        if (accessGranted && requiredRole) {
-          accessGranted = await hasRoleOrHigher(requiredRole);
+          // Verificar role mínimo necessário
+          if (accessGranted && requiredRole) {
+            accessGranted = await hasRoleOrHigher(requiredRole);
+          }
         }
 
         // Verificar ação e recurso específicos

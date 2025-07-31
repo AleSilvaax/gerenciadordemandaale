@@ -47,55 +47,55 @@ export const EnhancedNavbar: React.FC = () => {
       name: 'Dashboard', 
       path: '/', 
       icon: Home, 
-      roles: ['tecnico', 'gestor', 'administrador'] 
+      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Nova Demanda', 
       path: '/nova-demanda', 
       icon: Plus, 
-      roles: ['gestor', 'administrador'] 
+      roles: ['gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Demandas', 
       path: '/demandas', 
       icon: FileText, 
-      roles: ['tecnico', 'gestor', 'administrador'] 
+      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Buscar', 
       path: '/buscar', 
       icon: Search, 
-      roles: ['tecnico', 'gestor', 'administrador'] 
+      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Calendário', 
       path: '/calendar', 
       icon: Calendar, 
-      roles: ['tecnico', 'gestor', 'administrador'] 
+      roles: ['tecnico', 'gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Estatísticas', 
       path: '/estatisticas', 
       icon: BarChart3, 
-      roles: ['gestor', 'administrador'] 
+      roles: ['gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Equipe', 
       path: '/equipe', 
       icon: Users, 
-      roles: ['gestor', 'administrador'] 
+      roles: ['gestor', 'administrador', 'super_admin'] 
     },
     { 
       name: 'Administração', 
       path: '/admin', 
       icon: Shield, 
-      roles: ['administrador', 'gestor'] 
+      roles: ['administrador', 'gestor', 'super_admin'] 
     },
     { 
       name: 'Configurações', 
       path: '/settings', 
       icon: Settings, 
-      roles: ['gestor', 'administrador'] 
+      roles: ['gestor', 'administrador', 'super_admin'] 
     }
   ];
 

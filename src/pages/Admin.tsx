@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrganizationManagement } from '@/components/admin/OrganizationManagement';
@@ -8,11 +8,22 @@ import { InviteManagement } from '@/components/admin/InviteManagement';
 import { Users, Building2, Mail, Settings } from 'lucide-react';
 
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useEnhancedAuth();
   const [activeTab, setActiveTab] = useState('organizations');
 
-  // Verificar se o usuário é administrador ou gestor
-  if (!user || (user.role !== 'administrador' && user.role !== 'gestor')) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <p>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Verificar se o usuário tem permissão (super_admin, administrador ou gestor)
+  if (!user || !['super_admin', 'administrador', 'gestor'].includes(user.role)) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center">
