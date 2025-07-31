@@ -15,28 +15,6 @@ export interface TeamMember {
   signature?: string;
 }
 
-export interface ServiceMessage {
-  senderId: string;
-  senderName: string;
-  senderRole: string;
-  message: string;
-  timestamp?: string;
-}
-
-export interface ServiceFeedback {
-  clientRating: number;
-  clientComment?: string;
-  technicianFeedback?: string;
-}
-
-export interface CustomField {
-  id: string;
-  label: string;
-  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select' | 'date';
-  value: string | number | boolean;
-  options?: string[];
-}
-
 export interface Service {
   id: string;
   title: string;
