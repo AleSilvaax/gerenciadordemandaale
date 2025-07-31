@@ -93,4 +93,25 @@ export const Sidebar: React.FC = () => {
       {user && (
         <>
           <Separator className="mx-4" />
-          <div className="
+          <div className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs font-semibold text-primary">
+                  {user.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {user.name || 'Usuário'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {user.role || 'tecnico'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
