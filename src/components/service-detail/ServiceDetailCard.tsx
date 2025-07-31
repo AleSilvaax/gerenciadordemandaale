@@ -101,14 +101,14 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <div>
                 <p className="text-sm font-medium">Técnico Responsável</p>
                 <p className="text-sm text-muted-foreground">
-                  {service.technician?.name ?? "Não atribuído"}
+                  {service.technicians?.[0]?.name ?? "Não atribuído"}
                 </p>
               </div>
             </div>
-            {service.technician && (
+            {service.technicians?.[0] && (
               <TeamMemberAvatar 
-                src={service.technician.avatar || ""} 
-                name={service.technician.name} 
+                src={service.technicians[0].avatar || ""} 
+                name={service.technicians[0].name} 
                 size="sm"
               />
             )}
@@ -117,9 +117,9 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
 
         {hasGestorPermission && (
           <TechnicianAssigner
-            currentTechnicianId={service.technician?.id}
+            currentTechnicianId={service.technicians?.[0]?.id}
             onAssign={async (technician) => {
-              await updateService({ id: service.id, technician });
+              await updateService({ id: service.id, technicians: [technician] });
               toast.success("Técnico atualizado!");
               onServiceUpdate();
             }}

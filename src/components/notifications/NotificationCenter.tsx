@@ -20,13 +20,12 @@ export const NotificationCenter: React.FC = () => {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open && unreadCount > 0) {
-      const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
-      markAsRead(unreadIds);
+      markAllAsRead();
     }
   };
 
   const handleNotificationClick = (notificationId: string, serviceId?: string) => {
-    markAsRead([notificationId]);
+    markAsRead();
     if (serviceId) {
       navigate(`/demanda/${serviceId}`);
     }
@@ -34,10 +33,7 @@ export const NotificationCenter: React.FC = () => {
   };
 
   const markAllAsRead = () => {
-    const allIds = notifications.map(n => n.id);
-    if (allIds.length > 0) {
-      markAsRead(allIds);
-    }
+    markAsRead();
   };
 
   return (

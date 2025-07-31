@@ -51,7 +51,7 @@ const Search: React.FC = () => {
         service.description?.toLowerCase().includes(query) ||
         service.location.toLowerCase().includes(query) ||
         service.client?.toLowerCase().includes(query) ||
-        service.technician.name.toLowerCase().includes(query) ||
+        service.technicians?.[0]?.name?.toLowerCase().includes(query) ||
         service.id.toLowerCase().includes(query)
     );
 
@@ -76,7 +76,7 @@ const Search: React.FC = () => {
         service.description?.toLowerCase().includes(query) ||
         service.location.toLowerCase().includes(query) ||
         service.client?.toLowerCase().includes(query) ||
-        service.technician.name.toLowerCase().includes(query) ||
+        service.technicians?.[0]?.name?.toLowerCase().includes(query) ||
         service.id.toLowerCase().includes(query)
     );
 

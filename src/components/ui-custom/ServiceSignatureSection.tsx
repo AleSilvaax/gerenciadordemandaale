@@ -75,7 +75,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
           <h5 className="text-sm font-medium mb-2 text-left">Assinatura do Técnico</h5>
           <div className="mb-2">
             <span className="block text-sm text-muted-foreground text-left">
-              Técnico: {service.technician?.name || "Não atribuído"}
+              Técnico: {service.technicians?.[0]?.name || "Não atribuído"}
             </span>
           </div>
           <div className="border rounded-md p-4 bg-background/30">

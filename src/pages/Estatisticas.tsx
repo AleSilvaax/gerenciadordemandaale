@@ -61,8 +61,8 @@ const Estatisticas: React.FC = () => {
 
         // Team performance
         const techPerformance = services.reduce((acc, service) => {
-          if (service.technician?.id) {
-            acc[service.technician.id] = (acc[service.technician.id] || 0) + 1;
+          if (service.technicians?.[0]?.id) {
+            acc[service.technicians[0].id] = (acc[service.technicians[0].id] || 0) + 1;
           }
           return acc;
         }, {} as Record<string, number>);

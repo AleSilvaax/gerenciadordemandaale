@@ -66,7 +66,7 @@ export const useServiceDetail = () => {
     setIsLoading(true);
     
     try {
-      const foundService = await getServiceByIdFromDatabase(serviceId, user);
+      const foundService = await getServiceByIdFromDatabase(serviceId);
       
       if (foundService) {
         setService(foundService);

@@ -11,6 +11,13 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
     // Extract the data we want to save to the profile
     const { name, email, phone, avatar } = userData;
     
+    // Get current profile to preserve organization_id
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', userId)
+      .single();
+
     // Update the profiles table in Supabase
     const { error } = await supabase
       .from('profiles')
@@ -18,6 +25,7 @@ export const updateUserProfile = async (userId: string, userData: Partial<AuthUs
         id: userId,
         name,
         avatar,
+        organization_id: currentProfile?.organization_id || '00000000-0000-0000-0000-000000000001',
         updated_at: new Date().toISOString()
       }, { 
         onConflict: 'id',

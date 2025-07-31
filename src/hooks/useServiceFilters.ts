@@ -53,7 +53,7 @@ export const useServiceFilters = (services: Service[]) => {
     // Filtro por técnico
     if (filters.technicianId && filters.technicianId !== 'all') {
       filtered = filtered.filter(service => 
-        service.technician?.id === filters.technicianId
+        service.technicians?.[0]?.id === filters.technicianId
       );
       console.log('[FILTERS] Após filtro de técnico:', filtered.length);
     }

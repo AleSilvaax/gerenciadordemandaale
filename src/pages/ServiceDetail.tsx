@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
-import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
+// import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera, Download } from "lucide-react";
@@ -43,24 +43,19 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handlePhotosChange
   } = useServiceDetail();
 
-  // FUNÇÃO CORRIGIDA E LIMPA
+  // FUNÇÃO DESABILITADA TEMPORARIAMENTE
   const handleGenerateReport = async () => {
-    if (!service || !user) { // Checagem de segurança para serviço e usuário
+    if (!service || !user) {
       toast.error("Serviço ou dados do usuário não encontrados para gerar o relatório.");
       return;
     }
 
     try {
-      console.log('[ServiceDetail] Gerando relatório V4 para:', service.title);
-      toast.info("Gerando relatório profissional...");
-      
-      // Chamada correta, passando os 3 parâmetros necessários
-      await generateProfessionalServiceReport(service, photos, user);
-      
-      toast.success("Relatório profissional gerado com sucesso!");
+      console.log('[ServiceDetail] Geração de relatório temporariamente desabilitada');
+      toast.info("Funcionalidade de relatório em manutenção...");
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
-      toast.error("Erro ao gerar relatório profissional");
+      toast.error("Erro ao gerar relatório");
     }
   };
 

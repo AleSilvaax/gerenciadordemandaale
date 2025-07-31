@@ -117,9 +117,9 @@ const NewService: React.FC = () => {
         description: data.description,
         notes: data.notes,
         dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
-        technician: selectedTechnician,
+        technicians: selectedTechnician ? [selectedTechnician] : [],
         status: "pendente" as const,
-        priority: data.priority, // <-- 3. ALTERADO DE VALOR FIXO PARA VALOR DO FORMULÁRIO
+        priority: data.priority,
         createdBy: user?.id,
         creationDate: new Date().toISOString(),
       };

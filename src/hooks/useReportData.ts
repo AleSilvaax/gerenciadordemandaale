@@ -36,7 +36,7 @@ export function useReportData(period: string, technician: string, serviceType: s
           const cutoffDate = new Date(now.getTime() - (periodDays * 24 * 60 * 60 * 1000));
           
           const withinPeriod = serviceDate >= cutoffDate;
-          const matchesTechnician = technician === 'all' || service.technician?.name === technician;
+          const matchesTechnician = technician === 'all' || service.technicians?.[0]?.name === technician;
           const matchesServiceType = serviceType === 'all' || service.serviceType === serviceType;
           
           return withinPeriod && matchesTechnician && matchesServiceType;

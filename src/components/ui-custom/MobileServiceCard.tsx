@@ -144,20 +144,20 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Técnico</p>
               <p className="text-xs font-medium truncate">
-                {service.technician?.name || "Não atribuído"}
+                {service.technicians?.[0]?.name || "Não atribuído"}
               </p>
             </div>
           </div>
           
           {/* Technician Avatar */}
-          {service.technician && (
+          {service.technicians?.[0] && (
             <Avatar className="w-6 h-6 border border-primary/20">
               <AvatarImage 
-                src={service.technician.avatar} 
-                alt={service.technician.name}
+                src={service.technicians[0].avatar} 
+                alt={service.technicians[0].name}
               />
               <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                {service.technician.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'T'}
+                {service.technicians[0].name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'T'}
               </AvatarFallback>
             </Avatar>
           )}
