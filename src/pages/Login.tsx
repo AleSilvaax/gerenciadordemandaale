@@ -121,44 +121,6 @@ const Login: React.FC = () => {
           <p className="text-muted-foreground mt-2">Entre com suas credenciais para acessar</p>
         </div>
         
-        <Alert className="mb-4 bg-muted/50 border-primary/20 animate-fadeIn">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <p className="text-sm">Credenciais de demonstração:</p>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs hover-scale"
-                onClick={() => handleDemoLogin('tecnico')}
-                disabled={isSubmitting}
-              >
-                Técnico
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs hover-scale"
-                onClick={() => handleDemoLogin('administrador')}
-                disabled={isSubmitting}
-              >
-                Admin
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs hover-scale"
-                onClick={() => handleDemoLogin('gestor')}
-                disabled={isSubmitting}
-              >
-                Gestor
-              </Button>
-              <div className="col-span-3 text-xs text-muted-foreground mt-1">
-                Senha para todos: 123456
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
         
         <Card className="border-white/10 animate-fadeSlideIn">
           <CardHeader>

@@ -50,33 +50,33 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
 
   return (
     <Card 
-      className="hover:shadow-lg transition-all duration-300 border border-border/50 bg-gradient-to-br from-card/90 to-card backdrop-blur-sm cursor-pointer active:scale-[0.98] hover:border-primary/30"
+      className="mobile-service-card hover:shadow-lg transition-all duration-300 border border-border/50 bg-gradient-to-br from-card/90 to-card backdrop-blur-sm cursor-pointer active:scale-[0.98] hover:border-primary/30"
       onClick={handleCardClick}
     >
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-3">
+      <CardHeader className="pb-4 px-4 pt-5">
+        <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-bold text-card-foreground line-clamp-2 mb-2">
+            <CardTitle className="text-lg font-bold text-card-foreground line-clamp-2 mb-3">
               {service.title}
             </CardTitle>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {service.number && (
-                <Badge variant="outline" className="text-xs font-mono">
+                <Badge variant="outline" className="text-xs font-mono px-2 py-1">
                   #{service.number}
                 </Badge>
               )}
               {service.creationDate && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
                   {formatDate(service.creationDate)}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-2">
             <StatusBadge status={service.status} />
             {service.priority && (
-              <Badge className={`${getPriorityColor(service.priority)} border text-xs font-medium`}>
+              <Badge className={`${getPriorityColor(service.priority)} border text-xs font-medium px-2 py-1`}>
                 {service.priority === 'urgente' && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {service.priority}
               </Badge>
@@ -85,16 +85,16 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 px-4 pb-5">
         {/* Cliente */}
         {service.client && (
-          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
-            <Building2 className="w-4 h-4 text-primary shrink-0" />
+          <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
+            <Building2 className="w-5 h-5 text-primary shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-primary/80 uppercase tracking-wide">Cliente</p>
-              <p className="text-sm font-semibold">{service.client}</p>
+              <p className="text-xs font-medium text-primary/80 uppercase tracking-wide mb-1">Cliente</p>
+              <p className="text-sm font-semibold mb-1">{service.client}</p>
               {(service.address || service.city) && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground">
                   {[service.address, service.city].filter(Boolean).join(', ')}
                 </p>
               )}
@@ -104,32 +104,32 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
 
         {/* Description */}
         {service.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 bg-muted/30 p-2 rounded-md">
+          <p className="text-sm text-muted-foreground line-clamp-3 bg-muted/30 p-3 rounded-md leading-relaxed">
             {service.description}
           </p>
         )}
         
         {/* Service Type e Location */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {service.serviceType && (
-            <div className="flex items-center gap-3 p-2 bg-background/50 rounded-md">
-              <div className="p-1 bg-primary/10 rounded">
-                <Wrench className="w-3 h-3 text-primary" />
+            <div className="flex items-center gap-4 p-3 bg-background/50 rounded-md">
+              <div className="p-2 bg-primary/10 rounded-md">
+                <Wrench className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Tipo de Serviço</p>
+                <p className="text-xs text-muted-foreground mb-1">Tipo de Serviço</p>
                 <p className="text-sm font-medium truncate">{service.serviceType}</p>
               </div>
             </div>
           )}
           
           {service.location && (
-            <div className="flex items-center gap-3 p-2 bg-background/50 rounded-md">
-              <div className="p-1 bg-primary/10 rounded">
-                <MapPin className="w-3 h-3 text-primary" />
+            <div className="flex items-center gap-4 p-3 bg-background/50 rounded-md">
+              <div className="p-2 bg-primary/10 rounded-md">
+                <MapPin className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Localização</p>
+                <p className="text-xs text-muted-foreground mb-1">Localização</p>
                 <p className="text-sm font-medium truncate">{service.location}</p>
               </div>
             </div>
@@ -138,20 +138,20 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
 
         {/* Prazo */}
         {service.dueDate && (
-          <div className={`flex items-center gap-3 p-3 rounded-md transition-all ${
+          <div className={`flex items-center gap-4 p-3 rounded-md transition-all ${
             isDeadlineNear(service.dueDate) 
               ? 'bg-destructive/5 border border-destructive/20' 
               : 'bg-background/50'
           }`}>
-            <div className={`p-1 rounded ${
+            <div className={`p-2 rounded-md ${
               isDeadlineNear(service.dueDate) ? 'bg-destructive/10' : 'bg-primary/10'
             }`}>
-              <Clock className={`w-3 h-3 ${
+              <Clock className={`w-4 h-4 ${
                 isDeadlineNear(service.dueDate) ? 'text-destructive' : 'text-primary'
               }`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mb-1">
                 {isDeadlineNear(service.dueDate) ? 'Prazo Próximo!' : 'Prazo'}
               </p>
               <p className={`text-sm font-medium ${
@@ -167,17 +167,17 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
         )}
 
         {/* Técnicos */}
-        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-background/50 to-muted/30 rounded-md">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="p-1 bg-primary/10 rounded">
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-background/50 to-muted/30 rounded-md">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-2 bg-primary/10 rounded-md">
               {service.technicians && service.technicians.length > 1 ? (
-                <Users className="w-3 h-3 text-primary" />
+                <Users className="w-4 h-4 text-primary" />
               ) : (
-                <User className="w-3 h-3 text-primary" />
+                <User className="w-4 h-4 text-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mb-1">
                 {service.technicians && service.technicians.length > 1 ? 'Técnicos' : 'Técnico'}
               </p>
               <p className="text-sm font-medium truncate">
@@ -193,9 +193,9 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
           
           {/* Avatares dos Técnicos */}
           {service.technicians && service.technicians.length > 0 && (
-            <div className="flex -space-x-1">
+            <div className="flex -space-x-1 ml-3">
               {service.technicians.slice(0, 2).map((technician, index) => (
-                <Avatar key={technician.id} className="w-8 h-8 border-2 border-background">
+                <Avatar key={technician.id} className="w-9 h-9 border-2 border-background">
                   <AvatarImage 
                     src={technician.avatar} 
                     alt={technician.name}
@@ -206,7 +206,7 @@ export const MobileServiceCard: React.FC<MobileServiceCardProps> = ({
                 </Avatar>
               ))}
               {service.technicians.length > 2 && (
-                <div className="w-8 h-8 bg-muted border-2 border-background rounded-full flex items-center justify-center text-xs font-medium text-muted-foreground">
+                <div className="w-9 h-9 bg-muted border-2 border-background rounded-full flex items-center justify-center text-xs font-medium text-muted-foreground">
                   +{service.technicians.length - 2}
                 </div>
               )}

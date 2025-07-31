@@ -125,8 +125,8 @@ const Demandas = () => {
         }
       />
 
-      <motion.div 
-        className={`container mx-auto p-4 space-y-4 ${isMobile ? 'pt-2' : 'p-6 space-y-6'}`}
+        <motion.div 
+        className={`container mx-auto p-4 space-y-4 ${isMobile ? 'pt-2 mobile-safe-area' : 'p-6 space-y-6'}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}

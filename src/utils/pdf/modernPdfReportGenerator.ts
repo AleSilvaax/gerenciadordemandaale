@@ -409,6 +409,10 @@ const createFeedbackSection = async (doc: jsPDF, service: Service, yPosition: nu
 };
 
 const createPhotosSection = async (doc: jsPDF, service: Service, yPosition: number): Promise<number> => {
+  if (!service.photos || service.photos.length === 0) {
+    return yPosition;
+  }
+
   // Check if we need a new page
   if (yPosition > 150) {
     doc.addPage();
@@ -419,26 +423,79 @@ const createPhotosSection = async (doc: jsPDF, service: Service, yPosition: numb
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(colors.primary.r, colors.primary.g, colors.primary.b);
-  doc.text(`ANEXOS E FOTOS (${service.photos?.length || 0})`, margins.left, yPosition);
+  doc.text(`ANEXOS E FOTOS (${service.photos.length})`, margins.left, yPosition);
   
   yPosition += 15;
   
-  service.photos?.forEach((photo, index) => {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Foto ${index + 1}:`, margins.left, yPosition);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(photo, margins.left, yPosition + 8);
-    
-    yPosition += 20;
-    
-    if (yPosition > 250) {
+  // Process photos in rows of 2
+  const photosPerRow = 2;
+  const photoWidth = 70;
+  const photoHeight = 50;
+  const spacing = 10;
+  
+  for (let i = 0; i < service.photos.length; i += photosPerRow) {
+    // Check if we need a new page
+    if (yPosition + photoHeight + 20 > 270) {
       doc.addPage();
       yPosition = 20;
     }
-  });
+    
+    // Process row of photos
+    const photosInRow = service.photos.slice(i, i + photosPerRow);
+    const processedPhotos = await Promise.all(
+      photosInRow.map(async (photoUrl, index) => {
+        try {
+          const { processImage } = await import('@/utils/pdf/imageProcessor');
+          const processedImage = await processImage(photoUrl);
+          return { processedImage, index };
+        } catch (error) {
+          console.warn(`Erro ao processar foto ${i + index + 1}:`, error);
+          return { processedImage: null, index };
+        }
+      })
+    );
+    
+    // Add processed photos to PDF
+    processedPhotos.forEach(({ processedImage, index }, rowIndex) => {
+      const xPos = margins.left + (rowIndex * (photoWidth + spacing));
+      
+      if (processedImage) {
+        try {
+          doc.addImage(
+            processedImage,
+            'JPEG',
+            xPos,
+            yPosition,
+            photoWidth,
+            photoHeight
+          );
+        } catch (error) {
+          console.warn(`Erro ao adicionar imagem ao PDF:`, error);
+          // Fallback: show placeholder
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(xPos, yPosition, photoWidth, photoHeight);
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text('Imagem não disponível', xPos + 5, yPosition + photoHeight/2);
+        }
+      } else {
+        // Show placeholder for failed images
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(xPos, yPosition, photoWidth, photoHeight);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Imagem não disponível', xPos + 5, yPosition + photoHeight/2);
+      }
+      
+      // Add photo caption
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+      doc.text(`Foto ${i + index + 1}`, xPos, yPosition + photoHeight + 8);
+    });
+    
+    yPosition += photoHeight + 20;
+  }
   
   return yPosition + 10;
 };

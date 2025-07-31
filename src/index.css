@@ -292,6 +292,61 @@
   .mobile-team-scroll::-webkit-scrollbar {
     display: none;
   }
+
+  /* Melhorias adicionais para mobile service cards */
+  .mobile-service-card {
+    padding: 1.25rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 0.75rem !important;
+  }
+  
+  .mobile-service-card .card-header {
+    padding-bottom: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .mobile-service-card .card-content {
+    padding: 0 !important;
+  }
+  
+  .mobile-service-card .space-y-4 > * + * {
+    margin-top: 1rem !important;
+  }
+  
+  .mobile-service-card .space-y-5 > * + * {
+    margin-top: 1.25rem !important;
+  }
+  
+  /* Melhores espaçamentos para elementos interativos */
+  .mobile-interactive-element {
+    padding: 0.75rem 1rem !important;
+    border-radius: 0.5rem !important;
+    min-height: 48px !important;
+  }
+  
+  .mobile-interactive-element:active {
+    transform: scale(0.98);
+  }
+  
+  /* Seções mobile com melhor hierarquia visual */
+  .mobile-section {
+    margin-bottom: 1.5rem !important;
+    padding: 1rem !important;
+    border-radius: 0.5rem !important;
+  }
+  
+  .mobile-section-title {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.025em !important;
+  }
+  
+  /* Safe area para mobile */
+  .mobile-safe-area {
+    padding-bottom: 6rem !important;
+  }
 }
 
 /* Tablet layout adjustments - Melhor responsividade */

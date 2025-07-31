@@ -630,13 +630,21 @@ const createPhotosSection = async (doc: jsPDF, service: Service, startY: number)
           doc.setDrawColor(...PDF_COLORS.border);
           doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
           
-          currentY = addText(doc, '[Imagem não pôde ser carregada]', xPos + 5, currentY + photoHeight / 2, {
+          addText(doc, '[Imagem não disponível]', xPos + 5, currentY + photoHeight / 2, {
             fontSize: 8,
             color: [...PDF_COLORS.secondary] as [number, number, number]
           });
         }
       } catch (error) {
         console.error(`Erro ao processar foto ${i + 1}:`, error);
+        // Placeholder para erro
+        doc.setDrawColor(...PDF_COLORS.border);
+        doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
+        
+        addText(doc, '[Erro ao carregar imagem]', xPos + 5, currentY + photoHeight / 2, {
+          fontSize: 8,
+          color: [...PDF_COLORS.secondary] as [number, number, number]
+        });
       }
       
       if (col === photosPerRow - 1 || i === service.photos.length - 1) {
