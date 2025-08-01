@@ -7,7 +7,8 @@ import {
     BarChart3, 
     Plus,
     Calendar,
-    Shield
+    Shield,
+    Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,15 +31,14 @@ const Navbar = () => {
     { name: "Início", path: "/", icon: Home, badge: null },
     { name: "Demandas", path: "/demandas", icon: FileText, badge: null },
     { name: "Agenda", path: "/calendar", icon: Calendar, badge: null },
-    { name: "Estatísticas", path: "/estatisticas", icon: BarChart3, badge: null },
+    { name: "Análise", path: "/estatisticas", icon: BarChart3, badge: null },
     { name: "Equipe", path: "/equipe", icon: Users, badge: null },
-    { name: "Admin", path: "/admin", icon: Shield, badge: null },
   ];
   
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
     const { role } = user;
-    if (["/estatisticas", "/equipe", "/admin"].includes(item.path)) {
+    if (["/estatisticas", "/equipe"].includes(item.path)) {
       return ['super_admin', 'owner', 'administrador', 'gestor'].includes(role);
     }
     return true;
@@ -90,9 +90,20 @@ const Navbar = () => {
               })}
             </div>
 
-            {/* O BOTÃO 'NOVA DEMANDA' QUE ESTAVA AQUI FOI REMOVIDO */}
             <div className="flex items-center space-x-2">
-                {/* Vazio agora */}
+              <Link to="/buscar">
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Search className="w-4 h-4" />
+                </Button>
+              </Link>
+              {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
+                <Link to="/nova-demanda">
+                  <Button size="sm" className="flex items-center space-x-2">
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden lg:block">Nova Demanda</span>
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -121,6 +132,23 @@ const Navbar = () => {
                 </Link>
               );
             })}
+            
+            {/* Buscar - Mobile */}
+            <Link
+              to="/buscar"
+              className={`
+                flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
+                ${isActive("/buscar")
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+                }
+              `}
+            >
+              <Search className="w-6 h-6 flex-shrink-0" />
+              {isActive("/buscar") && (
+                <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
+              )}
+            </Link>
           </div>
         )}
       </div>

@@ -23,6 +23,8 @@ import DebugPage from '@/pages/Debug';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 import NotFound from '@/pages/NotFound';
 import { ServiceErrorBoundary } from '@/components/common/ServiceErrorBoundary';
+import Reports from '@/pages/Reports';
+import ServiceTypes from '@/pages/ServiceTypes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +63,8 @@ function App() {
                     <Route path="/admin" element={<AdminPage />} />
                     <Route path="/debug" element={<DebugPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/relatorios" element={<Reports />} />
+                    <Route path="/tipos-servico" element={<ServiceTypes />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>
