@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
+import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,7 @@ import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 const Index: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedTab, setSelectedTab] = useState("overview");
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: '',
     status: 'all',
@@ -290,7 +293,11 @@ const Index: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                       >
-                        <CompactServiceCard service={service} />
+                        {isMobile ? (
+                          <CompactMobileServiceCard service={service} />
+                        ) : (
+                          <CompactServiceCard service={service} />
+                        )}
                       </motion.div>
                     ))}
                   </div>

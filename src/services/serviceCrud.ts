@@ -166,6 +166,7 @@ export const getServicesFromDatabase = async (): Promise<Service[]> => {
  */
 export const getServiceByIdFromDatabase = async (serviceId: string): Promise<Service | null> => {
   try {
+    // Buscar o serviço
     const { data, error } = await supabase
       .from('services')
       .select(`*, service_technicians(profiles(id, name, avatar)), service_messages(*)`)
@@ -173,12 +174,24 @@ export const getServiceByIdFromDatabase = async (serviceId: string): Promise<Ser
       .single();
 
     if (error) {
-      // Não mostra o erro no toast para não poluir a interface, apenas no console.
       console.error(`[SERVICE DETAIL] Serviço não encontrado ou sem permissão para id ${serviceId}:`, error);
       return null;
     }
-    
+
+    // Buscar fotos do serviço
+    const { data: photosData } = await supabase
+      .from('service_photos')
+      .select('photo_url')
+      .eq('service_id', serviceId)
+      .order('created_at', { ascending: true });
+
+    // Atualizar o campo photos com as URLs das fotos
+    if (photosData && photosData.length > 0) {
+      data.photos = photosData.map(p => p.photo_url);
+    }
+
     return transformServiceData(data);
+
   } catch (error) {
     console.error('[SERVICE DETAIL] Erro ao buscar detalhe do serviço:', error);
     return null;

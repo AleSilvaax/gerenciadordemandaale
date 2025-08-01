@@ -96,6 +96,39 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     console.log('[PhotoUploader] Foto salva no banco com sucesso:', data);
   };
 
+  const updateServicePhotosField = async (serviceId: string) => {
+    try {
+      console.log('[PhotoUploader] Atualizando campo photos na tabela services');
+      
+      // Buscar todas as fotos do serviço
+      const { data: photosData, error: photosError } = await supabase
+        .from('service_photos')
+        .select('photo_url')
+        .eq('service_id', serviceId)
+        .order('created_at', { ascending: true });
+
+      if (photosError) {
+        console.error('[PhotoUploader] Erro ao buscar fotos:', photosError);
+        return;
+      }
+
+      // Atualizar o campo photos na tabela services
+      const photoUrls = photosData?.map(p => p.photo_url) || [];
+      const { error: updateError } = await supabase
+        .from('services')
+        .update({ photos: photoUrls })
+        .eq('id', serviceId);
+
+      if (updateError) {
+        console.error('[PhotoUploader] Erro ao atualizar campo photos:', updateError);
+      } else {
+        console.log('[PhotoUploader] Campo photos atualizado com sucesso:', photoUrls.length, 'fotos');
+      }
+    } catch (error) {
+      console.error('[PhotoUploader] Erro ao atualizar campo photos:', error);
+    }
+  };
+
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || disabled) return;
 
@@ -138,6 +171,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
           // Salvar no banco de dados
           if (serviceId) {
             await savePhotoToDatabase(photoUrl, title);
+            // Atualizar também o campo photos na tabela services
+            await updateServicePhotosField(serviceId);
           }
           
           const photo: Photo = {
@@ -203,6 +238,9 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         }
         
         console.log('[PhotoUploader] Foto removida do banco com sucesso');
+        
+        // Atualizar o campo photos na tabela services
+        await updateServicePhotosField(serviceId);
       } catch (error) {
         console.error('[PhotoUploader] Erro ao remover foto do banco:', error);
         toast.error('Erro ao remover foto');
