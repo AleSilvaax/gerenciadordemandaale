@@ -35,7 +35,7 @@ import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters"
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Demandas = () => {
-  const { services, isLoading, refetch } = useServices();
+  const { services, isLoading, refreshServices } = useServices();
   const { teamMembers } = useTeamMembers();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -58,10 +58,10 @@ const Demandas = () => {
     return services.filter(service => {
       const matchesSearch = !searchTerm || 
         service.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.serviceCode?.toLowerCase().includes(searchTerm.toLowerCase());
+        service.number?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === "all" || service.status === statusFilter;
       const matchesTechnician = technicianFilter === "all" || 
@@ -150,7 +150,7 @@ const Demandas = () => {
             </Button>
 
             {/* Refresh Button */}
-            <Button variant="outline" size="sm" onClick={refetch}>
+            <Button variant="outline" size="sm" onClick={() => refreshServices()}>
               <RefreshCcw className="w-4 h-4" />
               {!isMobile && <span className="ml-2">Atualizar</span>}
             </Button>
@@ -328,29 +328,42 @@ const Demandas = () => {
           >
             {isMobile ? (
               <MobileServiceFilters
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                technicianFilter={technicianFilter}
-                setTechnicianFilter={setTechnicianFilter}
-                serviceTypeFilter={serviceTypeFilter}
-                setServiceTypeFilter={setServiceTypeFilter}
-                priorityFilter={priorityFilter}
-                setPriorityFilter={setPriorityFilter}
-                teamMembers={teamMembers}
+                filters={{
+                  search: searchTerm,
+                  status: statusFilter === "all" ? "todos" : statusFilter as any,
+                  serviceType: serviceTypeFilter,
+                  technicianId: technicianFilter,
+                  dateRange: { from: null, to: null }
+                }}
+                onFilterChange={(key, value) => {
+                  if (key === 'search') setSearchTerm(value);
+                  if (key === 'status') setStatusFilter(value === "todos" ? "all" : value);
+                  if (key === 'serviceType') setServiceTypeFilter(value);
+                  if (key === 'technicianId') setTechnicianFilter(value);
+                }}
+                onClearFilters={clearFilters}
                 serviceTypes={serviceTypes}
+                totalResults={filteredServices.length}
               />
             ) : (
               <ServiceFilters
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                technicianFilter={technicianFilter}
-                setTechnicianFilter={setTechnicianFilter}
-                serviceTypeFilter={serviceTypeFilter}
-                setServiceTypeFilter={setServiceTypeFilter}
-                priorityFilter={priorityFilter}
-                setPriorityFilter={setPriorityFilter}
-                teamMembers={teamMembers}
+                filters={{
+                  search: searchTerm,
+                  status: statusFilter === "all" ? "todos" : statusFilter as any,
+                  serviceType: serviceTypeFilter,
+                  technicianId: technicianFilter,
+                  dateRange: { from: null, to: null }
+                }}
+                onFilterChange={(key, value) => {
+                  if (key === 'search') setSearchTerm(value);
+                  if (key === 'status') setStatusFilter(value === "todos" ? "all" : value);
+                  if (key === 'serviceType') setServiceTypeFilter(value);
+                  if (key === 'technicianId') setTechnicianFilter(value);
+                }}
+                onClearFilters={clearFilters}
+                technicians={teamMembers}
                 serviceTypes={serviceTypes}
+                totalResults={filteredServices.length}
               />
             )}
           </motion.div>
