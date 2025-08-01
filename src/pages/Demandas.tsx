@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -203,6 +204,7 @@ const Demandas = () => {
               </CardContent>
             </Card>
           </motion.div>
+        )}
 
         {/* Statistics Cards */}
         <motion.div 
