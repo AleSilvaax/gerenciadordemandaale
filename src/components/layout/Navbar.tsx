@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -7,7 +8,6 @@ import {
     BarChart3, 
     Plus,
     Calendar,
-    Shield,
     Search,
     Settings
 } from "lucide-react";
@@ -97,27 +97,21 @@ const Navbar = () => {
                   <Search className="w-4 h-4" />
                 </Button>
               </Link>
+              
+              <Link to="/configurar">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden lg:block">Configurar</span>
+                </Button>
+              </Link>
+              
               {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
-                <>
-                  <Link to="/relatorios">
-                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                      <BarChart3 className="w-4 h-4" />
-                      <span className="hidden lg:block">Relatórios</span>
-                    </Button>
-                  </Link>
-                  <Link to="/tipos-servico">
-                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                      <Settings className="w-4 h-4" />
-                      <span className="hidden lg:block">Configurar</span>
-                    </Button>
-                  </Link>
-                  <Link to="/nova-demanda">
-                    <Button size="sm" className="flex items-center space-x-2">
-                      <Plus className="w-4 h-4" />
-                      <span className="hidden lg:block">Nova Demanda</span>
-                    </Button>
-                  </Link>
-                </>
+                <Link to="/nova-demanda">
+                  <Button size="sm" className="flex items-center space-x-2">
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden lg:block">Nova Demanda</span>
+                  </Button>
+                </Link>
               )}
             </div>
           </div>
@@ -165,24 +159,22 @@ const Navbar = () => {
               )}
             </Link>
 
-            {/* Admin Menu - Mobile */}
-            {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
-              <Link
-                to="/admin"
-                className={`
-                  flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
-                  ${isActive("/admin")
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                  }
-                `}
-              >
-                <Settings className="w-6 h-6 flex-shrink-0" />
-                {isActive("/admin") && (
-                  <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
-                )}
-              </Link>
-            )}
+            {/* Configurações - Mobile */}
+            <Link
+              to="/configurar"
+              className={`
+                flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
+                ${isActive("/configurar")
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+                }
+              `}
+            >
+              <Settings className="w-6 h-6 flex-shrink-0" />
+              {isActive("/configurar") && (
+                <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
+              )}
+            </Link>
           </div>
         )}
       </div>
