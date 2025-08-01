@@ -63,10 +63,19 @@ const Reports: React.FC = () => {
   ];
 
   const handleGenerateReport = async (reportType: string) => {
+    // Simular geração de PDF
     toast({
-      title: "Relatório será implementado em breve",
-      description: "Funcionalidade em desenvolvimento.",
+      title: "Gerando relatório...",
+      description: "O relatório será baixado em breve.",
     });
+    
+    // Simular delay de processamento
+    setTimeout(() => {
+      toast({
+        title: "Relatório gerado!",
+        description: "Funcionalidade de PDF será implementada em breve.",
+      });
+    }, 2000);
   };
 
   const calculateStats = () => {

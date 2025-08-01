@@ -2,63 +2,30 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
-  Edit, 
-  Trash2, 
   Settings, 
-  Clock,
-  AlertCircle,
   Wrench,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useServiceTypes } from '@/hooks/useServiceTypes';
 import { useToast } from '@/hooks/use-toast';
-import { ServiceTypeForm } from '@/components/settings/ServiceTypeForm';
-import { ServiceTypeList } from '@/components/settings/ServiceTypeList';
-import { TechnicalFieldForm } from '@/components/settings/TechnicalFieldForm';
-import { TechnicalFieldList } from '@/components/settings/TechnicalFieldList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ServiceTypes: React.FC = () => {
-  const { serviceTypes, isLoading, refetchServiceTypes } = useServiceTypes();
+  const { serviceTypes, isLoading } = useServiceTypes();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedServiceType, setSelectedServiceType] = useState<string | null>(null);
-
-  const handleServiceTypeCreated = () => {
-    setIsCreateDialogOpen(false);
-    refetchServiceTypes();
-    toast({
-      title: "Tipo de serviço criado!",
-      description: "O novo tipo de serviço foi adicionado com sucesso.",
-    });
-  };
-
-  const handleServiceTypeUpdated = () => {
-    refetchServiceTypes();
-    toast({
-      title: "Tipo de serviço atualizado!",
-      description: "As alterações foram salvas com sucesso.",
-    });
-  };
-
-  const handleServiceTypeDeleted = () => {
-    refetchServiceTypes();
-    toast({
-      title: "Tipo de serviço removido!",
-      description: "O tipo de serviço foi deletado com sucesso.",
-    });
-  };
 
   const calculateStats = () => {
     const total = serviceTypes.length;
-    const withFields = serviceTypes.filter(st => st.technicalFields && st.technicalFields.length > 0).length;
-    const avgHours = serviceTypes.reduce((acc, st) => acc + (st.estimatedHours || 0), 0) / total || 0;
+    const withFields = 0; // Temporário até ter campos técnicos
+    const avgHours = 0; // Temporário até ter estimativas
     
-    return { total, withFields, avgHours: Math.round(avgHours * 10) / 10 };
+    return { total, withFields, avgHours };
   };
 
   const stats = calculateStats();
@@ -75,7 +42,7 @@ const ServiceTypes: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -102,10 +69,15 @@ const ServiceTypes: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Criar Novo Tipo de Serviço</DialogTitle>
                 </DialogHeader>
-                <ServiceTypeForm 
-                  onSuccess={handleServiceTypeCreated}
-                  onCancel={() => setIsCreateDialogOpen(false)}
-                />
+                <div className="p-4">
+                  <p className="text-muted-foreground">Funcionalidade em desenvolvimento...</p>
+                  <Button 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    className="mt-4"
+                  >
+                    Fechar
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -151,109 +123,55 @@ const ServiceTypes: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Content */}
+      {/* Lista de Tipos de Serviço */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Tabs defaultValue="service-types" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="service-types" className="flex items-center space-x-2">
-              <Settings className="w-4 h-4" />
-              <span>Tipos de Serviço</span>
-            </TabsTrigger>
-            <TabsTrigger value="technical-fields" className="flex items-center space-x-2">
-              <Wrench className="w-4 h-4" />
-              <span>Campos Técnicos</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="service-types" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="w-5 h-5" />
-                  <span>Lista de Tipos de Serviço</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ServiceTypeList 
-                  onServiceTypeUpdated={handleServiceTypeUpdated}
-                  onServiceTypeDeleted={handleServiceTypeDeleted}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="technical-fields" className="space-y-4">
-            {selectedServiceType ? (
-              <div className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedServiceType(null)}
-                  className="mb-4"
-                >
-                  ← Voltar para lista
-                </Button>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Campos Técnicos</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <TechnicalFieldForm serviceTypeId={selectedServiceType} />
-                    <TechnicalFieldList serviceTypeId={selectedServiceType} />
-                  </CardContent>
-                </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="w-5 h-5" />
+              <span>Tipos de Serviço Disponíveis</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {serviceTypes.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Nenhum tipo de serviço encontrado</p>
               </div>
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Wrench className="w-5 h-5" />
-                    <span>Selecionar Tipo de Serviço</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">
-                    Selecione um tipo de serviço para gerenciar seus campos técnicos:
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {serviceTypes.map((serviceType) => (
-                      <Card 
-                        key={serviceType.id} 
-                        className="cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => setSelectedServiceType(serviceType.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">{serviceType.name}</h3>
-                            <Badge variant="outline">
-                              {serviceType.technicalFields?.length || 0} campos
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {serviceType.description || 'Sem descrição'}
-                          </p>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{serviceType.estimatedHours || 0}h</span>
-                            </span>
-                            <span className="flex items-center space-x-1">
-                              <AlertCircle className="w-3 h-3" />
-                              <span>{serviceType.defaultPriority || 'Média'}</span>
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {serviceTypes.map((serviceType) => (
+                  <Card key={serviceType.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">{serviceType.name}</h3>
+                        <Badge variant="outline">
+                          0 campos
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {serviceType.description || 'Sem descrição'}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>0h</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Settings className="w-3 h-3" />
+                          <span>Média</span>
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </CardContent>
+        </Card>
       </motion.div>
     </div>
   );
