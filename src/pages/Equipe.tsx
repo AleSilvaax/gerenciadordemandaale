@@ -494,24 +494,39 @@ const Equipe: React.FC = () => {
                                     </Badge>
                                   </div>
                                   
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    {member.email && (
-                                      <div className="flex items-center gap-1">
-                                        <Mail className="w-4 h-4 flex-shrink-0" />
-                                        <span className="truncate">{member.email}</span>
-                                      </div>
-                                    )}
-                                    {member.phone && (
-                                      <div className="flex items-center gap-1">
-                                        <Phone className="w-4 h-4 flex-shrink-0" />
-                                        <span className="truncate">{member.phone}</span>
-                                      </div>
-                                    )}
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="w-4 h-4 flex-shrink-0" />
-                                      <span>Membro desde {new Date().toLocaleDateString()}</span>
-                                    </div>
-                                  </div>
+                                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                     {member.email && (
+                                       <div className="flex items-center gap-1">
+                                         <Mail className="w-4 h-4 flex-shrink-0" />
+                                         <span className="truncate">{member.email}</span>
+                                       </div>
+                                     )}
+                                     {member.phone && (
+                                       <div className="flex items-center gap-1">
+                                         <Phone className="w-4 h-4 flex-shrink-0" />
+                                         <span className="truncate">{member.phone}</span>
+                                       </div>
+                                     )}
+                                     <div className="flex items-center gap-1">
+                                       <Calendar className="w-4 h-4 flex-shrink-0" />
+                                       <span>Membro desde {member.stats?.joinDate || 'N/A'}</span>
+                                     </div>
+                                   </div>
+                                   
+                                   {/* Performance Stats */}
+                                   <div className="flex items-center gap-4 text-sm mt-2">
+                                     <div className="flex items-center gap-1">
+                                       <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                       <span className="text-green-500">{member.stats?.completedServices || 0} concluídos</span>
+                                     </div>
+                                     <div className="flex items-center gap-1">
+                                       <Clock className="w-4 h-4 text-orange-500" />
+                                       <span className="text-orange-500">{member.stats?.pendingServices || 0} pendentes</span>
+                                     </div>
+                                     <div className="flex items-center gap-1">
+                                       <span className="text-yellow-500">⭐ {(member.stats?.avgRating || 0).toFixed(1)}</span>
+                                     </div>
+                                   </div>
                                 </div>
                               </div>
                               

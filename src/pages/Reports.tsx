@@ -19,8 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
-// Função simplificada para gerar relatórios
 import { useToast } from '@/hooks/use-toast';
+import { generateExecutiveReport, generateOperationalReport, generateTeamPerformanceReport, generateServiceAnalysisReport } from '@/utils/pdf/reportGenerators';
 
 const Reports: React.FC = () => {
   const { services, isLoading } = useServices();
@@ -63,19 +63,70 @@ const Reports: React.FC = () => {
   ];
 
   const handleGenerateReport = async (reportType: string) => {
-    // Simular geração de PDF
     toast({
       title: "Gerando relatório...",
-      description: "O relatório será baixado em breve.",
+      description: "Preparando dados...",
     });
     
-    // Simular delay de processamento
-    setTimeout(() => {
+    try {
+      // Filter data based on selections
+      const filteredServices = services.filter(service => {
+        // Apply period filter
+        if (selectedPeriod !== 'all') {
+          const now = new Date();
+          const serviceDate = new Date(service.date || new Date());
+          const diffDays = Math.floor((now.getTime() - serviceDate.getTime()) / (1000 * 3600 * 24));
+          
+          const periodDays = parseInt(selectedPeriod);
+          if (diffDays > periodDays) return false;
+        }
+        
+        // Apply type filter
+        if (selectedType !== 'all' && service.serviceType !== selectedType) {
+          return false;
+        }
+        
+        // Apply technician filter
+        if (selectedTechnician !== 'all' && !service.technicians?.some(t => t.id === selectedTechnician)) {
+          return false;
+        }
+        
+        return true;
+      });
+
+      const filteredTeamMembers = selectedTechnician !== 'all' 
+        ? teamMembers.filter(member => member.id === selectedTechnician)
+        : teamMembers;
+
+      // Generate appropriate report
+      switch (reportType) {
+        case 'executive':
+          await generateExecutiveReport(filteredServices, filteredTeamMembers);
+          break;
+        case 'operational':
+          await generateOperationalReport(filteredServices, filteredTeamMembers);
+          break;
+        case 'team_performance':
+          await generateTeamPerformanceReport(filteredServices, filteredTeamMembers);
+          break;
+        case 'service_analysis':
+          await generateServiceAnalysisReport(filteredServices, filteredTeamMembers);
+          break;
+        default:
+          throw new Error("Tipo de relatório inválido");
+      }
+      
       toast({
         title: "Relatório gerado!",
-        description: "Funcionalidade de PDF será implementada em breve.",
+        description: "O download foi iniciado automaticamente.",
       });
-    }, 2000);
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast({
+        title: "Erro ao gerar relatório",
+        description: "Tente novamente em alguns instantes.",
+      });
+    }
   };
 
   const calculateStats = () => {
