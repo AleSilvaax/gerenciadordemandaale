@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
 import { ChartLine } from "@/components/ui-custom/ChartLine";
 import { ChartCircle } from "@/components/ui-custom/ChartCircle";
+import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Estatisticas: React.FC = () => {
@@ -185,7 +187,7 @@ const Estatisticas: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartCircle data={pieData} />
+                <AnimatedPieChart data={pieData} />
               </CardContent>
             </Card>
           </motion.div>
