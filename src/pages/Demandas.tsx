@@ -28,8 +28,6 @@ import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
 import { ServiceCard } from "@/components/ui-custom/ServiceCard";
 import { MobileServiceCard } from "@/components/ui-custom/MobileServiceCard";
-import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
-import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
 import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,9 +46,6 @@ const Demandas = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [viewMode, setViewMode] = useState<"detailed" | "compact">("detailed");
-
-  // Filtering logic and statistics calculations
 
   const filteredServices = useMemo(() => {
     if (!services) return [];
@@ -399,17 +394,9 @@ const Demandas = () => {
             <div className="space-y-4">
               {filteredServices.map((service) => {
                 if (isMobile) {
-                  return viewMode === "detailed" ? (
-                    <MobileServiceCard key={service.id} service={service} />
-                  ) : (
-                    <CompactMobileServiceCard key={service.id} service={service} />
-                  );
+                  return <MobileServiceCard key={service.id} service={service} />;
                 } else {
-                  return viewMode === "detailed" ? (
-                    <ServiceCard key={service.id} service={service} />
-                  ) : (
-                    <CompactServiceCard key={service.id} service={service} />
-                  );
+                  return <ServiceCard key={service.id} service={service} />;
                 }
               })}
             </div>

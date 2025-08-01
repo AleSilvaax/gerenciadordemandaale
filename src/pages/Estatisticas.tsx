@@ -12,22 +12,16 @@ import {
   CheckCircle, 
   AlertTriangle, 
   TrendingUp,
-  Calendar,
-  Target,
   Activity,
-  FileText,
   Download,
-  Sparkles,
   PieChart,
   BarChart,
-  LineChart
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useServices } from "@/hooks/useServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
-import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
-import { ChartLine } from "@/components/ui-custom/ChartLine";
-import { ChartCircle } from "@/components/ui-custom/ChartCircle";
 import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -35,6 +29,7 @@ const Estatisticas: React.FC = () => {
   const { services, isLoading } = useServices();
   const { teamMembers } = useTeamMembers();
   const [selectedPeriod, setSelectedPeriod] = useState("30");
+  const [selectedType, setSelectedType] = useState("all");
   const isMobile = useIsMobile();
 
   const filteredServices = services.filter(service => {
@@ -66,35 +61,14 @@ const Estatisticas: React.FC = () => {
     value
   }));
 
-  const servicesByMonth = filteredServices.reduce((acc, service) => {
-    const month = new Date(service.creationDate || service.date || '').toLocaleDateString('pt-BR', { month: 'short' });
-    acc[month] = (acc[month] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const chartData = Object.entries(servicesByMonth).map(([month, count]) => ({
-    name: month,
-    value: count
-  }));
-
   const pieData = [
-    { name: 'Concluídos', value: completed, color: '#10b981' },
-    { name: 'Em Andamento', value: inProgress, color: '#f59e0b' },
-    { name: 'Pendentes', value: pending, color: '#ef4444' }
+    { name: 'Concluído', value: completed, color: '#10b981' },
+    { name: 'Pendente', value: pending, color: '#f59e0b' },
+    { name: 'Em Andamento', value: inProgress, color: '#3b82f6' }
   ].filter(item => item.value > 0);
 
-  // Average resolution time calculation (real data)
-  const completedServicesWithDates = filteredServices.filter(s => 
-    s.status === 'concluido' && s.creationDate && s.date
-  );
-  
-  const avgResolutionTime = completedServicesWithDates.length > 0 
-    ? Math.round(completedServicesWithDates.reduce((acc, service) => {
-        const created = new Date(service.creationDate!);
-        const completed = new Date(service.date!);
-        return acc + (completed.getTime() - created.getTime()) / (1000 * 60 * 60);
-      }, 0) / completedServicesWithDates.length)
-    : 0;
+  // Average resolution time calculation (mock data)
+  const avgResolutionTime = 38;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -143,45 +117,64 @@ const Estatisticas: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Period Filter */}
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+                <SelectItem value="365">Último ano</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Type Filter */}
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {Object.keys(serviceTypeDistribution).map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {/* Professional Reports Button */}
             <Link to="/relatorios">
-              <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200">
-                <Download className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Exportar PDF</span>
-                <span className="sm:hidden">PDF</span>
+              <Button variant="outline" className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">Relatórios Profissionais</span>
+                <span className="sm:hidden">Relatórios</span>
               </Button>
             </Link>
 
-            {/* Period Filter */}
-            <div className="flex items-center space-x-3">
-              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90">Últimos 90 dias</SelectItem>
-                  <SelectItem value="365">Último ano</SelectItem>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Export PDF Button */}
+            <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 gap-2">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Exportar PDF</span>
+              <span className="sm:hidden">PDF</span>
+            </Button>
           </div>
         </motion.div>
 
-        {/* Enhanced KPI Cards */}
+        {/* KPI Cards */}
         <motion.div variants={itemVariants}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Total de Demandas</p>
                     <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{total}</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      no período selecionado
-                    </p>
+                    <div className="flex items-center mt-2 text-blue-600">
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                      <span className="text-sm">Trending</span>
+                    </div>
                   </div>
                   <div className="p-3 bg-blue-200 dark:bg-blue-800/50 rounded-full">
                     <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -196,9 +189,10 @@ const Estatisticas: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-green-700 dark:text-green-300">Concluídas</p>
                     <p className="text-3xl font-bold text-green-900 dark:text-green-100">{completed}</p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                      demandas finalizadas
-                    </p>
+                    <div className="flex items-center mt-2 text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      <span className="text-sm">Success</span>
+                    </div>
                   </div>
                   <div className="p-3 bg-green-200 dark:bg-green-800/50 rounded-full">
                     <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -213,9 +207,10 @@ const Estatisticas: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Taxa de Conclusão</p>
                     <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{completionRate}%</p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                      taxa de eficiência
-                    </p>
+                    <div className="flex items-center mt-2 text-yellow-600">
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                      <span className="text-sm">Rate</span>
+                    </div>
                   </div>
                   <div className="p-3 bg-yellow-200 dark:bg-yellow-800/50 rounded-full">
                     <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
@@ -229,12 +224,11 @@ const Estatisticas: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Tempo Médio</p>
-                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
-                      {avgResolutionTime > 0 ? `${avgResolutionTime}h` : '28h'}
-                    </p>
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                      tempo de resolução
-                    </p>
+                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{avgResolutionTime}h</p>
+                    <div className="flex items-center mt-2 text-purple-600">
+                      <Clock className="w-4 h-4 mr-1" />
+                      <span className="text-sm">Average</span>
+                    </div>
                   </div>
                   <div className="p-3 bg-purple-200 dark:bg-purple-800/50 rounded-full">
                     <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -260,7 +254,22 @@ const Estatisticas: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {pieData.length > 0 ? (
-                  <AnimatedPieChart data={pieData} />
+                  <div className="space-y-4">
+                    <AnimatedPieChart data={pieData} />
+                    <div className="flex flex-wrap justify-center gap-4">
+                      {pieData.map((entry, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {entry.name}: {entry.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-64 text-muted-foreground">
                     Nenhum dado disponível
