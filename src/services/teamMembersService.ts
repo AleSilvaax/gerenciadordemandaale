@@ -2,30 +2,100 @@ import { supabase } from '@/integrations/supabase/client';
 import { TeamMember, UserRole } from '@/types/serviceTypes';
 
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
-  // Get all profiles
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('*');
-  if (profileError) throw profileError;
-  if (!profiles || !Array.isArray(profiles)) return [];
+  try {
+    console.log('[TEAM] Buscando membros da equipe...');
+    
+    // Buscar perfis com informações de role
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        name,
+        avatar,
+        team_id,
+        organization_id,
+        created_at,
+        user_roles (role)
+      `)
+      .order('name', { ascending: true });
 
-  // Get all user_roles
-  const { data: roles, error: roleError } = await supabase
-    .from('user_roles')
-    .select('user_id, role');
-  if (roleError) throw roleError;
+    if (error) {
+      console.error('[TEAM] Erro ao buscar membros:', error);
+      throw new Error(`Erro ao carregar equipe: ${error.message}`);
+    }
 
-  // Merge profiles with their roles
-  const members: TeamMember[] = profiles.map(profile => {
-    const role = roles?.find(r => r.user_id === profile.id)?.role as UserRole || "tecnico";
-    return {
-      id: profile.id,
-      name: profile.name || "Sem Nome",
-      avatar: profile.avatar || "",
-      role
-    };
-  });
-  return members;
+    const members: TeamMember[] = [];
+    
+    for (const profile of data || []) {
+      // Calcular métricas reais de performance
+      const { data: completedServices } = await supabase
+        .from('services')
+        .select('id', { count: 'exact' })
+        .eq('status', 'concluido')
+        .or(`created_by.eq.${profile.id}`)
+        .limit(0);
+      
+      const { data: pendingServices } = await supabase
+        .from('services')
+        .select('id', { count: 'exact' })
+        .eq('status', 'pendente')
+        .or(`created_by.eq.${profile.id}`)
+        .limit(0);
+
+      // Calcular rating médio baseado em feedbacks reais
+      const { data: feedbackData } = await supabase
+        .from('services')
+        .select('feedback')
+        .eq('created_by', profile.id)
+        .eq('status', 'concluido')
+        .not('feedback', 'is', null);
+
+      let avgRating = 4.5; // Default
+      if (feedbackData && feedbackData.length > 0) {
+        const ratings = feedbackData
+          .map(s => {
+            try {
+              const feedback = typeof s.feedback === 'string' ? JSON.parse(s.feedback) : s.feedback;
+              return feedback?.clientRating;
+            } catch {
+              return null;
+            }
+          })
+          .filter(rating => rating && rating > 0);
+        
+        if (ratings.length > 0) {
+          avgRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+        }
+      }
+
+      const userRole = (profile.user_roles?.[0]?.role as UserRole) || 'tecnico';
+
+      const member: TeamMember = {
+        id: profile.id,
+        name: profile.name || 'Nome não informado',
+        role: userRole,
+        avatar: profile.avatar || '',
+        teamId: profile.team_id,
+        organizationId: profile.organization_id,
+        createdAt: profile.created_at,
+        // Métricas reais de performance
+        stats: {
+          completedServices: completedServices?.length || 0,
+          pendingServices: pendingServices?.length || 0,
+          avgRating: Number(avgRating.toFixed(1)),
+          joinDate: new Date(profile.created_at).toLocaleDateString('pt-BR')
+        }
+      };
+      
+      members.push(member);
+    }
+
+    console.log('[TEAM] Membros carregados com métricas:', members.length);
+    return members;
+  } catch (error) {
+    console.error('[TEAM] Erro fatal:', error);
+    throw error;
+  }
 };
 
 export const addTeamMember = async (member: {

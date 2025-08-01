@@ -594,28 +594,63 @@ const createPhotosSection = async (doc: jsPDF, service: Service, startY: number)
     color: [...PDF_COLORS.primary] as [number, number, number]
   });
   
-  if (service.photos && service.photos.length > 0) {
+  // Buscar fotos com títulos da tabela service_photos
+  let photosWithTitles: Array<{url: string, title: string}> = [];
+  
+  if (service.id) {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: photosData } = await supabase
+        .from('service_photos')
+        .select('photo_url, title')
+        .eq('service_id', service.id)
+        .order('created_at', { ascending: true });
+      
+      if (photosData && photosData.length > 0) {
+        photosWithTitles = photosData.map((p, index) => ({
+          url: p.photo_url,
+          title: p.title || `Foto ${index + 1}`
+        }));
+        console.log('[PDF] Fotos com títulos carregadas:', photosWithTitles.length);
+      }
+    } catch (error) {
+      console.error('[PDF] Erro ao buscar títulos das fotos:', error);
+    }
+  }
+  
+  // Fallback para o campo photos do service se não encontrou na tabela
+  if (photosWithTitles.length === 0 && service.photos && service.photos.length > 0) {
+    photosWithTitles = service.photos.map((url, index) => ({
+      url,
+      title: service.photoTitles?.[index] || `Foto ${index + 1}`
+    }));
+  }
+  
+  if (photosWithTitles.length > 0) {
+    // Layout horizontal - 2 fotos por linha
     let photosPerRow = 2;
     let photoWidth = (PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2) - 10) / photosPerRow;
     let photoHeight = photoWidth * 0.75;
     
-    for (let i = 0; i < service.photos.length; i++) {
+    for (let i = 0; i < photosWithTitles.length; i++) {
       if (i % photosPerRow === 0) {
-        currentY = checkPageBreak(doc, currentY, photoHeight + 20);
+        currentY = checkPageBreak(doc, currentY, photoHeight + 30);
         currentY += 10;
       }
       
       const col = i % photosPerRow;
       const xPos = PDF_DIMENSIONS.margin + (col * (photoWidth + 5));
+      const photo = photosWithTitles[i];
       
-      currentY = addText(doc, `Foto ${i + 1}:`, xPos, currentY, {
+      // Título da foto - usar o título personalizado
+      currentY = addText(doc, `${photo.title}:`, xPos, currentY, {
         fontSize: 10,
         fontStyle: 'bold',
         color: [...PDF_COLORS.secondary] as [number, number, number]
       });
       
       try {
-        const imageData = await processImage(service.photos[i]);
+        const imageData = await processImage(photo.url);
         if (imageData) {
           doc.addImage(
             imageData,
@@ -636,7 +671,7 @@ const createPhotosSection = async (doc: jsPDF, service: Service, startY: number)
           });
         }
       } catch (error) {
-        console.error(`Erro ao processar foto ${i + 1}:`, error);
+        console.error(`Erro ao processar foto "${photo.title}":`, error);
         // Placeholder para erro
         doc.setDrawColor(...PDF_COLORS.border);
         doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
@@ -647,7 +682,7 @@ const createPhotosSection = async (doc: jsPDF, service: Service, startY: number)
         });
       }
       
-      if (col === photosPerRow - 1 || i === service.photos.length - 1) {
+      if (col === photosPerRow - 1 || i === photosWithTitles.length - 1) {
         currentY += photoHeight + 15;
       }
     }

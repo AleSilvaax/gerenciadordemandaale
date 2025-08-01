@@ -149,17 +149,53 @@
   font-size: 0.875rem;
 }
 
-/* Better card styling for both themes */
+/* Better card styling for both themes - CORRIGIDO PARA CONSISTÊNCIA */
 .card-enhanced {
-  @apply border-2 shadow-lg;
+  @apply border-2 shadow-lg transition-all duration-200;
 }
 
 .light .card-enhanced {
-  @apply border-gray-200 bg-white/90 shadow-gray-200/50;
+  @apply border-border bg-card shadow-muted/20;
 }
 
 .dark .card-enhanced {
-  @apply border-gray-700/50 bg-card/80 shadow-black/20;
+  @apply border-border bg-card shadow-black/20;
+}
+
+/* Garantir consistência de cores em todos os cards */
+.card {
+  @apply bg-card text-card-foreground border-border;
+}
+
+/* Evitar contraste branco em modo dark */
+.dark .card {
+  @apply bg-card/95 backdrop-blur-sm;
+}
+
+.dark .bg-white {
+  @apply bg-card;
+}
+
+.dark .text-black {
+  @apply text-card-foreground;
+}
+
+/* Melhorar contraste de badges e elementos de destaque */
+.dark .bg-gray-100 {
+  @apply bg-muted;
+}
+
+.dark .text-gray-900 {
+  @apply text-foreground;
+}
+
+/* Corrigir fundos claros que quebram o tema dark */
+.dark .bg-slate-50 {
+  @apply bg-card/50;
+}
+
+.dark .bg-gray-50 {
+  @apply bg-card/50;
 }
 
 /* Mobile layout adjustments - Melhor responsividade */

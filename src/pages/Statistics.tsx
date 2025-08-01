@@ -110,82 +110,180 @@ const Statistics = () => {
       const doc = new jsPDF();
       let currentY = 30;
       
-      // Título principal
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RELATÓRIO DE ESTATÍSTICAS', 20, currentY);
-      currentY += 30;
+      // === CAPA PROFISSIONAL ===
+      // Fundo colorido para capa
+      doc.setFillColor(59, 130, 246); // Azul moderno
+      doc.rect(0, 0, 210, 80, 'F');
       
-      // Informações do cabeçalho
+      // Título principal
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('RELATÓRIO ANALÍTICO', 105, 30, { align: 'center' });
+      doc.text('DE ESTATÍSTICAS', 105, 45, { align: 'center' });
+      
+      // Subtítulo
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Sistema de Gestão de Demandas', 105, 60, { align: 'center' });
+      
+      // === INFORMAÇÕES DA CAPA ===
+      doc.setFillColor(255, 255, 255);
+      doc.rect(20, 90, 170, 140, 'F');
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(20, 90, 170, 140, 'S');
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMO EXECUTIVO', 105, 110, { align: 'center' });
+      
+      currentY = 130;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Período de Análise: ${timeFilter === 'all' ? 'Todos os períodos' : `Últimos ${timeFilter} dias`}`, 20, currentY);
-      currentY += 10;
-      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 20, currentY);
-      currentY += 20;
       
-      // Resumo executivo
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RESUMO EXECUTIVO', 20, currentY);
-      currentY += 15;
-      
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      const summary = [
-        `Total de Demandas: ${statistics.total}`,
-        `Demandas Concluídas: ${statistics.completed}`,
-        `Demandas Pendentes: ${statistics.pending}`,
-        `Demandas em Andamento: ${statistics.inProgress}`,
-        `Taxa de Conclusão: ${statistics.completionRate}%`,
-        `Tempo Médio de Resolução: ${statistics.avgResolutionTime}h`
+      const executiveSummary = [
+        [`Período Analisado:`, `${timeFilter === 'all' ? 'Todos os períodos' : `Últimos ${timeFilter} dias`}`],
+        [`Total de Demandas:`, `${statistics.total}`],
+        [`Taxa de Conclusão:`, `${statistics.completionRate}%`],
+        [`Demandas Concluídas:`, `${statistics.completed}`],
+        [`Demandas Pendentes:`, `${statistics.pending}`],
+        [`Eficiência Operacional:`, `${statistics.completionRate > 80 ? 'Excelente' : statistics.completionRate > 60 ? 'Boa' : 'Necessita Melhoria'}`]
       ];
       
-      summary.forEach(line => {
-        doc.text(line, 20, currentY);
-        currentY += 8;
+      executiveSummary.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, 30, currentY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, 120, currentY);
+        currentY += 12;
       });
       
-      currentY += 15;
+      // Data e rodapé da capa
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 105, 250, { align: 'center' });
       
-      // Análise por tipo de serviço
-      if (chartData.typeChartData.length > 0) {
-        doc.setFontSize(14);
+      // === NOVA PÁGINA - CONTEÚDO DETALHADO ===
+      doc.addPage();
+      currentY = 30;
+      
+      // Cabeçalho da página
+      doc.setFillColor(240, 240, 240);
+      doc.rect(0, 0, 210, 25, 'F');
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANÁLISE DETALHADA', 20, 15);
+      
+      doc.setTextColor(0, 0, 0);
+      currentY = 40;
+      
+      // === INDICADORES DE PERFORMANCE ===
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('🎯 INDICADORES DE PERFORMANCE', 20, currentY);
+      currentY += 20;
+      
+      const kpis = [
+        { label: 'Volume Total', value: statistics.total, trend: '📈', color: [59, 130, 246] },
+        { label: 'Taxa de Conclusão', value: `${statistics.completionRate}%`, trend: statistics.completionRate > 80 ? '📈' : '📊', color: [34, 197, 94] },
+        { label: 'Pendências Ativas', value: statistics.pending, trend: '⏱️', color: [251, 146, 60] },
+        { label: 'Tempo Médio', value: `${statistics.avgResolutionTime}h`, trend: '⚡', color: [168, 85, 247] }
+      ];
+      
+      kpis.forEach((kpi, index) => {
+        const xPos = 20 + (index % 2) * 90;
+        const yPos = currentY + Math.floor(index / 2) * 25;
+        
+        doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+        doc.rect(xPos, yPos - 5, 80, 20, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('DISTRIBUIÇÃO POR TIPO DE SERVIÇO', 20, currentY);
+        doc.text(`${kpi.trend} ${kpi.label}`, xPos + 5, yPos + 5);
+        doc.setFontSize(14);
+        doc.text(String(kpi.value), xPos + 5, yPos + 15);
+      });
+      
+      currentY += 60;
+      
+      // === DISTRIBUIÇÃO POR TIPO ===
+      if (chartData.typeChartData.length > 0) {
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('📊 DISTRIBUIÇÃO POR TIPO DE SERVIÇO', 20, currentY);
         currentY += 15;
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        chartData.typeChartData.forEach(item => {
-          doc.text(`• ${item.name}: ${item.value} demandas`, 30, currentY);
-          currentY += 6;
+        
+        chartData.typeChartData.forEach((item, index) => {
+          const percentage = ((item.value / statistics.total) * 100).toFixed(1);
+          doc.text(`▪ ${item.name}:`, 30, currentY);
+          doc.text(`${item.value} demandas (${percentage}%)`, 120, currentY);
+          currentY += 8;
         });
-        currentY += 10;
+        currentY += 15;
       }
       
-      // Análise de tendência
-      doc.setFontSize(14);
+      // === ANÁLISE TEMPORAL ===
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('ANÁLISE DE TENDÊNCIA (7 DIAS)', 20, currentY);
+      doc.text('📅 ANÁLISE TEMPORAL (7 DIAS)', 20, currentY);
       currentY += 15;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       chartData.trendData.forEach(trend => {
-        doc.text(`${trend.date}: ${trend.total} demandas (${trend.concluidos} concluídas)`, 30, currentY);
-        currentY += 6;
+        const efficiency = trend.total > 0 ? ((trend.concluidos / trend.total) * 100).toFixed(1) : '0';
+        doc.text(`${trend.date}:`, 30, currentY);
+        doc.text(`${trend.total} total • ${trend.concluidos} concluídas • ${efficiency}% eficiência`, 60, currentY);
+        currentY += 8;
       });
       
-      // Rodapé
+      // === RECOMENDAÇÕES INTELIGENTES ===
+      currentY += 20;
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('💡 RECOMENDAÇÕES ESTRATÉGICAS', 20, currentY);
+      currentY += 15;
+      
+      const recommendations = [];
+      if (statistics.completionRate < 70) {
+        recommendations.push('• Revisar processos operacionais para melhorar taxa de conclusão');
+      }
+      if (statistics.pending > statistics.completed) {
+        recommendations.push('• Implementar gestão mais eficiente de backlog de demandas');
+      }
+      if (statistics.avgResolutionTime > 48) {
+        recommendations.push('• Otimizar tempo de resposta através de automação de processos');
+      }
+      recommendations.push('• Considerar expansão da equipe técnica baseado na demanda crescente');
+      recommendations.push('• Implementar sistema de feedback contínuo para melhoria da qualidade');
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      recommendations.forEach(rec => {
+        doc.text(rec, 30, currentY);
+        currentY += 8;
+      });
+      
+      // === RODAPÉ PROFISSIONAL ===
       const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, pageHeight - 25, 190, pageHeight - 25);
+      
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');
-      doc.text('GerenciadorDemandas - Sistema de Gestão de Serviços', 20, pageHeight - 20);
-      doc.text(`Página 1 de 1`, 170, pageHeight - 20);
+      doc.setTextColor(100, 100, 100);
+      doc.text('GerenciadorDemandas - Relatório Analítico de Performance', 20, pageHeight - 15);
+      doc.text(`Página 2 de 2 • Confidencial`, 190, pageHeight - 15, { align: 'right' });
       
-      doc.save(`relatorio-estatisticas-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast.success('Relatório de estatísticas exportado com sucesso!');
+      doc.save(`relatorio-dashboard-avancado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('Relatório de dashboard exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       toast.error('Erro ao exportar relatório de estatísticas');

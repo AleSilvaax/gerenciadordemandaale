@@ -2,7 +2,7 @@
 
 export type ServiceStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado' | 'agendado';
 export type ServicePriority = "baixa" | "media" | "alta" | "urgente";
-export type UserRole = "tecnico" | "administrador" | "gestor";
+export type UserRole = "tecnico" | "administrador" | "gestor" | "super_admin" | "owner" | "requisitor";
 export type ServiceType = string;
 
 export interface TeamMember {
@@ -13,6 +13,15 @@ export interface TeamMember {
   email?: string;
   phone?: string;
   signature?: string;
+  teamId?: string;
+  organizationId?: string;
+  createdAt?: string;
+  stats?: {
+    completedServices: number;
+    pendingServices: number;
+    avgRating: number;
+    joinDate: string;
+  };
 }
 
 export interface ServiceMessage {

@@ -19,13 +19,15 @@ interface CompactTeamMemberCardProps {
 export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({ 
   member, 
   onEdit,
-  stats = {
+  stats
+}) => {
+  // Usar stats reais do membro ou fallback para dados mock apenas se não fornecido
+  const memberStats = stats || member.stats || {
     completedServices: Math.floor(Math.random() * 20) + 5,
     pendingServices: Math.floor(Math.random() * 10),
     avgRating: 4.2 + Math.random() * 0.8,
     joinDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString()
-  }
-}) => {
+  };
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case "tecnico": return "Técnico";
@@ -83,19 +85,19 @@ export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3 text-success" />
-              <span className="font-medium text-success">{stats.completedServices}</span>
+              <span className="font-medium text-success">{memberStats.completedServices}</span>
               <span>concluídos</span>
             </div>
             
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3 text-warning" />
-              <span className="font-medium text-warning">{stats.pendingServices}</span>
+              <span className="font-medium text-warning">{memberStats.pendingServices}</span>
               <span>pendentes</span>
             </div>
           </div>
           
           <div className="flex items-center gap-1">
-            <span className="font-medium text-foreground">{stats.avgRating.toFixed(1)}</span>
+            <span className="font-medium text-foreground">{memberStats.avgRating.toFixed(1)}</span>
             <span>★</span>
           </div>
         </div>
