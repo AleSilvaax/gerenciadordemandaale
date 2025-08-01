@@ -8,7 +8,6 @@ import {
     BarChart3, 
     Plus,
     Calendar,
-    Search,
     Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,16 +91,10 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Link to="/buscar">
-                <Button variant="ghost" size="sm" className="p-2">
-                  <Search className="w-4 h-4" />
-                </Button>
-              </Link>
-              
-              <Link to="/configurar">
+              <Link to="/settings">
                 <Button variant="outline" size="sm" className="flex items-center space-x-2">
                   <Settings className="w-4 h-4" />
-                  <span className="hidden lg:block">Configurar</span>
+                  <span className="hidden lg:block">Configurações</span>
                 </Button>
               </Link>
               
@@ -142,36 +135,19 @@ const Navbar = () => {
               );
             })}
             
-            {/* Buscar - Mobile */}
-            <Link
-              to="/buscar"
-              className={`
-                flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
-                ${isActive("/buscar")
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-                }
-              `}
-            >
-              <Search className="w-6 h-6 flex-shrink-0" />
-              {isActive("/buscar") && (
-                <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
-              )}
-            </Link>
-
             {/* Configurações - Mobile */}
             <Link
-              to="/configurar"
+              to="/settings"
               className={`
                 flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
-                ${isActive("/configurar")
+                ${isActive("/settings")
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
                 }
               `}
             >
               <Settings className="w-6 h-6 flex-shrink-0" />
-              {isActive("/configurar") && (
+              {isActive("/settings") && (
                 <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
               )}
             </Link>
