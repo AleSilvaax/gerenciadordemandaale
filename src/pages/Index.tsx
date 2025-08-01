@@ -183,62 +183,62 @@ const Index: React.FC = () => {
         {/* Cards de Estatísticas Principais - Simplificados */}
         <motion.div variants={itemVariants}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-            <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-lg transition-all duration-300">
+            <Card className="card-enhanced bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 dark:from-blue-950/20 dark:to-blue-900/30 dark:border-blue-800/50 hover:shadow-lg transition-all duration-300">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <div className="p-2 bg-blue-500/10 dark:bg-blue-400/20 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   Total de Demandas
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600 mb-1">{services.length}</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{services.length}</div>
                 <p className="text-sm text-muted-foreground">Demandas no sistema</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-lg transition-all duration-300">
+            <Card className="card-enhanced bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 dark:from-green-950/20 dark:to-green-900/30 dark:border-green-800/50 hover:shadow-lg transition-all duration-300">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Users className="h-4 w-4 text-green-600" />
+                  <div className="p-2 bg-green-500/10 dark:bg-green-400/20 rounded-lg">
+                    <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
                   </div>
                   Concluídas
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600 mb-1">{services.filter(s => s.status === 'concluido').length}</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{services.filter(s => s.status === 'concluido').length}</div>
                 <p className="text-sm text-muted-foreground">Demandas finalizadas</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 hover:shadow-lg transition-all duration-300">
+            <Card className="card-enhanced bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 dark:from-orange-950/20 dark:to-orange-900/30 dark:border-orange-800/50 hover:shadow-lg transition-all duration-300">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Clock className="h-4 w-4 text-orange-600" />
+                  <div className="p-2 bg-orange-500/10 dark:bg-orange-400/20 rounded-lg">
+                    <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   </div>
                   Pendentes
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-600 mb-1">{services.filter(s => s.status === 'pendente').length}</div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">{services.filter(s => s.status === 'pendente').length}</div>
                 <p className="text-sm text-muted-foreground">Aguardando execução</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-red-50/50 to-red-100/30 border-red-200/50 hover:shadow-lg transition-all duration-300">
+            <Card className="card-enhanced bg-gradient-to-br from-red-50/50 to-red-100/30 border-red-200/50 dark:from-red-950/20 dark:to-red-900/30 dark:border-red-800/50 hover:shadow-lg transition-all duration-300">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-red-500/10 rounded-lg">
-                    <Clock className="h-4 w-4 text-red-600" />
+                  <div className="p-2 bg-red-500/10 dark:bg-red-400/20 rounded-lg">
+                    <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
                   </div>
                   Alta Prioridade
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
                 <p className="text-sm text-muted-foreground">Demandas urgentes</p>
               </CardContent>
             </Card>
@@ -325,11 +325,11 @@ const Index: React.FC = () => {
 
             {/* Ações Rápidas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+              <Card className="card-enhanced bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 dark:from-primary/10 dark:to-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
                 <Link to="/estatisticas" className="block">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform">
+                      <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-xl group-hover:scale-110 transition-transform">
                         <TrendingUp className="h-6 w-6 text-primary" />
                       </div>
                       <div className="flex-1">
@@ -342,12 +342,12 @@ const Index: React.FC = () => {
                 </Link>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+              <Card className="card-enhanced bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 dark:from-green-950/20 dark:to-green-900/30 dark:border-green-800/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
                 <Link to="/equipe" className="block">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-green-500/10 rounded-xl group-hover:scale-110 transition-transform">
-                        <Users className="h-6 w-6 text-green-600" />
+                      <div className="p-3 bg-green-500/10 dark:bg-green-400/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold mb-1">Equipe</h3>
@@ -359,12 +359,12 @@ const Index: React.FC = () => {
                 </Link>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+              <Card className="card-enhanced bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 dark:from-blue-950/20 dark:to-blue-900/30 dark:border-blue-800/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
                 <Link to="/calendar" className="block">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-blue-500/10 rounded-xl group-hover:scale-110 transition-transform">
-                        <Calendar className="h-6 w-6 text-blue-600" />
+                      <div className="p-3 bg-blue-500/10 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold mb-1">Calendário</h3>

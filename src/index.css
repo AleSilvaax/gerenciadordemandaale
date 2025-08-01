@@ -198,6 +198,89 @@
   @apply bg-card/50;
 }
 
+/* Correções específicas para gradientes em modo dark */
+.dark .from-blue-50\/50 {
+  @apply from-blue-950/20;
+}
+
+.dark .to-blue-100\/30 {
+  @apply to-blue-900/30;
+}
+
+.dark .border-blue-200\/50 {
+  @apply border-blue-800/50;
+}
+
+.dark .from-green-50\/50 {
+  @apply from-green-950/20;
+}
+
+.dark .to-green-100\/30 {
+  @apply to-green-900/30;
+}
+
+.dark .border-green-200\/50 {
+  @apply border-green-800/50;
+}
+
+.dark .from-orange-50\/50 {
+  @apply from-orange-950/20;
+}
+
+.dark .to-orange-100\/30 {
+  @apply to-orange-900/30;
+}
+
+.dark .border-orange-200\/50 {
+  @apply border-orange-800/50;
+}
+
+.dark .from-red-50\/50 {
+  @apply from-red-950/20;
+}
+
+.dark .to-red-100\/30 {
+  @apply to-red-900/30;
+}
+
+.dark .border-red-200\/50 {
+  @apply border-red-800/50;
+}
+
+/* Correções para elementos com background específicos */
+.dark .bg-blue-500\/10 {
+  @apply bg-blue-400/20;
+}
+
+.dark .bg-green-500\/10 {
+  @apply bg-green-400/20;
+}
+
+.dark .bg-orange-500\/10 {
+  @apply bg-orange-400/20;
+}
+
+.dark .bg-red-500\/10 {
+  @apply bg-red-400/20;
+}
+
+.dark .bg-primary\/10 {
+  @apply bg-primary/20;
+}
+
+.dark .bg-primary\/5 {
+  @apply bg-primary/10;
+}
+
+/* Garantir que badges de status mantenham boa legibilidade */
+.dark .bg-green-100 {
+  @apply bg-green-900/30;
+}
+
+.dark .text-green-800 {
+  @apply text-green-200;
+}
+
 /* Mobile layout adjustments - Melhor responsividade */
 @media (max-width: 768px) {
   body {

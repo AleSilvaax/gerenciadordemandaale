@@ -11,7 +11,11 @@ interface CompactTeamMemberCardProps {
   stats?: {
     completedServices: number;
     pendingServices: number;
+    inProgressServices?: number;
+    totalServices?: number;
+    highPriorityServices?: number;
     avgRating: number;
+    completionRate?: number;
     joinDate: string;
   };
 }
@@ -21,12 +25,16 @@ export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({
   onEdit,
   stats
 }) => {
-  // Usar stats reais do membro ou fallback para dados mock apenas se não fornecido
+  // Usar apenas stats reais do membro - sem fallback para dados mock
   const memberStats = stats || member.stats || {
-    completedServices: Math.floor(Math.random() * 20) + 5,
-    pendingServices: Math.floor(Math.random() * 10),
-    avgRating: 4.2 + Math.random() * 0.8,
-    joinDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString()
+    completedServices: 0,
+    pendingServices: 0,
+    inProgressServices: 0,
+    totalServices: 0,
+    highPriorityServices: 0,
+    avgRating: 0,
+    completionRate: 0,
+    joinDate: new Date().toLocaleDateString('pt-BR')
   };
   const getRoleDisplayName = (role: string) => {
     switch (role) {
@@ -80,25 +88,36 @@ export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({
           </Badge>
         </div>
 
-        {/* Linha de Estatísticas */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-success" />
-              <span className="font-medium text-success">{memberStats.completedServices}</span>
-              <span>concluídos</span>
+        {/* Linha de Estatísticas REAIS */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3 h-3 text-green-500" />
+                <span className="font-medium text-green-600 dark:text-green-400">{memberStats.completedServices}</span>
+                <span className="text-muted-foreground">concluídos</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-orange-500" />
+                <span className="font-medium text-orange-600 dark:text-orange-400">{memberStats.pendingServices}</span>
+                <span className="text-muted-foreground">pendentes</span>
+              </div>
             </div>
             
             <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-warning" />
-              <span className="font-medium text-warning">{memberStats.pendingServices}</span>
-              <span>pendentes</span>
+              <span className="font-medium text-foreground">
+                {memberStats.avgRating > 0 ? memberStats.avgRating.toFixed(1) : 'N/A'}
+              </span>
+              <span className="text-yellow-500">★</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-1">
-            <span className="font-medium text-foreground">{memberStats.avgRating.toFixed(1)}</span>
-            <span>★</span>
+          {/* Estatísticas extras visíveis em desktop */}
+          <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <span>Desde: <span className="font-medium text-foreground">{memberStats.joinDate}</span></span>
+            </div>
           </div>
         </div>
 
