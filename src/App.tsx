@@ -14,7 +14,7 @@ import NewService from '@/pages/NewService';
 import Demandas from '@/pages/Demandas';
 import ServiceDetail from '@/pages/ServiceDetail';
 import Search from '@/pages/Search';
-import Statistics from '@/pages/Statistics';
+import Estatisticas from '@/pages/Estatisticas';
 import Equipe from '@/pages/Equipe';
 import Calendar from '@/pages/Calendar';
 import Settings from '@/pages/Settings';
@@ -56,7 +56,7 @@ function App() {
                     <Route path="/demandas" element={<Demandas />} />
                     <Route path="/demanda/:id" element={<ServiceErrorBoundary><ServiceDetail /></ServiceErrorBoundary>} />
                     <Route path="/buscar" element={<Search />} />
-                    <Route path="/estatisticas" element={<Statistics />} />
+                    <Route path="/estatisticas" element={<Estatisticas />} />
                     <Route path="/equipe" element={<Equipe />} />
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/settings" element={<Settings />} />
