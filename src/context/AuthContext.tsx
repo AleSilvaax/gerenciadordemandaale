@@ -246,6 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = useCallback(async (userData: any): Promise<boolean> => {
     try {
       setIsLoading(true);
+      console.log('[Auth] Iniciando registro para:', userData.email);
       
       // Limpar estado antes do registro
       cleanAuthState();
@@ -256,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             name: userData.name,
-            role: userData.role,
+            role: userData.role || 'tecnico',
             team_id: userData.team_id
           },
           emailRedirectTo: `${window.location.origin}/`
@@ -265,21 +266,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('[Auth] Erro no registro:', error);
-        toast.error("Erro no cadastro", { description: error.message });
+        
+        let errorMessage = 'Erro no cadastro';
+        if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+          errorMessage = 'Este email já está cadastrado no sistema';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Email inválido';
+        } else if (error.message.includes('Password') || error.message.includes('password')) {
+          errorMessage = 'Senha deve ter pelo menos 6 caracteres';
+        } else if (error.message.includes('signup_disabled')) {
+          errorMessage = 'Cadastro desabilitado temporariamente';
+        } else {
+          errorMessage = error.message;
+        }
+        
+        toast.error("Erro no cadastro", { description: errorMessage });
         return false;
       }
 
       if (data.user) {
-        toast.success("Cadastro realizado!", { 
-          description: "Verifique seu email para confirmar a conta." 
-        });
+        console.log('[Auth] Usuário registrado com sucesso:', data.user.id);
+        
+        // Verificar se o email foi confirmado automaticamente
+        if (data.user.email_confirmed_at) {
+          toast.success("Cadastro realizado com sucesso!", { 
+            description: "Você será redirecionado automaticamente." 
+          });
+        } else {
+          toast.success("Cadastro realizado!", { 
+            description: "Verifique seu email para confirmar a conta." 
+          });
+        }
         return true;
       }
 
       return false;
     } catch (error: any) {
       console.error('[Auth] Erro inesperado no registro:', error);
-      toast.error("Erro no cadastro", { description: "Tente novamente" });
+      toast.error("Erro no cadastro", { description: "Erro inesperado. Tente novamente." });
       return false;
     } finally {
       setIsLoading(false);
