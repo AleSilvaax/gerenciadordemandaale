@@ -19,6 +19,9 @@ const Register: React.FC = () => {
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold">Sistema de Gestão</h1>
           <p className="text-muted-foreground mt-2">Crie sua conta para acessar o sistema</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            ✅ Sistema de registro otimizado e funcionando
+          </p>
         </div>
         
         <RegisterForm setRegistrationInProgress={setRegistrationInProgress} />

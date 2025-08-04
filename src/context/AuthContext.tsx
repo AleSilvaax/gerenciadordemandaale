@@ -244,70 +244,130 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const register = useCallback(async (userData: any): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      console.log('[Auth] Iniciando registro para:', userData.email);
-      
-      // Limpar estado antes do registro
-      cleanAuthState();
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            role: userData.role || 'tecnico',
-            team_id: userData.team_id
-          },
-          emailRedirectTo: `${window.location.origin}/`
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        setIsLoading(true);
+        console.log(`[Auth] Tentativa ${retryCount + 1} de registro para:`, userData.email);
+        console.log('[Auth] Dados de registro:', { 
+          name: userData.name, 
+          role: userData.role, 
+          team_id: userData.team_id,
+          email: userData.email 
+        });
+        
+        // Limpar estado antes do registro
+        cleanAuthState();
+        
+        // Validações adicionais
+        if (!userData.email || !userData.password || !userData.name) {
+          throw new Error('Dados obrigatórios não fornecidos');
         }
-      });
+        
+        // Preparar metadata com validação
+        const userMetadata: any = {
+          name: userData.name.trim(),
+          role: userData.role || 'tecnico'
+        };
+        
+        // Só incluir team_id se for válido
+        if (userData.team_id && userData.team_id.trim() !== '') {
+          userMetadata.team_id = userData.team_id.trim();
+        }
+        
+        console.log('[Auth] Metadata a ser enviado:', userMetadata);
+        
+        const { data, error } = await supabase.auth.signUp({
+          email: userData.email.trim(),
+          password: userData.password,
+          options: {
+            data: userMetadata,
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
 
-      if (error) {
-        console.error('[Auth] Erro no registro:', error);
-        
-        let errorMessage = 'Erro no cadastro';
-        if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
-          errorMessage = 'Este email já está cadastrado no sistema';
-        } else if (error.message.includes('Invalid email')) {
-          errorMessage = 'Email inválido';
-        } else if (error.message.includes('Password') || error.message.includes('password')) {
-          errorMessage = 'Senha deve ter pelo menos 6 caracteres';
-        } else if (error.message.includes('signup_disabled')) {
-          errorMessage = 'Cadastro desabilitado temporariamente';
-        } else {
-          errorMessage = error.message;
+        if (error) {
+          console.error(`[Auth] Erro no registro (tentativa ${retryCount + 1}):`, error);
+          
+          // Verificar se é um erro temporário que justifica retry
+          const isTemporaryError = error.message.includes('timeout') || 
+                                 error.message.includes('network') ||
+                                 error.message.includes('connection') ||
+                                 error.message.includes('Database error');
+          
+          if (isTemporaryError && retryCount < maxRetries) {
+            console.log(`[Auth] Erro temporário detectado, tentando novamente em 2 segundos...`);
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          
+          // Classificar e tratar erro definitivo
+          let errorMessage = 'Erro no cadastro';
+          if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+            errorMessage = 'Este email já está cadastrado no sistema';
+          } else if (error.message.includes('Invalid email')) {
+            errorMessage = 'Email inválido';
+          } else if (error.message.includes('Password') || error.message.includes('password')) {
+            errorMessage = 'Senha deve ter pelo menos 6 caracteres';
+          } else if (error.message.includes('signup_disabled')) {
+            errorMessage = 'Cadastro desabilitado temporariamente';
+          } else if (error.message.includes('Database error')) {
+            errorMessage = 'Erro no servidor. Tente novamente em alguns instantes.';
+          } else {
+            errorMessage = error.message;
+          }
+          
+          toast.error("Erro no cadastro", { description: errorMessage });
+          return false;
         }
-        
-        toast.error("Erro no cadastro", { description: errorMessage });
+
+        if (data.user) {
+          console.log('[Auth] Usuário registrado com sucesso:', data.user.id);
+          console.log('[Auth] Dados do usuário criado:', {
+            id: data.user.id,
+            email: data.user.email,
+            confirmed: !!data.user.email_confirmed_at,
+            metadata: data.user.user_metadata
+          });
+          
+          // Aguardar um pouco para o trigger do banco processar
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verificar se o email foi confirmado automaticamente
+          if (data.user.email_confirmed_at) {
+            toast.success("Cadastro realizado com sucesso!", { 
+              description: "Você será redirecionado automaticamente." 
+            });
+          } else {
+            toast.success("Cadastro realizado!", { 
+              description: "Verifique seu email para confirmar a conta." 
+            });
+          }
+          return true;
+        }
+
         return false;
-      }
-
-      if (data.user) {
-        console.log('[Auth] Usuário registrado com sucesso:', data.user.id);
+      } catch (error: any) {
+        console.error(`[Auth] Erro inesperado no registro (tentativa ${retryCount + 1}):`, error);
         
-        // Verificar se o email foi confirmado automaticamente
-        if (data.user.email_confirmed_at) {
-          toast.success("Cadastro realizado com sucesso!", { 
-            description: "Você será redirecionado automaticamente." 
-          });
-        } else {
-          toast.success("Cadastro realizado!", { 
-            description: "Verifique seu email para confirmar a conta." 
-          });
+        // Se for o último retry, mostrar erro
+        if (retryCount >= maxRetries) {
+          toast.error("Erro no cadastro", { description: "Erro inesperado. Tente novamente." });
+          return false;
         }
-        return true;
+        
+        // Tentar novamente
+        retryCount++;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } finally {
+        setIsLoading(false);
       }
-
-      return false;
-    } catch (error: any) {
-      console.error('[Auth] Erro inesperado no registro:', error);
-      toast.error("Erro no cadastro", { description: "Erro inesperado. Tente novamente." });
-      return false;
-    } finally {
-      setIsLoading(false);
     }
+    
+    return false;
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {

@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { RegisterFormData } from '@/types/auth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { validateEmail, validatePassword, validateRequiredField, validatePasswordMatch } from '@/utils/formValidation';
 
 interface Team {
   id: string;
@@ -68,8 +69,37 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
   const validateForm = () => {
     setError(null);
     
-    if (!name || !email || !password || !confirmPassword || !role) {
-      setError('Todos os campos obrigatórios devem ser preenchidos');
+    // Validar nome
+    const nameValidation = validateRequiredField(name.trim(), 'Nome');
+    if (!nameValidation.valid) {
+      setError(nameValidation.error);
+      return false;
+    }
+    
+    // Validar email
+    const emailValidation = validateEmail(email.trim());
+    if (!emailValidation.valid) {
+      setError(emailValidation.error);
+      return false;
+    }
+    
+    // Validar senha
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.error);
+      return false;
+    }
+    
+    // Validar confirmação de senha
+    const passwordMatchValidation = validatePasswordMatch(password, confirmPassword);
+    if (!passwordMatchValidation.valid) {
+      setError(passwordMatchValidation.error);
+      return false;
+    }
+    
+    // Validar role
+    if (!role) {
+      setError('Selecione uma função');
       return false;
     }
     
@@ -79,14 +109,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
       return false;
     }
     
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setError('As senhas não conferem');
-      return false;
-    }
+    console.log('[RegisterForm] Validação concluída com sucesso');
     return true;
   };
 
