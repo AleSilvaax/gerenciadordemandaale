@@ -65,46 +65,57 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-      <CardHeader className="pb-4">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="text-xl font-bold mb-2">{service.title}</CardTitle>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>{service.location}</span>
+      <CardHeader className="pb-3 md:pb-4">
+        {/* FASE 4: Header responsivo - Stack em mobile, lado a lado em desktop */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg md:text-xl font-bold mb-2 break-words">{service.title}</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1 min-w-0">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{service.location}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          {/* FASE 4: Controles reorganizados para mobile */}
+          <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 order-2 sm:order-1">
+              <div className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                OS #{service.number || 'N/A'}
+              </div>
+              <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1 text-xs`}>
+                {getStatusIcon(service.status)}
+                <span className="hidden xs:inline">
+                  {service.status === "concluido" ? "Concluído" : 
+                   service.status === "cancelado" ? "Cancelado" : "Pendente"}
+                </span>
+                <span className="xs:hidden">
+                  {service.status === "concluido" ? "OK" : 
+                   service.status === "cancelado" ? "X" : "P"}
+                </span>
+              </Badge>
+            </div>
+            
             {canEdit && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="h-8 px-2"
+                className="h-8 px-3 order-1 sm:order-2 flex-shrink-0"
               >
-                <Edit2 className="w-3 h-3 mr-1" />
-                Editar
+                <Edit2 className="w-3 h-3 sm:mr-1" />
+                <span className="hidden sm:inline">Editar</span>
               </Button>
             )}
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-xs text-muted-foreground font-medium">
-                OS #{service.number || 'N/A'}
-              </div>
-              <Badge className={`${getStatusColor(service.status)} border flex items-center gap-1`}>
-                {getStatusIcon(service.status)}
-                {service.status === "concluido" ? "Concluído" : 
-                 service.status === "cancelado" ? "Cancelado" : "Pendente"}
-              </Badge>
-            </div>
           </div>
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-6">
-        {/* Resumo Compacto */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+      {/* FASE 4: Content com melhor espaçamento mobile */}
+      <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
+        {/* FASE 4: Resumo Compacto - Cards responsivos */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
           <div className="text-center">
             <p className="text-sm font-semibold text-primary">{service.priority || 'Normal'}</p>
             <p className="text-xs text-muted-foreground">Prioridade</p>
@@ -128,9 +139,9 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
               <User className="w-4 h-4 text-primary" />
               Cliente
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
               {service.client && (
-                <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-background/60 to-background/30 rounded-lg border border-border/30">
+                <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-gradient-to-br from-background/60 to-background/30 rounded-lg border border-border/30">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <User className="w-4 h-4 text-primary" />
                   </div>

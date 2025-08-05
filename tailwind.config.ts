@@ -19,6 +19,9 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs': '475px', // FASE 4: Breakpoint adicional para melhor responsividade
+      },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
       },

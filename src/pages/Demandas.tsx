@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useServices } from "@/hooks/useServices";
+import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
@@ -33,9 +34,27 @@ import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters"
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Demandas = () => {
-  const { services, isLoading, refreshServices } = useServices();
-  const { teamMembers } = useTeamMembers();
   const { user } = useAuth();
+  const { teamMembers } = useTeamMembers();
+  
+  // CORREÇÃO CRÍTICA: Usar hook específico baseado no role do usuário
+  const { 
+    services: allServices, 
+    isLoading: allServicesLoading, 
+    refreshServices: refreshAllServices 
+  } = useServices();
+  
+  const { 
+    data: techServices, 
+    isLoading: techServicesLoading, 
+    refetch: refreshTechServices 
+  } = useTechnicianServices();
+  
+  // Determinar qual hook usar baseado no role
+  const isTechnician = user?.role === 'tecnico';
+  const services = isTechnician ? techServices : allServices;
+  const isLoading = isTechnician ? techServicesLoading : allServicesLoading;
+  const refreshServices = isTechnician ? refreshTechServices : refreshAllServices;
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -46,11 +65,25 @@ const Demandas = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  
+  // FASE 3: Estado para controlar visualização de demandas concluídas
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const hasActiveFilters = searchTerm || statusFilter !== "all" || 
+    technicianFilter !== "all" || serviceTypeFilter !== "all" || priorityFilter !== "all";
 
   const filteredServices = useMemo(() => {
     if (!services) return [];
 
-    return services.filter(service => {
+    // FASE 3: Sistema inteligente de listagem
+    let activeServices = services;
+    
+    // Para não-técnicos, aplicar filtro inteligente de demandas concluídas
+    if (!isTechnician && !showCompleted && statusFilter === "all" && !hasActiveFilters) {
+      activeServices = services.filter(service => !['concluido', 'cancelado'].includes(service.status));
+    }
+
+    return activeServices.filter(service => {
       const matchesSearch = !searchTerm || 
         service.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +99,7 @@ const Demandas = () => {
 
       return matchesSearch && matchesStatus && matchesTechnician && matchesServiceType && matchesPriority;
     });
-  }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter]);
+  }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter, isTechnician, showCompleted, hasActiveFilters]);
 
   const stats = useMemo(() => {
     const total = filteredServices.length;
@@ -90,9 +123,6 @@ const Demandas = () => {
     setServiceTypeFilter("all");
     setPriorityFilter("all");
   };
-
-  const hasActiveFilters = searchTerm || statusFilter !== "all" || 
-    technicianFilter !== "all" || serviceTypeFilter !== "all" || priorityFilter !== "all";
 
   if (isLoading) {
     return (
@@ -155,6 +185,18 @@ const Demandas = () => {
               <Download className="w-4 h-4" />
               {!isMobile && <span className="ml-2">Exportar</span>}
             </Button>
+
+            {/* Show Completed Toggle - FASE 3 */}
+            {!isTechnician && (
+              <Button
+                variant={showCompleted ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowCompleted(!showCompleted)}
+              >
+                <CheckCircle className="w-4 h-4" />
+                {!isMobile && <span className="ml-2">{showCompleted ? 'Ocultar' : 'Ver'} Concluídas</span>}
+              </Button>
+            )}
 
             {/* New Service Button */}
             {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
@@ -337,7 +379,7 @@ const Demandas = () => {
                   if (key === 'technicianId') setTechnicianFilter(value);
                 }}
                 onClearFilters={clearFilters}
-                serviceTypes={serviceTypes}
+                serviceTypes={serviceTypes as string[]}
                 totalResults={filteredServices.length}
               />
             ) : (
@@ -357,7 +399,7 @@ const Demandas = () => {
                 }}
                 onClearFilters={clearFilters}
                 technicians={teamMembers}
-                serviceTypes={serviceTypes}
+                serviceTypes={serviceTypes as string[]}
                 totalResults={filteredServices.length}
               />
             )}

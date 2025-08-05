@@ -28,14 +28,19 @@ import {
   updateTechnicalField,
   deleteTechnicalField,
 } from "@/services/servicesDataService";
+import { usePermissions } from "@/hooks/usePermissions";
 
-// Remover mocks e usaremos apenas dados do Supabase:
+// FASE 2: Correção - Controle de acesso adequado para criação de tipos de serviço
 export const TechnicalSettingsTab = () => {
+  const { user, canEditServices } = usePermissions();
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [selectedType, setSelectedType] = useState<ServiceTypeConfig | null>(null);
   const [editingField, setEditingField] = useState<TechnicalField | null>(null);
   const [isNewField, setIsNewField] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Verificar se usuário pode gerenciar tipos de serviço
+  const canManageServiceTypes = user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role || '');
 
   // Carregando tipos do banco
   useEffect(() => {
@@ -60,8 +65,13 @@ export const TechnicalSettingsTab = () => {
     setEditingField(null);
   };
 
-  // Criar novo tipo de serviço
+  // Criar novo tipo de serviço - FASE 2: Com verificação de permissão
   const handleCreateNewType = async () => {
+    if (!canManageServiceTypes) {
+      toast.error("Você não tem permissão para criar tipos de serviço.");
+      return;
+    }
+    
     setIsSaving(true);
     try {
       const data = await createServiceType({ name: "Novo Tipo de Serviço", description: "" });
@@ -73,8 +83,13 @@ export const TechnicalSettingsTab = () => {
         fields: [],
       });
       toast.success("Tipo de serviço criado.");
-    } catch {
-      toast.error("Erro ao criar tipo.");
+    } catch (error: any) {
+      console.error("Erro ao criar tipo:", error);
+      if (error?.message?.includes('permission') || error?.message?.includes('policy')) {
+        toast.error("Você não tem permissão para criar tipos de serviço.");
+      } else {
+        toast.error("Erro ao criar tipo de serviço.");
+      }
     }
     setIsSaving(false);
   };
@@ -240,7 +255,7 @@ export const TechnicalSettingsTab = () => {
               serviceTypes={serviceTypes}
               selectedType={selectedType}
               onSelectType={handleSelectType}
-              onCreateNewType={handleCreateNewType}
+              onCreateNewType={canManageServiceTypes ? handleCreateNewType : undefined}
             />
 
             {/* Detalhes do Tipo Selecionado */}
@@ -279,12 +294,19 @@ export const TechnicalSettingsTab = () => {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <p className="text-muted-foreground mb-4">
-                      Selecione um tipo de serviço para editar ou crie um novo
+                      Selecione um tipo de serviço para editar{canManageServiceTypes ? ' ou crie um novo' : ''}
                     </p>
-                    <Button onClick={handleCreateNewType}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Novo Tipo
-                    </Button>
+                    {canManageServiceTypes && (
+                      <Button onClick={handleCreateNewType}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Novo Tipo
+                      </Button>
+                    )}
+                    {!canManageServiceTypes && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Você precisa ser gestor, administrador ou proprietário para criar tipos de serviço.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

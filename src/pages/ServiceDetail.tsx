@@ -95,8 +95,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       >
         <ServiceDetailHeader />
         
+        {/* FASE 4: Layout mobile responsivo otimizado */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+          {/* Coluna principal - FASE 4: Melhor espaçamento mobile */}
+          <div className="lg:col-span-2 space-y-3 md:space-y-4 lg:space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -160,7 +162,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
 
-          <div className="space-y-4 lg:space-y-6">
+          {/* Coluna lateral - FASE 4: Ordem otimizada para mobile */}
+          <div className="space-y-3 md:space-y-4 lg:space-y-6 order-last lg:order-none">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
