@@ -17,14 +17,14 @@ import { ServiceMessages } from "@/components/service-detail/ServiceMessages";
 import { ServiceFeedback } from "@/components/service-detail/ServiceFeedback";
 import { useServiceDetail } from "@/hooks/useServiceDetail";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
 
 interface ServiceDetailProps {
   editMode?: boolean;
 }
 
 const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
-  const { user } = useAuth(); // ADICIONADO PARA PEGAR O USUÁRIO LOGADO
+  const { user } = useEnhancedAuth(); // ADICIONADO PARA PEGAR O USUÁRIO LOGADO
   const {
     service,
     isLoading,

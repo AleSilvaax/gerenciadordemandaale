@@ -7,7 +7,7 @@ import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceEditForm } from "./ServiceEditForm";
 import { updateService } from "@/services/servicesDataService";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { toast } from "sonner";
 import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
@@ -20,7 +20,7 @@ interface ServiceDetailCardProps {
 }
 
 export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, onServiceUpdate }) => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const [isEditing, setIsEditing] = useState(false);
   
   const canEdit = user?.role === 'gestor' || user?.role === 'administrador';

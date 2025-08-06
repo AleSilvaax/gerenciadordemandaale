@@ -12,7 +12,7 @@ import {
   Wrench,
   Shield
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { Separator } from "@/components/ui/separator";
 
 // Array de navegação corrigido e completo
@@ -30,7 +30,7 @@ const navigation = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
 
   const isActive = (href: string) => {
     if (href === "/") {
