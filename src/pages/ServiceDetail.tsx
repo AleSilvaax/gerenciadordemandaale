@@ -95,8 +95,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       >
         <ServiceDetailHeader />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+          <div className="xl:col-span-2 space-y-4 lg:space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -134,7 +134,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 md:p-6">
                   <PhotoUploader
                     photos={photos}
                     onPhotosChange={handlePhotosChange}
@@ -160,7 +160,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
 
-          <div className="space-y-4 lg:space-y-6">
+          <div className="space-y-4 lg:space-y-6 xl:sticky xl:top-4">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}

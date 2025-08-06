@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useServices } from "@/hooks/useServices";
+import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
@@ -31,9 +32,20 @@ import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileSe
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
 import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Demandas = () => {
-  const { services, isLoading, refreshServices } = useServices();
+  const { canViewAllServices } = usePermissions();
+  const shouldUseGeneralServices = canViewAllServices();
+  
+  const { services: allServices = [], isLoading: isLoadingAll, refreshServices: refetchAll } = useServices();
+  const { data: technicianServices = [], isLoading: isLoadingTech, refetch: refetchTech } = useTechnicianServices();
+  
+  const services = shouldUseGeneralServices ? allServices : technicianServices;
+  const isLoading = shouldUseGeneralServices ? isLoadingAll : isLoadingTech;
+  const refreshServices = shouldUseGeneralServices ? refetchAll : refetchTech;
+  
   const { teamMembers } = useTeamMembers();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,11 +58,25 @@ const Demandas = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [activeTab, setActiveTab] = useState("active");
 
   const filteredServices = useMemo(() => {
     if (!services) return [];
 
-    return services.filter(service => {
+    let baseServices = services;
+    
+    // Filtrar por aba ativa
+    if (activeTab === "active") {
+      baseServices = services.filter(service => 
+        ['pendente', 'em_andamento', 'agendado'].includes(service.status)
+      );
+    } else if (activeTab === "completed") {
+      baseServices = services.filter(service => 
+        ['concluido', 'cancelado'].includes(service.status)
+      );
+    }
+
+    return baseServices.filter(service => {
       const matchesSearch = !searchTerm || 
         service.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,8 +91,36 @@ const Demandas = () => {
       const matchesPriority = priorityFilter === "all" || service.priority === priorityFilter;
 
       return matchesSearch && matchesStatus && matchesTechnician && matchesServiceType && matchesPriority;
+    }).sort((a, b) => {
+      // Para aba ativa: priorizar por status primeiro (em_andamento > pendente > agendado)
+      if (activeTab === "active") {
+        const statusOrder = {
+          em_andamento: 3,
+          pendente: 2,
+          agendado: 1,
+          concluido: 0,
+          cancelado: 0
+        };
+        
+        const statusDiff = statusOrder[b.status] - statusOrder[a.status];
+        if (statusDiff !== 0) return statusDiff;
+      }
+      
+      // Ordenação por prioridade
+      const priorityOrder = {
+        urgente: 4,
+        alta: 3,
+        media: 2,
+        baixa: 1
+      };
+      
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Depois por data de criação (mais recente primeiro)
+      return new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime();
     });
-  }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter]);
+  }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter, activeTab]);
 
   const stats = useMemo(() => {
     const total = filteredServices.length;
@@ -277,6 +331,21 @@ const Demandas = () => {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Tabs for Active/Completed */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.25 }}
+        >
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">Todas</TabsTrigger>
+              <TabsTrigger value="active">Ativas</TabsTrigger>
+              <TabsTrigger value="completed">Concluídas</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </motion.div>
 
         {/* Filters and Controls */}

@@ -2,6 +2,19 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ServiceTypeConfig, TechnicalField } from '@/types/serviceTypes';
 
+const getCurrentOrganizationId = async (): Promise<string> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado');
+  
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+  
+  return profile?.organization_id || '00000000-0000-0000-0000-000000000001';
+};
+
 export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]> => {
   try {
     console.log('[ServiceTypes] Iniciando busca de tipos de serviço...');
@@ -109,7 +122,7 @@ export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
       .insert({ 
         name: type.name, 
         description: type.description,
-        organization_id: null // Não usar organização por enquanto
+        organization_id: (await getCurrentOrganizationId())
       })
       .select()
       .single();
@@ -154,7 +167,7 @@ export const createTechnicalField = async (serviceTypeId: string, field: Omit<Te
         type: field.type,
         required: field.required,
         options: field.options ? JSON.stringify(field.options) : null,
-        organization_id: null // Não usar organização por enquanto
+        organization_id: (await getCurrentOrganizationId())
       })
       .select()
       .single();

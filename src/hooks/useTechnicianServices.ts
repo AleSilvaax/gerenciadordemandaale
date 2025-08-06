@@ -1,83 +1,114 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Service, ServiceStatus, ServicePriority } from '@/types/serviceTypes';
+import { useAuth } from '@/context/AuthContext';
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Service } from "@/types/serviceTypes";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+export const useTechnicianServices = () => {
+  const { user } = useAuth();
 
-/**
- * Busca todos os serviços VINCULADOS AO técnico logado
- */
-export function useTechnicianServices() {
-  const { user } = useEnhancedAuth();
-
-  return useQuery<Service[]>({
+  return useQuery({
     queryKey: ['technician-services', user?.id],
-    queryFn: async () => {
-      if (!user) {
-        console.log("[TECH-SERVICES] Nenhum usuário logado.");
+    queryFn: async (): Promise<Service[]> => {
+      if (!user?.id) return [];
+
+      console.log('[TECHNICIAN SERVICES] Buscando serviços para técnico:', user.id);
+
+      // Primeiro buscar os service_ids atribuídos ao técnico
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('service_technicians')
+        .select('service_id')
+        .eq('technician_id', user.id);
+
+      if (assignmentsError) {
+        console.error('[TECHNICIAN SERVICES] Erro ao buscar atribuições:', assignmentsError);
+        throw assignmentsError;
+      }
+
+      if (!assignments || assignments.length === 0) {
+        console.log('[TECHNICIAN SERVICES] Nenhuma demanda atribuída ao técnico');
         return [];
       }
-      
-      console.log("[TECH-SERVICES] Buscando serviços para técnico:", user.id);
-      
-      try {
-        // Primeiro buscar IDs dos serviços vinculados ao técnico
-        const { data: assignments, error: assignmentsError } = await supabase
-          .from('service_technicians')
-          .select('service_id')
-          .eq('technician_id', user.id);
 
-        console.log("[TECH-SERVICES] Query assignments executada:", { assignments, assignmentsError });
+      const serviceIds = assignments.map(a => a.service_id);
+      console.log('[TECHNICIAN SERVICES] IDs dos serviços atribuídos:', serviceIds);
 
-        if (assignmentsError) {
-          console.error("[TECH-SERVICES] Erro ao buscar atribuições:", assignmentsError);
-          throw new Error(assignmentsError.message);
-        }
+      // Buscar os serviços completos
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          *,
+          service_technicians!inner(
+            technician_id,
+            profiles!inner(
+              id,
+              name,
+              avatar
+            )
+          )
+        `)
+        .in('id', serviceIds)
+        .order('created_at', { ascending: false });
 
-        const serviceIds = assignments?.map(a => a.service_id) || [];
-        console.log("[TECH-SERVICES] Service IDs encontrados:", serviceIds);
-
-        if (serviceIds.length === 0) {
-          console.log("[TECH-SERVICES] Nenhuma demanda atribuída ao técnico.");
-          return [];
-        }
-
-        // Buscar os serviços completos
-        const { data: services, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .in('id', serviceIds);
-
-        console.log("[TECH-SERVICES] Query services executada:", { services, servicesError });
-
-        if (servicesError) {
-          console.error("[TECH-SERVICES] Erro ao buscar serviços:", servicesError);
-          throw new Error(servicesError.message);
-        }
-
-        console.log("[TECH-SERVICES] Serviços encontrados:", services?.length || 0);
-
-        // Transformar para o formato esperado
-        return (services || []).map((service: any) => ({
-          ...service,
-          technician: {
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar || '',
-            role: 'tecnico',
-          },
-          status: service.status || 'pendente',
-          priority: service.priority || 'media',
-          serviceType: service.service_type || 'Vistoria',
-          messages: [],
-        })) as Service[];
-      } catch (error) {
-        console.error("[TECH-SERVICES] Erro geral:", error);
-        throw error;
+      if (servicesError) {
+        console.error('[TECHNICIAN SERVICES] Erro ao buscar serviços:', servicesError);
+        throw servicesError;
       }
+
+      console.log('[TECHNICIAN SERVICES] Serviços encontrados:', services?.length || 0);
+
+      if (!services) return [];
+
+      // Transformar dados para o formato esperado
+      return services.map((service) => {
+        const parseJsonField = (field: any) => {
+          if (!field) return undefined;
+          if (typeof field === 'object') return field;
+          try { return JSON.parse(field); } catch { return undefined; }
+        };
+
+        const safePriority = ['baixa', 'media', 'alta', 'urgente'].includes(service.priority)
+          ? service.priority as ServicePriority : 'media' as ServicePriority;
+        const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
+          ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
+
+        // Mapear técnicos
+        const technicians = service.service_technicians?.map((st: any) => ({
+          id: st.profiles.id,
+          name: st.profiles.name,
+          avatar: st.profiles.avatar,
+          role: 'tecnico' as const
+        })) || [];
+
+        return {
+          id: service.id,
+          title: service.title || 'Sem título',
+          location: service.location || 'Local não informado',
+          status: safeStatus,
+          technicians,
+          creationDate: service.created_at,
+          dueDate: service.due_date,
+          priority: safePriority,
+          serviceType: service.service_type || 'Vistoria',
+          number: service.number,
+          description: service.description,
+          createdBy: service.created_by,
+          client: service.client,
+          address: service.address,
+          city: service.city,
+          notes: service.notes,
+          estimatedHours: service.estimated_hours,
+          customFields: parseJsonField(service.custom_fields) || [],
+          signatures: parseJsonField(service.signatures) || {},
+          feedback: parseJsonField(service.feedback),
+          messages: [],
+          photos: Array.isArray(service.photos) ? service.photos : [],
+          photoTitles: Array.isArray(service.photo_titles) ? service.photo_titles : [],
+          date: service.date,
+        } as Service;
+      });
     },
     enabled: !!user,
     retry: 2,
-    staleTime: 30000, // 30 segundos
+    staleTime: 30000,
   });
-}
+};
