@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// ✅ Usando EnhancedAuthProvider para suporte completo a permissões
-import { EnhancedAuthProvider } from '@/context/EnhancedAuthContext';
+// ✅ Garante que estamos a usar o AuthProvider da sua versão estável.
+import { AuthProvider } from '@/context/AuthContext'; 
 import { AuthGuard } from '@/components/guards/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -40,7 +40,7 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         {/* ✅ Garante que o provedor correto está a "abraçar" toda a aplicação. */}
-        <EnhancedAuthProvider>
+        <AuthProvider>
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
@@ -71,7 +71,7 @@ function App() {
               </AuthGuard>
             } />
           </Routes>
-        </EnhancedAuthProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );

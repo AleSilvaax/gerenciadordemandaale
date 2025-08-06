@@ -17,14 +17,14 @@ import { ServiceMessages } from "@/components/service-detail/ServiceMessages";
 import { ServiceFeedback } from "@/components/service-detail/ServiceFeedback";
 import { useServiceDetail } from "@/hooks/useServiceDetail";
 import { Button } from "@/components/ui/button";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
+import { useAuth } from "@/context/AuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
 
 interface ServiceDetailProps {
   editMode?: boolean;
 }
 
 const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
-  const { user } = useEnhancedAuth(); // ADICIONADO PARA PEGAR O USUÁRIO LOGADO
+  const { user } = useAuth(); // ADICIONADO PARA PEGAR O USUÁRIO LOGADO
   const {
     service,
     isLoading,
@@ -95,10 +95,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       >
         <ServiceDetailHeader />
         
-        {/* FASE 4: Layout mobile responsivo otimizado */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          {/* Coluna principal - FASE 4: Melhor espaçamento mobile */}
-          <div className="lg:col-span-2 space-y-3 md:space-y-4 lg:space-y-6">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -162,8 +160,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
 
-          {/* Coluna lateral - FASE 4: Ordem otimizada para mobile */}
-          <div className="space-y-3 md:space-y-4 lg:space-y-6 order-last lg:order-none">
+          <div className="space-y-4 lg:space-y-6">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 // Ícone para o novo campo de Prioridade
 import { ArrowLeft, Plus, Calendar, MapPin, FileText, User, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -38,7 +38,7 @@ const NewService: React.FC = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const navigate = useNavigate();
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
 
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 

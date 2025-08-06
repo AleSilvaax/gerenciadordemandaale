@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { TeamMember, UserRole } from "@/types/serviceTypes";
 import { getTeamMembers, updateTeamMember, addTeamMember, deleteTeamMember } from "@/services/servicesDataService";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +52,7 @@ import { CompactTeamMemberCard } from "@/components/ui-custom/CompactTeamMemberC
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Equipe: React.FC = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [team, setTeam] = useState<TeamMember[]>([]);

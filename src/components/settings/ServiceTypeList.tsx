@@ -10,7 +10,7 @@ interface Props {
   serviceTypes: ServiceTypeConfig[];
   selectedType: ServiceTypeConfig | null;
   onSelectType: (type: ServiceTypeConfig) => void;
-  onCreateNewType?: () => void; // FASE 2: Opcional para controle de permissão
+  onCreateNewType: () => void;
 }
 
 export const ServiceTypeList: React.FC<Props> = ({
@@ -22,11 +22,9 @@ export const ServiceTypeList: React.FC<Props> = ({
   <div className="lg:col-span-2 border rounded-lg p-3 h-[500px] flex flex-col">
     <div className="flex items-center justify-between mb-2">
       <h3 className="text-sm font-medium">Tipos de Serviço</h3>
-      {onCreateNewType && (
-        <Button size="sm" variant="ghost" onClick={onCreateNewType}>
-          <Plus className="h-4 w-4" />
-        </Button>
-      )}
+      <Button size="sm" variant="ghost" onClick={onCreateNewType}>
+        <Plus className="h-4 w-4" />
+      </Button>
     </div>
     <Separator className="my-2" />
     <ScrollArea className="flex-grow">

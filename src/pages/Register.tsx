@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { RegisterForm } from '@/components/forms/RegisterForm';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 const Register: React.FC = () => {
-  const { user, isLoading } = useEnhancedAuth();
+  const { user, isLoading } = useAuth();
   const [registrationInProgress, setRegistrationInProgress] = useState(false);
 
   if (user) {

@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => {

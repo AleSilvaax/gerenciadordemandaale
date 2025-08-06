@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { motion } from "framer-motion";
 import { TechnicalSettingsTab } from "@/components/settings/TechnicalSettingsTab";
 import { EnhancedVisualPreferencesTab } from "@/components/settings/EnhancedVisualPreferencesTab";
-import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState("technical");
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
 
   const isAdmin = user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role);
 

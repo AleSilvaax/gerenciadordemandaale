@@ -4,10 +4,10 @@ import { useEffect } from 'react';
 import { useServiceStore } from '@/store/serviceStore';
 import { useQuery } from '@tanstack/react-query';
 import { getServices } from '@/services/servicesDataService';
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 export const useServices = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   const { services, setServices, setError, setLoading } = useServiceStore();
 
   const {

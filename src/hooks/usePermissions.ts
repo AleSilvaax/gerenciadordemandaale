@@ -1,8 +1,8 @@
-import { useEnhancedAuth } from '@/context/EnhancedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { hasPermission, canAccessRoute, hasRoleOrHigher, getCurrentUserEffectiveRole, canManageUser, canViewOrganization } from '@/services/permissionService';
 
 export const usePermissions = () => {
-  const { user } = useEnhancedAuth();
+  const { user } = useAuth();
   
   return {
     user,
