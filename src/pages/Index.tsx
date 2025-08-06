@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getServices } from "@/services/servicesDataService";
+import { useSmartServices } from "@/hooks/useSmartServices";
 import { Service } from "@/types/serviceTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,6 @@ import { RealtimeMetrics } from "@/components/dashboard/RealtimeMetrics";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Index: React.FC = () => {
-  const [services, setServices] = useState<Service[]>([]);
   const [selectedTab, setSelectedTab] = useState("overview");
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState<SearchFilters>({
@@ -36,19 +35,14 @@ const Index: React.FC = () => {
 
   // Ativar notificações em tempo real
   const { isConnected } = useRealtimeNotifications();
-
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const fetchedServices = await getServices();
-        setServices(fetchedServices);
-      } catch (error) {
-        console.error("Error loading services:", error);
-      }
-    };
-
-    loadServices();
-  }, []);
+  
+  // Usar hook inteligente que decide automaticamente qual estratégia usar
+  const { 
+    services = [], 
+    isLoading, 
+    isTechnicianView, 
+    isManager 
+  } = useSmartServices();
 
   const applyFilters = (services: Service[]): Service[] => {
     return services.filter(service => {

@@ -23,11 +23,20 @@ export const useSmartServices = () => {
     return user.role === 'tecnico' && !hasRoleOrHigher('gestor');
   }, [user?.role, hasRoleOrHigher]);
   
-  // Retornar dados da query apropriada
-  const activeQuery = shouldUseTechnicianView ? technicianServicesQuery : consolidatedServicesQuery;
+  // Retornar dados da query apropriada com interface unificada
+  if (shouldUseTechnicianView) {
+    return {
+      ...technicianServicesQuery,
+      services: technicianServicesQuery.data || [],
+      isTechnicianView: shouldUseTechnicianView,
+      isManager: hasRoleOrHigher('gestor'),
+      isAdmin: hasRoleOrHigher('administrador'),
+    };
+  }
   
   return {
-    ...activeQuery,
+    ...consolidatedServicesQuery,
+    services: consolidatedServicesQuery.services || [],
     isTechnicianView: shouldUseTechnicianView,
     isManager: hasRoleOrHigher('gestor'),
     isAdmin: hasRoleOrHigher('administrador'),
