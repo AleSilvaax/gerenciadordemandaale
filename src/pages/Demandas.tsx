@@ -26,7 +26,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useServices } from "@/hooks/useServices";
 import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
 import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
 import { ServiceFilters } from "@/components/filters/ServiceFilters";
@@ -34,7 +34,7 @@ import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters"
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Demandas = () => {
-  const { user } = useAuth();
+  const { user } = useEnhancedAuth();
   const { teamMembers } = useTeamMembers();
   
   // CORREÇÃO CRÍTICA: Usar hook específico baseado no role do usuário

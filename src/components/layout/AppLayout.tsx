@@ -4,7 +4,7 @@ import React from "react";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/AuthContext";
+import { useEnhancedAuth } from "@/context/EnhancedAuthContext";
 import { Loader2 } from "lucide-react";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
@@ -14,7 +14,7 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
-  const { isLoading, user } = useAuth();
+  const { isLoading, user } = useEnhancedAuth();
   
   if (isLoading) {
     return (
