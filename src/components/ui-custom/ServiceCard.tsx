@@ -186,7 +186,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {service.technicians && service.technicians.length > 1 ? 'Técnicos' : 'Técnico Responsável'}
+                {service.technicians && service.technicians.length > 1 ? 'Técnicos Atribuídos' : 'Técnico Responsável'}
               </p>
               <p className="text-sm font-semibold truncate">
                 {service.technicians && service.technicians.length > 0
@@ -196,6 +196,12 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
                   : "Não atribuído"
                 }
               </p>
+              {service.technicians && service.technicians.length > 1 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {service.technicians.slice(1, 3).map(t => t.name).join(', ')}
+                  {service.technicians.length > 3 && ` e mais ${service.technicians.length - 3}`}
+                </p>
+              )}
             </div>
           </div>
           

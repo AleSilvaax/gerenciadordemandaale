@@ -6,7 +6,7 @@ import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { IntelligentNotificationCenter } from "@/components/notifications/IntelligentNotificationCenter";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -40,7 +40,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* ✅ 2. Adicionamos o sino de notificações aqui, ao lado do perfil */}
             <div className="flex items-center gap-2">
-              <NotificationCenter />
+              <IntelligentNotificationCenter />
               <UserProfileMenu />
             </div>
 

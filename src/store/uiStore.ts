@@ -8,13 +8,21 @@ interface UIState {
   isConnected: boolean;
 }
 
-interface Notification {
+export interface Notification {
   id: string;
   title: string;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
   timestamp: Date;
   read: boolean;
+  serviceId?: string;
+  category?: 'service' | 'system' | 'deadline' | 'assignment';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  actions?: Array<{
+    label: string;
+    action: () => void;
+    variant?: 'default' | 'destructive' | 'outline';
+  }>;
 }
 
 interface UIActions {

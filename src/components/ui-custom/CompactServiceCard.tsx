@@ -151,22 +151,35 @@ export const CompactServiceCard: React.FC<CompactServiceCardProps> = ({ service 
             )}
           </div>
 
-          {/* Linha 3: Técnico e Ação */}
+          {/* Linha 3: Técnicos e Ação */}
           <div className="flex items-center justify-between pt-3 border-t border-border/30">
             <div className="flex items-center gap-3">
               {service.technicians && service.technicians.length > 0 ? (
                 <>
-                  <TeamMemberAvatar
-                    src={service.technicians[0].avatar || ''}
-                    name={service.technicians[0].name}
-                    size="md"
-                  />
+                  <div className="flex -space-x-2">
+                    {service.technicians.slice(0, 2).map((technician, index) => (
+                      <TeamMemberAvatar
+                        key={technician.id}
+                        src={technician.avatar || ''}
+                        name={technician.name}
+                        size="md"
+                        className={`border-2 border-background ${index > 0 ? 'z-10' : 'z-20'}`}
+                      />
+                    ))}
+                    {service.technicians.length > 2 && (
+                      <div className="w-10 h-10 bg-muted border-2 border-background rounded-full flex items-center justify-center text-xs font-semibold text-muted-foreground z-30">
+                        +{service.technicians.length - 2}
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      {service.technicians[0].name}
+                      {service.technicians.length === 1 
+                        ? service.technicians[0].name 
+                        : `${service.technicians[0].name} + ${service.technicians.length - 1} outros`}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {service.technicians[0].role || 'Técnico'}
+                      {service.technicians.length > 1 ? 'Múltiplos técnicos' : 'Técnico responsável'}
                     </p>
                   </div>
                 </>
