@@ -245,13 +245,10 @@ export const createServiceInDatabase = async (
     if (error) throw error;
 
     let technicianError: string | null = null;
-    if (service.technicians && service.technicians.length > 0 && data.id) {
-        try {
-          const { assignMultipleTechnicians } = await import('./multiTechnicianService');
-          await assignMultipleTechnicians(data.id, service.technicians);
-        } catch (error) {
-          technicianError = "Serviço criado, mas falha ao atribuir técnicos.";
-        }
+    if (service.technicians?.[0]?.id && service.technicians[0].id !== '0' && data.id) {
+        await assignTechnician(data.id, service.technicians[0].id).catch(() => {
+            technicianError = "Serviço criado, mas falha ao atribuir técnico.";
+        });
     }
 
     const createdService = await getServiceByIdFromDatabase(data.id);
@@ -291,10 +288,8 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     
     if (error) throw error;
     
-    // Atribuir múltiplos técnicos se fornecidos
-    if (service.technicians !== undefined) {
-      const { assignMultipleTechnicians } = await import('./multiTechnicianService');
-      await assignMultipleTechnicians(service.id, service.technicians);
+    if (service.technicians !== undefined && service.technicians[0]) {
+      await assignTechnician(service.id, service.technicians[0].id);
     }
     
     const updatedService = await getServiceByIdFromDatabase(data.id);

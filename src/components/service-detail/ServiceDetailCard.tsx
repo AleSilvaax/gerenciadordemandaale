@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TeamMemberAvatar } from "@/components/ui-custom/TeamMemberAvatar";
-import { MultiTechnicianAssigner } from "@/components/ui-custom/MultiTechnicianAssigner";
+import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceEditForm } from "./ServiceEditForm";
 import { updateService } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
@@ -193,59 +193,55 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
           </div>
         </div>
 
-        {/* Técnicos Atribuídos */}
+        {/* Técnico Responsável */}
         <div className="space-y-3">
           <h4 className="text-base font-semibold text-foreground flex items-center gap-2 pb-2 border-b border-border/30">
             <User className="w-4 h-4 text-primary" />
-            {service.technicians && service.technicians.length > 1 ? 'Técnicos Atribuídos' : 'Técnico Responsável'}
+            Técnico Responsável
           </h4>
           <div className="p-3 bg-gradient-to-br from-background/60 to-background/30 rounded-lg border border-border/30">
-            {service.technicians && service.technicians.length > 0 ? (
-              <div className="space-y-3">
-                {service.technicians.map((technician, index) => (
-                  <div key={technician.id} className="flex items-center gap-3">
-                    <TeamMemberAvatar 
-                      src={technician.avatar || ""} 
-                      name={technician.name} 
-                      size="sm"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{technician.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {technician.role || 'Técnico'}
-                        {index === 0 && service.technicians && service.technicians.length > 1 && ' (Principal)'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {service.technicians?.[0] ? (
+                  <TeamMemberAvatar 
+                    src={service.technicians[0].avatar || ""} 
+                    name={service.technicians[0].name} 
+                    size="sm"
+                  />
+                ) : (
                   <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center">
                     <User className="w-5 h-5 text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Não atribuído</p>
-                    <p className="text-xs text-muted-foreground">Aguardando atribuição</p>
-                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {service.technicians?.[0]?.name ?? "Não atribuído"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {service.technicians?.[0]?.role ?? "Aguardando atribuição"}
+                  </p>
                 </div>
+              </div>
+              {!service.technicians?.[0] && (
                 <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/30 text-xs">
                   Pendente
                 </Badge>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
         {/* Gerenciar Atribuição (apenas para gestores) */}
         {hasGestorPermission && (
           <div className="space-y-3">
-            <MultiTechnicianAssigner
-              currentTechnicians={service.technicians || []}
-              onAssign={async (technicians) => {
-                await updateService({ id: service.id, technicians });
-                toast.success("Técnicos atualizados com sucesso!");
+            <h4 className="text-base font-semibold text-foreground pb-2 border-b border-border/30">
+              Gerenciar Atribuição
+            </h4>
+            <TechnicianAssigner
+              currentTechnicianId={service.technicians?.[0]?.id}
+              onAssign={async (technician) => {
+                await updateService({ id: service.id, technicians: [technician] });
+                toast.success("Técnico atualizado com sucesso!");
                 onServiceUpdate();
               }}
             />

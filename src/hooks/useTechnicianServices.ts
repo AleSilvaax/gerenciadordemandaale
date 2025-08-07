@@ -53,11 +53,11 @@ export const useTechnicianServices = () => {
         const safeStatus = ['pendente', 'em_andamento', 'concluido', 'cancelado', 'agendado'].includes(service.status)
           ? service.status as ServiceStatus : 'pendente' as ServiceStatus;
 
-        // Mapear técnicos (suporte a múltiplos técnicos)
+        // Mapear técnicos
         const technicians = service.service_technicians?.map((st: any) => ({
-          id: st.profiles?.id || st.technician_id,
-          name: st.profiles?.name || 'Técnico',
-          avatar: st.profiles?.avatar || '',
+          id: st.profiles.id,
+          name: st.profiles.name,
+          avatar: st.profiles.avatar,
           role: 'tecnico' as const
         })) || [];
 

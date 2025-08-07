@@ -31,10 +31,3 @@ export {
 } from "./serviceMessaging";
 
 export { uploadServicePhoto } from "./photoService";
-
-export {
-  assignMultipleTechnicians,
-  getServiceTechnicians,
-  addTechnicianToService,
-  removeTechnicianFromService
-} from "./multiTechnicianService";
