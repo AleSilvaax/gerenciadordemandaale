@@ -20,7 +20,16 @@ export const useSmartServices = () => {
   // Determinar qual query usar baseado no role
   const shouldUseTechnicianView = useMemo(() => {
     if (!user?.role) return false;
-    return user.role === 'tecnico' && !hasRoleOrHigher('gestor');
+    
+    console.log('[SMART SERVICES] User role:', user.role);
+    console.log('[SMART SERVICES] Has role gestor or higher:', hasRoleOrHigher('gestor'));
+    
+    // Técnicos puros (sem role de gestor ou superior) usam vista de técnico
+    const isTechnician = user.role === 'tecnico' && !hasRoleOrHigher('gestor');
+    
+    console.log('[SMART SERVICES] Should use technician view:', isTechnician);
+    
+    return isTechnician;
   }, [user?.role, hasRoleOrHigher]);
   
   // Retornar dados da query apropriada com interface unificada

@@ -13,22 +13,21 @@ export const useTechnicianServices = () => {
 
       console.log('[TECHNICIAN SERVICES] Buscando serviços para técnico:', user.id);
 
-      // Com as novas políticas RLS simplificadas, buscar serviços diretamente
-      // A política já filtra apenas os serviços visíveis para o técnico
+      // Buscar serviços usando RLS - as políticas já filtram automaticamente
+      // apenas os serviços atribuídos ao técnico logado
       const { data: services, error: servicesError } = await supabase
         .from('services')
         .select(`
           *,
-          service_technicians!inner(
+          service_technicians(
             technician_id,
-            profiles!inner(
+            profiles(
               id,
               name,
               avatar
             )
           )
         `)
-        .eq('service_technicians.technician_id', user.id)
         .order('created_at', { ascending: false });
 
       if (servicesError) {

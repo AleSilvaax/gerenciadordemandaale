@@ -23,6 +23,7 @@ import {
   Download
 } from "lucide-react";
 import { useSmartServices } from "@/hooks/useSmartServices";
+import { RoleBasedAccess } from "@/components/admin/RoleBasedAccess";
 import { Link, useNavigate } from "react-router-dom";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
@@ -43,6 +44,9 @@ const Demandas = () => {
     isTechnicianView, 
     isManager
   } = smartServicesResult;
+
+  console.log('[DEMANDAS] User view type:', { isTechnicianView, isManager });
+  console.log('[DEMANDAS] Services count:', services?.length || 0);
   
   // Função de refresh que funciona para ambos os hooks
   const refreshServices = () => {
@@ -217,8 +221,8 @@ const Demandas = () => {
               {!isMobile && <span className="ml-2">Exportar</span>}
             </Button>
 
-            {/* New Service Button */}
-            {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
+            {/* New Service Button - Only for managers and above */}
+            <RoleBasedAccess allowedRoles={['super_admin', 'owner', 'administrador', 'gestor']}>
               <Link to="/nova-demanda">
                 <Button className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
                   <Plus className="w-4 h-4" />
@@ -226,7 +230,7 @@ const Demandas = () => {
                   <span className="ml-2 sm:hidden">Nova</span>
                 </Button>
               </Link>
-            )}
+            </RoleBasedAccess>
           </div>
         </motion.div>
 
