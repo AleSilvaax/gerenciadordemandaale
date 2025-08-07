@@ -22,9 +22,8 @@ import {
   RefreshCcw,
   Download
 } from "lucide-react";
+import { useSmartServices } from "@/hooks/useSmartServices";
 import { Link, useNavigate } from "react-router-dom";
-import { useServices } from "@/hooks/useServices";
-import { useTechnicianServices } from "@/hooks/useTechnicianServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
 import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
@@ -36,15 +35,23 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Demandas = () => {
-  const { canViewAllServices } = usePermissions();
-  const shouldUseGeneralServices = canViewAllServices();
+  // Usar o hook inteligente que decide automaticamente qual estratégia usar
+  const smartServicesResult = useSmartServices();
+  const { 
+    services = [], 
+    isLoading, 
+    isTechnicianView, 
+    isManager
+  } = smartServicesResult;
   
-  const { services: allServices = [], isLoading: isLoadingAll, refreshServices: refetchAll } = useServices();
-  const { data: technicianServices = [], isLoading: isLoadingTech, refetch: refetchTech } = useTechnicianServices();
-  
-  const services = shouldUseGeneralServices ? allServices : technicianServices;
-  const isLoading = shouldUseGeneralServices ? isLoadingAll : isLoadingTech;
-  const refreshServices = shouldUseGeneralServices ? refetchAll : refetchTech;
+  // Função de refresh que funciona para ambos os hooks
+  const refreshServices = () => {
+    if ('refetch' in smartServicesResult && typeof smartServicesResult.refetch === 'function') {
+      smartServicesResult.refetch();
+    } else if ('actions' in smartServicesResult && smartServicesResult.actions?.refreshServices) {
+      smartServicesResult.actions.refreshServices();
+    }
+  };
   
   const { teamMembers } = useTeamMembers();
   const { user } = useAuth();

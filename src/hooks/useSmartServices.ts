@@ -40,5 +40,7 @@ export const useSmartServices = () => {
     isTechnicianView: shouldUseTechnicianView,
     isManager: hasRoleOrHigher('gestor'),
     isAdmin: hasRoleOrHigher('administrador'),
+    // Manter compatibilidade com refreshServices
+    refreshServices: consolidatedServicesQuery.actions?.refreshServices,
   };
 };
