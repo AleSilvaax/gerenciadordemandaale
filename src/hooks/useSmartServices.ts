@@ -31,6 +31,9 @@ export const useSmartServices = () => {
       isTechnicianView: shouldUseTechnicianView,
       isManager: hasRoleOrHigher('gestor'),
       isAdmin: hasRoleOrHigher('administrador'),
+      // Adicionar compatibilidade
+      refreshServices: technicianServicesQuery.refetch,
+      actions: { refreshServices: technicianServicesQuery.refetch },
     };
   }
   
@@ -42,5 +45,9 @@ export const useSmartServices = () => {
     isAdmin: hasRoleOrHigher('administrador'),
     // Manter compatibilidade com refreshServices
     refreshServices: consolidatedServicesQuery.actions?.refreshServices,
+    // Adicionar propriedades esperadas pelos componentes
+    data: consolidatedServicesQuery.services || [],
+    isLoading: consolidatedServicesQuery.isLoading,
+    error: consolidatedServicesQuery.error,
   };
 };
