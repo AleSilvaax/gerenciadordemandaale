@@ -127,10 +127,20 @@ const NewService: React.FC = () => {
       };
 
       const result = await createService(serviceData);
+      
+      if (!result?.created?.id) {
+        throw new Error("Falha ao criar demanda: resposta inválida do servidor");
+      }
+      
       const newService = result.created;
       console.log("Demanda criada:", newService);
       
-      toast.success("Demanda criada com sucesso!");
+      if (result.technicianError) {
+        toast.warning(`Demanda criada com sucesso! ${result.technicianError}`);
+      } else {
+        toast.success("Demanda criada com sucesso!");
+      }
+      
       navigate(`/demanda/${newService.id}`);
     } catch (error) {
       console.error("Erro ao criar demanda:", error);

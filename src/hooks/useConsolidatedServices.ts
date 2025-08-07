@@ -47,7 +47,17 @@ export const useConsolidatedServices = (options: UseConsolidatedServicesOptions 
     isStale
   } = useQuery({
     queryKey: SERVICES_QUERY_KEY,
-    queryFn: getServices,
+    queryFn: async () => {
+      try {
+        // Com as novas políticas RLS simplificadas, buscar serviços diretamente
+        // A política já aplica os filtros corretos baseados no role do usuário
+        const result = await getServices();
+        return result || [];
+      } catch (error) {
+        console.error('Erro ao buscar serviços consolidados:', error);
+        throw error;
+      }
+    },
     staleTime,
     gcTime: cacheTime,
     refetchOnWindowFocus: false,

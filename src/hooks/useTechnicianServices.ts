@@ -13,26 +13,8 @@ export const useTechnicianServices = () => {
 
       console.log('[TECHNICIAN SERVICES] Buscando serviços para técnico:', user.id);
 
-      // Primeiro buscar os service_ids atribuídos ao técnico
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('service_technicians')
-        .select('service_id')
-        .eq('technician_id', user.id);
-
-      if (assignmentsError) {
-        console.error('[TECHNICIAN SERVICES] Erro ao buscar atribuições:', assignmentsError);
-        throw assignmentsError;
-      }
-
-      if (!assignments || assignments.length === 0) {
-        console.log('[TECHNICIAN SERVICES] Nenhuma demanda atribuída ao técnico');
-        return [];
-      }
-
-      const serviceIds = assignments.map(a => a.service_id);
-      console.log('[TECHNICIAN SERVICES] IDs dos serviços atribuídos:', serviceIds);
-
-      // Buscar os serviços completos
+      // Com as novas políticas RLS simplificadas, buscar serviços diretamente
+      // A política já filtra apenas os serviços visíveis para o técnico
       const { data: services, error: servicesError } = await supabase
         .from('services')
         .select(`
@@ -46,7 +28,7 @@ export const useTechnicianServices = () => {
             )
           )
         `)
-        .in('id', serviceIds)
+        .eq('service_technicians.technician_id', user.id)
         .order('created_at', { ascending: false });
 
       if (servicesError) {
