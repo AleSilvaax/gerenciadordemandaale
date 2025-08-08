@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useNavigate } from 'react-router-dom';
 import { MobileHeader } from '@/components/layout/MobileHeader';
@@ -256,7 +257,10 @@ const Calendar: React.FC = () => {
                         className="group relative overflow-hidden"
                       >
                         <div 
-                          className="p-5 bg-gradient-to-r from-background/80 via-background/60 to-background/40 rounded-2xl border border-border/40 cursor-pointer hover:border-primary/40 hover:shadow-xl transition-all duration-300 backdrop-blur-sm"
+                          className={cn(
+                            "p-5 bg-gradient-to-r from-background/80 via-background/60 to-background/40 rounded-2xl border border-border/40 cursor-pointer hover:border-primary/40 hover:shadow-xl transition-all duration-300 backdrop-blur-sm",
+                            event.status === 'concluido' && "opacity-75"
+                          )}
                           onClick={() => event.service?.id && navigate(`/demanda/${event.service.id}`)}
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -266,6 +270,9 @@ const Calendar: React.FC = () => {
                                 <h4 className="font-bold text-lg group-hover:text-primary transition-colors duration-200">
                                   {event.title}
                                 </h4>
+                                <Badge variant="outline">
+                                  {event.status === 'concluido' ? 'Concluído' : event.status === 'em_andamento' ? 'Em andamento' : event.status === 'cancelado' ? 'Cancelado' : event.status === 'pendente' ? 'Pendente' : 'Agendado'}
+                                </Badge>
                               </div>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -301,7 +308,7 @@ const Calendar: React.FC = () => {
                               <div className="text-right">
                                 <div className="text-xs text-muted-foreground">Horário</div>
                                 <div className="font-semibold text-sm">
-                                  {format(event.start, 'HH:mm', { locale: ptBR })}
+                                  {format(event.start, 'HH:mm', { locale: ptBR }) === '00:00' ? '–:–' : format(event.start, 'HH:mm', { locale: ptBR })}
                                 </div>
                               </div>
                               <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />

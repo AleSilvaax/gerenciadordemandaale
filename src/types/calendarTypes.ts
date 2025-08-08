@@ -19,7 +19,7 @@ export interface CalendarEvent {
   start: Date;
   end: Date;
   description?: string;
-  status: 'agendado' | 'em_andamento' | 'concluido' | 'cancelado';
+  status: 'agendado' | 'em_andamento' | 'concluido' | 'cancelado' | 'pendente';
   technician?: {
     id: string;
     name: string;
