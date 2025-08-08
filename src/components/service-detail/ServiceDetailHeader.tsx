@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 
-export const ServiceDetailHeader: React.FC = () => {
+export const ServiceDetailHeader: React.FC<{ title?: string; number?: string | number; }> = ({ title, number }) => {
   return (
     <motion.div 
       className="flex items-center gap-4 mb-8"
@@ -19,7 +19,7 @@ export const ServiceDetailHeader: React.FC = () => {
       </Link>
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-          Detalhes da Demanda
+          {number ? `Demanda #${number}` : 'Detalhes da Demanda'}{title ? ` — ${title}` : ''}
         </h1>
         <p className="text-muted-foreground mt-1">Visualize e gerencie os detalhes da demanda</p>
       </div>

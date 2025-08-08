@@ -1,6 +1,6 @@
 // ARQUIVO COMPLETO E CORRIGIDO: src/pages/ServiceDetail.tsx
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
@@ -42,6 +42,14 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     handleUpdateCustomFields,
     handlePhotosChange
   } = useServiceDetail();
+
+  useEffect(() => {
+    if (service?.title || service?.number) {
+      document.title = `Demanda ${service?.number ? `#${service.number}` : ''} | ${service?.title || 'Detalhes'}`;
+    } else {
+      document.title = 'Detalhes da Demanda';
+    }
+  }, [service?.title, service?.number]);
 
   const handleGenerateReport = async () => {
     if (!service || !user) {

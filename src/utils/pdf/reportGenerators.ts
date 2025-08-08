@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Service, TeamMember } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
+import { addPageNumbers } from './pdfFormatters';
 
 export const generateExecutiveReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -84,7 +85,8 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
     margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
-  // Save
+  // Footer/page numbers
+  addPageNumbers(doc);
   const fileName = `relatorio-executivo-${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 };
@@ -167,6 +169,7 @@ export const generateOperationalReport = async (services: Service[], teamMembers
     margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
+  addPageNumbers(doc);
   const fileName = `relatorio-operacional-${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 };
@@ -253,6 +256,7 @@ export const generateTeamPerformanceReport = async (services: Service[], teamMem
     margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
+  addPageNumbers(doc);
   const fileName = `relatorio-performance-equipe-${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 };
@@ -337,6 +341,7 @@ export const generateServiceAnalysisReport = async (services: Service[], teamMem
     margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
+  addPageNumbers(doc);
   const fileName = `relatorio-analise-servicos-${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(fileName);
 };
