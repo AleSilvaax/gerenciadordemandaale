@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const NotificationCenter: React.FC = () => {
-  const { notifications, markNotificationRead, removeNotification } = useUIStore();
+  const { notifications, markNotificationRead, removeNotification, isConnected } = useUIStore();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -25,9 +25,11 @@ export const NotificationCenter: React.FC = () => {
     setIsOpen(open);
   };
 
-  const handleNotificationClick = (notificationId: string, serviceId?: string) => {
+  const handleNotificationClick = (notificationId: string, serviceId?: string, route?: string) => {
     markNotificationRead(notificationId);
-    if (serviceId) {
+    if (route) {
+      navigate(route);
+    } else if (serviceId) {
       navigate(`/demanda/${serviceId}`);
     }
     setIsOpen(false);
@@ -101,12 +103,18 @@ export const NotificationCenter: React.FC = () => {
               </Badge>
             )}
           </div>
-          {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" className="text-xs h-auto p-1" onClick={markAllAsRead}>
-              <CheckCheck className="w-3 h-3 mr-1"/>
-              Marcar todas como lidas
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className={`inline-block h-2 w-2 rounded-full ${isConnected ? 'bg-primary' : 'bg-border'}`} />
+              <span>{isConnected ? 'Online' : 'Offline'}</span>
+            </div>
+            {notifications.length > 0 && (
+              <Button variant="ghost" size="sm" className="text-xs h-auto p-1" onClick={markAllAsRead}>
+                <CheckCheck className="w-3 h-3 mr-1"/>
+                Marcar todas como lidas
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[420px]">
@@ -138,7 +146,7 @@ export const NotificationCenter: React.FC = () => {
                       "group relative flex items-start gap-3 p-4 hover:bg-accent/50 cursor-pointer transition-all duration-200",
                       !notification.read && "bg-primary/5 border-l-2 border-l-primary"
                     )}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    onClick={() => handleNotificationClick(notification.id, notification.serviceId, notification.route)}
                   >
                     {/* Ícone da notificação */}
                     <div className="flex-shrink-0 mt-0.5">

@@ -15,6 +15,9 @@ interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   timestamp: Date;
   read: boolean;
+  serviceId?: string;
+  route?: string;
+  meta?: Record<string, any>;
 }
 
 interface UIActions {

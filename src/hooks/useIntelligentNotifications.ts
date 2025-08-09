@@ -10,7 +10,9 @@ export const useIntelligentNotifications = () => {
     addNotification({
       title: '🔧 Técnico Atribuído',
       message: `Você foi atribuído à demanda: "${service.title}"`,
-      type: 'info'
+      type: 'info',
+      serviceId: service.id,
+      route: `/demanda/${service.id}`,
     });
   }, [addNotification]);
 
@@ -18,7 +20,9 @@ export const useIntelligentNotifications = () => {
     addNotification({
       title: '✅ Demanda Concluída',
       message: `Demanda "${service.title}" foi finalizada!`,
-      type: 'success'
+      type: 'success',
+      serviceId: service.id,
+      route: `/demanda/${service.id}`,
     });
   }, [addNotification]);
 
@@ -26,7 +30,9 @@ export const useIntelligentNotifications = () => {
     addNotification({
       title: '⏰ Demanda em Atraso',
       message: `Demanda "${service.title}" está atrasada`,
-      type: 'warning'
+      type: 'warning',
+      serviceId: service.id,
+      route: `/demanda/${service.id}`,
     });
     
     toast({
