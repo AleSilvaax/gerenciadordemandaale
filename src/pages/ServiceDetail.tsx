@@ -101,7 +101,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <ServiceDetailHeader />
+        <ServiceDetailHeader title={service.title} number={service.number} />
         
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
           <div className="xl:col-span-2 space-y-4 lg:space-y-6">

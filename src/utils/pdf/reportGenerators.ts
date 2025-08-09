@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Service, TeamMember } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
-import { addPageNumbers } from './pdfFormatters';
+import { addPageNumbers, addHeader } from './pdfFormatters';
 
 export const generateExecutiveReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -12,7 +12,7 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
   
   // Summary statistics
   doc.addPage();
-  let currentY = 30;
+  let currentY = addHeader(doc, 'RELATÓRIO EXECUTIVO', 0);
   
   // Title
   doc.setFontSize(18);
@@ -97,7 +97,7 @@ export const generateOperationalReport = async (services: Service[], teamMembers
   createReportCover(doc, 'RELATÓRIO OPERACIONAL', 'Detalhes técnicos e operacionais');
   
   doc.addPage();
-  let currentY = 30;
+  let currentY = addHeader(doc, 'RELATÓRIO OPERACIONAL', 0);
   
   // Services by type
   doc.setFontSize(18);
@@ -180,7 +180,7 @@ export const generateTeamPerformanceReport = async (services: Service[], teamMem
   createReportCover(doc, 'PERFORMANCE DA EQUIPE', 'Análise detalhada dos técnicos');
   
   doc.addPage();
-  let currentY = 30;
+  let currentY = addHeader(doc, 'PERFORMANCE DA EQUIPE', 0);
   
   // Team overview
   doc.setFontSize(18);
@@ -267,7 +267,7 @@ export const generateServiceAnalysisReport = async (services: Service[], teamMem
   createReportCover(doc, 'ANÁLISE DE SERVIÇOS', 'Breakdown detalhado por categoria');
   
   doc.addPage();
-  let currentY = 30;
+  let currentY = addHeader(doc, 'ANÁLISE DE SERVIÇOS', 0);
   
   // Services by status
   doc.setFontSize(18);
