@@ -94,15 +94,16 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" role="main">
       <motion.div
         className="container mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <ServiceDetailHeader title={service.title} number={service.number} />
-        
+        <header>
+          <ServiceDetailHeader title={service.title} number={service.number} />
+        </header>
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
           <div className="xl:col-span-2 space-y-4 lg:space-y-6">
             <motion.div
@@ -168,7 +169,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             </motion.div>
           </div>
 
-          <div className="space-y-4 lg:space-y-6 xl:sticky xl:top-4">
+          <aside className="space-y-4 lg:space-y-6 xl:sticky xl:top-4" aria-label="Interações da demanda">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -205,10 +206,10 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                 onUpdateSignatures={handleUpdateSignatures}
               />
             </motion.div>
-          </div>
+          </aside>
         </div>
       </motion.div>
-    </div>
+    </main>
   );
 };
 

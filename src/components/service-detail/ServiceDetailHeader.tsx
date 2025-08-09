@@ -13,6 +13,7 @@ export const ServiceDetailHeader: React.FC<{ title?: string; number?: string | n
     >
       <Link 
         to="/demandas" 
+        aria-label="Voltar às demandas"
         className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
       >
         <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
