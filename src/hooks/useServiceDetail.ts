@@ -11,6 +11,7 @@ import {
 import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useIntelligentNotifications } from "@/hooks/useIntelligentNotifications";
 
 interface Photo {
   id: string;
@@ -25,9 +26,10 @@ export const useServiceDetail = () => {
   const [newMessage, setNewMessage] = useState("");
   const [feedback, setFeedback] = useState<ServiceFeedback>({ clientRating: 5 });
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const { id } = useParams<{ id?: string }>();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+const { id } = useParams<{ id?: string }>();
+const { user } = useAuth();
+const navigate = useNavigate();
+const { notifyServiceCompleted } = useIntelligentNotifications();
 
   const loadPhotosFromDatabase = async (serviceId: string) => {
     try {
@@ -100,18 +102,22 @@ export const useServiceDetail = () => {
     }
   };
 
-  const handleStatusChange = async (newStatus: Service["status"]) => {
-    if (!service) return;
-    try {
-      const updatedService = await updateService({ id: service.id, status: newStatus });
-      if (updatedService) {
-        setService(updatedService);
-        toast.success("Status atualizado com sucesso!");
+const handleStatusChange = async (newStatus: Service["status"]) => {
+  if (!service) return;
+  try {
+    const updatedService = await updateService({ id: service.id, status: newStatus });
+    if (updatedService) {
+      setService(updatedService);
+      toast.success("Status atualizado com sucesso!");
+      if (newStatus === 'concluido') {
+        // Notificação contextual quando concluído
+        notifyServiceCompleted(updatedService);
       }
-    } catch (error) {
-      toast.error("Erro ao atualizar status");
     }
-  };
+  } catch (error) {
+    toast.error("Erro ao atualizar status");
+  }
+};
 
   const handleSendMessage = async () => {
     if (!service || !newMessage.trim() || !user) return;

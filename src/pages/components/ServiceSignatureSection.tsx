@@ -29,13 +29,13 @@ const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = ({
             {clientName}
           </span>
         </div>
-        <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-          <SignatureCapture
-            initialSignature={clientSignature}
-            onChange={onClientSignature}
-            label="Assinatura do Cliente"
-          />
-        </div>
+<div className="border border-border/50 rounded-md p-4 bg-card/50 backdrop-blur-sm">
+  <SignatureCapture
+    initialSignature={clientSignature}
+    onChange={onClientSignature}
+    label="Assinatura do Cliente"
+  />
+</div>
       </div>
       <div>
         <h5 className="text-sm font-medium mb-2">Assinatura do Técnico</h5>
@@ -44,13 +44,13 @@ const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = ({
             Técnico: {technicianName}
           </span>
         </div>
-        <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-800">
-          <SignatureCapture
-            initialSignature={technicianSignature}
-            onChange={onTechnicianSignature}
-            label="Assinatura do Técnico"
-          />
-        </div>
+<div className="border border-border/50 rounded-md p-4 bg-card/50 backdrop-blur-sm">
+  <SignatureCapture
+    initialSignature={technicianSignature}
+    onChange={onTechnicianSignature}
+    label="Assinatura do Técnico"
+  />
+</div>
       </div>
     </div>
   </div>

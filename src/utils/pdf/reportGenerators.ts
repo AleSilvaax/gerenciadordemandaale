@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { Service, TeamMember } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { addPageNumbers, addHeader } from './pdfFormatters';
+import { defaultTableTheme } from './pdfLayout';
 
 export const generateExecutiveReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -14,12 +15,12 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
   doc.addPage();
   let currentY = addHeader(doc, 'RELATÓRIO EXECUTIVO', 0);
   
-  // Title
+// Title
   doc.setFontSize(18);
   doc.setFont(PDF_FONTS.normal, 'bold');
   doc.setTextColor(...PDF_COLORS.primary);
   doc.text('RESUMO EXECUTIVO', PDF_DIMENSIONS.margin, currentY);
-  currentY += 15;
+  currentY += 12;
   
   // Stats
   const stats = calculateServiceStats(services);
@@ -32,22 +33,12 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
     ['Equipe Ativa', teamMembers.length.toString()]
   ];
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Métrica', 'Valor']],
-    body: statsData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.primary],
-      textColor: [255, 255, 255],
-      fontSize: 12
-    },
-    bodyStyles: {
-      fontSize: 11,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Métrica', 'Valor']],
+  body: statsData,
+  ...defaultTableTheme('primary'),
+});
   
   // Top performers
   currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -68,22 +59,13 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
     (member.stats?.avgRating || 0).toFixed(1)
   ]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Técnico', 'Função', 'Concluídos', 'Avaliação']],
-    body: performersData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Técnico', 'Função', 'Concluídos', 'Avaliação']],
+  body: performersData,
+  ...defaultTableTheme('accent'),
+  theme: 'striped',
+});
   
   // Footer/page numbers
   addPageNumbers(doc);
@@ -114,22 +96,12 @@ export const generateOperationalReport = async (services: Service[], teamMembers
   
   const typeData = Object.entries(servicesByType).map(([type, count]) => [type, count.toString()]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Tipo de Serviço', 'Quantidade']],
-    body: typeData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.primary],
-      textColor: [255, 255, 255],
-      fontSize: 12
-    },
-    bodyStyles: {
-      fontSize: 11,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Tipo de Serviço', 'Quantidade']],
+  body: typeData,
+  ...defaultTableTheme('primary'),
+});
   
   // Services details
   currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -152,22 +124,13 @@ export const generateOperationalReport = async (services: Service[], teamMembers
     service.location || 'N/A'
   ]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['OS', 'Título', 'Status', 'Cliente', 'Local']],
-    body: servicesData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 10
-    },
-    bodyStyles: {
-      fontSize: 9,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['OS', 'Título', 'Status', 'Cliente', 'Local']],
+  body: servicesData,
+  ...defaultTableTheme('accent'),
+  theme: 'striped',
+});
   
   addPageNumbers(doc);
   const fileName = `relatorio-operacional-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -198,22 +161,12 @@ export const generateTeamPerformanceReport = async (services: Service[], teamMem
     member.stats?.joinDate || 'N/A'
   ]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Nome', 'Função', 'Concluídos', 'Pendentes', 'Avaliação', 'Entrada']],
-    body: teamData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.primary],
-      textColor: [255, 255, 255],
-      fontSize: 10
-    },
-    bodyStyles: {
-      fontSize: 9,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Nome', 'Função', 'Concluídos', 'Pendentes', 'Avaliação', 'Entrada']],
+  body: teamData,
+  ...defaultTableTheme('primary'),
+});
   
   // Performance metrics
   currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -239,22 +192,13 @@ export const generateTeamPerformanceReport = async (services: Service[], teamMem
     ['Total de Administradores', teamMembers.filter(m => m.role === 'administrador').length.toString()]
   ];
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Métrica', 'Valor']],
-    body: metricsData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Métrica', 'Valor']],
+  body: metricsData,
+  ...defaultTableTheme('accent'),
+  theme: 'striped',
+});
   
   addPageNumbers(doc);
   const fileName = `relatorio-performance-equipe-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -287,22 +231,12 @@ export const generateServiceAnalysisReport = async (services: Service[], teamMem
     `${Math.round((count / services.length) * 100)}%`
   ]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Status', 'Quantidade', 'Percentual']],
-    body: statusData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.primary],
-      textColor: [255, 255, 255],
-      fontSize: 12
-    },
-    bodyStyles: {
-      fontSize: 11,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Status', 'Quantidade', 'Percentual']],
+  body: statusData,
+  ...defaultTableTheme('primary'),
+});
   
   // Services by priority
   currentY = (doc as any).lastAutoTable.finalY + 20;
@@ -324,22 +258,13 @@ export const generateServiceAnalysisReport = async (services: Service[], teamMem
     `${Math.round((count / services.length) * 100)}%`
   ]);
   
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Prioridade', 'Quantidade', 'Percentual']],
-    body: priorityData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 11
-    },
-    bodyStyles: {
-      fontSize: 10,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
-  });
+autoTable(doc, {
+  startY: currentY,
+  head: [['Prioridade', 'Quantidade', 'Percentual']],
+  body: priorityData,
+  ...defaultTableTheme('accent'),
+  theme: 'striped',
+});
   
   addPageNumbers(doc);
   const fileName = `relatorio-analise-servicos-${new Date().toISOString().slice(0, 10)}.pdf`;

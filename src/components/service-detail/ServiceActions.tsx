@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +20,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
   editMode = false,
   onGenerateReport
 }) => {
+  const [downloading, setDownloading] = useState(false);
   const getStatusIcon = (status: Service["status"]) => {
     switch (status) {
       case "concluido":
@@ -95,19 +96,29 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
 
         {/* Gerar Relatório */}
         {onGenerateReport && (
-          <div className="pt-4 border-t">
-            <Button 
-              onClick={onGenerateReport} 
-              className="w-full"
-              variant="outline"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Gerar Relatório PDF
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Inclui todas as informações, fotos e assinaturas
-            </p>
-          </div>
+<div className="pt-4 border-t">
+  <Button 
+    onClick={async () => {
+      if (!onGenerateReport) return;
+      try {
+        setDownloading(true);
+        await onGenerateReport();
+      } finally {
+        setDownloading(false);
+      }
+    }} 
+    className="w-full"
+    variant="outline"
+    disabled={downloading}
+    aria-label="Gerar relatório PDF da demanda"
+  >
+    <Download className="w-4 h-4 mr-2" />
+    {downloading ? 'Gerando...' : 'Gerar Relatório PDF'}
+  </Button>
+  <p className="text-xs text-muted-foreground mt-2 text-center">
+    Inclui todas as informações, fotos e assinaturas
+  </p>
+</div>
         )}
       </CardContent>
     </Card>

@@ -62,25 +62,27 @@ export const ServiceMessages: React.FC<ServiceMessagesProps> = ({
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhuma mensagem ainda</p>
-            </div>
+<div className="text-center py-8 text-muted-foreground">
+  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+  <p className="text-sm">Nenhuma mensagem ainda</p>
+  <p className="text-xs">Envie a primeira mensagem abaixo</p>
+</div>
           )}
         </ScrollArea>
         
-        <div className="flex gap-2">
-          <Input
-            placeholder="Digite sua mensagem..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && onSendMessage()}
-            className="bg-background/50"
-          />
-          <Button onClick={onSendMessage} size="sm">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+<div className="flex gap-2">
+  <Input
+    placeholder="Digite sua mensagem..."
+    aria-label="Mensagem da demanda"
+    value={newMessage}
+    onChange={(e) => setNewMessage(e.target.value)}
+    onKeyDown={(e) => e.key === 'Enter' && onSendMessage()}
+    className="bg-background/50"
+  />
+  <Button onClick={onSendMessage} size="sm" aria-label="Enviar mensagem">
+    <Send className="w-4 h-4" />
+  </Button>
+</div>
       </CardContent>
     </Card>
   );
