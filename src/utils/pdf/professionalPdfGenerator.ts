@@ -83,6 +83,16 @@ const createProfessionalCover = async (doc: jsPDF, service: Service): Promise<nu
   doc.setFillColor(...PDF_COLORS.accent);
   doc.rect(0, 95, PDF_DIMENSIONS.pageWidth, 10, 'F');
   
+  // Logo (quando disponível)
+  try {
+    const logo = await processImage('/icons/icon-512.png');
+    if (logo) {
+      doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 10, 16, 16);
+    }
+  } catch (e) {
+    console.warn('[PDF] Logo não carregado');
+  }
+  
   // Título principal
   doc.setFontSize(28);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
