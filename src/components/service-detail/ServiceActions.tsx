@@ -27,8 +27,6 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case "cancelado":
         return <X className="w-4 h-4 text-red-500" />;
-      case "em_andamento":
-        return <Clock className="w-4 h-4 text-blue-500" />;
       default:
         return <Clock className="w-4 h-4 text-yellow-500" />;
     }
@@ -59,8 +57,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
           <span className="text-sm font-medium">Status Atual:</span>
           <Badge variant={getStatusBadgeVariant(service.status)} className="flex items-center gap-1">
             {getStatusIcon(service.status)}
-            {service.status === "pendente" ? "Pendente" :
-             service.status === "em_andamento" ? "Em Andamento" :
+            {service.status === "pendente" ? "Pendente" : 
              service.status === "concluido" ? "Concluído" : "Cancelado"}
           </Badge>
         </div>
@@ -78,12 +75,6 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-yellow-500" />
                     Pendente
-                  </div>
-                </SelectItem>
-                <SelectItem value="em_andamento">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-500" />
-                    Em Andamento
                   </div>
                 </SelectItem>
                 <SelectItem value="concluido">

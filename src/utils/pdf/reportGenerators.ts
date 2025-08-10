@@ -4,7 +4,6 @@ import { Service, TeamMember } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { addPageNumbers, addHeader } from './pdfFormatters';
 import { defaultTableTheme } from './pdfLayout';
-import { processImage } from './imageProcessor';
 
 export const generateExecutiveReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -281,12 +280,6 @@ const createReportCover = (doc: jsPDF, title: string, subtitle: string): void =>
   // Accent bar
   doc.setFillColor(...PDF_COLORS.accent);
   doc.rect(0, 95, PDF_DIMENSIONS.pageWidth, 10, 'F');
-  
-  // Logo
-  try {
-    const logo = await processImage('/icons/icon-512.png');
-    if (logo) doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 10, 16, 16);
-  } catch {}
   
   // Title
   doc.setFontSize(24);
