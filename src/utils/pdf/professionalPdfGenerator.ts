@@ -268,13 +268,15 @@ const createProfessionalCover = async (doc: any, service: Service): Promise<numb
 const createIndex = (doc: any, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, 'ÍNDICE', PDF_DIMENSIONS.margin, currentY, {
-    fontSize: 18,
-    fontStyle: 'bold',
-    color: [...PDF_COLORS.primary] as [number, number, number]
-  });
+  // Título com fundo
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(18);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('ÍNDICE', PDF_DIMENSIONS.margin, currentY);
 
-  currentY += 10;
+  currentY += 12;
 
   const indexItems = [
     '1. Informações Gerais',
@@ -288,38 +290,46 @@ const createIndex = (doc: any, startY: number): number => {
     '9. Anexos Fotográficos'
   ];
 
-  indexItems.forEach((item) => {
-    currentY = safeAddText(doc, item, PDF_DIMENSIONS.margin + 10, currentY, {
-      fontSize: 10,
-      color: [...PDF_COLORS.text] as [number, number, number]
-    });
-    currentY += 6;
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLORS.text);
+  indexItems.forEach((item, idx) => {
+    const yPos = currentY + (idx * 7);
+    doc.text(item, PDF_DIMENSIONS.margin, yPos);
+    // linha tracejada até a margem direita
+    const lineStartX = PDF_DIMENSIONS.margin + doc.getTextWidth(item) + 2;
+    doc.setDrawColor(...PDF_COLORS.lightGray);
+    for (let x = lineStartX; x < PDF_DIMENSIONS.pageWidth - 25; x += 2) {
+      doc.line(x, yPos - 1, x + 1, yPos - 1);
+    }
+    // número da página (placeholder)
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(String(idx + 2), PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, yPos, { align: 'right' });
+    doc.setTextColor(...PDF_COLORS.text);
   });
 
-  return currentY + 10;
+  return currentY + indexItems.length * 7 + 5;
 };
 
 const createServiceOverview = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  // Título da seção
-  currentY = safeAddText(doc, '1. INFORMAÇÕES GERAIS', PDF_DIMENSIONS.margin, currentY, {
-    fontSize: 16,
-    fontStyle: 'bold',
-    color: [...PDF_COLORS.primary] as [number, number, number]
-  });
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('1. INFORMAÇÕES GERAIS', PDF_DIMENSIONS.margin, currentY);
 
-  currentY += 8;
+  currentY += 10;
 
-  // Caixa de destaque
-  doc.setFillColor(...PDF_COLORS.lightGray);
-  doc.rect(PDF_DIMENSIONS.margin - 5, currentY - 5, 170, 60, 'F');
+  // Card de informações
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'F');
+  doc.setDrawColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'S');
 
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.rect(PDF_DIMENSIONS.margin - 5, currentY - 5, 170, 60, 'S');
-
-  // Informações principais
-  const overview = [
+  const info = [
     ['Número da OS:', formatForPdf(service.number || 'N/A')],
     ['Título:', formatForPdf(service.title)],
     ['Tipo de Serviço:', formatForPdf(service.serviceType || 'Não especificado')],
@@ -328,32 +338,35 @@ const createServiceOverview = (doc: any, service: Service, startY: number): numb
     ['Localização:', formatForPdf(service.location || 'Não informado')]
   ];
 
-  overview.forEach(([label, value]) => {
-    currentY = safeAddText(doc, `${label} ${value}`, PDF_DIMENSIONS.margin, currentY, {
-      fontSize: 10,
-      color: [...PDF_COLORS.text] as [number, number, number]
-    });
-    currentY += 6;
+  let colX = PDF_DIMENSIONS.margin + 3;
+  let colY = currentY + 8;
+  doc.setFontSize(10);
+  info.forEach(([label, value], idx) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(label, colX, colY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(value, 120), colX + 35, colY);
+    colY += 8;
   });
 
-  currentY += 8;
+  currentY += 60;
 
-  // Descrição
   if (service.description) {
-    currentY = safeAddText(doc, 'Descrição do Serviço:', PDF_DIMENSIONS.margin, currentY, {
-      fontSize: 12,
-      fontStyle: 'bold',
-      color: [...PDF_COLORS.secondary] as [number, number, number]
-    });
-
-    currentY = safeAddText(doc, service.description, PDF_DIMENSIONS.margin, currentY, {
-      fontSize: 10,
-      color: [...PDF_COLORS.text] as [number, number, number],
-      maxWidth: 160
-    });
+    doc.setFontSize(12);
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text('Descrição do Serviço:', PDF_DIMENSIONS.margin, currentY);
+    currentY += 5;
+    doc.setFontSize(10);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(service.description, 160), PDF_DIMENSIONS.margin, currentY);
+    currentY += 10;
   }
 
-  return currentY + 10;
+  return currentY + 5;
 };
 
 const createClientDetails = (doc: any, service: Service, startY: number): number => {
