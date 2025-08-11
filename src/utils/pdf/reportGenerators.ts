@@ -274,35 +274,115 @@ autoTable(doc, {
 
 // Helper functions
 const createReportCover = async (doc: jsPDF, title: string, subtitle: string): Promise<void> => {
-  // Cover background
+  // Modern gradient background
   doc.setFillColor(...PDF_COLORS.primary);
-  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 100, 'F');
+  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 120, 'F');
   
-  // Accent bar
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(0, 100, PDF_DIMENSIONS.pageWidth, 20, 'F');
+  
   doc.setFillColor(...PDF_COLORS.accent);
-  doc.rect(0, 95, PDF_DIMENSIONS.pageWidth, 10, 'F');
+  doc.rect(0, 115, PDF_DIMENSIONS.pageWidth, 8, 'F');
   
-  // Logo
+  // Decorative geometric elements
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.circle(180, 25, 15, 'F');
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.circle(180, 25, 8, 'F');
+  
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(170, 35, 30, 3, 'F');
+  doc.rect(175, 40, 20, 2, 'F');
+  
+  // Modern logo
   try {
-    const logo = await processImage('/icons/icon-512.png');
-    if (logo) doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 10, 16, 16);
-  } catch {}
+    const logo = await processImage('/logo.svg');
+    if (logo) {
+      doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 15, 24, 24);
+    } else {
+      // Fallback modern logo
+      doc.setFillColor(...PDF_COLORS.white);
+      doc.roundedRect(PDF_DIMENSIONS.margin, 15, 24, 24, 4, 4, 'F');
+      doc.setFillColor(...PDF_COLORS.accent);
+      doc.circle(PDF_DIMENSIONS.margin + 12, 27, 8, 'F');
+    }
+  } catch {
+    // Fallback design
+    doc.setFillColor(...PDF_COLORS.white);
+    doc.roundedRect(PDF_DIMENSIONS.margin, 15, 24, 24, 4, 4, 'F');
+    doc.setFillColor(...PDF_COLORS.accent);
+    doc.circle(PDF_DIMENSIONS.margin + 12, 27, 8, 'F');
+  }
   
-  // Title
-  doc.setFontSize(24);
+  // Main title with enhanced typography
+  doc.setFontSize(32);
   doc.setFont(PDF_FONTS.normal, 'bold');
   doc.setTextColor(255, 255, 255);
   doc.text(title, PDF_DIMENSIONS.pageWidth / 2, 50, { align: 'center' });
   
-  // Subtitle
-  doc.setFontSize(14);
+  // Subtitle with accent
+  doc.setFontSize(16);
   doc.setFont(PDF_FONTS.normal, 'normal');
   doc.text(subtitle, PDF_DIMENSIONS.pageWidth / 2, 70, { align: 'center' });
   
-  // Date
-  doc.setFontSize(10);
-  doc.setTextColor(...PDF_COLORS.secondary);
-  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, PDF_DIMENSIONS.pageWidth / 2, 270, { align: 'center' });
+  // System branding
+  doc.setFontSize(12);
+  doc.setFont(PDF_FONTS.normal, 'bold');
+  doc.text('ServiceFlow Analytics', PDF_DIMENSIONS.pageWidth / 2, 85, { align: 'center' });
+  
+  // Modern info card
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(35, 140, 140, 100, 8, 8, 'F');
+  
+  // Card shadow effect
+  doc.setFillColor(...PDF_COLORS.mediumGray);
+  doc.roundedRect(37, 142, 140, 100, 8, 8, 'F');
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(35, 140, 140, 100, 8, 8, 'F');
+  
+  // Card header
+  doc.setFillColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(35, 140, 140, 25, 8, 8, 'F');
+  doc.rect(35, 157, 140, 8, 'F');
+  
+  doc.setTextColor(...PDF_COLORS.primary);
+  doc.setFontSize(14);
+  doc.setFont(PDF_FONTS.normal, 'bold');
+  doc.text('INFORMAÇÕES DO RELATÓRIO', 105, 155, { align: 'center' });
+  
+  // Card content
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.setFontSize(11);
+  doc.setFont(PDF_FONTS.normal, 'normal');
+  
+  const currentDate = new Date().toLocaleDateString('pt-BR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  const reportInfo = [
+    `📊 Período: ${currentDate}`,
+    `📈 Sistema: Gestão Integrada`,
+    `🔒 Confidencial: Uso Interno`,
+    `⚡ Gerado Automaticamente`
+  ];
+  
+  let infoY = 180;
+  reportInfo.forEach(info => {
+    doc.text(info, 105, infoY, { align: 'center' });
+    infoY += 12;
+  });
+  
+  // Footer with enhanced branding
+  doc.setFontSize(8);
+  doc.setTextColor(...PDF_COLORS.textLight);
+  doc.text(`Documento gerado em ${currentDate}`, 
+           PDF_DIMENSIONS.pageWidth / 2, 275, { align: 'center' });
+  doc.text('ServiceFlow • Sistema de Gestão de Demandas', 
+           PDF_DIMENSIONS.pageWidth / 2, 285, { align: 'center' });
 };
 
 const calculateServiceStats = (services: Service[]) => {

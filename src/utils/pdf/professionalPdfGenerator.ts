@@ -76,80 +76,152 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
 };
 
 const createProfessionalCover = async (doc: jsPDF, service: Service): Promise<number> => {
-  // Fundo gradiente simulado
+  // Fundo gradiente mais moderno - duas cores principais
   doc.setFillColor(...PDF_COLORS.primary);
-  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 100, 'F');
+  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 120, 'F');
   
-  // Faixa decorativa
+  // Gradiente decorativo secundário
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(0, 100, PDF_DIMENSIONS.pageWidth, 20, 'F');
+  
+  // Faixa accent mais destacada
   doc.setFillColor(...PDF_COLORS.accent);
-  doc.rect(0, 95, PDF_DIMENSIONS.pageWidth, 10, 'F');
+  doc.rect(0, 115, PDF_DIMENSIONS.pageWidth, 8, 'F');
   
-  // Logo (quando disponível)
+  // Elementos geométricos decorativos
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.circle(180, 25, 15, 'F');
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(170, 35, 30, 3, 'F');
+  
+  // Logo modernizado
   try {
-    const logo = await processImage('/icons/icon-512.png');
+    const logo = await processImage('/logo.svg');
     if (logo) {
-      doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 10, 16, 16);
+      doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 15, 20, 20);
+    } else {
+      // Fallback - logo simples geométrico
+      doc.setFillColor(...PDF_COLORS.white);
+      doc.rect(PDF_DIMENSIONS.margin, 15, 20, 20, 'F');
+      doc.setFillColor(...PDF_COLORS.accent);
+      doc.circle(PDF_DIMENSIONS.margin + 10, 25, 6, 'F');
     }
   } catch (e) {
-    console.warn('[PDF] Logo não carregado');
+    // Logo fallback mais elaborado
+    doc.setFillColor(...PDF_COLORS.white);
+    doc.rect(PDF_DIMENSIONS.margin, 15, 20, 20, 'F');
+    doc.setFillColor(...PDF_COLORS.accent);
+    doc.circle(PDF_DIMENSIONS.margin + 10, 25, 6, 'F');
   }
   
-  // Título principal
-  doc.setFontSize(28);
+  // Título principal mais impactante
+  doc.setFontSize(32);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
   doc.setTextColor(255, 255, 255);
-  doc.text('RELATÓRIO DE SERVIÇO', PDF_DIMENSIONS.pageWidth / 2, 40, { align: 'center' });
+  doc.text('RELATÓRIO TÉCNICO', PDF_DIMENSIONS.pageWidth / 2, 45, { align: 'center' });
   
-  // Subtítulo
-  doc.setFontSize(16);
+  // Subtítulo com mais estilo
+  doc.setFontSize(18);
   doc.setFont(PDF_FONTS.normal, 'normal');
-  doc.text('Sistema de Gestão de Demandas', PDF_DIMENSIONS.pageWidth / 2, 55, { align: 'center' });
+  doc.text('Sistema Integrado de Gestão', PDF_DIMENSIONS.pageWidth / 2, 62, { align: 'center' });
   
-  // Informações principais na capa
-  doc.setFontSize(14);
-  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-  doc.text(`OS #${service.number || 'N/A'}`, PDF_DIMENSIONS.pageWidth / 2, 75, { align: 'center' });
-  
-  // Área branca para informações
-  doc.setFillColor(255, 255, 255);
-  doc.rect(30, 120, 150, 120, 'F');
-  
-  // Borda da área
-  doc.setDrawColor(PDF_COLORS.border[0], PDF_COLORS.border[1], PDF_COLORS.border[2]);
-  doc.setLineWidth(0.5);
-  doc.rect(30, 120, 150, 120, 'S');
-  
-  // Informações do serviço na capa
-  doc.setTextColor(...PDF_COLORS.text);
+  // Badge OS mais visível
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.roundedRect(65, 75, 80, 12, 3, 3, 'F');
   doc.setFontSize(16);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-  doc.text('INFORMAÇÕES GERAIS', 105, 135, { align: 'center' });
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.text(`OS #${service.number || 'N/A'}`, PDF_DIMENSIONS.pageWidth / 2, 83, { align: 'center' });
   
-  let infoY = 150;
-  const infoLines = [
-    ['Título:', sanitizeText(service.title)],
+  // Card principal de informações mais moderno
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
+  
+  // Sombra simulada do card
+  doc.setFillColor(...PDF_COLORS.mediumGray);
+  doc.roundedRect(27, 137, 160, 130, 8, 8, 'F');
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
+  
+  // Borda decorativa do card
+  doc.setDrawColor(...PDF_COLORS.accent);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'S');
+  
+  // Header do card com background
+  doc.setFillColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(25, 135, 160, 25, 8, 8, 'F');
+  doc.rect(25, 152, 160, 8, 'F'); // Complemento para deixar quadrado embaixo
+  
+  // Título do card
+  doc.setTextColor(...PDF_COLORS.primary);
+  doc.setFontSize(18);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
+  doc.text('RESUMO EXECUTIVO', 105, 150, { align: 'center' });
+  
+  // Informações organizadas em duas colunas
+  let infoY = 175;
+  const leftCol = 35;
+  const rightCol = 115;
+  
+  const leftInfo = [
+    ['Demanda:', sanitizeText(service.title)],
     ['Cliente:', sanitizeText(service.client)],
+    ['Localização:', sanitizeText(service.location)],
+  ];
+  
+  const rightInfo = [
     ['Tipo:', sanitizeText(service.serviceType)],
     ['Status:', getStatusText(service.status)],
-    ['Criado em:', formatDate(service.creationDate)],
-    ['Prazo:', service.dueDate ? formatDate(service.dueDate) : 'Não definido']
+    ['Prioridade:', service.priority || 'Normal'],
   ];
   
   doc.setFontSize(10);
-  infoLines.forEach(([label, value]) => {
+  
+  // Coluna esquerda
+  leftInfo.forEach(([label, value]) => {
     doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-    doc.text(label, 35, infoY);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(label, leftCol, infoY);
     doc.setFont(PDF_FONTS.normal, 'normal');
-    doc.text(value, 70, infoY);
-    infoY += 8;
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(value, 70);
+    doc.text(wrappedValue, leftCol, infoY + 6);
+    infoY += 18;
   });
   
-  // Rodapé da capa
-  doc.setFontSize(8);
-  doc.setTextColor(...PDF_COLORS.secondary);
-  doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, 105, 270, { align: 'center' });
+  // Coluna direita
+  infoY = 175;
+  rightInfo.forEach(([label, value]) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(label, rightCol, infoY);
+    doc.setFont(PDF_FONTS.normal, 'normal');
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(value, 70);
+    doc.text(wrappedValue, rightCol, infoY + 6);
+    infoY += 18;
+  });
   
-  return 280;
+  // Data de criação e prazo com ícones
+  doc.setFillColor(...PDF_COLORS.accent);
+  doc.circle(leftCol, 235, 3, 'F');
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.setFontSize(9);
+  doc.text(`Criado: ${formatDate(service.creationDate)}`, leftCol + 8, 237);
+  
+  if (service.dueDate) {
+    doc.setFillColor(...PDF_COLORS.warning);
+    doc.circle(rightCol, 235, 3, 'F');
+    doc.text(`Prazo: ${formatDate(service.dueDate)}`, rightCol + 8, 237);
+  }
+  
+  // Rodapé da capa mais elegante
+  doc.setFontSize(8);
+  doc.setTextColor(...PDF_COLORS.textLight);
+  doc.text(`Documento gerado automaticamente em ${formatDate(new Date().toISOString())}`, 105, 280, { align: 'center' });
+  
+  return 290;
 };
 
 const createIndex = (doc: jsPDF, startY: number): number => {

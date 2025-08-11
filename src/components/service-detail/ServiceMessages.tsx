@@ -10,6 +10,7 @@ import { Service } from "@/types/serviceTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MessageSquare, Send } from "lucide-react";
+import SectionCard from "@/components/service-detail/SectionCard";
 
 interface ServiceMessagesProps {
   service: Service;
@@ -25,65 +26,88 @@ export const ServiceMessages: React.FC<ServiceMessagesProps> = ({
   onSendMessage
 }) => {
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Mensagens ({service.messages?.length || 0})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ScrollArea className="h-[300px] pr-4">
+    <SectionCard 
+      title="Comunicação" 
+      description={`${service.messages?.length || 0} mensagens registradas`}
+      rightSlot={
+        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+          <MessageSquare className="w-3 h-3 mr-1" />
+          {service.messages?.length || 0}
+        </Badge>
+      }
+    >
+      <div className="space-y-4">
+        <ScrollArea className="h-[280px] pr-3">
           {service.messages && service.messages.length > 0 ? (
             <div className="space-y-3">
               {service.messages.map((msg, index) => (
-                <div key={index} className="flex gap-3 p-3 bg-background/30 rounded-lg border border-border/30">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={msg.senderId} />
-                    <AvatarFallback className="text-xs">
-                      {msg.senderName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{msg.senderName}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {msg.senderRole}
-                      </Badge>
-                      {msg.timestamp && (
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(msg.timestamp), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </span>
-                      )}
+                <div key={index} className="group relative">
+                  <div className="flex gap-3 p-4 bg-gradient-to-r from-background/80 to-background/40 rounded-xl border border-border/40 hover:border-border/60 transition-all duration-200 hover:shadow-sm">
+                    <Avatar className="w-9 h-9 ring-2 ring-primary/20">
+                      <AvatarImage src={msg.senderId} />
+                      <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-accent/20 text-primary font-medium">
+                        {msg.senderName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{msg.senderName}</span>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gradient-to-r from-accent/10 to-accent/5 text-accent-foreground border-accent/20">
+                          {msg.senderRole}
+                        </Badge>
+                        {msg.timestamp && (
+                          <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                            {format(new Date(msg.timestamp), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-lg p-3 border border-border/30">
+                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{msg.message}</p>
                   </div>
+                  <div className="absolute -left-2 top-4 w-1 h-8 bg-gradient-to-b from-primary/30 to-accent/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                 </div>
               ))}
             </div>
           ) : (
-<div className="text-center py-8 text-muted-foreground">
-  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-  <p className="text-sm">Nenhuma mensagem ainda</p>
-  <p className="text-xs">Envie a primeira mensagem abaixo</p>
-</div>
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-primary/60" />
+              </div>
+              <p className="text-sm font-medium mb-1">Ainda não há mensagens</p>
+              <p className="text-xs opacity-70">Inicie a conversa enviando a primeira mensagem</p>
+            </div>
           )}
         </ScrollArea>
         
-<div className="flex gap-2">
-  <Input
-    placeholder="Digite sua mensagem..."
-    aria-label="Mensagem da demanda"
-    value={newMessage}
-    onChange={(e) => setNewMessage(e.target.value)}
-    onKeyDown={(e) => e.key === 'Enter' && onSendMessage()}
-    className="bg-background/50"
-  />
-  <Button onClick={onSendMessage} size="sm" aria-label="Enviar mensagem">
-    <Send className="w-4 h-4" />
-  </Button>
-</div>
-      </CardContent>
-    </Card>
+        <div className="relative">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Input
+                placeholder="Digite sua mensagem..."
+                aria-label="Mensagem da demanda"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onSendMessage()}
+                className="bg-gradient-to-r from-background/80 to-background/60 border-border/50 focus:border-primary/50 focus:ring-primary/20 pr-12 h-11"
+              />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <MessageSquare className="w-4 h-4 text-muted-foreground/50" />
+              </div>
+            </div>
+            <Button 
+              onClick={onSendMessage} 
+              size="sm" 
+              aria-label="Enviar mensagem"
+              className="h-11 px-4 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
+              disabled={!newMessage.trim()}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </SectionCard>
   );
 };

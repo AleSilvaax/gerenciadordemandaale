@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
-// import { generateProfessionalServiceReport } from "@/utils/pdf/professionalReportGenerator";
+import SectionCard from "@/components/service-detail/SectionCard";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ServiceDetailHeader } from "@/components/service-detail/ServiceDetailHeader";
 import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard";
@@ -133,32 +134,36 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base md:text-lg flex items-center gap-2">
-                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
-                    Fotos e Anexos
-                    {photos.length > 0 && (
-                      <span className="text-sm text-muted-foreground">({photos.length} fotos)</span>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 md:p-6">
-                  <PhotoUploader
-                    photos={photos}
-                    onPhotosChange={handlePhotosChange}
-                    serviceId={service.id}
-                    maxPhotos={10}
-                  />
-                </CardContent>
-              </Card>
+              <SectionCard 
+                title="Fotos e Anexos" 
+                description="Documentação visual do atendimento"
+                rightSlot={
+                  photos.length > 0 ? (
+                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                      <Camera className="w-3 h-3 mr-1" />
+                      {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-muted/10 text-muted-foreground border-muted/30">
+                      <Camera className="w-3 h-3 mr-1" />
+                      Nenhuma foto
+                    </Badge>
+                  )
+                }
+              >
+                <PhotoUploader
+                  photos={photos}
+                  onPhotosChange={handlePhotosChange}
+                  serviceId={service.id}
+                  maxPhotos={10}
+                />
+              </SectionCard>
             </motion.div>
-
 
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.4 }}
             >
               <ServiceActions
                 service={service}
@@ -173,7 +178,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.5 }}
             >
               <ServiceMessages
                 service={service}
@@ -186,7 +191,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.6 }}
             >
               <ServiceFeedback
                 service={service}
@@ -199,7 +204,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8 }}
+              transition={{ delay: 0.7 }}
             >
               <ServiceSignatureSection
                 service={service}

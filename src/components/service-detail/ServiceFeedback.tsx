@@ -1,13 +1,14 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Rating } from "@/components/ui-custom/Rating";
 import { Service, ServiceFeedback as ServiceFeedbackType } from "@/types/serviceTypes";
 import { useAuth } from "@/context/AuthContext";
-import { Star } from "lucide-react";
+import { Star, MessageCircle, ThumbsUp } from "lucide-react";
+import SectionCard from "@/components/service-detail/SectionCard";
 
 interface ServiceFeedbackProps {
   service: Service;
@@ -25,44 +26,88 @@ export const ServiceFeedback: React.FC<ServiceFeedbackProps> = ({
   const { user } = useAuth();
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Star className="w-5 h-5" />
-          Feedback
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {service.feedback ? (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium">Avaliação do Cliente</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Rating value={service.feedback.clientRating} />
-                <span className="text-sm text-muted-foreground">
-                  ({service.feedback.clientRating}/5)
-                </span>
+    <SectionCard 
+      title="Avaliação & Feedback" 
+      description="Qualidade e observações do atendimento"
+      rightSlot={
+        service.feedback ? (
+          <Badge variant="default" className="bg-gradient-to-r from-success/10 to-success/5 text-success border-success/30">
+            <ThumbsUp className="w-3 h-3 mr-1" />
+            Avaliado
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+            <Star className="w-3 h-3 mr-1" />
+            Pendente
+          </Badge>
+        )
+      }
+    >
+      {service.feedback ? (
+        <div className="space-y-6">
+          <div className="relative">
+            <div className="bg-gradient-to-br from-primary/5 via-background/50 to-accent/5 rounded-xl p-6 border border-border/40">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center">
+                  <Star className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold text-foreground">Avaliação do Cliente</Label>
+                  <p className="text-xs text-muted-foreground">Qualidade geral do atendimento</p>
+                </div>
               </div>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <Rating value={service.feedback.clientRating} />
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-primary">{service.feedback.clientRating}</span>
+                  <span className="text-sm text-muted-foreground">/5 estrelas</span>
+                </div>
+              </div>
+              
               {service.feedback.clientComment && (
-                <div className="mt-2 p-3 bg-background/30 rounded-lg border border-border/30">
-                  <p className="text-sm">{service.feedback.clientComment}</p>
+                <div className="bg-gradient-to-br from-background/80 to-background/40 rounded-lg p-4 border border-border/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Comentário do Cliente</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{service.feedback.clientComment}</p>
                 </div>
               )}
             </div>
-            
-            {service.feedback.technicianFeedback && (
-              <div>
-                <Label className="text-sm font-medium">Feedback do Técnico</Label>
-                <div className="mt-1 p-3 bg-background/30 rounded-lg border border-border/30">
-                  <p className="text-sm">{service.feedback.technicianFeedback}</p>
+          </div>
+          
+          {service.feedback.technicianFeedback && (
+            <div className="bg-gradient-to-br from-accent/5 via-background/50 to-secondary/5 rounded-xl p-6 border border-border/40">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold text-foreground">Observações do Técnico</Label>
+                  <p className="text-xs text-muted-foreground">Detalhes técnicos do atendimento</p>
                 </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div>
-              <Label className="text-sm font-medium">Avaliação do Cliente</Label>
+              <div className="bg-gradient-to-br from-background/80 to-background/40 rounded-lg p-4 border border-border/30">
+                <p className="text-sm leading-relaxed text-muted-foreground">{service.feedback.technicianFeedback}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-primary/5 via-background/50 to-accent/5 rounded-xl p-6 border border-border/40">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center">
+                <Star className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-foreground">Avaliação do Cliente</Label>
+                <p className="text-xs text-muted-foreground">Como você avalia este atendimento?</p>
+              </div>
+            </div>
+            
+            <div className="mb-4">
               <Rating
                 value={feedback.clientRating}
                 onChange={(value) => setFeedback({ ...feedback, clientRating: value })}
@@ -70,35 +115,48 @@ export const ServiceFeedback: React.FC<ServiceFeedbackProps> = ({
             </div>
             
             <div>
-              <Label className="text-sm font-medium">Comentário do Cliente</Label>
+              <Label className="text-sm font-medium mb-2 block">Comentário (opcional)</Label>
               <Textarea
-                placeholder="Deixe seu comentário..."
+                placeholder="Conte-nos sobre sua experiência com este atendimento..."
                 value={feedback.clientComment || ""}
                 onChange={(e) => setFeedback({ ...feedback, clientComment: e.target.value })}
-                className="bg-background/50 resize-none"
+                className="bg-gradient-to-br from-background/80 to-background/40 border-border/50 focus:border-primary/50 resize-none min-h-[80px]"
                 rows={3}
               />
             </div>
-            
-            {user?.role === "tecnico" && (
-              <div>
-                <Label className="text-sm font-medium">Feedback do Técnico</Label>
-                <Textarea
-                  placeholder="Deixe seu feedback técnico..."
-                  value={feedback.technicianFeedback || ""}
-                  onChange={(e) => setFeedback({ ...feedback, technicianFeedback: e.target.value })}
-                  className="bg-background/50 resize-none"
-                  rows={3}
-                />
-              </div>
-            )}
-            
-            <Button onClick={onSubmitFeedback} className="w-full">
-              Salvar Feedback
-            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          {user?.role === "tecnico" && (
+            <div className="bg-gradient-to-br from-accent/5 via-background/50 to-secondary/5 rounded-xl p-6 border border-border/40">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold text-foreground">Observações Técnicas</Label>
+                  <p className="text-xs text-muted-foreground">Detalhes sobre o atendimento realizado</p>
+                </div>
+              </div>
+              <Textarea
+                placeholder="Descreva os procedimentos realizados, observações técnicas ou recomendações..."
+                value={feedback.technicianFeedback || ""}
+                onChange={(e) => setFeedback({ ...feedback, technicianFeedback: e.target.value })}
+                className="bg-gradient-to-br from-background/80 to-background/40 border-border/50 focus:border-accent/50 resize-none min-h-[80px]"
+                rows={3}
+              />
+            </div>
+          )}
+          
+          <Button 
+            onClick={onSubmitFeedback} 
+            className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-200"
+            disabled={!feedback.clientRating}
+          >
+            <Star className="w-4 h-4 mr-2" />
+            Salvar Avaliação
+          </Button>
+        </div>
+      )}
+    </SectionCard>
   );
 };
