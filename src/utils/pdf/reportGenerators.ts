@@ -10,7 +10,7 @@ export const generateExecutiveReport = async (services: Service[], teamMembers: 
   const doc = new jsPDF('portrait', 'mm', 'a4');
   
   // Cover page
-  createReportCover(doc, 'RELATÓRIO EXECUTIVO', 'Visão geral de performance e KPIs');
+  await createReportCover(doc, 'RELATÓRIO EXECUTIVO', 'Visão geral de performance e KPIs');
   
   // Summary statistics
   doc.addPage();
@@ -77,7 +77,7 @@ autoTable(doc, {
 export const generateOperationalReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
   
-  createReportCover(doc, 'RELATÓRIO OPERACIONAL', 'Detalhes técnicos e operacionais');
+  await createReportCover(doc, 'RELATÓRIO OPERACIONAL', 'Detalhes técnicos e operacionais');
   
   doc.addPage();
   let currentY = addHeader(doc, 'RELATÓRIO OPERACIONAL', 0);
@@ -141,7 +141,7 @@ autoTable(doc, {
 export const generateTeamPerformanceReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
   
-  createReportCover(doc, 'PERFORMANCE DA EQUIPE', 'Análise detalhada dos técnicos');
+  await createReportCover(doc, 'PERFORMANCE DA EQUIPE', 'Análise detalhada dos técnicos');
   
   doc.addPage();
   let currentY = addHeader(doc, 'PERFORMANCE DA EQUIPE', 0);
@@ -209,7 +209,7 @@ autoTable(doc, {
 export const generateServiceAnalysisReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
   
-  createReportCover(doc, 'ANÁLISE DE SERVIÇOS', 'Breakdown detalhado por categoria');
+  await createReportCover(doc, 'ANÁLISE DE SERVIÇOS', 'Breakdown detalhado por categoria');
   
   doc.addPage();
   let currentY = addHeader(doc, 'ANÁLISE DE SERVIÇOS', 0);
@@ -273,7 +273,7 @@ autoTable(doc, {
 };
 
 // Helper functions
-const createReportCover = (doc: jsPDF, title: string, subtitle: string): void => {
+const createReportCover = async (doc: jsPDF, title: string, subtitle: string): Promise<void> => {
   // Cover background
   doc.setFillColor(...PDF_COLORS.primary);
   doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 100, 'F');
