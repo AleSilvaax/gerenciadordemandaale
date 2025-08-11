@@ -30,6 +30,10 @@ export default defineConfig(({ mode }) => ({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
       }
     }),
     mode === 'development' &&
