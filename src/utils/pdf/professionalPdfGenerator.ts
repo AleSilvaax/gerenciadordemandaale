@@ -4,6 +4,7 @@ import { Service } from '@/types/serviceTypes';
 import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
 import { processImage } from './imageProcessor';
+import { defaultTableTheme } from './pdfLayout';
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
@@ -263,20 +264,8 @@ const createClientDetails = (doc: jsPDF, service: Service, startY: number): numb
     startY: currentY + 5,
     head: [['Campo', 'Informação']],
     body: clientData,
+    ...defaultTableTheme('primary'),
     theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.primary],
-      textColor: [255, 255, 255],
-      fontSize: 10
-    },
-    bodyStyles: {
-      fontSize: 9,
-      textColor: [...PDF_COLORS.text]
-    },
-    alternateRowStyles: {
-      fillColor: [...PDF_COLORS.lightGray]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
   return (doc as any).lastAutoTable.finalY + 10;
@@ -302,17 +291,8 @@ const createTimelineSection = (doc: jsPDF, service: Service, startY: number): nu
     startY: currentY + 5,
     head: [['Etapa', 'Detalhes', 'Status']],
     body: timelineData,
+    ...defaultTableTheme('accent'),
     theme: 'striped',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 10
-    },
-    bodyStyles: {
-      fontSize: 9,
-      textColor: [...PDF_COLORS.text]
-    },
-    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
   });
   
   return (doc as any).lastAutoTable.finalY + 10;
@@ -341,17 +321,8 @@ const createTechnicianSection = (doc: jsPDF, service: Service, startY: number): 
       startY: currentY + 5,
       head: [['Campo', 'Informação']],
       body: techData,
+      ...defaultTableTheme('secondary'),
       theme: 'grid',
-      headStyles: {
-        fillColor: [...PDF_COLORS.secondary],
-        textColor: [255, 255, 255],
-        fontSize: 10
-      },
-      bodyStyles: {
-        fontSize: 9,
-        textColor: [...PDF_COLORS.text]
-      },
-      margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
     });
     
     return (doc as any).lastAutoTable.finalY + 10;
@@ -385,20 +356,8 @@ const createTechnicianFieldsSection = (doc: jsPDF, service: Service, startY: num
       startY: currentY + 5,
       head: [['Campo', 'Tipo', 'Valor', 'Status']],
       body: fieldsData,
+      ...defaultTableTheme('accent'),
       theme: 'grid',
-    headStyles: {
-      fillColor: [...PDF_COLORS.accent],
-      textColor: [255, 255, 255],
-      fontSize: 10
-    },
-    bodyStyles: {
-      fontSize: 9,
-      textColor: [...PDF_COLORS.text]
-    },
-      alternateRowStyles: {
-        fillColor: [...PDF_COLORS.lightGray]
-      },
-      margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
     });
     
     return (doc as any).lastAutoTable.finalY + 10;
