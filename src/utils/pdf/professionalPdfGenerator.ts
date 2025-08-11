@@ -676,7 +676,6 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
     color: [...PDF_COLORS.primary] as [number, number, number]
   });
 
-  // Buscar fotos com títulos da tabela service_photos
   let photosWithTitles: Array<{url: string, title: string}> = [];
 
   if (service.id) {
@@ -699,7 +698,6 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
     }
   }
 
-  // Fallback para o campo photos do service se não encontrou na tabela
   if (photosWithTitles.length === 0 && service.photos && service.photos.length > 0) {
     photosWithTitles = service.photos.map((url: string, index: number) => ({
       url,
@@ -707,71 +705,65 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
     }));
   }
 
-  if (photosWithTitles.length > 0) {
-    // Layout horizontal - 2 fotos por linha
-    let photosPerRow = 2;
-    let photoWidth = (PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2) - 10) / photosPerRow;
-    let photoHeight = photoWidth * 0.75;
-
-    for (let i = 0; i < photosWithTitles.length; i++) {
-      if (i % photosPerRow === 0) {
-        currentY = checkPageBreak(doc, currentY, photoHeight + 30);
-        currentY += 10;
-      }
-
-      const col = i % photosPerRow;
-      const xPos = PDF_DIMENSIONS.margin + (col * (photoWidth + 5));
-      const photo = photosWithTitles[i];
-
-      // Título da foto - usar o título personalizado
-      currentY = safeAddText(doc, `${photo.title}:`, xPos, currentY, {
-        fontSize: 10,
-        fontStyle: 'bold',
-        color: [...PDF_COLORS.secondary] as [number, number, number]
-      });
-
-      try {
-        const imageData = await processImage(photo.url);
-        if (imageData) {
-          doc.addImage(
-            imageData,
-            'JPEG',
-            xPos,
-            currentY + 5,
-            photoWidth,
-            photoHeight
-          );
-        } else {
-          // Placeholder para foto não carregada
-          doc.setDrawColor(...PDF_COLORS.border);
-          doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
-
-          safeAddText(doc, '[Imagem não disponível]', xPos + 5, currentY + photoHeight / 2, {
-            fontSize: 8,
-            color: [...PDF_COLORS.secondary] as [number, number, number]
-          });
-        }
-      } catch (error) {
-        console.error(`Erro ao processar foto "${photo.title}":`, error);
-        doc.setDrawColor(...PDF_COLORS.border);
-        doc.rect(xPos, currentY + 5, photoWidth, photoHeight, 'S');
-
-        safeAddText(doc, '[Erro ao carregar imagem]', xPos + 5, currentY + photoHeight / 2, {
-          fontSize: 8,
-          color: [...PDF_COLORS.secondary] as [number, number, number]
-        });
-      }
-
-      if (col === photosPerRow - 1 || i === photosWithTitles.length - 1) {
-        currentY += photoHeight + 15;
-      }
-    }
-  } else {
+  if (photosWithTitles.length === 0) {
     currentY = safeAddText(doc, 'Nenhuma foto anexada.', PDF_DIMENSIONS.margin, currentY + 5, {
       fontSize: 10,
       color: [...PDF_COLORS.secondary] as [number, number, number]
     });
-    currentY += 20;
+    return currentY + 20;
+  }
+
+  const photosPerRow = Number(service.photosPerRow) || 2;
+  const gap = 6;
+  const usableWidth = PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2);
+  const photoWidth = (usableWidth - (gap * (photosPerRow - 1))) / photosPerRow;
+  const photoHeight = photoWidth * 0.66;
+  const titleFontSize = 10;
+  const titleLineHeightMm = titleFontSize * 0.35277778 + 1.0;
+
+  for (let rowStartIdx = 0; rowStartIdx < photosWithTitles.length; rowStartIdx += photosPerRow) {
+    const rowItems = photosWithTitles.slice(rowStartIdx, rowStartIdx + photosPerRow);
+    const titleLinesArr = rowItems.map(item =>
+      doc.splitTextToSize(formatForPdf(item.title || ''), photoWidth)
+    );
+    const titleHeights = titleLinesArr.map(lines => Math.max(1, lines.length) * titleLineHeightMm);
+    const maxTitleHeight = Math.max(...titleHeights, titleLineHeightMm);
+
+    currentY = checkPageBreak(doc, currentY, maxTitleHeight + photoHeight + 20);
+    const yTitleBase = currentY + 6;
+
+    for (let col = 0; col < rowItems.length; col++) {
+      const item = rowItems[col];
+      const xPos = PDF_DIMENSIONS.margin + col * (photoWidth + gap);
+      const titleLines = titleLinesArr[col];
+
+      doc.setFontSize(titleFontSize);
+      doc.setFont(PDF_FONTS.normal, 'bold' as any);
+      doc.text(titleLines, xPos + photoWidth / 2, yTitleBase, { align: 'center' });
+
+      const imgY = yTitleBase + maxTitleHeight + 4;
+      try {
+        const imageData = await processImage(item.url);
+        if (imageData) {
+          doc.addImage(imageData, 'JPEG', xPos, imgY, photoWidth, photoHeight);
+        } else {
+          doc.setDrawColor(...PDF_COLORS.border);
+          doc.rect(xPos, imgY, photoWidth, photoHeight, 'S');
+          doc.setFontSize(8);
+          doc.setFont(PDF_FONTS.normal, 'normal' as any);
+          doc.text('[Imagem não disponível]', xPos + photoWidth / 2, imgY + photoHeight / 2, { align: 'center' });
+        }
+      } catch (error) {
+        console.error(`Erro ao processar foto "${item.title}":`, error);
+        doc.setDrawColor(...PDF_COLORS.border);
+        doc.rect(xPos, imgY, photoWidth, photoHeight, 'S');
+        doc.setFontSize(8);
+        doc.setFont(PDF_FONTS.normal, 'normal' as any);
+        doc.text('[Erro ao carregar imagem]', xPos + photoWidth / 2, imgY + photoHeight / 2, { align: 'center' });
+      }
+    }
+
+    currentY = yTitleBase + maxTitleHeight + photoHeight + 12;
   }
 
   return currentY;
