@@ -24,6 +24,7 @@ import { useServices } from "@/hooks/useServices";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { AnimatedPieChart } from "@/components/dashboard/AnimatedPieChart";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { generateServiceAnalysisReport } from "@/utils/pdf/reportGenerators";
 
 const Estatisticas: React.FC = () => {
   const { services, isLoading } = useServices();
@@ -33,13 +34,18 @@ const Estatisticas: React.FC = () => {
   const isMobile = useIsMobile();
 
   const filteredServices = services.filter(service => {
-    if (selectedPeriod === "all") return true;
-    
-    const serviceDate = new Date(service.creationDate || service.date || '');
-    const now = new Date();
-    const cutoffDate = new Date(now.getTime() - (parseInt(selectedPeriod) * 24 * 60 * 60 * 1000));
-    
-    return serviceDate >= cutoffDate;
+    // Period filter
+    const periodOk = selectedPeriod === "all" ? true : (() => {
+      const serviceDate = new Date(service.creationDate || service.date || '');
+      const now = new Date();
+      const cutoffDate = new Date(now.getTime() - (parseInt(selectedPeriod) * 24 * 60 * 60 * 1000));
+      return serviceDate >= cutoffDate;
+    })();
+
+    // Type filter
+    const typeOk = selectedType === "all" ? true : (service.serviceType === selectedType);
+
+    return periodOk && typeOk;
   });
 
   const total = filteredServices.length;
@@ -127,7 +133,7 @@ const Estatisticas: React.FC = () => {
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 90 dias</SelectItem>
                 <SelectItem value="365">Último ano</SelectItem>
-                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os períodos</SelectItem>
               </SelectContent>
             </Select>
 
@@ -154,7 +160,7 @@ const Estatisticas: React.FC = () => {
             </Link>
 
             {/* Export PDF Button */}
-            <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 gap-2">
+            <Button onClick={() => generateServiceAnalysisReport(filteredServices, teamMembers)} className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 gap-2">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Exportar PDF</span>
               <span className="sm:hidden">PDF</span>
