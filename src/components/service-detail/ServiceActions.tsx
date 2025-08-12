@@ -71,9 +71,9 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
     >
       <div className="space-y-6">
         {/* Status Management */}
-        <div className="bg-gradient-to-br from-primary/5 via-background/50 to-accent/5 rounded-xl p-6 border border-border/40">
+        <div className="bg-gradient-to-br from-primary/10 via-background/80 to-accent/10 rounded-xl p-6 border border-border/60">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary/30 to-accent/30 rounded-xl flex items-center justify-center">
               {getStatusIcon(service.status)}
             </div>
             <div>
@@ -86,7 +86,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
               <Select onValueChange={onStatusChange} value={service.status}>
-                <SelectTrigger className="bg-gradient-to-r from-background/80 to-background/60 border-border/50 focus:border-primary/50 h-11">
+                <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,7 +134,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
 
         {/* Report Generation */}
         {onGenerateReport && (
-          <div className="bg-gradient-to-br from-accent/5 via-background/50 to-secondary/5 rounded-xl p-6 border border-border/40">
+          <div className="bg-gradient-to-br from-accent/10 via-background/80 to-secondary/10 rounded-xl p-6 border border-border/60">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
                 <FileText className="w-5 h-5 text-accent" />
@@ -155,7 +155,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
                   setDownloading(false);
                 }
               }} 
-              className="w-full h-11 bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent shadow-md hover:shadow-lg transition-all duration-200"
+              className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:border disabled:border-border/60 disabled:cursor-not-allowed"
               disabled={downloading}
               aria-label="Gerar relatório PDF da demanda"
             >

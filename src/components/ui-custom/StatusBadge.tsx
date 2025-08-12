@@ -15,21 +15,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, small = false 
   switch (status) {
     case 'concluido':
       return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200">
+        <Badge className="bg-success/15 text-success hover:bg-success/20 border border-success/30 dark:bg-success/20">
           <CheckCircle className="mr-1" width={iconSize} height={iconSize} />
           {small ? 'OK' : 'Concluído'}
         </Badge>
       );
     case 'pendente':
       return (
-        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200">
+        <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border border-warning/30 dark:bg-warning/20">
           <Clock className="mr-1" width={iconSize} height={iconSize} />
           {small ? 'Pend.' : 'Pendente'}
         </Badge>
       );
     case 'cancelado':
       return (
-        <Badge className="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200">
+        <Badge className="bg-danger/15 text-danger hover:bg-danger/20 border border-danger/30 dark:bg-danger/20">
           <XCircle className="mr-1" width={iconSize} height={iconSize} />
           {small ? 'Canc.' : 'Cancelado'}
         </Badge>

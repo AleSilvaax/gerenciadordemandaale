@@ -726,7 +726,7 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
     return currentY + 20;
   }
 
-  const photosPerRow = Number(service.photosPerRow) || 2;
+  const photosPerRow = photosWithTitles.length > 3 ? 3 : 2;
   const gap = 6;
   const usableWidth = PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2);
   const photoWidth = (usableWidth - (gap * (photosPerRow - 1))) / photosPerRow;
