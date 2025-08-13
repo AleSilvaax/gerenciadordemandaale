@@ -27,28 +27,44 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     const members: TeamMember[] = [];
     
     for (const profile of data || []) {
-      // Calcular métricas reais de performance
+      // Calcular métricas reais baseadas na atribuição de técnicos
       const { data: completedServices } = await supabase
-        .from('services')
-        .select('id', { count: 'exact' })
-        .eq('status', 'concluido')
-        .or(`created_by.eq.${profile.id}`)
-        .limit(0);
+        .from('service_technicians')
+        .select('service_id', { count: 'exact' })
+        .eq('technician_id', profile.id)
+        .in('service_id', (
+          await supabase
+            .from('services')
+            .select('id')
+            .eq('status', 'concluido')
+        ).data?.map(s => s.id) || []);
       
       const { data: pendingServices } = await supabase
-        .from('services')
-        .select('id', { count: 'exact' })
-        .eq('status', 'pendente')
-        .or(`created_by.eq.${profile.id}`)
-        .limit(0);
+        .from('service_technicians')
+        .select('service_id', { count: 'exact' })
+        .eq('technician_id', profile.id)
+        .in('service_id', (
+          await supabase
+            .from('services')
+            .select('id')
+            .in('status', ['pendente', 'em_andamento'])
+        ).data?.map(s => s.id) || []);
 
-      // Calcular rating médio baseado em feedbacks reais
-      const { data: feedbackData } = await supabase
-        .from('services')
-        .select('feedback')
-        .eq('created_by', profile.id)
-        .eq('status', 'concluido')
-        .not('feedback', 'is', null);
+      // Calcular rating médio baseado em feedbacks dos serviços atribuídos
+      const { data: assignedServices } = await supabase
+        .from('service_technicians')
+        .select(`
+          service_id,
+          services!inner(
+            feedback,
+            status
+          )
+        `)
+        .eq('technician_id', profile.id)
+        .eq('services.status', 'concluido')
+        .not('services.feedback', 'is', null);
+
+      const feedbackData = assignedServices?.map(as => as.services.feedback).filter(Boolean) || [];
 
       let avgRating = 4.5; // Default
       if (feedbackData && feedbackData.length > 0) {
@@ -78,7 +94,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
         teamId: profile.team_id,
         organizationId: profile.organization_id,
         createdAt: profile.created_at,
-        // Métricas reais de performance
+        // Métricas reais de performance baseadas em atribuições
         stats: {
           completedServices: completedServices?.length || 0,
           pendingServices: pendingServices?.length || 0,

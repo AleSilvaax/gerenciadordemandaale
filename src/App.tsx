@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext'; 
 import { AuthGuard } from '@/components/guards/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 // Pages
 import Login from '@/pages/Login';
@@ -41,6 +42,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         {/* ✅ Garante que o provedor correto está a "abraçar" toda a aplicação. */}
         <AuthProvider>
+          <GlobalNotifications />
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
@@ -75,6 +77,12 @@ function App() {
       </QueryClientProvider>
     </BrowserRouter>
   );
+}
+
+// Componente para inicializar notificações globalmente
+function GlobalNotifications() {
+  useRealtimeNotifications();
+  return null;
 }
 
 export default App;
