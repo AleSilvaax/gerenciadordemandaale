@@ -49,6 +49,33 @@ const safeAddText = (doc: any, text: any, x: number, y: number, opts?: any) => {
   return addText(doc, formatForPdf(text), x, y, opts);
 };
 
+
+// === Alterações visuais modernas ===
+const primaryColor = "#007BFF";
+const secondaryColor = "#1E1E1E";
+const accentColor = "#00FFC6";
+const titleFont = "Poppins";
+const bodyFont = "Roboto";
+
+function drawModernHeader(doc: any, title: string, pageWidth: number) {
+  doc.setFillColor(primaryColor);
+  doc.rect(0, 0, pageWidth, 40, "F");
+  doc.setFont(titleFont, "bold");
+  doc.setFontSize(20);
+  doc.setTextColor("#FFFFFF");
+  doc.text(title, pageWidth / 2, 25, { align: "center" });
+}
+
+function drawModernFooter(doc: any, pageNumber: number, totalPages: number, pageWidth: number, pageHeight: number) {
+  doc.setDrawColor(accentColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, pageHeight - 15, pageWidth - 20, pageHeight - 15);
+  doc.setFont(bodyFont, "normal");
+  doc.setFontSize(10);
+  doc.setTextColor("#555555");
+  doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+}
+
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
 
