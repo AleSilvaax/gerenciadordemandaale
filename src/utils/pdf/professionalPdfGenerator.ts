@@ -50,9 +50,6 @@ const safeAddText = (doc: any, text: any, x: number, y: number, opts?: any) => {
 };
 
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
-  // Usar o novo gerador moderno que corrige problemas de texto
-  const { generateModernServiceReport } = await import('./modernPdfReportGenerator');
-  return generateModernServiceReport(service);
   const doc = new jsPDF('portrait', 'mm', 'a4');
 
   let currentY = 0;
