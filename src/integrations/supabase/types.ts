@@ -7,13 +7,211 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
   public: {
     Tables: {
+      inventory: {
+        Row: {
+          available_stock: number | null
+          created_at: string
+          current_stock: number
+          id: string
+          last_movement_at: string | null
+          material_id: string
+          organization_id: string
+          reserved_stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          available_stock?: number | null
+          created_at?: string
+          current_stock?: number
+          id?: string
+          last_movement_at?: string | null
+          material_id: string
+          organization_id?: string
+          reserved_stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          available_stock?: number | null
+          created_at?: string
+          current_stock?: number
+          id?: string
+          last_movement_at?: string | null
+          material_id?: string
+          organization_id?: string
+          reserved_stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          cost_per_unit: number | null
+          created_at: string
+          created_by: string
+          id: string
+          material_id: string
+          movement_type: string
+          new_stock: number
+          notes: string | null
+          organization_id: string
+          previous_stock: number
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          total_cost: number | null
+        }
+        Insert: {
+          cost_per_unit?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          material_id: string
+          movement_type: string
+          new_stock: number
+          notes?: string | null
+          organization_id?: string
+          previous_stock: number
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          total_cost?: number | null
+        }
+        Update: {
+          cost_per_unit?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          material_id?: string
+          movement_type?: string
+          new_stock?: number
+          notes?: string | null
+          organization_id?: string
+          previous_stock?: number
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          total_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          barcode: string | null
+          category_id: string | null
+          cost_per_unit: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          max_stock: number | null
+          min_stock: number | null
+          name: string
+          organization_id: string
+          sku: string | null
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name: string
+          organization_id?: string
+          sku?: string | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name?: string
+          organization_id?: string
+          sku?: string | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -253,6 +451,60 @@ export type Database = {
           },
         ]
       }
+      service_material_usage: {
+        Row: {
+          created_at: string
+          id: string
+          is_completed: boolean | null
+          material_id: string
+          notes: string | null
+          organization_id: string
+          planned_quantity: number | null
+          service_id: string
+          updated_at: string
+          used_quantity: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_completed?: boolean | null
+          material_id: string
+          notes?: string | null
+          organization_id?: string
+          planned_quantity?: number | null
+          service_id: string
+          updated_at?: string
+          used_quantity?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_completed?: boolean | null
+          material_id?: string
+          notes?: string | null
+          organization_id?: string
+          planned_quantity?: number | null
+          service_id?: string
+          updated_at?: string
+          used_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_material_usage_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_material_usage_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_messages: {
         Row: {
           id: string
@@ -355,6 +607,54 @@ export type Database = {
             columns: ["technician_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_type_materials: {
+        Row: {
+          created_at: string
+          default_quantity: number
+          id: string
+          is_required: boolean | null
+          material_id: string
+          organization_id: string
+          service_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_quantity?: number
+          id?: string
+          is_required?: boolean | null
+          material_id: string
+          organization_id?: string
+          service_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_quantity?: number
+          id?: string
+          is_required?: boolean | null
+          material_id?: string
+          organization_id?: string
+          service_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_type_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_type_materials_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
             referencedColumns: ["id"]
           },
         ]
@@ -751,14 +1051,26 @@ export type Database = {
     }
     Functions: {
       create_first_organization: {
-        Args: { org_name: string; admin_email: string; admin_name: string }
+        Args: { admin_email: string; admin_name: string; org_name: string }
+        Returns: string
+      }
+      create_inventory_movement: {
+        Args: {
+          p_cost_per_unit?: number
+          p_material_id: string
+          p_movement_type: string
+          p_notes?: string
+          p_quantity: number
+          p_reference_id?: string
+          p_reference_type?: string
+        }
         Returns: string
       }
       create_notification: {
         Args: {
-          target_user_id: string
           notification_message: string
           target_service_id?: string
+          target_user_id: string
         }
         Returns: undefined
       }
@@ -767,7 +1079,7 @@ export type Database = {
         Returns: undefined
       }
       create_team: {
-        Args: { name: string; creator_id: string }
+        Args: { creator_id: string; name: string }
         Returns: string
       }
       generate_random_code: {
@@ -805,13 +1117,13 @@ export type Database = {
       get_user_complete_profile: {
         Args: { user_uuid: string }
         Returns: {
+          avatar: string
           id: string
           name: string
-          avatar: string
-          team_id: string
-          team_name: string
           organization_id: string
           role: string
+          team_id: string
+          team_name: string
         }[]
       }
       get_user_organization_id: {
@@ -819,7 +1131,7 @@ export type Database = {
         Returns: string
       }
       get_user_organization_role: {
-        Args: { target_user_id: string; target_org_id: string }
+        Args: { target_org_id: string; target_user_id: string }
         Returns: string
       }
       get_user_organization_safe: {
@@ -835,7 +1147,7 @@ export type Database = {
         Returns: string
       }
       has_permission: {
-        Args: { user_id: string; required_role: string }
+        Args: { required_role: string; user_id: string }
         Returns: boolean
       }
       is_organization_owner: {
@@ -851,7 +1163,7 @@ export type Database = {
         Returns: boolean
       }
       join_team_by_code: {
-        Args: { user_id: string; code: string }
+        Args: { code: string; user_id: string }
         Returns: string
       }
       nextval_for_service: {
