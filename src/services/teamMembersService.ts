@@ -69,10 +69,10 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
       let avgRating = 4.5; // Default
       if (feedbackData && feedbackData.length > 0) {
         const ratings = feedbackData
-          .map(s => {
+          .map(feedback => {
             try {
-              const feedback = typeof s.feedback === 'string' ? JSON.parse(s.feedback) : s.feedback;
-              return feedback?.clientRating;
+              const feedbackObj = typeof feedback === 'string' ? JSON.parse(feedback) : feedback;
+              return feedbackObj?.clientRating;
             } catch {
               return null;
             }

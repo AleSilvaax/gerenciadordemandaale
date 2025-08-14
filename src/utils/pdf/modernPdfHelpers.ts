@@ -147,12 +147,12 @@ export const getStatusText = (status: string): string => {
 // Função para obter cor do status
 export const getStatusColor = (status: string): [number, number, number] => {
   const colorMap: Record<string, [number, number, number]> = {
-    'pendente': PDF_COLORS.warning,
-    'em_andamento': PDF_COLORS.primaryLight,
-    'concluido': PDF_COLORS.success,
-    'cancelado': PDF_COLORS.danger,
-    'agendado': PDF_COLORS.accent
+    'pendente': [...PDF_COLORS.warning] as [number, number, number],
+    'em_andamento': [...PDF_COLORS.primaryLight] as [number, number, number],
+    'concluido': [...PDF_COLORS.success] as [number, number, number],
+    'cancelado': [...PDF_COLORS.danger] as [number, number, number],
+    'agendado': [...PDF_COLORS.accent] as [number, number, number]
   };
   
-  return colorMap[status] || PDF_COLORS.text;
+  return colorMap[status] || [...PDF_COLORS.text] as [number, number, number];
 };
