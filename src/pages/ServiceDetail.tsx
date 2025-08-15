@@ -16,6 +16,7 @@ import { ServiceDetailCard } from "@/components/service-detail/ServiceDetailCard
 import { ServiceActions } from "@/components/service-detail/ServiceActions";
 import { ServiceMessages } from "@/components/service-detail/ServiceMessages";
 import { ServiceFeedback } from "@/components/service-detail/ServiceFeedback";
+import { ServiceMaterialsManager } from "@/components/service-detail/ServiceMaterialsManager";
 import { useServiceDetail } from "@/hooks/useServiceDetail";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext"; // IMPORTADO PARA PEGAR O USUÁRIO
@@ -165,6 +166,17 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
+              <ServiceMaterialsManager
+                serviceId={service.id}
+                isReadOnly={service.status === 'concluido'}
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
               <ServiceActions
                 service={service}
                 onStatusChange={handleStatusChange}
@@ -178,7 +190,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.6 }}
             >
               <ServiceMessages
                 service={service}
@@ -191,7 +203,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.7 }}
             >
               <ServiceFeedback
                 service={service}
@@ -204,7 +216,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.8 }}
             >
               <ServiceSignatureSection
                 service={service}

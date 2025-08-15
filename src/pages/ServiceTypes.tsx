@@ -1,5 +1,6 @@
 import React from "react";
 import { TechnicalSettingsTab } from "@/components/settings/TechnicalSettingsTab";
+import { ServiceTypeMaterialsManager } from "@/components/service-detail/ServiceTypeMaterialsManager";
 
 const ServiceTypes: React.FC = () => {
   return (

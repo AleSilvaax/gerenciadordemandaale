@@ -54,7 +54,7 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
   open,
   onClose
 }) => {
-  const { data: categories } = useMaterialCategories();
+  const { data: categories, isLoading: categoriesLoading } = useMaterialCategories();
   const createMaterial = useCreateMaterial();
 
   const form = useForm<MaterialFormData>({
