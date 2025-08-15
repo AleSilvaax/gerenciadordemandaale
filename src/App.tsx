@@ -26,6 +26,7 @@ import NotFound from '@/pages/NotFound';
 import { ServiceErrorBoundary } from '@/components/common/ServiceErrorBoundary';
 import Reports from '@/pages/Reports';
 import ServiceTypes from '@/pages/ServiceTypes';
+import Inventory from '@/pages/Inventory';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,7 @@ function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/relatorios" element={<Reports />} />
                     <Route path="/tipos-servico" element={<ServiceTypes />} />
+                    <Route path="/estoque" element={<Inventory />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>

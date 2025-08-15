@@ -8,7 +8,8 @@ import {
     BarChart3, 
     Plus,
     Calendar,
-    Settings
+    Settings,
+    Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ const Navbar = () => {
     { name: "Início", path: "/", icon: Home, badge: null },
     { name: "Demandas", path: "/demandas", icon: FileText, badge: null },
     { name: "Agenda", path: "/calendar", icon: Calendar, badge: null },
+    { name: "Estoque", path: "/estoque", icon: Package, badge: null },
     { name: "Análise", path: "/estatisticas", icon: BarChart3, badge: null },
     { name: "Equipe", path: "/equipe", icon: Users, badge: null },
   ];
@@ -38,7 +40,7 @@ const Navbar = () => {
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
     const { role } = user;
-    if (["/estatisticas", "/equipe"].includes(item.path)) {
+    if (["/estatisticas", "/equipe", "/estoque"].includes(item.path)) {
       return ['super_admin', 'owner', 'administrador', 'gestor'].includes(role);
     }
     return true;

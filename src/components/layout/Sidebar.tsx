@@ -10,7 +10,8 @@ import {
   Plus,
   PieChart,
   Wrench,
-  Shield
+  Shield,
+  Package
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Demandas", href: "/demandas", icon: ClipboardList },
   { name: "Agenda", href: "/calendar", icon: Calendar },
   { name: "Nova Demanda", href: "/demandas/nova", icon: Plus },
+  { name: "Estoque", href: "/estoque", icon: Package },
   { name: "Equipe", href: "/equipe", icon: Users },
   { name: "Relatórios", href: "/relatorios", icon: PieChart },
   { name: "Tipos de Serviço", href: "/tipos-servico", icon: Wrench },
@@ -46,7 +48,7 @@ export const Sidebar: React.FC = () => {
     const { role } = user;
     const { href } = item;
 
-    const adminGestorRoutes = ["/equipe", "/relatorios", "/tipos-servico", "/demandas/nova", "/admin"];
+    const adminGestorRoutes = ["/equipe", "/relatorios", "/tipos-servico", "/demandas/nova", "/admin", "/estoque"];
     if (adminGestorRoutes.includes(href)) {
       return role === 'administrador' || role === 'gestor';
     }
