@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
 import { useAuth } from "@/context/AuthContext";
+import { ServiceMaterialsPreloader } from "@/components/service-detail/ServiceMaterialsPreloader";
+import { useAddMaterialUsageToService } from "@/hooks/useInventory";
 // Ícone para o novo campo de Prioridade
 import { ArrowLeft, Plus, Calendar, MapPin, FileText, User, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -37,8 +39,11 @@ const NewService: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string>("");
+  const [preloadedMaterials, setPreloadedMaterials] = useState<Array<{ materialId: string; quantity: number; required: boolean }>>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const addMaterialUsage = useAddMaterialUsageToService();
 
   const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
 
@@ -134,6 +139,23 @@ const NewService: React.FC = () => {
       
       const newService = result.created;
       console.log("Demanda criada:", newService);
+
+      // Adicionar materiais precarregados ao serviço
+      if (preloadedMaterials.length > 0) {
+        for (const material of preloadedMaterials) {
+          try {
+            await addMaterialUsage.mutateAsync({
+              serviceId: newService.id,
+              materialId: material.materialId,
+              plannedQuantity: material.quantity,
+              usedQuantity: 0,
+              notes: material.required ? "Material obrigatório" : "Material opcional"
+            });
+          } catch (error) {
+            console.warn("Erro ao adicionar material precarregado:", error);
+          }
+        }
+      }
       
       if (result.technicianError) {
         toast.warning(`Demanda criada com sucesso! ${result.technicianError}`);
@@ -224,7 +246,11 @@ const NewService: React.FC = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Tipo de Serviço/Demanda</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            const selectedType = serviceTypes.find(t => t.name === value);
+                            setSelectedServiceTypeId(selectedType?.id || "");
+                          }} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="bg-background/50">
                                 <SelectValue placeholder="Selecione o tipo de serviço" />

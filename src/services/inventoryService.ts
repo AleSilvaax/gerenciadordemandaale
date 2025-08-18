@@ -85,17 +85,36 @@ export const getMaterialById = async (id: string): Promise<Material | null> => {
 };
 
 export const createMaterial = async (material: MaterialFormData): Promise<Material> => {
-  const { data, error } = await supabase
+  // Criar o material
+  const { data: createdMaterial, error: materialError } = await supabase
     .from('materials')
-    .insert(material)
+    .insert({
+      ...material,
+      category_id: material.category_id || null
+    })
     .select(`
       *,
       category:material_categories(*)
     `)
     .single();
 
-  if (error) throw error;
-  return data;
+  if (materialError) throw materialError;
+
+  // Criar registro inicial no estoque com valor 0
+  const { error: inventoryError } = await supabase
+    .from('inventory')
+    .insert([{
+      material_id: createdMaterial.id,
+      current_stock: 0,
+      reserved_stock: 0,
+      available_stock: 0
+    }]);
+
+  if (inventoryError) {
+    console.warn('Erro ao criar registro inicial no estoque:', inventoryError);
+  }
+
+  return createdMaterial;
 };
 
 export const updateMaterial = async (id: string, material: Partial<MaterialFormData>): Promise<Material> => {
@@ -188,7 +207,10 @@ export const createInventoryMovement = async (movement: MovementFormData): Promi
     p_cost_per_unit: movement.cost_per_unit || 0
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Erro detalhado ao criar movimentação:', error);
+    throw new Error(`Erro ao criar movimentação: ${error.message}`);
+  }
   return data;
 };
 
