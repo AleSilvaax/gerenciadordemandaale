@@ -1,29 +1,52 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUIStore } from '@/store/uiStore';
-
-let channelInstance: any = null;
-let subscribers = 0;
+import { useAuth } from '@/context/AuthContext';
 
 export const useRealtimeNotifications = () => {
   const { addNotification, setConnectionStatus } = useUIStore();
+  const { user } = useAuth();
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    if (!user?.organizationId) {
+      setConnectionStatus(false);
+      return;
+    }
+
+    // Clean up previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
     const channel = supabase
-      .channel('realtime-changes')
-      // Novas demandas
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'services' }, (payload) => {
+      .channel(`realtime-changes-${user.organizationId}`)
+      // Novas demandas da organização
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'services',
+        filter: `organization_id=eq.${user.organizationId}`
+      }, (payload) => {
         const newService = payload.new as any;
-        addNotification({
-          title: '🆕 Nova Demanda',
-          message: `Nova demanda: "${newService.title}"`,
-          type: newService.priority === 'alta' ? 'warning' : 'info',
-          serviceId: newService.id,
-          route: `/demanda/${newService.id}`,
-        });
+        // Não notificar o próprio criador
+        if (newService.created_by !== user.id) {
+          addNotification({
+            title: '🆕 Nova Demanda',
+            message: `Nova demanda: "${newService.title}"`,
+            type: newService.priority === 'alta' ? 'warning' : 'info',
+            serviceId: newService.id,
+            route: `/demanda/${newService.id}`,
+          });
+        }
       })
-      // Mudança de status
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'services' }, (payload) => {
+      // Mudança de status nas demandas da organização
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'services',
+        filter: `organization_id=eq.${user.organizationId}`
+      }, (payload) => {
         const before = payload.old as any;
         const after = payload.new as any;
         if (before.status !== after.status) {
@@ -47,13 +70,16 @@ export const useRealtimeNotifications = () => {
       // Novas mensagens nas demandas
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_messages' }, (payload) => {
         const msg = payload.new as any;
-        addNotification({
-          title: '💬 Nova mensagem',
-          message: 'Você recebeu uma nova mensagem em uma demanda',
-          type: 'info',
-          serviceId: msg.service_id,
-          route: `/demanda/${msg.service_id}`,
-        });
+        // Verificar se a mensagem não é do próprio usuário
+        if (msg.sender_id !== user.id) {
+          addNotification({
+            title: '💬 Nova mensagem',
+            message: `Nova mensagem de ${msg.sender_name}`,
+            type: 'info',
+            serviceId: msg.service_id,
+            route: `/demanda/${msg.service_id}`,
+          });
+        }
       })
       // Novas fotos anexadas
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_photos' }, (payload) => {
@@ -66,14 +92,42 @@ export const useRealtimeNotifications = () => {
           route: `/demanda/${photo.service_id}`,
         });
       })
+      // Movimentações de estoque (apenas para gestores)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'inventory_movements',
+        filter: `organization_id=eq.${user.organizationId}`
+      }, (payload) => {
+        const movement = payload.new as any;
+        if (['administrador', 'gestor', 'owner'].includes(user.role)) {
+          const typeMap: Record<string, string> = {
+            'entrada': '📦 Entrada de estoque',
+            'saida': '📤 Saída de estoque',
+            'ajuste': '🔧 Ajuste de estoque'
+          };
+          addNotification({
+            title: typeMap[movement.movement_type] || '📊 Movimentação de estoque',
+            message: `${movement.movement_type}: ${movement.quantity} unidades`,
+            type: 'info',
+            route: '/estoque',
+          });
+        }
+      })
       .subscribe((status) => {
+        console.log('Realtime connection status:', status);
         setConnectionStatus(status === 'SUBSCRIBED');
       });
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [addNotification, setConnectionStatus]);
+  }, [addNotification, setConnectionStatus, user?.organizationId, user?.id, user?.role]);
 
   const { isConnected } = useUIStore();
   return { isConnected };
