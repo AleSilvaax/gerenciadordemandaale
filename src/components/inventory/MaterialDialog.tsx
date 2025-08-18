@@ -79,7 +79,7 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
       await createMaterial.mutateAsync({
         ...data,
         is_active: true,
-        category_id: data.category_id || undefined,
+        category_id: data.category_id === "no-category" ? undefined : data.category_id,
       } as any);
       form.reset();
       onClose();
@@ -193,7 +193,7 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sem categoria</SelectItem>
+                          <SelectItem value="no-category">Sem categoria</SelectItem>
                           {categories?.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
