@@ -454,6 +454,17 @@ const NewService: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Materials Preloader */}
+                  {selectedServiceTypeId && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Materiais Padrão</h3>
+                      <ServiceMaterialsPreloader 
+                        serviceTypeId={selectedServiceTypeId}
+                        onMaterialsLoaded={setPreloadedMaterials}
+                      />
+                    </div>
+                  )}
+
                   {/* Descrição */}
                   <FormField
                     control={form.control}

@@ -13,6 +13,7 @@ import { MovementsTable } from "@/components/inventory/MovementsTable";
 import { MaterialDialog } from "@/components/inventory/MaterialDialog";
 import { MovementDialog } from "@/components/inventory/MovementDialog";
 import { CategoryDialog } from "@/components/inventory/CategoryDialog";
+import { Material } from "@/types/inventoryTypes";
 
 const Inventory: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("dashboard");
@@ -22,9 +23,19 @@ const Inventory: React.FC = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
-  const { data: dashboard, isLoading: dashboardLoading } = useInventoryDashboard();
-  const { data: materials, isLoading: materialsLoading } = useMaterials();
-  const { data: inventory, isLoading: inventoryLoading } = useInventory();
+  const { data: dashboardData, isLoading: isDashboardLoading } = useInventoryDashboard();
+  const { data: materials, isLoading: isMaterialsLoading } = useMaterials();
+  const { data: inventory, isLoading: isInventoryLoading } = useInventory();
+
+  const handleEditMaterial = (material: Material) => {
+    setEditingMaterial(material);
+    setMaterialDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setMaterialDialogOpen(false);
+    setEditingMaterial(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
@@ -87,8 +98,8 @@ const Inventory: React.FC = () => {
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
             <InventoryDashboardCards 
-              dashboard={dashboard} 
-              isLoading={dashboardLoading} 
+              dashboard={dashboardData} 
+              isLoading={isDashboardLoading} 
             />
             
             {/* Quick Actions */}
@@ -147,8 +158,9 @@ const Inventory: React.FC = () => {
 
             <MaterialsTable 
               materials={materials || []}
-              isLoading={materialsLoading}
+              isLoading={isMaterialsLoading}
               searchTerm={searchTerm}
+              onEditMaterial={handleEditMaterial}
             />
           </TabsContent>
 
@@ -171,7 +183,7 @@ const Inventory: React.FC = () => {
 
             <InventoryTable 
               inventory={inventory || []}
-              isLoading={inventoryLoading}
+              isLoading={isInventoryLoading}
               searchTerm={searchTerm}
             />
           </TabsContent>

@@ -92,6 +92,22 @@ export const useRealtimeNotifications = () => {
           route: `/demanda/${photo.service_id}`,
         });
       })
+      // Notificações diretas da tabela notifications
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        const notification = payload.new as any;
+        addNotification({
+          title: '🔔 Nova Notificação',
+          message: notification.message,
+          type: 'info',
+          serviceId: notification.service_id,
+          route: notification.service_id ? `/demanda/${notification.service_id}` : undefined,
+        });
+      })
       // Movimentações de estoque (apenas para gestores)
       .on('postgres_changes', { 
         event: 'INSERT', 

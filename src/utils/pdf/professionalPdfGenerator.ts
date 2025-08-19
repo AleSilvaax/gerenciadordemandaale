@@ -5,6 +5,7 @@ import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
 import { processImage } from './imageProcessor';
 import { defaultTableTheme } from './pdfLayout';
+import { getServiceMaterialUsage } from '@/services/inventoryService';
 
 /**
  * Correções e melhorias (não alterei a API externa):
@@ -98,6 +99,10 @@ export const generateProfessionalServiceReport = async (service: Service): Promi
   // Detalhes do cliente
   currentY = checkPageBreak(doc, currentY, 40);
   currentY = createClientDetails(doc, service, currentY);
+
+  // Seção de materiais
+  currentY = checkPageBreak(doc, currentY, 60);
+  currentY = await createMaterialsSection(doc, service, currentY);
 
   // Cronograma e status
   currentY = checkPageBreak(doc, currentY, 40);
@@ -308,13 +313,14 @@ const createIndex = (doc: any, startY: number): number => {
   const indexItems = [
     '1. Informações Gerais',
     '2. Detalhes do Cliente',
-    '3. Cronograma e Status',
-    '4. Técnico Responsável',
-    '5. Campos Técnicos',
-    '6. Comunicações',
-    '7. Feedback',
-    '8. Assinaturas',
-    '9. Anexos Fotográficos'
+    '3. Materiais Utilizados',
+    '4. Cronograma e Status',
+    '5. Técnico Responsável',
+    '6. Campos Técnicos',
+    '7. Comunicações',
+    '8. Feedback',
+    '9. Assinaturas',
+    '10. Anexos Fotográficos'
   ];
 
   doc.setFontSize(10);
@@ -396,10 +402,144 @@ const createServiceOverview = (doc: any, service: Service, startY: number): numb
   return currentY + 5;
 };
 
+const createMaterialsSection = async (doc: any, service: Service, startY: number): Promise<number> => {
+  let currentY = startY;
+
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('3. MATERIAIS UTILIZADOS', PDF_DIMENSIONS.margin, currentY);
+
+  currentY += 15;
+
+  try {
+    // Buscar dados dos materiais utilizados no serviço
+    const materialsData = await getServiceMaterialUsage(service.id || '');
+    
+    if (materialsData && materialsData.length > 0) {
+      // Preparar dados para a tabela
+      const tableData = materialsData.map(usage => [
+        formatForPdf(usage.material?.name || 'Material não identificado'),
+        formatForPdf(usage.material?.unit || 'un'),
+        String(usage.planned_quantity || 0),
+        String(usage.used_quantity || 0),
+        usage.material?.cost_per_unit 
+          ? `R$ ${(Number(usage.material.cost_per_unit) * usage.used_quantity).toFixed(2)}`
+          : 'N/A',
+        formatForPdf(usage.notes || '-')
+      ]);
+
+      // Calcular totais
+      const totalCost = materialsData.reduce((total, usage) => {
+        if (usage.material?.cost_per_unit) {
+          return total + (Number(usage.material.cost_per_unit) * usage.used_quantity);
+        }
+        return total;
+      }, 0);
+
+      // Criar tabela de materiais
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Material', 'Unidade', 'Planejado', 'Usado', 'Custo Total', 'Observações']],
+        body: tableData,
+        ...defaultTableTheme('accent'),
+        theme: 'striped',
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [...PDF_COLORS.accent],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+          4: { halign: 'right' }
+        }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+
+      // Adicionar resumo de custos
+      if (totalCost > 0) {
+        doc.setFillColor(...PDF_COLORS.lightGray);
+        doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 15, 'F');
+        doc.setDrawColor(...PDF_COLORS.accent);
+        doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 15, 'S');
+        
+        doc.setFontSize(12);
+        doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+        doc.setTextColor(...PDF_COLORS.primary);
+        doc.text('CUSTO TOTAL DOS MATERIAIS:', PDF_DIMENSIONS.margin + 5, currentY + 9);
+        doc.text(`R$ ${totalCost.toFixed(2)}`, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin - 5, currentY + 9, { align: 'right' });
+        
+        currentY += 20;
+      }
+
+      // Observações adicionais sobre os materiais
+      const materialsWithNotes = materialsData.filter(usage => usage.notes && usage.notes.trim());
+      if (materialsWithNotes.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+        doc.setTextColor(...PDF_COLORS.secondary);
+        doc.text('Observações sobre Materiais:', PDF_DIMENSIONS.margin, currentY);
+        currentY += 8;
+
+        materialsWithNotes.forEach((usage, index) => {
+          doc.setFontSize(10);
+          doc.setFont(PDF_FONTS.normal, 'normal' as any);
+          doc.setTextColor(...PDF_COLORS.text);
+          const noteText = `${usage.material?.name}: ${usage.notes}`;
+          const wrappedText = doc.splitTextToSize(noteText, 160);
+          doc.text(wrappedText, PDF_DIMENSIONS.margin, currentY);
+          currentY += wrappedText.length * 4 + 3;
+        });
+        
+        currentY += 5;
+      }
+    } else {
+      // Nenhum material registrado
+      doc.setFillColor(...PDF_COLORS.lightGray);
+      doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 30, 'F');
+      doc.setDrawColor(...PDF_COLORS.border);
+      doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 30, 'S');
+      
+      doc.setFontSize(12);
+      doc.setFont(PDF_FONTS.normal, 'normal' as any);
+      doc.setTextColor(...PDF_COLORS.secondary);
+      doc.text('Nenhum material foi registrado para este serviço.', PDF_DIMENSIONS.pageWidth / 2, currentY + 20, { align: 'center' });
+      
+      currentY += 35;
+    }
+  } catch (error) {
+    console.error('Erro ao buscar materiais do serviço:', error);
+    
+    // Exibir erro no PDF
+    doc.setFillColor(...PDF_COLORS.warning);
+    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 25, 'F');
+    doc.setDrawColor(...PDF_COLORS.border);
+    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 25, 'S');
+    
+    doc.setFontSize(10);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text('Erro ao carregar informações dos materiais.', PDF_DIMENSIONS.pageWidth / 2, currentY + 15, { align: 'center' });
+    
+    currentY += 30;
+  }
+
+  return currentY;
+};
+
 const createClientDetails = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '2. DETALHES DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '4. DETALHES DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -427,7 +567,7 @@ const createClientDetails = (doc: any, service: Service, startY: number): number
 const createTimelineSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '3. CRONOGRAMA E STATUS', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '5. CRONOGRAMA E STATUS', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -454,7 +594,7 @@ const createTimelineSection = (doc: any, service: Service, startY: number): numb
 const createTechnicianSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '4. TÉCNICO RESPONSÁVEL', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '6. TÉCNICO RESPONSÁVEL', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -491,7 +631,7 @@ const createTechnicianSection = (doc: any, service: Service, startY: number): nu
 const createTechnicianFieldsSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '5. CHECKLIST TÉCNICO', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '7. CHECKLIST TÉCNICO', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -526,7 +666,7 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
 const createCommunicationsSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '6. COMUNICAÇÕES', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '8. COMUNICAÇÕES', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -571,7 +711,7 @@ const createCommunicationsSection = (doc: any, service: Service, startY: number)
 const createFeedbackSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '7. FEEDBACK DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '9. FEEDBACK DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -626,7 +766,7 @@ const createFeedbackSection = (doc: any, service: Service, startY: number): numb
 const createSignaturesSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '8. ASSINATURAS', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '10. ASSINATURAS', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]
@@ -710,7 +850,7 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
 const createPhotosSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
 
-  currentY = safeAddText(doc, '9. ANEXOS FOTOGRÁFICOS', PDF_DIMENSIONS.margin, currentY, {
+  currentY = safeAddText(doc, '11. ANEXOS FOTOGRÁFICOS', PDF_DIMENSIONS.margin, currentY, {
     fontSize: 16,
     fontStyle: 'bold',
     color: [...PDF_COLORS.primary] as [number, number, number]

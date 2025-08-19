@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -27,7 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useCreateMaterial, useMaterialCategories } from "@/hooks/useInventory";
+import { useCreateMaterial, useMaterialCategories, useUpdateMaterial } from "@/hooks/useInventory";
+import { useToast } from "@/hooks/use-toast";
+import { Material } from "@/types/inventoryTypes";
 
 const materialSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -53,10 +55,14 @@ interface MaterialDialogProps {
 
 export const MaterialDialog: React.FC<MaterialDialogProps> = ({
   open,
-  onClose
+  onClose,
+  editingMaterial
 }) => {
+  const { toast } = useToast();
   const { data: categories, isLoading: categoriesLoading } = useMaterialCategories();
   const createMaterial = useCreateMaterial();
+  const updateMaterial = useUpdateMaterial();
+  const isEditing = !!editingMaterial;
 
   const form = useForm<MaterialFormData>({
     resolver: zodResolver(materialSchema),
@@ -75,17 +81,60 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
     },
   });
 
+  useEffect(() => {
+    if (editingMaterial && open) {
+      form.reset({
+        name: editingMaterial.name,
+        description: editingMaterial.description || "",
+        sku: editingMaterial.sku || "",
+        unit: editingMaterial.unit,
+        category_id: editingMaterial.category_id || "",
+        min_stock: editingMaterial.min_stock,
+        max_stock: editingMaterial.max_stock,
+        cost_per_unit: Number(editingMaterial.cost_per_unit),
+        supplier: editingMaterial.supplier || "",
+        barcode: editingMaterial.barcode || "",
+        location: editingMaterial.location || "",
+      });
+    } else if (!open) {
+      form.reset();
+    }
+  }, [editingMaterial, open, form]);
+
   const onSubmit = async (data: MaterialFormData) => {
     try {
-      await createMaterial.mutateAsync({
-        ...data,
-        is_active: true,
-        category_id: data.category_id === "no-category" ? undefined : data.category_id,
-      } as any);
+      if (isEditing && editingMaterial) {
+        await updateMaterial.mutateAsync({
+          id: editingMaterial.id,
+          data: {
+            ...data,
+            category_id: data.category_id === "no-category" ? undefined : data.category_id,
+          }
+        });
+        toast({
+          title: "Material atualizado",
+          description: "Material atualizado com sucesso!",
+        });
+      } else {
+        await createMaterial.mutateAsync({
+          ...data,
+          is_active: true,
+          category_id: data.category_id === "no-category" ? undefined : data.category_id,
+        } as any);
+        toast({
+          title: "Material criado",
+          description: "Material criado com sucesso!",
+        });
+      }
       form.reset();
       onClose();
     } catch (error) {
-      console.error('Erro ao criar material:', error);
+      console.error('Erro ao processar material:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao ${isEditing ? 'atualizar' : 'criar'} material.`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -98,9 +147,9 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Material</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Material' : 'Novo Material'}</DialogTitle>
           <DialogDescription>
-            Cadastre um novo material para o controle de estoque
+            {isEditing ? 'Edite as informações do material' : 'Cadastre um novo material para o controle de estoque'}
           </DialogDescription>
         </DialogHeader>
 
@@ -307,12 +356,17 @@ export const MaterialDialog: React.FC<MaterialDialogProps> = ({
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                disabled={createMaterial.isPending}
+                disabled={createMaterial.isPending || updateMaterial.isPending}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMaterial.isPending}>
-                {createMaterial.isPending ? "Criando..." : "Criar Material"}
+              <Button 
+                type="submit" 
+                disabled={createMaterial.isPending || updateMaterial.isPending}
+              >
+                {(createMaterial.isPending || updateMaterial.isPending) 
+                  ? (isEditing ? "Atualizando..." : "Criando...") 
+                  : (isEditing ? "Atualizar Material" : "Criar Material")}
               </Button>
             </div>
           </form>
