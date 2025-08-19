@@ -13,18 +13,42 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { Material } from "@/types/inventoryTypes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUpdateMaterial, useDeleteMaterial } from "@/hooks/useInventory";
+import { useToast } from "@/hooks/use-toast";
 
 interface MaterialsTableProps {
   materials: Material[];
   isLoading: boolean;
   searchTerm: string;
+  onEditMaterial: (material: Material) => void;
 }
 
 export const MaterialsTable: React.FC<MaterialsTableProps> = ({
   materials,
   isLoading,
-  searchTerm
+  searchTerm,
+  onEditMaterial
 }) => {
+  const { toast } = useToast();
+  const deleteMaterial = useDeleteMaterial();
+
+  const handleDelete = async (materialId: string, materialName: string) => {
+    if (confirm(`Tem certeza que deseja excluir o material "${materialName}"?`)) {
+      try {
+        await deleteMaterial.mutateAsync(materialId);
+        toast({
+          title: "Material excluído",
+          description: `O material "${materialName}" foi excluído com sucesso.`
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir material.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
   const filteredMaterials = useMemo(() => {
     return materials.filter(material =>
       material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,10 +144,21 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => onEditMaterial(material)}
+                        title="Editar material"
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDelete(material.id, material.name)}
+                        title="Excluir material"
+                        disabled={deleteMaterial.isPending}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

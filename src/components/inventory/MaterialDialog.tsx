@@ -48,6 +48,7 @@ type MaterialFormData = z.infer<typeof materialSchema>;
 interface MaterialDialogProps {
   open: boolean;
   onClose: () => void;
+  editingMaterial?: Material | null;
 }
 
 export const MaterialDialog: React.FC<MaterialDialogProps> = ({

@@ -20,6 +20,7 @@ const Inventory: React.FC = () => {
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [movementDialogOpen, setMovementDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
   const { data: dashboard, isLoading: dashboardLoading } = useInventoryDashboard();
   const { data: materials, isLoading: materialsLoading } = useMaterials();
@@ -198,9 +199,10 @@ const Inventory: React.FC = () => {
       </div>
 
       {/* Dialogs */}
-      <MaterialDialog 
-        open={materialDialogOpen} 
-        onClose={() => setMaterialDialogOpen(false)} 
+      <MaterialDialog
+        open={materialDialogOpen}
+        onClose={handleCloseDialog}
+        editingMaterial={editingMaterial}
       />
       <MovementDialog 
         open={movementDialogOpen} 
