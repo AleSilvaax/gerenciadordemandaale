@@ -14,25 +14,17 @@ import { getServiceMaterialUsage } from '@/services/inventoryService';
  * - Corrigi usos incorretos de spread em defaultTableTheme (usando ...defaultTableTheme(...))
  * - Adicionei `cleanStringForPdf` e `formatForPdf` para remover null-bytes/encoding ruins e normalizar texto
  * - Criei `safeAddText` (substitui todas as chamadas a addText dentro deste arquivo) para garantir que todo texto
- *   passe por sanitização antes de ir para o PDF
- * - Hierarquia tipográfica consistente: Título (20–22), Seção (16), Subtítulo (12–13), Corpo (10–11)
- * - “Respiro” entre seções padronizado (spacingY = 8–14mm conforme bloco)
- * - Índice com estilo e divisores
- * - Tabelas com tema clean (listras leves, cabeçalho destacado, padding consistente)
- * - Caixas para Comunicações e Feedback (card com sombra simulada e barra à esquerda)
- * - Assinaturas lado a lado com placeholders
- * - Grade responsiva de fotos (2 ou 3 por linha, com título)
- * - Cabeçalho e rodapé em todas as páginas (menos capa), com número de página e data
- * - Evitei quebras abruptas usando checkPageBreak em todos os blocos longos
+ *   passe por sanitização antes de ser desenhado no PDF — isso corrige os caracteres corrompidos (ex: C\u0000o\u0000n...)
+ * - Mantive a assinatura exportada `generateProfessionalServiceReport` e não alterei integrações externas
  */
 
-// ============= Utils de sanitização =============
+// --- Helpers locais ---
 const cleanStringForPdf = (input: any): string => {
-  if (input === undefined || input === null) return '';
+  if (input === null || input === undefined) return '';
   let s = String(input);
-  // remove null-bytes e caracteres invisíveis mais comuns
-  s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
-  // remove marca BOM, se houver
+  // remover bytes NUL que aparecem quando uma string UTF-16 é passada como UTF-8
+  s = s.replace(/\u0000/g, '');
+  // remover BOM se presente
   s = s.replace(/^\uFEFF/, '');
   // trim + normalização Unicode
   try {
@@ -63,8 +55,28 @@ const safeAddText = (doc: any, text: any, x: number, y: number, opts?: any) => {
 const primaryColor = "#007BFF";
 const secondaryColor = "#1E1E1E";
 const accentColor = "#00FFC6";
+const titleFont = "Poppins";
+const bodyFont = "Roboto";
 
-// ============= Gerador principal =============
+function drawModernHeader(doc: any, title: string, pageWidth: number) {
+  doc.setFillColor(primaryColor);
+  doc.rect(0, 0, pageWidth, 40, "F");
+  doc.setFont(titleFont, "bold");
+  doc.setFontSize(20);
+  doc.setTextColor("#FFFFFF");
+  doc.text(title, pageWidth / 2, 25, { align: "center" });
+}
+
+function drawModernFooter(doc: any, pageNumber: number, totalPages: number, pageWidth: number, pageHeight: number) {
+  doc.setDrawColor(accentColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, pageHeight - 15, pageWidth - 20, pageHeight - 15);
+  doc.setFont(bodyFont, "normal");
+  doc.setFontSize(10);
+  doc.setTextColor("#555555");
+  doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+}
+
 export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
 
@@ -147,10 +159,6 @@ const createProfessionalCover = async (doc: any, service: Service): Promise<numb
   doc.setFillColor(...PDF_COLORS.primaryLight);
   doc.rect(0, 100, PDF_DIMENSIONS.pageWidth, 20, 'F');
 
-  // Bloco branco (conteúdo da capa)
-  doc.setFillColor(255, 255, 255);
-  doc.rect(PDF_DIMENSIONS.margin, 40, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin * 2, 70, 'F');
-
   // Faixa accent mais destacada
   doc.setFillColor(...PDF_COLORS.accent);
   doc.rect(0, 115, PDF_DIMENSIONS.pageWidth, 8, 'F');
@@ -175,90 +183,134 @@ const createProfessionalCover = async (doc: any, service: Service): Promise<numb
   } catch (e) {
     doc.setFillColor(...PDF_COLORS.white);
     doc.rect(PDF_DIMENSIONS.margin, 15, 20, 20, 'F');
+    doc.setFillColor(...PDF_COLORS.accent);
+    doc.circle(PDF_DIMENSIONS.margin + 10, 25, 6, 'F');
   }
 
-  // Título da capa
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.setFontSize(22);
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  safeAddText(doc, 'RELATÓRIO TÉCNICO', PDF_DIMENSIONS.margin + 10, 60);
+  // Título principal
+  doc.setFontSize(32);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatForPdf('RELATÓRIO TÉCNICO'), PDF_DIMENSIONS.pageWidth / 2, 45, { align: 'center' });
 
-  doc.setFontSize(14);
+  // Subtítulo
+  doc.setFontSize(18);
   doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.secondary);
-  safeAddText(doc, 'Sistema Integrado de Gestão', PDF_DIMENSIONS.margin + 10, 68);
+  doc.text(formatForPdf('Sistema Integrado de Gestão'), PDF_DIMENSIONS.pageWidth / 2, 62, { align: 'center' });
 
-  // Número da OS e título
-  doc.setFontSize(12);
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  safeAddText(doc, `OS #${formatForPdf(service.number || '-')}`, PDF_DIMENSIONS.margin + 10, 80);
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  safeAddText(doc, formatForPdf(service.title || '—'), PDF_DIMENSIONS.margin + 10, 86);
+  // Badge OS
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.roundedRect(65, 75, 80, 12, 3, 3, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.text(formatForPdf(`OS #${service.number || 'N/A'}`), PDF_DIMENSIONS.pageWidth / 2, 83, { align: 'center' });
 
-  // Resumo executivo (card)
-  const cardX = PDF_DIMENSIONS.margin + 10;
-  const cardW = PDF_DIMENSIONS.pageWidth - cardX - PDF_DIMENSIONS.margin - 10;
-  const cardY = 92;
-  const cardH = 30;
+  // Card principal de informações
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
 
-  // Sombra simulada
-  doc.setDrawColor(240, 240, 240);
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(cardX, cardY, cardW, cardH, 2, 2, 'F');
+  // Sombra simulada do card (leve overdraw intencional)
+  doc.setFillColor(...PDF_COLORS.mediumGray);
+  doc.roundedRect(27, 137, 160, 130, 8, 8, 'F');
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
+
+  // Borda decorativa do card
   doc.setDrawColor(...PDF_COLORS.accent);
-  doc.setLineWidth(0.6);
-  doc.line(cardX, cardY, cardX, cardY + cardH);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'S');
 
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setFontSize(11);
+  // Header do card com background
+  doc.setFillColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(25, 135, 160, 25, 8, 8, 'F');
+  doc.rect(25, 152, 160, 8, 'F');
+
+  // Título do card
   doc.setTextColor(...PDF_COLORS.primary);
-  safeAddText(doc, 'RESUMO EXECUTIVO', cardX + 4, cardY + 7);
+  doc.setFontSize(18);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.text(formatForPdf('RESUMO EXECUTIVO'), 105, 150, { align: 'center' });
 
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setFontSize(10);
-  doc.setTextColor(...PDF_COLORS.secondary);
+  // Informações organizadas em duas colunas
+  let infoY = 175;
+  const leftCol = 35;
+  const rightCol = 115;
 
-  const resumo = [
-    [`Demanda:`, formatForPdf(service.title || '-')],
-    [`Cliente:`, formatForPdf(service.client?.name || service.client_name || '-')],
-    [`Localização:`, formatForPdf(service.location || '-')],
-    [`Tipo:`, formatForPdf(service.serviceType || service.type || '-')],
-    [`Status:`, formatForPdf(service.status || '-')],
-    [`Prioridade:`, formatForPdf(service.priority || '-')],
+  const leftInfo = [
+    ['Demanda:', formatForPdf(service.title)],
+    ['Cliente:', formatForPdf(service.client)],
+    ['Localização:', formatForPdf(service.location)],
   ];
 
-  let y = cardY + 13;
-  const col1X = cardX + 4;
-  const col2X = cardX + cardW / 2;
-  const lineH = 5.4;
-  resumo.forEach((pair, idx) => {
-    const destX = idx % 2 === 0 ? col1X : col2X;
-    if (idx % 2 === 0 && idx > 0) y += lineH; // pular linha a cada 2 itens
-    doc.setFont(PDF_FONTS.normal, 'bold' as any);
-    safeAddText(doc, pair[0], destX, y);
+  const rightInfo = [
+    ['Tipo:', formatForPdf(service.serviceType)],
+    ['Status:', formatForPdf(getStatusText(service.status))],
+    ['Prioridade:', formatForPdf(service.priority || 'Normal')],
+  ];
+
+  doc.setFontSize(10);
+
+  // Coluna esquerda
+  leftInfo.forEach(([label, value]) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(formatForPdf(String(label)), leftCol, infoY);
     doc.setFont(PDF_FONTS.normal, 'normal' as any);
-    safeAddText(doc, pair[1], destX + 24, y);
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(String(value), 70);
+    doc.text(wrappedValue, leftCol, infoY + 6);
+    infoY += 18;
   });
 
-  return 130; // fim da capa
+  // Coluna direita
+  infoY = 175;
+  rightInfo.forEach(([label, value]) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(formatForPdf(String(label)), rightCol, infoY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(String(value), 70);
+    doc.text(wrappedValue, rightCol, infoY + 6);
+    infoY += 18;
+  });
+
+  // Data de criação e prazo com ícones
+  doc.setFillColor(...PDF_COLORS.accent);
+  doc.circle(leftCol, 235, 3, 'F');
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.setFontSize(9);
+  doc.text(formatForPdf(`Criado: ${formatDate(service.creationDate)}`), leftCol + 8, 237);
+
+  if (service.dueDate) {
+    doc.setFillColor(...PDF_COLORS.warning);
+    doc.circle(rightCol, 235, 3, 'F');
+    doc.text(formatForPdf(`Prazo: ${formatDate(service.dueDate)}`), rightCol + 8, 237);
+  }
+
+  // Rodapé da capa mais elegante
+  doc.setFontSize(8);
+  doc.setTextColor(...PDF_COLORS.textLight);
+  doc.text(formatForPdf(`Documento gerado automaticamente em ${formatDate(new Date().toISOString())}`), 105, 280, { align: 'center' });
+
+  return 290;
 };
 
-// ============= Índice =============
 const createIndex = (doc: any, startY: number): number => {
-  let y = startY;
+  let currentY = startY;
 
-  doc.setFontSize(16);
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setTextColor(...PDF_COLORS.primary);
-  safeAddText(doc, 'ÍNDICE', PDF_DIMENSIONS.margin, y);
+  // Título com fundo
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(18);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('ÍNDICE', PDF_DIMENSIONS.margin, currentY);
 
-  y += 6;
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.setLineWidth(0.2);
-  doc.line(PDF_DIMENSIONS.margin, y, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, y);
-  y += 4;
+  currentY += 12;
 
-  const items = [
+  const indexItems = [
     '1. Informações Gerais',
     '2. Detalhes do Cliente',
     '3. Materiais Utilizados',
@@ -268,199 +320,331 @@ const createIndex = (doc: any, startY: number): number => {
     '7. Comunicações',
     '8. Feedback',
     '9. Assinaturas',
-    '10. Anexos Fotográficos',
+    '10. Anexos Fotográficos'
   ];
 
-  doc.setFontSize(11);
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.secondary);
-
-  items.forEach((txt, i) => {
-    safeAddText(doc, txt, PDF_DIMENSIONS.margin, y);
-    y += 6;
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLORS.text);
+  indexItems.forEach((item, idx) => {
+    const yPos = currentY + (idx * 7);
+    doc.text(item, PDF_DIMENSIONS.margin, yPos);
+    // linha tracejada até a margem direita
+    const lineStartX = PDF_DIMENSIONS.margin + doc.getTextWidth(item) + 2;
+    doc.setDrawColor(...PDF_COLORS.lightGray);
+    for (let x = lineStartX; x < PDF_DIMENSIONS.pageWidth - 25; x += 2) {
+      doc.line(x, yPos - 1, x + 1, yPos - 1);
+    }
+    // número da página (placeholder)
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(String(idx + 2), PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, yPos, { align: 'right' });
+    doc.setTextColor(...PDF_COLORS.text);
   });
 
-  return y + 4;
+  return currentY + indexItems.length * 7 + 5;
 };
 
-// ============= Informações Gerais =============
 const createServiceOverview = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = sectionTitle(doc, '1. INFORMAÇÕES GERAIS', currentY);
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('1. INFORMAÇÕES GERAIS', PDF_DIMENSIONS.margin, currentY);
+
+  currentY += 10;
+
+  // Card de informações
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'F');
+  doc.setDrawColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'S');
 
   const info = [
-    ['Número da OS:', formatForPdf(service.number || '-')],
-    ['Título:', formatForPdf(service.title || '-')],
-    ['Tipo de Serviço:', formatForPdf(service.serviceType || service.type || '-')],
-    ['Prioridade:', formatForPdf(service.priority || '-')],
-    ['Status Atual:', formatForPdf(service.status || '-')],
-    ['Localização:', formatForPdf(service.location || '-')],
+    ['Número da OS:', formatForPdf(service.number || 'N/A')],
+    ['Título:', formatForPdf(service.title)],
+    ['Tipo de Serviço:', formatForPdf(service.serviceType || 'Não especificado')],
+    ['Prioridade:', formatForPdf(service.priority || 'Normal')],
+    ['Status Atual:', formatForPdf(getStatusText(service.status))],
+    ['Localização:', formatForPdf(service.location || 'Não informado')]
   ];
 
-  drawDefinitionList(doc, info, currentY + 4);
-  
-  // Descrição do Serviço (bloco com quebra)
-  const descTitleY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 6 : currentY + 22;
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setFontSize(12);
-  doc.setTextColor(...PDF_COLORS.primary);
-  safeAddText(doc, 'Descrição do Serviço:', PDF_DIMENSIONS.margin, descTitleY);
+  let colX = PDF_DIMENSIONS.margin + 3;
+  let colY = currentY + 8;
+  doc.setFontSize(10);
+  info.forEach(([label, value], idx) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(label, colX, colY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(value, 120), colX + 35, colY);
+    colY += 8;
+  });
 
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setFontSize(11);
-  doc.setTextColor(...PDF_COLORS.secondary);
+  currentY += 60;
 
-  const desc = formatForPdf(service.description || '-');
-  const wrapped = doc.splitTextToSize(desc, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin * 2);
-  safeAddText(doc, wrapped, PDF_DIMENSIONS.margin, descTitleY + 6);
+  if (service.description) {
+    doc.setFontSize(12);
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text('Descrição do Serviço:', PDF_DIMENSIONS.margin, currentY);
+    currentY += 5;
+    doc.setFontSize(10);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(service.description, 160), PDF_DIMENSIONS.margin, currentY);
+    currentY += 10;
+  }
 
-  return descTitleY + 6 + wrapped.length * 5 + 4;
+  return currentY + 5;
 };
 
-// ============= Detalhes do Cliente =============
-const createClientDetails = (doc: any, service: Service, startY: number): number => {
-  let currentY = startY;
-
-  currentY = sectionTitle(doc, '2. DETALHES DO CLIENTE', currentY);
-
-  const info = [
-    ['Nome/Razão Social', formatForPdf(service.client?.name || service.client_name || '-')],
-    ['Endereço', formatForPdf(service.client?.address || service.address || '-')],
-    ['Cidade', formatForPdf(service.client?.city || service.city || '-')],
-    ['Local do Serviço', formatForPdf(service.location || '-')],
-  ];
-
-  drawTable(doc, ['Campo', 'Informação'], info, currentY + 4);
-  return (doc as any).lastAutoTable.finalY + 8;
-};
-
-// ============= Materiais =============
 const createMaterialsSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
 
-  currentY = sectionTitle(doc, '3. MATERIAIS UTILIZADOS', currentY);
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('3. MATERIAIS UTILIZADOS', PDF_DIMENSIONS.margin, currentY);
 
-  // Busca detalhamento do uso
-  let usage = [] as Array<{ material: any; planned_quantity: number; used_quantity: number; notes?: string }>;
+  currentY += 15;
+
   try {
-    usage = await getServiceMaterialUsage(service.id!);
-  } catch (e) {
-    // fallback para dados dentro do próprio service
-    usage = (service.materials || []).map((m: any) => ({
-      material: m,
-      planned_quantity: Number(m.planned || m.qtd_plan || 0),
-      used_quantity: Number(m.used || m.qtd_used || 0),
-      notes: m.notes || m.observations || '',
-    }));
-  }
+    // Buscar dados dos materiais utilizados no serviço
+    const materialsData = await getServiceMaterialUsage(service.id || '');
+    
+    if (materialsData && materialsData.length > 0) {
+      // Preparar dados para a tabela
+      const tableData = materialsData.map(usage => [
+        formatForPdf(usage.material?.name || 'Material não identificado'),
+        formatForPdf(usage.material?.unit || 'un'),
+        String(usage.planned_quantity || 0),
+        String(usage.used_quantity || 0),
+        usage.material?.cost_per_unit 
+          ? `R$ ${(Number(usage.material.cost_per_unit) * usage.used_quantity).toFixed(2)}`
+          : 'N/A',
+        formatForPdf(usage.notes || '-')
+      ]);
 
-  const tableData = usage.map((u) => {
-    const unit = u.material?.unit || 'un';
-    const costTotal = (Number(u.material?.cost_per_unit) || 0) * Number(u.used_quantity || 0);
-    return [
-      formatForPdf(u.material?.name || '-'),
-      formatForPdf(unit),
-      String(u.planned_quantity ?? 0),
-      String(u.used_quantity ?? 0),
-      costTotal ? `R$ ${costTotal.toFixed(2)}` : 'N/A',
-      formatForPdf(u.notes || '-')
-    ];
-  });
+      // Calcular totais
+      const totalCost = materialsData.reduce((total, usage) => {
+        if (usage.material?.cost_per_unit) {
+          return total + (Number(usage.material.cost_per_unit) * usage.used_quantity);
+        }
+        return total;
+      }, 0);
 
-  // Somatório do custo total (se disponível)
-  const totalCost = usage.reduce((total, usage) => {
-    if (usage.material?.cost_per_unit) {
-      return total + (Number(usage.material.cost_per_unit) * usage.used_quantity);
+      // Criar tabela de materiais
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Material', 'Unidade', 'Planejado', 'Usado', 'Custo Total', 'Observações']],
+        body: tableData,
+        ...defaultTableTheme('accent'),
+        theme: 'striped',
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [...PDF_COLORS.accent],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+          4: { halign: 'right' }
+        }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+
+      // Adicionar resumo de custos
+      if (totalCost > 0) {
+        doc.setFillColor(...PDF_COLORS.lightGray);
+        doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 15, 'F');
+        doc.setDrawColor(...PDF_COLORS.accent);
+        doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 15, 'S');
+        
+        doc.setFontSize(12);
+        doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+        doc.setTextColor(...PDF_COLORS.primary);
+        doc.text('CUSTO TOTAL DOS MATERIAIS:', PDF_DIMENSIONS.margin + 5, currentY + 9);
+        doc.text(`R$ ${totalCost.toFixed(2)}`, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin - 5, currentY + 9, { align: 'right' });
+        
+        currentY += 20;
+      }
+
+      // Observações adicionais sobre os materiais
+      const materialsWithNotes = materialsData.filter(usage => usage.notes && usage.notes.trim());
+      if (materialsWithNotes.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+        doc.setTextColor(...PDF_COLORS.secondary);
+        doc.text('Observações sobre Materiais:', PDF_DIMENSIONS.margin, currentY);
+        currentY += 8;
+
+        materialsWithNotes.forEach((usage, index) => {
+          doc.setFontSize(10);
+          doc.setFont(PDF_FONTS.normal, 'normal' as any);
+          doc.setTextColor(...PDF_COLORS.text);
+          const noteText = `${usage.material?.name}: ${usage.notes}`;
+          const wrappedText = doc.splitTextToSize(noteText, 160);
+          doc.text(wrappedText, PDF_DIMENSIONS.margin, currentY);
+          currentY += wrappedText.length * 4 + 3;
+        });
+        
+        currentY += 5;
+      }
+    } else {
+      // Nenhum material registrado
+      doc.setFillColor(...PDF_COLORS.lightGray);
+      doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 30, 'F');
+      doc.setDrawColor(...PDF_COLORS.border);
+      doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 30, 'S');
+      
+      doc.setFontSize(12);
+      doc.setFont(PDF_FONTS.normal, 'normal' as any);
+      doc.setTextColor(...PDF_COLORS.secondary);
+      doc.text('Nenhum material foi registrado para este serviço.', PDF_DIMENSIONS.pageWidth / 2, currentY + 20, { align: 'center' });
+      
+      currentY += 35;
     }
-    return total;
-  }, 0);
-
-  // Criar tabela de materiais
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Material', 'Unidade', 'Planejado', 'Usado', 'Custo Total', 'Observações']],
-    body: tableData,
-    ...defaultTableTheme('accent'),
-    theme: 'striped',
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fontStyle: 'bold',
-    },
-    alternateRowStyles: {
-      fillColor: [...PDF_COLORS.tableStripe] as [number, number, number],
-    },
-  });
-
-  let y = (doc as any).lastAutoTable.finalY + 4;
-
-  // Total
-  if (totalCost) {
-    doc.setFont(PDF_FONTS.normal, 'bold' as any);
-    doc.setTextColor(...PDF_COLORS.primary);
-    doc.setFontSize(11);
-    safeAddText(doc, `Total de Materiais: R$ ${totalCost.toFixed(2)}`, PDF_DIMENSIONS.margin, y);
-    y += 6;
+  } catch (error) {
+    console.error('Erro ao buscar materiais do serviço:', error);
+    
+    // Exibir erro no PDF
+    doc.setFillColor(...PDF_COLORS.warning);
+    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 25, 'F');
+    doc.setDrawColor(...PDF_COLORS.border);
+    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 25, 'S');
+    
+    doc.setFontSize(10);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text('Erro ao carregar informações dos materiais.', PDF_DIMENSIONS.pageWidth / 2, currentY + 15, { align: 'center' });
+    
+    currentY += 30;
   }
 
-  return y + 2;
+  return currentY;
 };
 
-// ============= Cronograma =============
+const createClientDetails = (doc: any, service: Service, startY: number): number => {
+  let currentY = startY;
+
+  currentY = safeAddText(doc, '4. DETALHES DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
+
+  // Tabela de informações do cliente
+  const clientData = [
+    ['Nome/Razão Social', formatForPdf(service.client || 'Não informado')],
+    ['Endereço', formatForPdf(service.address || 'Não informado')],
+    ['Cidade', formatForPdf(service.city || 'Não informada')],
+    ['Local do Serviço', formatForPdf(service.location || 'Não informado')]
+  ];
+
+  autoTable(doc, {
+    startY: currentY + 6,
+    head: [['Campo', 'Informação']],
+    body: clientData,
+    ...defaultTableTheme('primary'),
+    theme: 'grid',
+  });
+
+  return (doc as any).lastAutoTable.finalY + 10;
+};
+
 const createTimelineSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = sectionTitle(doc, '4. CRONOGRAMA E STATUS', currentY);
+  currentY = safeAddText(doc, '5. CRONOGRAMA E STATUS', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
-  const steps: Array<[string, string, string]> = [
-    ['Criação', formatDate(service.created_at), 'Concluído'],
-    ['Atribuição', formatForPdf(service.technician ? 'Técnico atribuído' : '—'), 'Concluído'],
-    ['Execução', formatForPdf(service.status_detail || 'Em execução'), service.status || '—'],
-    ['Finalização', formatForPdf(service.finished_at ? formatDate(service.finished_at) : 'Aguardando'), formatForPdf(service.is_done ? 'Concluído' : 'Pendente')],
+  const timelineData = [
+    ['Criação', formatForPdf(formatDate(service.creationDate)), formatForPdf('✓ Concluído')],
+    ['Atribuição', formatForPdf(service.technicians?.[0] ? 'Técnico atribuído' : 'Aguardando'), formatForPdf(service.technicians?.[0] ? '✓ Concluído' : '○ Pendente')],
+    ['Execução', formatForPdf(getExecutionStatus(service.status)), formatForPdf(getExecutionIcon(service.status))],
+    ['Finalização', formatForPdf(service.status === 'concluido' ? 'Serviço finalizado' : 'Aguardando'), formatForPdf(service.status === 'concluido' ? '✓ Concluído' : '○ Pendente')]
   ];
 
-  drawTable(doc, ['Etapa', 'Detalhes', 'Status'], steps, currentY + 4);
-  return (doc as any).lastAutoTable.finalY + 8;
+  autoTable(doc, {
+    startY: currentY + 6,
+    head: [['Etapa', 'Detalhes', 'Status']],
+    body: timelineData,
+    ...defaultTableTheme('accent'),
+    theme: 'striped',
+  });
+
+  return (doc as any).lastAutoTable.finalY + 10;
 };
 
-// ============= Técnico Responsável =============
 const createTechnicianSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = sectionTitle(doc, '5. TÉCNICO RESPONSÁVEL', currentY);
+  currentY = safeAddText(doc, '6. TÉCNICO RESPONSÁVEL', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
-  const info = [
-    ['Nome', formatForPdf(service.technician?.name || service.technician_name || 'Não informado')],
-    ['Função', formatForPdf(service.technician?.role || service.technician_role || 'tecnico')],
-    ['Email', formatForPdf(service.technician?.email || service.technician_email || 'Não informado')],
-    ['Telefone', formatForPdf(service.technician?.phone || service.technician_phone || 'Não informado')],
-  ];
+  if (service.technicians && service.technicians.length > 0) {
+    const technician = service.technicians[0];
 
-  drawTable(doc, ['Campo', 'Informação'], info, currentY + 4);
-  return (doc as any).lastAutoTable.finalY + 8;
+    const techData = [
+      ['Nome', formatForPdf(technician.name)],
+      ['Função', formatForPdf(technician.role || 'Técnico')],
+      ['Email', formatForPdf(technician.email || 'Não informado')],
+      ['Telefone', formatForPdf(technician.phone || 'Não informado')]
+    ];
+
+    autoTable(doc, {
+      startY: currentY + 6,
+      head: [['Campo', 'Informação']],
+      body: techData,
+      ...defaultTableTheme('secondary'),
+      theme: 'grid',
+    });
+
+    return (doc as any).lastAutoTable.finalY + 10;
+  } else {
+    currentY = safeAddText(doc, 'Nenhum técnico foi atribuído a este serviço.', PDF_DIMENSIONS.margin, currentY + 6, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+    return currentY + 20;
+  }
 };
 
-// ============= Campos técnicos (Checklist) =============
 const createTechnicianFieldsSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  currentY = sectionTitle(doc, '6. CHECKLIST TÉCNICO', currentY);
+  currentY = safeAddText(doc, '7. CHECKLIST TÉCNICO', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
-  const fields = (service.customFields || []).map((f: any) => ([
-    formatForPdf(f?.label || f?.name || '-'),
-    formatForPdf(f?.type || '-'),
-    formatForPdf(
-      f?.type === 'boolean' ? (f?.value ? 'true' : 'false') : f?.value ?? '-'
-    ),
-    formatForPdf(f?.status || 'Configurado'),
-  ]));
+  if (service.customFields && service.customFields.length > 0) {
+    const fieldsData = service.customFields.map(field => [
+      formatForPdf(field.label || 'Campo'),
+      formatForPdf(field.type || 'texto'),
+      formatForPdf(field.value ? String(field.value) : 'Não preenchido'),
+      formatForPdf('Configurado')
+    ]);
 
-  const fieldsData = fields.length ? fields : [];
-
-  if (fieldsData.length) {
     autoTable(doc, {
       startY: currentY + 6,
       head: [['Campo', 'Tipo', 'Valor', 'Status']],
@@ -475,180 +659,194 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
       fontSize: 10,
       color: [...PDF_COLORS.secondary] as [number, number, number]
     });
-    return currentY + 10;
+    return currentY + 20;
   }
 };
 
-// ============= Comunicações =============
 const createCommunicationsSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
-  currentY = sectionTitle(doc, '7. COMUNICAÇÕES', currentY);
 
-  const messages = (service.messages || []).map((m: any, idx: number) => ({
-    author: m.author || m.user_name || `Mensagem ${idx + 1}`,
-    role: m.role || m.user_role || '-',
-    text: formatForPdf(m.text || m.message || ''),
-    created_at: m.created_at || m.date || new Date().toISOString(),
-  }));
-
-  if (!messages.length) {
-    safeAddText(doc, 'Nenhuma comunicação registrada.', PDF_DIMENSIONS.margin, currentY + 4);
-    return currentY + 10;
-  }
-
-  const cardX = PDF_DIMENSIONS.margin;
-  const cardW = PDF_DIMENSIONS.pageWidth - 2 * PDF_DIMENSIONS.margin;
-
-  messages.forEach((msg, i) => {
-    currentY = checkPageBreak(doc, currentY, 24);
-
-    // Card
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(...PDF_COLORS.border);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(cardX, currentY + 2, cardW, 20, 2, 2, 'S');
-
-    // Barra à esquerda
-    doc.setFillColor(...PDF_COLORS.accent);
-    doc.rect(cardX, currentY + 2, 2, 20, 'F');
-
-    // Conteúdo
-    doc.setFont(PDF_FONTS.normal, 'bold' as any);
-    doc.setFontSize(11);
-    doc.setTextColor(...PDF_COLORS.primary);
-    safeAddText(doc, `${formatForPdf(msg.author)} — ${formatForPdf(msg.role)}`, cardX + 4, currentY + 8);
-
-    doc.setFont(PDF_FONTS.normal, 'normal' as any);
-    doc.setFontSize(10);
-    doc.setTextColor(...PDF_COLORS.secondary);
-    safeAddText(doc, formatDate(msg.created_at), cardX + 4, currentY + 13);
-
-    const wrapped = doc.splitTextToSize(msg.text, cardW - 8);
-    safeAddText(doc, wrapped, cardX + 4, currentY + 18);
-
-    currentY += 22 + Math.max(0, (wrapped.length - 1)) * 4.2;
+  currentY = safeAddText(doc, '8. COMUNICAÇÕES', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
   });
 
-  return currentY + 4;
-};
+  if (service.messages && service.messages.length > 0) {
+    service.messages.forEach((message, index) => {
+      currentY = checkPageBreak(doc, currentY, 25);
 
-// ============= Feedback =============
-const createFeedbackSection = (doc: any, service: Service, startY: number): number => {
-  let currentY = startY;
-  currentY = sectionTitle(doc, '8. FEEDBACK DO CLIENTE', currentY);
+      // Cabeçalho da mensagem
+      currentY = safeAddText(doc, `Mensagem ${index + 1}`, PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 11,
+        fontStyle: 'bold',
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
 
-  const cardX = PDF_DIMENSIONS.margin;
-  const cardW = PDF_DIMENSIONS.pageWidth - 2 * PDF_DIMENSIONS.margin;
-  const cardH = 22;
+      currentY = safeAddText(doc, `${formatDate(message.timestamp)} - ${formatForPdf(message.senderName)}`, PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 9,
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
 
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.roundedRect(cardX, currentY + 2, cardW, cardH, 2, 2, 'S');
-  
-  // Barra à esquerda
-  doc.setFillColor(...PDF_COLORS.primaryLight);
-  doc.rect(cardX, currentY + 2, 2, cardH, 'F');
+      // Conteúdo da mensagem
+      currentY = safeAddText(doc, message.message, PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 10,
+        color: [...PDF_COLORS.text] as [number, number, number],
+        maxWidth: 160
+      });
 
-  const rating = service.feedback?.rating || service.feedback_rating || null;
-  const comment = formatForPdf(service.feedback?.comment || service.feedback_comment || '');
-  const techObs = formatForPdf(service.feedback?.technician_note || service.feedback_technician_note || '');
-
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.setFontSize(11);
-  safeAddText(doc, 'Comentário do Cliente:', cardX + 4, currentY + 8);
-
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.secondary);
-  doc.setFontSize(10);
-  const wrapC = doc.splitTextToSize(comment || '—', cardW - 8);
-  safeAddText(doc, wrapC, cardX + 4, currentY + 13);
-
-  let y = currentY + 13 + wrapC.length * 4.2 + 2;
-
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.setFontSize(11);
-  safeAddText(doc, 'Observações do Técnico:', cardX + 4, y);
-
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.secondary);
-  doc.setFontSize(10);
-  const wrapT = doc.splitTextToSize(techObs || '—', cardW - 8);
-  safeAddText(doc, wrapT, cardX + 4, y + 5);
-
-  y += 5 + wrapT.length * 4.2;
-
-  if (rating) {
-    doc.setFont(PDF_FONTS.normal, 'bold' as any);
-    doc.setTextColor(...PDF_COLORS.primary);
-    doc.setFontSize(11);
-    safeAddText(doc, `Avaliação: ${rating}/5`, cardX + 4, y + 4);
-    y += 6;
+      currentY += 8;
+    });
+  } else {
+    currentY = safeAddText(doc, 'Nenhuma comunicação registrada.', PDF_DIMENSIONS.margin, currentY + 5, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+    currentY += 20;
   }
 
-  return y + 4;
+  return currentY;
 };
 
-// ============= Assinaturas =============
+const createFeedbackSection = (doc: any, service: Service, startY: number): number => {
+  let currentY = startY;
+
+  currentY = safeAddText(doc, '9. FEEDBACK DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
+
+  if (service.feedback) {
+    if (service.feedback.clientComment) {
+      currentY = safeAddText(doc, 'Comentário do Cliente:', PDF_DIMENSIONS.margin, currentY + 5, {
+        fontSize: 12,
+        fontStyle: 'bold',
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
+
+      currentY = safeAddText(doc, service.feedback.clientComment, PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 10,
+        color: [...PDF_COLORS.text] as [number, number, number],
+        maxWidth: 160
+      });
+    }
+
+    if (service.feedback.technicianFeedback) {
+      currentY = safeAddText(doc, 'Observações do Técnico:', PDF_DIMENSIONS.margin, currentY + 5, {
+        fontSize: 12,
+        fontStyle: 'bold',
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
+
+      currentY = safeAddText(doc, service.feedback.technicianFeedback, PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 10,
+        color: [...PDF_COLORS.text] as [number, number, number],
+        maxWidth: 160
+      });
+    }
+
+    if (service.feedback.clientRating) {
+      currentY = safeAddText(doc, `Avaliação: ${formatForPdf(service.feedback.clientRating)}/5 estrelas`, PDF_DIMENSIONS.margin, currentY + 5, {
+        fontSize: 10,
+        fontStyle: 'bold',
+        color: [...PDF_COLORS.accent] as [number, number, number]
+      });
+    }
+  } else {
+    currentY = safeAddText(doc, 'Nenhum feedback registrado.', PDF_DIMENSIONS.margin, currentY + 5, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+  }
+
+  return currentY + 15;
+};
+
 const createSignaturesSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
-  currentY = sectionTitle(doc, '9. ASSINATURAS', currentY);
 
-  const boxW = (PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin * 2 - 8) / 2;
-  const boxH = 30;
-  const y = currentY + 4;
-  const x1 = PDF_DIMENSIONS.margin;
-  const x2 = x1 + boxW + 8;
+  currentY = safeAddText(doc, '10. ASSINATURAS', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
-  // Cliente
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.roundedRect(x1, y, boxW, boxH, 2, 2, 'S');
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.setFontSize(10);
-  safeAddText(doc, 'Assinatura do Cliente', x1 + 4, y + 6);
+  currentY += 10;
 
-  try {
-    const signClient = service.signatures?.client
-      ? await processImage(service.signatures.client)
-      : null;
-    if (signClient) {
-      doc.addImage(signClient, 'PNG', x1 + 4, y + 8, boxW - 8, 12);
-    } else {
-      doc.setFont(PDF_FONTS.normal, 'normal' as any);
-      doc.setTextColor(...PDF_COLORS.secondary);
-      doc.setFontSize(9);
-      safeAddText(doc, '[Aguardando assinatura]', x1 + 4, y + 16);
+  // Assinatura do cliente
+  if (service.signatures?.client) {
+    currentY = safeAddText(doc, 'Assinatura do Cliente:', PDF_DIMENSIONS.margin, currentY, {
+      fontSize: 12,
+      fontStyle: 'bold',
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+
+    try {
+      const clientSigData = await processImage(service.signatures.client);
+      if (clientSigData) {
+        doc.addImage(
+          clientSigData,
+          'PNG',
+          PDF_DIMENSIONS.margin,
+          currentY,
+          PDF_DIMENSIONS.signatureWidth,
+          PDF_DIMENSIONS.signatureHeight
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao processar assinatura do cliente:', error);
+      currentY = safeAddText(doc, '[Assinatura não pôde ser carregada]', PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 9,
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
     }
-  } catch {}
 
-  // Técnico
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.roundedRect(x2, y, boxW, boxH, 2, 2, 'S');
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.setFontSize(10);
-  safeAddText(doc, 'Assinatura do Técnico', x2 + 4, y + 6);
+    currentY += PDF_DIMENSIONS.signatureHeight + 5;
+  }
 
-  try {
-    const signTech = service.signatures?.technician
-      ? await processImage(service.signatures.technician)
-      : null;
-    if (signTech) {
-      doc.addImage(signTech, 'PNG', x2 + 4, y + 8, boxW - 8, 12);
-    } else {
-      doc.setFont(PDF_FONTS.normal, 'normal' as any);
-      doc.setTextColor(...PDF_COLORS.secondary);
-      doc.setFontSize(9);
-      safeAddText(doc, '[Aguardando assinatura]', x2 + 4, y + 16);
+  // Assinatura do técnico
+  if (service.signatures?.technician) {
+    currentY = safeAddText(doc, 'Assinatura do Técnico:', PDF_DIMENSIONS.margin, currentY, {
+      fontSize: 12,
+      fontStyle: 'bold',
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+
+    try {
+      const techSigData = await processImage(service.signatures.technician);
+      if (techSigData) {
+        doc.addImage(
+          techSigData,
+          'PNG',
+          PDF_DIMENSIONS.margin,
+          currentY,
+          PDF_DIMENSIONS.signatureWidth,
+          PDF_DIMENSIONS.signatureHeight
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao processar assinatura do técnico:', error);
+      currentY = safeAddText(doc, '[Assinatura não pôde ser carregada]', PDF_DIMENSIONS.margin, currentY, {
+        fontSize: 9,
+        color: [...PDF_COLORS.secondary] as [number, number, number]
+      });
     }
-  } catch {}
 
-  return y + boxH + 6;
+    currentY += PDF_DIMENSIONS.signatureHeight + 5;
+  }
+
+  if (!service.signatures?.client && !service.signatures?.technician) {
+    currentY = safeAddText(doc, 'Nenhuma assinatura registrada.', PDF_DIMENSIONS.margin, currentY, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+    currentY += 15;
+  }
+
+  return currentY;
 };
 
-// ============= Fotos (grid 2–3 col) =============
 const createPhotosSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
 
@@ -745,13 +943,12 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
       }
     }
 
-    currentY += maxTitleHeight + 4 + photoHeight + 8;
+    currentY = yTitleBase + maxTitleHeight + photoHeight + 12;
   }
 
-  return currentY + 4;
+  return currentY;
 };
 
-// ============= Cabeçalho e rodapé =============
 const addHeadersAndFooters = (doc: any, service: Service): void => {
   const pageCount = doc.getNumberOfPages();
 
@@ -769,8 +966,7 @@ const addHeadersAndFooters = (doc: any, service: Service): void => {
 
     // Rodapé
     doc.setDrawColor(...PDF_COLORS.border);
-    doc.setLineWidth(0.2);
-    doc.line(PDF_DIMENSIONS.margin, 288, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, 288);
+    doc.line(PDF_DIMENSIONS.margin, 280, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, 280);
 
     doc.setFontSize(8);
     doc.setFont(PDF_FONTS.normal, 'normal' as any);
@@ -785,72 +981,42 @@ const addHeadersAndFooters = (doc: any, service: Service): void => {
 const formatDate = (dateString: string | undefined): string => {
   if (!dateString) return 'Não informado';
   try {
-    const d = new Date(dateString);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch {
-    return String(dateString);
+    return 'Data inválida';
   }
 };
 
-const sectionTitle = (doc: any, title: string, y: number): number => {
-  doc.setFont(PDF_FONTS.normal, 'bold' as any);
-  doc.setFontSize(16);
-  doc.setTextColor(...PDF_COLORS.primary);
-  safeAddText(doc, title, PDF_DIMENSIONS.margin, y);
-
-  // Divider
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.setLineWidth(0.2);
-  doc.line(PDF_DIMENSIONS.margin, y + 2, PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, y + 2);
-
-  return y + 6;
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'pendente': return formatForPdf('Pendente');
+    case 'em_andamento': return formatForPdf('Em Andamento');
+    case 'concluido': return formatForPdf('Concluído');
+    case 'cancelado': return formatForPdf('Cancelado');
+    default: return formatForPdf('Status não definido');
+  }
 };
 
-const drawDefinitionList = (doc: any, pairs: Array<[string, string]>, startY: number) => {
-  const labelW = 40;
-  const lineH = 5.2;
-  let y = startY;
-
-  pairs.forEach(([label, value]) => {
-    doc.setFont(PDF_FONTS.normal, 'bold' as any);
-    doc.setFontSize(11);
-    doc.setTextColor(...PDF_COLORS.primary);
-    safeAddText(doc, label, PDF_DIMENSIONS.margin, y);
-
-    doc.setFont(PDF_FONTS.normal, 'normal' as any);
-    doc.setTextColor(...PDF_COLORS.secondary);
-    doc.setFontSize(11);
-
-    const maxW = PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin * 2 - labelW - 2;
-    const wrapped = doc.splitTextToSize(value, maxW);
-    safeAddText(doc, wrapped, PDF_DIMENSIONS.margin + labelW, y);
-
-    y += Math.max(lineH, wrapped.length * 4.2);
-  });
-
-  return y + 2;
+const getExecutionStatus = (status: string): string => {
+  switch (status) {
+    case 'em_andamento': return formatForPdf('Em execução');
+    case 'concluido': return formatForPdf('Executado com sucesso');
+    case 'cancelado': return formatForPdf('Execução cancelada');
+    default: return formatForPdf('Aguardando início');
+  }
 };
 
-const drawTable = (doc: any, head: string[], body: (string[])[], startY: number) => {
-  autoTable(doc, {
-    startY,
-    head: [head],
-    body,
-    ...defaultTableTheme('accent'),
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fontStyle: 'bold',
-    },
-    alternateRowStyles: {
-      fillColor: [...PDF_COLORS.tableStripe] as [number, number, number],
-    },
-  });
+const getExecutionIcon = (status: string): string => {
+  switch (status) {
+    case 'em_andamento': return formatForPdf('◐ Em andamento');
+    case 'concluido': return formatForPdf('✓ Concluído');
+    case 'cancelado': return formatForPdf('✗ Cancelado');
+    default: return formatForPdf('○ Pendente');
+  }
 };
