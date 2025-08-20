@@ -15,6 +15,7 @@ import { Material } from "@/types/inventoryTypes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUpdateMaterial, useDeleteMaterial } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 
 interface MaterialsTableProps {
   materials: Material[];
@@ -31,6 +32,10 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({
 }) => {
   const { toast } = useToast();
   const deleteMaterial = useDeleteMaterial();
+  const { user } = useOptimizedAuth();
+
+  // Check if user can edit/delete materials
+  const canManageMaterials = user?.role && ['administrador', 'gestor', 'owner', 'super_admin'].includes(user.role);
 
   const handleDelete = async (materialId: string, materialName: string) => {
     if (confirm(`Tem certeza que deseja excluir o material "${materialName}"?`)) {
@@ -144,23 +149,31 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => onEditMaterial(material)}
-                        title="Editar material"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDelete(material.id, material.name)}
-                        title="Excluir material"
-                        disabled={deleteMaterial.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canManageMaterials ? (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => onEditMaterial(material)}
+                            title="Editar material"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDelete(material.id, material.name)}
+                            title="Excluir material"
+                            disabled={deleteMaterial.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground px-2 py-1">
+                          Somente leitura
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

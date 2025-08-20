@@ -7,6 +7,25 @@ import { processImage } from './imageProcessor';
 import { defaultTableTheme } from './pdfLayout';
 import { getServiceMaterialUsage } from '@/services/inventoryService';
 
+// Enhanced PDF configuration interface
+interface PdfConfig {
+  includeMaterials?: boolean;
+  includeServiceType?: boolean;
+  showCurrentStock?: boolean;
+  currency?: string;
+  locale?: string;
+  companyName?: string;
+}
+
+const DEFAULT_PDF_CONFIG: PdfConfig = {
+  includeMaterials: true,
+  includeServiceType: true,
+  showCurrentStock: false,
+  currency: 'BRL',
+  locale: 'pt-BR',
+  companyName: 'Empresa'
+};
+
 /**
  * Correções e melhorias (não alterei a API externa):
  * - Removi pontos extraneous (ex.: `.PDF_COLORS`) que causavam erros de runtime
@@ -77,7 +96,13 @@ function drawModernFooter(doc: any, pageNumber: number, totalPages: number, page
   doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth / 2, pageHeight - 7, { align: "center" });
 }
 
-export const generateProfessionalServiceReport = async (service: Service): Promise<void> => {
+export const generateProfessionalServiceReport = async (
+  service: Service, 
+  reportData?: any,
+  config: PdfConfig = {}
+): Promise<void> => {
+  const finalConfig = { ...DEFAULT_PDF_CONFIG, ...config };
+  
   const doc = new jsPDF('portrait', 'mm', 'a4');
 
   let currentY = 0;
