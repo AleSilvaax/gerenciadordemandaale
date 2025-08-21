@@ -52,7 +52,6 @@ export const useRealtimeNotifications = () => {
               title: notification.title,
               message: notification.message,
               type: notification.type,
-              read: false,
             });
           }
         }
@@ -77,7 +76,6 @@ export const useRealtimeNotifications = () => {
               title: 'Status de Serviço Atualizado',
               message: `Serviço #${newRecord.id} mudou para: ${newRecord.status}`,
               type: 'info',
-              read: false,
             });
           }
           
@@ -87,7 +85,6 @@ export const useRealtimeNotifications = () => {
               title: 'Novo Serviço Atribuído',
               message: `Você foi designado para o serviço #${newRecord.id}`,
               type: 'success',
-              read: false,
             });
           }
         }
@@ -132,7 +129,6 @@ export const useRealtimeNotifications = () => {
             title: 'Novo Serviço na Equipe',
             message: `Um novo serviço foi criado para sua equipe: ${service.title || `#${service.id}`}`,
             type: 'info',
-            read: false,
           });
         }
       )
@@ -151,7 +147,6 @@ export const useRealtimeNotifications = () => {
             title: 'Novo Membro na Equipe',
             message: 'Um novo membro foi adicionado à sua equipe',
             type: 'success',
-            read: false,
           });
         }
       )
@@ -189,7 +184,6 @@ export const useRealtimeNotifications = () => {
               title: `Serviço ${service.priority === 'urgent' ? 'Urgente' : 'Alta Prioridade'}`,
               message: `Novo serviço: ${service.title || `#${service.id}`}`,
               type: service.priority === 'urgent' ? 'error' : 'warning',
-              read: false,
             });
           }
         }
