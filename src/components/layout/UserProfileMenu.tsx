@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import { User, LogOut, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const UserProfileMenu = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useOptimizedAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
