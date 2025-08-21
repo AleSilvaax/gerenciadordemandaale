@@ -1,10 +1,11 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Service, ServiceStatus, ServicePriority } from '@/types/serviceTypes';
-import { useAuth } from '@/context/AuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 
 export const useTechnicianServices = () => {
-  const { user } = useAuth();
+  const { user } = useOptimizedAuth();
 
   return useQuery({
     queryKey: ['technician-services', user?.id],
