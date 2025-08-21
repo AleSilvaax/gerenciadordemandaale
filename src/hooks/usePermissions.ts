@@ -1,8 +1,9 @@
-import { useAuth } from '@/context/AuthContext';
+
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 import { hasPermission, canAccessRoute, hasRoleOrHigher, getCurrentUserEffectiveRole, canManageUser, canViewOrganization } from '@/services/permissionService';
 
 export const usePermissions = () => {
-  const { user } = useAuth();
+  const { user } = useOptimizedAuth();
   
   return {
     user,

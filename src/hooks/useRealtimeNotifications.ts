@@ -49,7 +49,6 @@ export const useRealtimeNotifications = () => {
           
           if (notification && !notification.read) {
             addNotification({
-              id: notification.id,
               title: notification.title,
               message: notification.message,
               type: notification.type,
@@ -76,7 +75,6 @@ export const useRealtimeNotifications = () => {
           // Notify about status changes
           if (oldRecord?.status !== newRecord?.status) {
             addNotification({
-              id: `service-${newRecord.id}-status-${Date.now()}`,
               title: 'Status de Serviço Atualizado',
               message: `Serviço #${newRecord.id} mudou para: ${newRecord.status}`,
               type: 'info',
@@ -88,7 +86,6 @@ export const useRealtimeNotifications = () => {
           // Notify about assignment changes
           if (oldRecord?.assigned_to !== newRecord?.assigned_to && newRecord?.assigned_to === user.id) {
             addNotification({
-              id: `service-${newRecord.id}-assigned-${Date.now()}`,
               title: 'Novo Serviço Atribuído',
               message: `Você foi designado para o serviço #${newRecord.id}`,
               type: 'success',
@@ -100,7 +97,7 @@ export const useRealtimeNotifications = () => {
       )
       .subscribe((status) => {
         console.log('[RealtimeNotifications] Status da conexão:', status);
-        setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'disconnected');
+        setConnectionStatus(status === 'SUBSCRIBED');
       });
 
     channelRef.current = userChannel;
@@ -135,7 +132,6 @@ export const useRealtimeNotifications = () => {
           const service = payload.new as any;
           
           addNotification({
-            id: `team-service-${service.id}-${Date.now()}`,
             title: 'Novo Serviço na Equipe',
             message: `Um novo serviço foi criado para sua equipe: ${service.title || `#${service.id}`}`,
             type: 'info',
@@ -156,7 +152,6 @@ export const useRealtimeNotifications = () => {
           console.log('[RealtimeNotifications] Novo membro da equipe:', payload);
           
           addNotification({
-            id: `team-member-${Date.now()}`,
             title: 'Novo Membro na Equipe',
             message: 'Um novo membro foi adicionado à sua equipe',
             type: 'success',
@@ -196,7 +191,6 @@ export const useRealtimeNotifications = () => {
           // Only notify if it's a high priority service
           if (service.priority === 'urgent' || service.priority === 'high') {
             addNotification({
-              id: `org-service-${service.id}-${Date.now()}`,
               title: `Serviço ${service.priority === 'urgent' ? 'Urgente' : 'Alta Prioridade'}`,
               message: `Novo serviço: ${service.title || `#${service.id}`}`,
               type: service.priority === 'urgent' ? 'error' : 'warning',

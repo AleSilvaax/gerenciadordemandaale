@@ -1,10 +1,9 @@
-// Arquivo: src/components/layout/AppLayout.tsx (VERSÃO FINAL E CORRIGIDA)
 
 import React from "react";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/context/AuthContext";
+import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
 import { Loader2 } from "lucide-react";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
@@ -14,7 +13,7 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
-  const { isLoading, user } = useAuth();
+  const { isLoading, user } = useOptimizedAuth();
   
   if (isLoading) {
     return (
@@ -38,7 +37,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {isMobile && <span className="sm:hidden">GD</span>}
             </div>
 
-            {/* ✅ 2. Adicionamos o sino de notificações aqui, ao lado do perfil */}
             <div className="flex items-center gap-2">
               <NotificationCenter />
               <UserProfileMenu />
