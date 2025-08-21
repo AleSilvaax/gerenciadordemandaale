@@ -1,7 +1,8 @@
+
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUIStore } from '@/store/uiStore';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface DatabaseNotification {
   id: string;
@@ -14,7 +15,7 @@ interface DatabaseNotification {
 
 export const useRealtimeNotifications = () => {
   const { addNotification, setConnectionStatus } = useUIStore();
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export const useRealtimeNotifications = () => {
       supabase.removeChannel(channelRef.current);
     }
 
-    const organizationId = user.organizationId || '00000000-0000-0000-0000-000000000001';
+    // Use a fallback organization ID if user doesn't have one
+    const organizationId = user.organizationId || user.organization_id || '00000000-0000-0000-0000-000000000001';
 
     // Enhanced real-time channel with comprehensive event listening
     const channel = supabase
@@ -194,7 +196,7 @@ export const useRealtimeNotifications = () => {
         setConnectionStatus(false);
       }
     };
-  }, [addNotification, setConnectionStatus, user?.id, user?.organizationId, user?.role]);
+  }, [addNotification, setConnectionStatus, user?.id, user?.organizationId, user?.organization_id, user?.role]);
 
   const { isConnected } = useUIStore();
   return { isConnected };
