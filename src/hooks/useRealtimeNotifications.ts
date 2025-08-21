@@ -1,7 +1,8 @@
+
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUIStore } from '@/store/uiStore';
-import { useAuth } from '@/context/AuthContext';
+import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 
 interface DatabaseNotification {
   id: string;
@@ -14,7 +15,7 @@ interface DatabaseNotification {
 
 export const useRealtimeNotifications = () => {
   const { addNotification, setConnectionStatus } = useUIStore();
-  const { user } = useAuth();
+  const { user } = useOptimizedAuth();
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
