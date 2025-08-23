@@ -12,6 +12,7 @@ interface AuthUser {
   teamId?: string;
   permissions: string[];
   organizationId?: string;
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
@@ -84,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: role as any,
         teamId: profileData?.team_id || null,
         organizationId: profileData?.organization_id || null,
+        must_change_password: profileData?.must_change_password || false,
         permissions: []
       };
 
@@ -100,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: 'tecnico',
         teamId: null,
         organizationId: null,
+        must_change_password: false,
         permissions: []
       };
     }
@@ -398,6 +401,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .update({
           name: userData.name,
           avatar: userData.avatar,
+          must_change_password: userData.must_change_password,
         })
         .eq('id', user.id);
 

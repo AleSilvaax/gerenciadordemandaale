@@ -318,6 +318,7 @@ export type Database = {
           avatar: string | null
           created_at: string | null
           id: string
+          must_change_password: boolean | null
           name: string | null
           organization_id: string
           team_id: string | null
@@ -327,6 +328,7 @@ export type Database = {
           avatar?: string | null
           created_at?: string | null
           id: string
+          must_change_password?: boolean | null
           name?: string | null
           organization_id: string
           team_id?: string | null
@@ -336,6 +338,7 @@ export type Database = {
           avatar?: string | null
           created_at?: string | null
           id?: string
+          must_change_password?: boolean | null
           name?: string | null
           organization_id?: string
           team_id?: string | null
