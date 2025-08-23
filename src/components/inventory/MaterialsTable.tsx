@@ -15,7 +15,7 @@ import { Material } from "@/types/inventoryTypes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUpdateMaterial, useDeleteMaterial } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface MaterialsTableProps {
   materials: Material[];
@@ -32,7 +32,7 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({
 }) => {
   const { toast } = useToast();
   const deleteMaterial = useDeleteMaterial();
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
 
   // Check if user can edit/delete materials
   const canManageMaterials = user?.role && ['administrador', 'gestor', 'owner', 'super_admin'].includes(user.role);
