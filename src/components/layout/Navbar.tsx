@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -12,12 +13,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useOptimizedAuth } from "@/context/OptimizedAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const isActive = (path: string) => {
@@ -40,7 +41,7 @@ const Navbar = () => {
     if (!user) return false;
     const { role } = user;
     if (["/estatisticas", "/equipe", "/estoque"].includes(item.path)) {
-      return ['administrador', 'gestor'].includes(role);
+      return ['super_admin', 'owner', 'administrador', 'gestor'].includes(role);
     }
     return true;
   });
@@ -99,7 +100,7 @@ const Navbar = () => {
                 </Button>
               </Link>
               
-              {user && ['administrador', 'gestor'].includes(user.role) && (
+              {user && ['super_admin', 'owner', 'administrador', 'gestor'].includes(user.role) && (
                 <Link to="/nova-demanda">
                   <Button size="sm" className="flex items-center space-x-2">
                     <Plus className="w-4 h-4" />

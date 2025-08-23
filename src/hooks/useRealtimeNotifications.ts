@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUIStore } from '@/store/uiStore';
@@ -6,11 +5,10 @@ import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
 
 interface DatabaseNotification {
   id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
   user_id: string;
-  read: boolean;
+  message: string;
+  service_id?: string;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -21,180 +19,183 @@ export const useRealtimeNotifications = () => {
 
   useEffect(() => {
     if (!user?.id) {
-      console.log('[RealtimeNotifications] Usuário não autenticado, cancelando subscriptions');
+      setConnectionStatus(false);
       return;
     }
 
-    console.log('[RealtimeNotifications] Inicializando para usuário:', user.id);
-
-    // Cleanup previous channel
+    // Clean up previous channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
     }
 
-    // Subscribe to user-specific notifications
-    const userChannel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('[RealtimeNotifications] Nova notificação recebida:', payload);
+    const organizationId = user.organizationId || '00000000-0000-0000-0000-000000000001';
+
+    // Enhanced real-time channel with comprehensive event listening
+    const channel = supabase
+      .channel(`user_notifications_${user.id}`)
+      
+      // Direct notifications from database
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('[REALTIME] Database notification:', payload);
+        
+        if (payload.eventType === 'INSERT' && payload.new) {
           const notification = payload.new as DatabaseNotification;
-          
-          if (notification && !notification.read) {
+          addNotification({
+            title: '🔔 Notificação',
+            message: notification.message,
+            type: 'info',
+            serviceId: notification.service_id,
+            route: notification.service_id ? `/demanda/${notification.service_id}` : undefined,
+          });
+        }
+      })
+
+      // New service creation (organization level)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'services',
+        filter: `organization_id=eq.${organizationId}`
+      }, (payload) => {
+        console.log('[REALTIME] New service created:', payload);
+        
+        if (payload.eventType === 'INSERT' && payload.new) {
+          // Don't notify service creator of their own service
+          if (payload.new.created_by !== user.id) {
             addNotification({
-              title: notification.title,
-              message: notification.message,
-              type: notification.type,
+              title: '🆕 Nova Demanda',
+              message: `Nova demanda: "${payload.new.title}"`,
+              type: payload.new.priority === 'alta' ? 'warning' : 'info',
+              serviceId: payload.new.id,
+              route: `/demanda/${payload.new.id}`,
             });
           }
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'services',
-          filter: user.organizationId ? `organization_id=eq.${user.organizationId}` : '',
-        },
-        (payload) => {
-          console.log('[RealtimeNotifications] Serviço atualizado:', payload);
-          
-          const oldRecord = payload.old as any;
-          const newRecord = payload.new as any;
-          
-          // Notify about status changes
-          if (oldRecord?.status !== newRecord?.status) {
+      })
+
+      // Service status updates
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'services',
+        filter: `organization_id=eq.${organizationId}`
+      }, (payload) => {
+        console.log('[REALTIME] Service updated:', payload);
+        
+        if (payload.eventType === 'UPDATE' && payload.new && payload.old) {
+          // Only show if status changed
+          if (payload.old.status !== payload.new.status) {
+            const statusMap: Record<string, { title: string; type: 'success'|'info'|'warning'|'error' }> = {
+              'concluido': { title: '✅ Demanda Concluída', type: 'success' },
+              'em_andamento': { title: '🚧 Demanda em Andamento', type: 'info' },
+              'cancelado': { title: '❌ Demanda Cancelada', type: 'warning' },
+              'agendado': { title: '📅 Demanda Agendada', type: 'info' },
+              'pendente': { title: '⏳ Demanda Pendente', type: 'info' },
+            };
+            
+            const meta = statusMap[payload.new.status] || { title: 'Atualização de Demanda', type: 'info' } as any;
+            
             addNotification({
-              title: 'Status de Serviço Atualizado',
-              message: `Serviço #${newRecord.id} mudou para: ${newRecord.status}`,
+              title: meta.title,
+              message: `"${payload.new.title}" agora está: ${payload.new.status.replace('_', ' ')}`,
+              type: meta.type,
+              serviceId: payload.new.id,
+              route: `/demanda/${payload.new.id}`,
+            });
+          }
+        }
+      })
+
+      // New messages
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'service_messages'
+      }, (payload) => {
+        console.log('[REALTIME] New message:', payload);
+        
+        if (payload.eventType === 'INSERT' && payload.new) {
+          // Don't notify the sender of their own message
+          if (payload.new.sender_id !== user.id) {
+            addNotification({
+              title: '💬 Nova Mensagem',
+              message: `${payload.new.sender_name} enviou uma mensagem`,
               type: 'info',
-            });
-          }
-          
-          // Notify about assignment changes
-          if (oldRecord?.assigned_to !== newRecord?.assigned_to && newRecord?.assigned_to === user.id) {
-            addNotification({
-              title: 'Novo Serviço Atribuído',
-              message: `Você foi designado para o serviço #${newRecord.id}`,
-              type: 'success',
+              serviceId: payload.new.service_id,
+              route: `/demanda/${payload.new.service_id}`,
             });
           }
         }
-      )
+      })
+
+      // New photos
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'service_photos'
+      }, (payload) => {
+        console.log('[REALTIME] New photo attached:', payload);
+        
+        if (payload.eventType === 'INSERT' && payload.new) {
+          addNotification({
+            title: '📷 Foto Anexada',
+            message: `Nova foto foi anexada à demanda`,
+            type: 'info',
+            serviceId: payload.new.service_id,
+            route: `/demanda/${payload.new.service_id}`,
+          });
+        }
+      })
+
+      // Inventory movements (managers only)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_movements',
+        filter: `organization_id=eq.${organizationId}`
+      }, (payload) => {
+        console.log('[REALTIME] Inventory movement:', payload);
+        
+        if (payload.eventType === 'INSERT' && payload.new) {
+          // Only show for managers/admins
+          if (user.role && ['administrador', 'gestor', 'owner', 'super_admin'].includes(user.role)) {
+            const typeMap: Record<string, string> = {
+              'entrada': '📦 Entrada de estoque',
+              'saida': '📤 Saída de estoque',
+              'ajuste': '🔧 Ajuste de estoque'
+            };
+            
+            addNotification({
+              title: typeMap[payload.new.movement_type] || '📊 Movimentação de estoque',
+              message: `${payload.new.movement_type}: ${payload.new.quantity} unidades`,
+              type: 'info',
+              route: '/inventory',
+            });
+          }
+        }
+      })
+
       .subscribe((status) => {
-        console.log('[RealtimeNotifications] Status da conexão:', status);
+        console.log('[REALTIME] Connection status:', status);
         setConnectionStatus(status === 'SUBSCRIBED');
       });
 
-    channelRef.current = userChannel;
+    channelRef.current = channel;
 
     return () => {
-      console.log('[RealtimeNotifications] Limpando subscriptions');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        setConnectionStatus(false);
       }
     };
-  }, [user?.id, user?.organizationId, addNotification, setConnectionStatus]);
+  }, [addNotification, setConnectionStatus, user?.id, user?.organizationId, user?.role]);
 
-  // Subscribe to team notifications if user is part of a team
-  useEffect(() => {
-    if (!user?.teamId) return;
-
-    console.log('[RealtimeNotifications] Inicializando notificações da equipe:', user.teamId);
-
-    const teamChannel = supabase
-      .channel(`team:${user.teamId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'services',
-          filter: `team_id=eq.${user.teamId}`,
-        },
-        (payload) => {
-          console.log('[RealtimeNotifications] Novo serviço da equipe:', payload);
-          const service = payload.new as any;
-          
-          addNotification({
-            title: 'Novo Serviço na Equipe',
-            message: `Um novo serviço foi criado para sua equipe: ${service.title || `#${service.id}`}`,
-            type: 'info',
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'team_members',
-          filter: `team_id=eq.${user.teamId}`,
-        },
-        (payload) => {
-          console.log('[RealtimeNotifications] Novo membro da equipe:', payload);
-          
-          addNotification({
-            title: 'Novo Membro na Equipe',
-            message: 'Um novo membro foi adicionado à sua equipe',
-            type: 'success',
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('[RealtimeNotifications] Limpando subscriptions da equipe');
-      supabase.removeChannel(teamChannel);
-    };
-  }, [user?.teamId, addNotification]);
-
-  // Subscribe to organization-wide notifications for managers/admins
-  useEffect(() => {
-    if (!user?.organizationId || !['gestor', 'administrador'].includes(user.role)) return;
-
-    console.log('[RealtimeNotifications] Inicializando notificações da organização:', user.organizationId);
-
-    const orgChannel = supabase
-      .channel(`organization:${user.organizationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'services',
-          filter: `organization_id=eq.${user.organizationId}`,
-        },
-        (payload) => {
-          console.log('[RealtimeNotifications] Novo serviço na organização:', payload);
-          const service = payload.new as any;
-          
-          // Only notify if it's a high priority service
-          if (service.priority === 'urgent' || service.priority === 'high') {
-            addNotification({
-              title: `Serviço ${service.priority === 'urgent' ? 'Urgente' : 'Alta Prioridade'}`,
-              message: `Novo serviço: ${service.title || `#${service.id}`}`,
-              type: service.priority === 'urgent' ? 'error' : 'warning',
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('[RealtimeNotifications] Limpando subscriptions da organização');
-      supabase.removeChannel(orgChannel);
-    };
-  }, [user?.organizationId, user?.role, addNotification]);
-
-  return { isConnected: true };
+  const { isConnected } = useUIStore();
+  return { isConnected };
 };

@@ -1,8 +1,8 @@
-
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { OptimizedAuthProvider } from '@/context/OptimizedAuthContext'; 
+// ✅ Garante que estamos a usar o AuthProvider da sua versão estável.
+import { AuthProvider } from '@/context/AuthContext'; 
 import { AuthGuard } from '@/components/guards/AuthGuard';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
@@ -41,7 +41,8 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <OptimizedAuthProvider>
+        {/* ✅ Garante que o provedor correto está a "abraçar" toda a aplicação. */}
+        <AuthProvider>
           <GlobalNotifications />
           <Routes>
             {/* Rotas públicas */}
@@ -74,7 +75,7 @@ function App() {
               </AuthGuard>
             } />
           </Routes>
-        </OptimizedAuthProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );

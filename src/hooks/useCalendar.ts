@@ -3,13 +3,13 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarEvent } from '@/types/calendarTypes';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { parseISO, isValid, isSameDay, startOfMonth, addMonths } from 'date-fns';
 
 const CALENDAR_QUERY_KEY = ['calendar-events'];
 
 export const useCalendar = () => {
-  const { user } = useOptimizedAuth();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const {

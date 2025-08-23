@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useOptimizedAuth } from '@/context/OptimizedAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
@@ -9,7 +9,7 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { user, isLoading } = useOptimizedAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
   // Mostrar loading enquanto verifica autenticação
