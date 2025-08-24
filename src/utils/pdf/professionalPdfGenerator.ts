@@ -6,6 +6,7 @@ import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
 import { processImage } from './imageProcessor';
 import { defaultTableTheme } from './pdfLayout';
 import { getServiceMaterialUsage } from '@/services/inventoryService';
+import { MobilePdfHandler } from '../mobilePdf';
 
 // Enhanced PDF configuration interface
 interface PdfConfig {
@@ -101,78 +102,85 @@ export const generateProfessionalServiceReport = async (
   reportData?: any,
   config: PdfConfig = {}
 ): Promise<void> => {
-  const finalConfig = { ...DEFAULT_PDF_CONFIG, ...config };
-  
-  const doc = new jsPDF('portrait', 'mm', 'a4');
+  return MobilePdfHandler.generateAndHandle(
+    async () => {
+      const finalConfig = { ...DEFAULT_PDF_CONFIG, ...config };
+      
+      const doc = new jsPDF('portrait', 'mm', 'a4');
 
-  let currentY = 0;
+      let currentY = 0;
 
-  // Capa profissional
-  currentY = await createProfessionalCover(doc, service);
+      // Capa profissional
+      currentY = await createProfessionalCover(doc, service);
 
-  // Nova página para o conteúdo
-  doc.addPage();
-  currentY = 30;
+      // Nova página para o conteúdo
+      doc.addPage();
+      currentY = 30;
 
-  // Índice
-  currentY = createIndex(doc, currentY);
+      // Índice
+      currentY = createIndex(doc, currentY);
 
-  // Informações gerais
-  currentY = checkPageBreak(doc, currentY, 60);
-  currentY = createServiceOverview(doc, service, currentY);
+      // Informações gerais
+      currentY = checkPageBreak(doc, currentY, 60);
+      currentY = createServiceOverview(doc, service, currentY);
 
-  // Detalhes do cliente
-  currentY = checkPageBreak(doc, currentY, 40);
-  currentY = createClientDetails(doc, service, currentY);
+      // Detalhes do cliente
+      currentY = checkPageBreak(doc, currentY, 40);
+      currentY = createClientDetails(doc, service, currentY);
 
-  // Seção de materiais
-  currentY = checkPageBreak(doc, currentY, 60);
-  currentY = await createMaterialsSection(doc, service, currentY);
+      // Seção de materiais
+      currentY = checkPageBreak(doc, currentY, 60);
+      currentY = await createMaterialsSection(doc, service, currentY);
 
-  // Cronograma e status
-  currentY = checkPageBreak(doc, currentY, 40);
-  currentY = createTimelineSection(doc, service, currentY);
+      // Cronograma e status
+      currentY = checkPageBreak(doc, currentY, 40);
+      currentY = createTimelineSection(doc, service, currentY);
 
-  // Técnico responsável
-  currentY = checkPageBreak(doc, currentY, 30);
-  currentY = createTechnicianSection(doc, service, currentY);
+      // Técnico responsável
+      currentY = checkPageBreak(doc, currentY, 30);
+      currentY = createTechnicianSection(doc, service, currentY);
 
-  // Campos técnicos/checklist
-  if (service.customFields && service.customFields.length > 0) {
-    currentY = checkPageBreak(doc, currentY, 50);
-    currentY = createTechnicianFieldsSection(doc, service, currentY);
-  }
+      // Campos técnicos/checklist
+      if (service.customFields && service.customFields.length > 0) {
+        currentY = checkPageBreak(doc, currentY, 50);
+        currentY = createTechnicianFieldsSection(doc, service, currentY);
+      }
 
-  // Comunicações
-  if (service.messages && service.messages.length > 0) {
-    currentY = checkPageBreak(doc, currentY, 50);
-    currentY = createCommunicationsSection(doc, service, currentY);
-  }
+      // Comunicações
+      if (service.messages && service.messages.length > 0) {
+        currentY = checkPageBreak(doc, currentY, 50);
+        currentY = createCommunicationsSection(doc, service, currentY);
+      }
 
-  // Feedback
-  if (service.feedback) {
-    currentY = checkPageBreak(doc, currentY, 40);
-    currentY = createFeedbackSection(doc, service, currentY);
-  }
+      // Feedback
+      if (service.feedback) {
+        currentY = checkPageBreak(doc, currentY, 40);
+        currentY = createFeedbackSection(doc, service, currentY);
+      }
 
-  // Assinaturas
-  if (service.signatures?.client || service.signatures?.technician) {
-    currentY = checkPageBreak(doc, currentY, 60);
-    currentY = await createSignaturesSection(doc, service, currentY);
-  }
+      // Assinaturas
+      if (service.signatures?.client || service.signatures?.technician) {
+        currentY = checkPageBreak(doc, currentY, 60);
+        currentY = await createSignaturesSection(doc, service, currentY);
+      }
 
-  // Fotos
-  if (service.photos && service.photos.length > 0) {
-    currentY = checkPageBreak(doc, currentY, 80);
-    await createPhotosSection(doc, service, currentY);
-  }
+      // Fotos
+      if (service.photos && service.photos.length > 0) {
+        currentY = checkPageBreak(doc, currentY, 80);
+        await createPhotosSection(doc, service, currentY);
+      }
 
-  // Adicionar cabeçalhos e rodapés em todas as páginas
-  addHeadersAndFooters(doc, service);
+      // Adicionar cabeçalhos e rodapés em todas as páginas
+      addHeadersAndFooters(doc, service);
 
-  // Salvar
-  const fileName = `OS_${formatForPdf(service.number || 'N_A')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+      return doc;
+    },
+    `OS_${formatForPdf(service.number || 'N_A')}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    {
+      title: `Relatório OS ${service.number}`,
+      text: `${service.title} - ${service.client}`
+    }
+  );
 };
 
 const createProfessionalCover = async (doc: any, service: Service): Promise<number> => {

@@ -5,271 +5,304 @@ import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { addPageNumbers, addHeader } from './pdfFormatters';
 import { defaultTableTheme } from './pdfLayout';
 import { processImage } from './imageProcessor';
+import { MobilePdfHandler } from '../mobilePdf';
 
 export const generateExecutiveReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
-  const doc = new jsPDF('portrait', 'mm', 'a4');
-  
-  // Cover page
-  await createReportCover(doc, 'RELATÓRIO EXECUTIVO', 'Visão geral de performance e KPIs');
-  
-  // Summary statistics
-  doc.addPage();
-  let currentY = addHeader(doc, 'RELATÓRIO EXECUTIVO', 0);
-  
-// Title
-  doc.setFontSize(18);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.text('RESUMO EXECUTIVO', PDF_DIMENSIONS.margin, currentY);
-  currentY += 12;
-  
-  // Stats
-  const stats = calculateServiceStats(services);
-  const statsData = [
-    ['Total de Serviços', stats.total.toString()],
-    ['Serviços Concluídos', stats.completed.toString()],
-    ['Em Andamento', stats.inProgress.toString()],
-    ['Pendentes', stats.pending.toString()],
-    ['Taxa de Conclusão', `${Math.round((stats.completed / stats.total) * 100)}%`],
-    ['Equipe Ativa', teamMembers.length.toString()]
-  ];
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Métrica', 'Valor']],
-  body: statsData,
-  ...defaultTableTheme('primary'),
-});
-  
-  // Top performers
-  currentY = (doc as any).lastAutoTable.finalY + 20;
-  
-  doc.setFontSize(16);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.text('TOP PERFORMERS', PDF_DIMENSIONS.margin, currentY);
-  currentY += 10;
-  
-  const topPerformers = teamMembers
-    .sort((a, b) => (b.stats?.completedServices || 0) - (a.stats?.completedServices || 0))
-    .slice(0, 5);
-  
-  const performersData = topPerformers.map(member => [
-    member.name,
-    member.role,
-    (member.stats?.completedServices || 0).toString(),
-    (member.stats?.avgRating || 0).toFixed(1)
-  ]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Técnico', 'Função', 'Concluídos', 'Avaliação']],
-  body: performersData,
-  ...defaultTableTheme('accent'),
-  theme: 'striped',
-});
-  
-  // Footer/page numbers
-  addPageNumbers(doc);
-  const fileName = `relatorio-executivo-${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  return MobilePdfHandler.generateAndHandle(
+    async () => {
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      
+      // Cover page
+      await createReportCover(doc, 'RELATÓRIO EXECUTIVO', 'Visão geral de performance e KPIs');
+      
+      // Summary statistics
+      doc.addPage();
+      let currentY = addHeader(doc, 'RELATÓRIO EXECUTIVO', 0);
+      
+    // Title
+      doc.setFontSize(18);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text('RESUMO EXECUTIVO', PDF_DIMENSIONS.margin, currentY);
+      currentY += 12;
+      
+      // Stats
+      const stats = calculateServiceStats(services);
+      const statsData = [
+        ['Total de Serviços', stats.total.toString()],
+        ['Serviços Concluídos', stats.completed.toString()],
+        ['Em Andamento', stats.inProgress.toString()],
+        ['Pendentes', stats.pending.toString()],
+        ['Taxa de Conclusão', `${Math.round((stats.completed / stats.total) * 100)}%`],
+        ['Equipe Ativa', teamMembers.length.toString()]
+      ];
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Métrica', 'Valor']],
+      body: statsData,
+      ...defaultTableTheme('primary'),
+    });
+      
+      // Top performers
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+      
+      doc.setFontSize(16);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.text('TOP PERFORMERS', PDF_DIMENSIONS.margin, currentY);
+      currentY += 10;
+      
+      const topPerformers = teamMembers
+        .sort((a, b) => (b.stats?.completedServices || 0) - (a.stats?.completedServices || 0))
+        .slice(0, 5);
+      
+      const performersData = topPerformers.map(member => [
+        member.name,
+        member.role,
+        (member.stats?.completedServices || 0).toString(),
+        (member.stats?.avgRating || 0).toFixed(1)
+      ]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Técnico', 'Função', 'Concluídos', 'Avaliação']],
+      body: performersData,
+      ...defaultTableTheme('accent'),
+      theme: 'striped',
+    });
+      
+      // Footer/page numbers
+      addPageNumbers(doc);
+      return doc;
+    },
+    `relatorio-executivo-${new Date().toISOString().slice(0, 10)}.pdf`,
+    {
+      title: 'Relatório Executivo',
+      text: 'Visão geral de performance e KPIs'
+    }
+  );
 };
 
 export const generateOperationalReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
-  const doc = new jsPDF('portrait', 'mm', 'a4');
-  
-  await createReportCover(doc, 'RELATÓRIO OPERACIONAL', 'Detalhes técnicos e operacionais');
-  
-  doc.addPage();
-  let currentY = addHeader(doc, 'RELATÓRIO OPERACIONAL', 0);
-  
-  // Services by type
-  doc.setFontSize(18);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.text('SERVIÇOS POR TIPO', PDF_DIMENSIONS.margin, currentY);
-  currentY += 15;
-  
-  const servicesByType = services.reduce((acc, service) => {
-    const type = service.serviceType || 'Não especificado';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const typeData = Object.entries(servicesByType).map(([type, count]) => [type, count.toString()]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Tipo de Serviço', 'Quantidade']],
-  body: typeData,
-  ...defaultTableTheme('primary'),
-});
-  
-  // Services details
-  currentY = (doc as any).lastAutoTable.finalY + 20;
-  
-  if (currentY > 250) {
-    doc.addPage();
-    currentY = 30;
-  }
-  
-  doc.setFontSize(16);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.text('DETALHES DOS SERVIÇOS', PDF_DIMENSIONS.margin, currentY);
-  currentY += 10;
-  
-  const servicesData = services.slice(0, 20).map(service => [
-    service.number || 'N/A',
-    service.title.substring(0, 30) + (service.title.length > 30 ? '...' : ''),
-    service.status,
-    service.client || 'N/A',
-    service.location || 'N/A'
-  ]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['OS', 'Título', 'Status', 'Cliente', 'Local']],
-  body: servicesData,
-  ...defaultTableTheme('accent'),
-  theme: 'striped',
-});
-  
-  addPageNumbers(doc);
-  const fileName = `relatorio-operacional-${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  return MobilePdfHandler.generateAndHandle(
+    async () => {
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      
+      await createReportCover(doc, 'RELATÓRIO OPERACIONAL', 'Detalhes técnicos e operacionais');
+      
+      doc.addPage();
+      let currentY = addHeader(doc, 'RELATÓRIO OPERACIONAL', 0);
+      
+      // Services by type
+      doc.setFontSize(18);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text('SERVIÇOS POR TIPO', PDF_DIMENSIONS.margin, currentY);
+      currentY += 15;
+      
+      const servicesByType = services.reduce((acc, service) => {
+        const type = service.serviceType || 'Não especificado';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const typeData = Object.entries(servicesByType).map(([type, count]) => [type, count.toString()]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Tipo de Serviço', 'Quantidade']],
+      body: typeData,
+      ...defaultTableTheme('primary'),
+    });
+      
+      // Services details
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+      
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 30;
+      }
+      
+      doc.setFontSize(16);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.text('DETALHES DOS SERVIÇOS', PDF_DIMENSIONS.margin, currentY);
+      currentY += 10;
+      
+      const servicesData = services.slice(0, 20).map(service => [
+        service.number || 'N/A',
+        service.title.substring(0, 30) + (service.title.length > 30 ? '...' : ''),
+        service.status,
+        service.client || 'N/A',
+        service.location || 'N/A'
+      ]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['OS', 'Título', 'Status', 'Cliente', 'Local']],
+      body: servicesData,
+      ...defaultTableTheme('accent'),
+      theme: 'striped',
+    });
+      
+      addPageNumbers(doc);
+      return doc;
+    },
+    `relatorio-operacional-${new Date().toISOString().slice(0, 10)}.pdf`,
+    {
+      title: 'Relatório Operacional',
+      text: 'Detalhes técnicos e operacionais'
+    }
+  );
 };
 
 export const generateTeamPerformanceReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
-  const doc = new jsPDF('portrait', 'mm', 'a4');
-  
-  await createReportCover(doc, 'PERFORMANCE DA EQUIPE', 'Análise detalhada dos técnicos');
-  
-  doc.addPage();
-  let currentY = addHeader(doc, 'PERFORMANCE DA EQUIPE', 0);
-  
-  // Team overview
-  doc.setFontSize(18);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.text('VISÃO GERAL DA EQUIPE', PDF_DIMENSIONS.margin, currentY);
-  currentY += 15;
-  
-  const teamData = teamMembers.map(member => [
-    member.name,
-    member.role,
-    (member.stats?.completedServices || 0).toString(),
-    (member.stats?.pendingServices || 0).toString(),
-    (member.stats?.avgRating || 0).toFixed(1),
-    member.stats?.joinDate || 'N/A'
-  ]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Nome', 'Função', 'Concluídos', 'Pendentes', 'Avaliação', 'Entrada']],
-  body: teamData,
-  ...defaultTableTheme('primary'),
-});
-  
-  // Performance metrics
-  currentY = (doc as any).lastAutoTable.finalY + 20;
-  
-  if (currentY > 200) {
-    doc.addPage();
-    currentY = 30;
-  }
-  
-  doc.setFontSize(16);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.text('MÉTRICAS DE PERFORMANCE', PDF_DIMENSIONS.margin, currentY);
-  currentY += 10;
-  
-  const avgCompletedServices = teamMembers.reduce((acc, member) => acc + (member.stats?.completedServices || 0), 0) / teamMembers.length;
-  const avgRating = teamMembers.reduce((acc, member) => acc + (member.stats?.avgRating || 0), 0) / teamMembers.length;
-  
-  const metricsData = [
-    ['Média de Serviços Concluídos', avgCompletedServices.toFixed(1)],
-    ['Avaliação Média da Equipe', avgRating.toFixed(1)],
-    ['Total de Técnicos', teamMembers.filter(m => m.role === 'tecnico').length.toString()],
-    ['Total de Gestores', teamMembers.filter(m => m.role === 'gestor').length.toString()],
-    ['Total de Administradores', teamMembers.filter(m => m.role === 'administrador').length.toString()]
-  ];
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Métrica', 'Valor']],
-  body: metricsData,
-  ...defaultTableTheme('accent'),
-  theme: 'striped',
-});
-  
-  addPageNumbers(doc);
-  const fileName = `relatorio-performance-equipe-${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  return MobilePdfHandler.generateAndHandle(
+    async () => {
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      
+      await createReportCover(doc, 'PERFORMANCE DA EQUIPE', 'Análise detalhada dos técnicos');
+      
+      doc.addPage();
+      let currentY = addHeader(doc, 'PERFORMANCE DA EQUIPE', 0);
+      
+      // Team overview
+      doc.setFontSize(18);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text('VISÃO GERAL DA EQUIPE', PDF_DIMENSIONS.margin, currentY);
+      currentY += 15;
+      
+      const teamData = teamMembers.map(member => [
+        member.name,
+        member.role,
+        (member.stats?.completedServices || 0).toString(),
+        (member.stats?.pendingServices || 0).toString(),
+        (member.stats?.avgRating || 0).toFixed(1),
+        member.stats?.joinDate || 'N/A'
+      ]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Nome', 'Função', 'Concluídos', 'Pendentes', 'Avaliação', 'Entrada']],
+      body: teamData,
+      ...defaultTableTheme('primary'),
+    });
+      
+      // Performance metrics
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+      
+      if (currentY > 200) {
+        doc.addPage();
+        currentY = 30;
+      }
+      
+      doc.setFontSize(16);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.text('MÉTRICAS DE PERFORMANCE', PDF_DIMENSIONS.margin, currentY);
+      currentY += 10;
+      
+      const avgCompletedServices = teamMembers.reduce((acc, member) => acc + (member.stats?.completedServices || 0), 0) / teamMembers.length;
+      const avgRating = teamMembers.reduce((acc, member) => acc + (member.stats?.avgRating || 0), 0) / teamMembers.length;
+      
+      const metricsData = [
+        ['Média de Serviços Concluídos', avgCompletedServices.toFixed(1)],
+        ['Avaliação Média da Equipe', avgRating.toFixed(1)],
+        ['Total de Técnicos', teamMembers.filter(m => m.role === 'tecnico').length.toString()],
+        ['Total de Gestores', teamMembers.filter(m => m.role === 'gestor').length.toString()],
+        ['Total de Administradores', teamMembers.filter(m => m.role === 'administrador').length.toString()]
+      ];
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Métrica', 'Valor']],
+      body: metricsData,
+      ...defaultTableTheme('accent'),
+      theme: 'striped',
+    });
+      
+      addPageNumbers(doc);
+      return doc;
+    },
+    `relatorio-performance-equipe-${new Date().toISOString().slice(0, 10)}.pdf`,
+    {
+      title: 'Relatório Performance da Equipe',
+      text: 'Análise detalhada dos técnicos'
+    }
+  );
 };
 
 export const generateServiceAnalysisReport = async (services: Service[], teamMembers: TeamMember[]): Promise<void> => {
-  const doc = new jsPDF('portrait', 'mm', 'a4');
-  
-  await createReportCover(doc, 'ANÁLISE DE SERVIÇOS', 'Breakdown detalhado por categoria');
-  
-  doc.addPage();
-  let currentY = addHeader(doc, 'ANÁLISE DE SERVIÇOS', 0);
-  
-  // Services by status
-  doc.setFontSize(18);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.setTextColor(...PDF_COLORS.primary);
-  doc.text('SERVIÇOS POR STATUS', PDF_DIMENSIONS.margin, currentY);
-  currentY += 15;
-  
-  const servicesByStatus = services.reduce((acc, service) => {
-    acc[service.status] = (acc[service.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const statusData = Object.entries(servicesByStatus).map(([status, count]) => [
-    getStatusDisplayName(status),
-    count.toString(),
-    `${Math.round((count / services.length) * 100)}%`
-  ]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Status', 'Quantidade', 'Percentual']],
-  body: statusData,
-  ...defaultTableTheme('primary'),
-});
-  
-  // Services by priority
-  currentY = (doc as any).lastAutoTable.finalY + 20;
-  
-  doc.setFontSize(16);
-  doc.setFont(PDF_FONTS.normal, 'bold');
-  doc.text('SERVIÇOS POR PRIORIDADE', PDF_DIMENSIONS.margin, currentY);
-  currentY += 10;
-  
-  const servicesByPriority = services.reduce((acc, service) => {
-    const priority = service.priority || 'media';
-    acc[priority] = (acc[priority] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const priorityData = Object.entries(servicesByPriority).map(([priority, count]) => [
-    priority.charAt(0).toUpperCase() + priority.slice(1),
-    count.toString(),
-    `${Math.round((count / services.length) * 100)}%`
-  ]);
-  
-autoTable(doc, {
-  startY: currentY,
-  head: [['Prioridade', 'Quantidade', 'Percentual']],
-  body: priorityData,
-  ...defaultTableTheme('accent'),
-  theme: 'striped',
-});
-  
-  addPageNumbers(doc);
-  const fileName = `relatorio-analise-servicos-${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  return MobilePdfHandler.generateAndHandle(
+    async () => {
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      
+      await createReportCover(doc, 'ANÁLISE DE SERVIÇOS', 'Breakdown detalhado por categoria');
+      
+      doc.addPage();
+      let currentY = addHeader(doc, 'ANÁLISE DE SERVIÇOS', 0);
+      
+      // Services by status
+      doc.setFontSize(18);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text('SERVIÇOS POR STATUS', PDF_DIMENSIONS.margin, currentY);
+      currentY += 15;
+      
+      const servicesByStatus = services.reduce((acc, service) => {
+        acc[service.status] = (acc[service.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const statusData = Object.entries(servicesByStatus).map(([status, count]) => [
+        getStatusDisplayName(status),
+        count.toString(),
+        `${Math.round((count / services.length) * 100)}%`
+      ]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Status', 'Quantidade', 'Percentual']],
+      body: statusData,
+      ...defaultTableTheme('primary'),
+    });
+      
+      // Services by priority
+      currentY = (doc as any).lastAutoTable.finalY + 20;
+      
+      doc.setFontSize(16);
+      doc.setFont(PDF_FONTS.normal, 'bold');
+      doc.text('SERVIÇOS POR PRIORIDADE', PDF_DIMENSIONS.margin, currentY);
+      currentY += 10;
+      
+      const servicesByPriority = services.reduce((acc, service) => {
+        const priority = service.priority || 'media';
+        acc[priority] = (acc[priority] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const priorityData = Object.entries(servicesByPriority).map(([priority, count]) => [
+        priority.charAt(0).toUpperCase() + priority.slice(1),
+        count.toString(),
+        `${Math.round((count / services.length) * 100)}%`
+      ]);
+      
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Prioridade', 'Quantidade', 'Percentual']],
+      body: priorityData,
+      ...defaultTableTheme('accent'),
+      theme: 'striped',
+    });
+      
+      addPageNumbers(doc);
+      return doc;
+    },
+    `relatorio-analise-servicos-${new Date().toISOString().slice(0, 10)}.pdf`,
+    {
+      title: 'Análise de Serviços',
+      text: 'Breakdown detalhado por categoria'
+    }
+  );
 };
 
 // Helper functions

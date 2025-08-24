@@ -14,6 +14,8 @@ import { MaterialDialog } from "@/components/inventory/MaterialDialog";
 import { MovementDialog } from "@/components/inventory/MovementDialog";
 import { CategoryDialog } from "@/components/inventory/CategoryDialog";
 import { Material } from "@/types/inventoryTypes";
+import { MobileOptimizedLayout } from "@/components/layout/MobileOptimizedLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Inventory: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("dashboard");
@@ -26,6 +28,7 @@ const Inventory: React.FC = () => {
   const { data: dashboardData, isLoading: isDashboardLoading } = useInventoryDashboard();
   const { data: materials, isLoading: isMaterialsLoading } = useMaterials();
   const { data: inventory, isLoading: isInventoryLoading } = useInventory();
+  const isMobile = useIsMobile();
 
   const handleEditMaterial = (material: Material) => {
     setEditingMaterial(material);
@@ -37,10 +40,10 @@ const Inventory: React.FC = () => {
     setEditingMaterial(null);
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
-      <div className="container mx-auto space-y-8">
-        {/* Header */}
+  const content = (
+    <div className="space-y-6">
+      {/* Header - Desktop only, mobile uses MobileOptimizedLayout title */}
+      {!isMobile && (
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -73,27 +76,65 @@ const Inventory: React.FC = () => {
             </Button>
           </div>
         </div>
+      )}
 
-        {/* Tabs */}
-        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <Button 
+            onClick={() => setCategoryDialogOpen(true)}
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Categoria
+          </Button>
+          <Button 
+            onClick={() => setMaterialDialogOpen(true)}
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Material
+          </Button>
+          <Button 
+            onClick={() => setMovementDialogOpen(true)}
+            className="flex-shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Movimentação
+          </Button>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full min-w-[400px] grid-cols-4">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs sm:text-sm">
               <TrendingUp className="h-4 w-4" />
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Dash</span>
             </TabsTrigger>
-            <TabsTrigger value="materials" className="flex items-center gap-2">
+            <TabsTrigger value="materials" className="flex items-center gap-2 text-xs sm:text-sm">
               <Package className="h-4 w-4" />
-              Materiais
+              <span className="hidden sm:inline">Materiais</span>
+              <span className="sm:hidden">Mat</span>
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <TabsTrigger value="inventory" className="flex items-center gap-2 text-xs sm:text-sm">
               <AlertTriangle className="h-4 w-4" />
-              Estoque
+              <span className="hidden sm:inline">Estoque</span>
+              <span className="sm:hidden">Est</span>
             </TabsTrigger>
-            <TabsTrigger value="movements" className="flex items-center gap-2">
+            <TabsTrigger value="movements" className="flex items-center gap-2 text-xs sm:text-sm">
               <Activity className="h-4 w-4" />
-              Movimentações
+              <span className="hidden sm:inline">Movimentações</span>
+              <span className="sm:hidden">Mov</span>
             </TabsTrigger>
           </TabsList>
+        </div>
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
@@ -139,75 +180,111 @@ const Inventory: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* Materials Tab */}
-          <TabsContent value="materials" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2 flex-1 max-w-sm">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar materiais..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button onClick={() => setMaterialDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Material
-              </Button>
+        {/* Materials Tab */}
+        <TabsContent value="materials" className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center space-x-2 flex-1 w-full sm:max-w-sm">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="Pesquisar materiais..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
             </div>
+            <Button 
+              onClick={() => setMaterialDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Material
+            </Button>
+          </div>
 
-            <MaterialsTable 
-              materials={materials || []}
-              isLoading={isMaterialsLoading}
-              searchTerm={searchTerm}
-              onEditMaterial={handleEditMaterial}
-            />
-          </TabsContent>
-
-          {/* Inventory Tab */}
-          <TabsContent value="inventory" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2 flex-1 max-w-sm">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar no estoque..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button onClick={() => setMovementDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Movimentação
-              </Button>
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <MaterialsTable 
+                materials={materials || []}
+                isLoading={isMaterialsLoading}
+                searchTerm={searchTerm}
+                onEditMaterial={handleEditMaterial}
+              />
             </div>
+          </div>
+        </TabsContent>
 
-            <InventoryTable 
-              inventory={inventory || []}
-              isLoading={isInventoryLoading}
-              searchTerm={searchTerm}
-            />
-          </TabsContent>
-
-          {/* Movements Tab */}
-          <TabsContent value="movements" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2 flex-1 max-w-sm">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar movimentações..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button onClick={() => setMovementDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Movimentação
-              </Button>
+        {/* Inventory Tab */}
+        <TabsContent value="inventory" className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center space-x-2 flex-1 w-full sm:max-w-sm">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="Pesquisar no estoque..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
             </div>
+            <Button 
+              onClick={() => setMovementDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Movimentação
+            </Button>
+          </div>
 
-            <MovementsTable searchTerm={searchTerm} />
-          </TabsContent>
-        </Tabs>
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <InventoryTable 
+                inventory={inventory || []}
+                isLoading={isInventoryLoading}
+                searchTerm={searchTerm}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Movements Tab */}
+        <TabsContent value="movements" className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center space-x-2 flex-1 w-full sm:max-w-sm">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="Pesquisar movimentações..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <Button 
+              onClick={() => setMovementDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Movimentação
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <MovementsTable searchTerm={searchTerm} />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  return (
+    <MobileOptimizedLayout
+      title="Controle de Estoque"
+      subtitle="Gerencie materiais, estoque e movimentações"
+    >
+      <div className={isMobile ? "" : "min-h-screen bg-gradient-to-br from-background to-muted/20 p-6"}>
+        <div className={isMobile ? "" : "container mx-auto space-y-8"}>
+          {content}
+        </div>
       </div>
 
       {/* Dialogs */}
@@ -224,7 +301,7 @@ const Inventory: React.FC = () => {
         open={categoryDialogOpen} 
         onClose={() => setCategoryDialogOpen(false)} 
       />
-    </div>
+    </MobileOptimizedLayout>
   );
 };
 
