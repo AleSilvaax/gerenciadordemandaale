@@ -35,7 +35,11 @@ const ROLE_DISPLAY_NAMES = {
   requisitor: 'Requisitor'
 } as const;
 
-export function UserManagement() {
+interface UserManagementProps {
+  selectedOrgId?: string;
+}
+
+export function UserManagement({ selectedOrgId }: UserManagementProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -45,7 +49,7 @@ export function UserManagement() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [selectedOrgId]);
 
   const loadUsers = async () => {
     try {
@@ -65,6 +69,11 @@ export function UserManagement() {
       // Se não for super admin, filtrar por organização
       if (!isSuperAdmin && currentUser?.organizationId) {
         query = query.eq('organization_id', currentUser.organizationId);
+      }
+      
+      // Se selectedOrgId for fornecido, usar para filtrar
+      if (selectedOrgId) {
+        query = query.eq('organization_id', selectedOrgId);
       }
       
       const { data, error } = await query.order('name');

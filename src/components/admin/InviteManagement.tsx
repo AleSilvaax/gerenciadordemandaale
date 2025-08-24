@@ -21,7 +21,11 @@ const ROLE_DISPLAY_NAMES = {
   requisitor: 'Requisitor'
 } as const;
 
-export function InviteManagement() {
+interface InviteManagementProps {
+  selectedOrgId?: string;
+}
+
+export function InviteManagement({ selectedOrgId }: InviteManagementProps) {
   const [invites, setInvites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -34,12 +38,12 @@ export function InviteManagement() {
 
   useEffect(() => {
     loadInvites();
-  }, []);
+  }, [selectedOrgId]);
 
   const loadInvites = async () => {
     try {
       setLoading(true);
-      const organizationId = user?.organizationId || '00000000-0000-0000-0000-000000000001';
+      const organizationId = selectedOrgId || user?.organizationId || '00000000-0000-0000-0000-000000000001';
       
       const { data, error } = await supabase
         .from('user_invites')
@@ -70,7 +74,7 @@ export function InviteManagement() {
         body: {
           email: formData.email,
           role: formData.role,
-          organizationId: user?.organizationId || '00000000-0000-0000-0000-000000000001',
+          organizationId: selectedOrgId || user?.organizationId || '00000000-0000-0000-0000-000000000001',
           teamId: null
         }
       });
