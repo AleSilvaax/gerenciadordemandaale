@@ -22,6 +22,25 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
+    // SECURITY: Get the authenticated user from the JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse request body
     const { serviceId, message } = await req.json();
     
@@ -34,10 +53,10 @@ serve(async (req: Request) => {
       );
     }
     
-    // Check if the service exists
+    // SECURITY: Check if user has access to this service and get service info
     const { data: service, error: serviceError } = await supabaseClient
       .from('services')
-      .select('id')
+      .select('id, created_by, organization_id')
       .eq('id', serviceId)
       .single();
       
@@ -46,6 +65,27 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'Service not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    // SECURITY: Check if user can add messages to this service
+    const isCreator = service.created_by === user.id;
+    const { data: isTechnician } = await supabaseClient
+      .from('service_technicians')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('technician_id', user.id)
+      .single();
+
+    const { data: userRole } = await supabaseClient
+      .rpc('get_effective_user_role');
+
+    const isManager = ['super_admin', 'owner', 'administrador', 'gestor'].includes(userRole);
+
+    if (!isCreator && !isTechnician && !isManager) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized to add messages to this service' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
       );
     }
     

@@ -1105,18 +1105,6 @@ export type Database = {
         Args: { check_org_id?: string }
         Returns: string
       }
-      get_service_messages: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          message: string
-          sender_id: string
-          sender_name: string
-          sender_role: string
-          service_id: string | null
-          timestamp: string | null
-        }[]
-      }
       get_user_complete_profile: {
         Args: { user_uuid: string }
         Returns: {

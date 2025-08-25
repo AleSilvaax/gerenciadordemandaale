@@ -894,6 +894,7 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
   if (service.id) {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
+      // Fetch photos and convert to signed URLs for PDF generation
       const { data: photosData } = await supabase
         .from('service_photos')
         .select('photo_url, title')
@@ -901,10 +902,28 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
         .order('created_at', { ascending: true });
 
       if (photosData && photosData.length > 0) {
-        photosWithTitles = photosData.map((p: any, index: number) => ({
-          url: p.photo_url,
-          title: p.title ? formatForPdf(p.title) : `Foto ${index + 1}`
-        }));
+        // Convert to signed URLs since bucket is now private
+        const photosWithSignedUrls = await Promise.all(
+          photosData.map(async (p: any, index: number) => {
+            let filePath = p.photo_url;
+            if (p.photo_url.includes('/service-photos/')) {
+              filePath = p.photo_url.split('/service-photos/')[1];
+            } else if (p.photo_url.includes('/object/public/service-photos/')) {
+              filePath = p.photo_url.split('/object/public/service-photos/')[1];
+            }
+            
+            const { data: signedUrlData } = await supabase.storage
+              .from('service-photos')
+              .createSignedUrl(filePath, 600); // 10 minutes for PDF generation
+            
+            return {
+              url: signedUrlData?.signedUrl || p.photo_url,
+              title: p.title ? formatForPdf(p.title) : `Foto ${index + 1}`
+            };
+          })
+        );
+        
+        photosWithTitles = photosWithSignedUrls;
       }
     } catch (error) {
       console.error('[PDF] Erro ao buscar títulos das fotos:', error);

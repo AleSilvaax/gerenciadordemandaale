@@ -63,12 +63,18 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
     console.log('[PhotoUploader] Upload no storage bem-sucedido:', data.path);
 
-    const { data: publicData } = supabase.storage
+    // Since service-photos is now private, we need to use signed URLs
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('service-photos')
-      .getPublicUrl(data.path);
+      .createSignedUrl(data.path, 3600); // 1 hour expiry
 
-    console.log('[PhotoUploader] URL pública gerada:', publicData.publicUrl);
-    return publicData.publicUrl;
+    if (signedUrlError) {
+      console.error('[PhotoUploader] Erro ao gerar URL assinada:', signedUrlError);
+      throw new Error(`Erro ao gerar URL da foto: ${signedUrlError.message}`);
+    }
+
+    console.log('[PhotoUploader] URL assinada gerada:', signedUrlData.signedUrl);
+    return signedUrlData.signedUrl;
   };
 
   const savePhotoToDatabase = async (photoUrl: string, title: string) => {
@@ -112,17 +118,39 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         return;
       }
 
-      // Atualizar o campo photos na tabela services
-      const photoUrls = photosData?.map(p => p.photo_url) || [];
-      const { error: updateError } = await supabase
-        .from('services')
-        .update({ photos: photoUrls })
-        .eq('id', serviceId);
+      if (photosData && photosData.length > 0) {
+        // Convert existing photos to signed URLs since bucket is now private
+        console.log('[PhotoUploader] Convertendo URLs para URLs assinadas');
+        const photosWithSignedUrls = await Promise.all(
+          photosData.map(async (photo) => {
+            // Extract file path from existing URL
+            let filePath = photo.photo_url;
+            if (photo.photo_url.includes('/service-photos/')) {
+              filePath = photo.photo_url.split('/service-photos/')[1];
+            } else if (photo.photo_url.includes('/object/public/service-photos/')) {
+              filePath = photo.photo_url.split('/object/public/service-photos/')[1];
+            }
+            
+            const { data: signedUrlData } = await supabase.storage
+              .from('service-photos')
+              .createSignedUrl(filePath, 3600);
+            return signedUrlData?.signedUrl || photo.photo_url;
+          })
+        );
+        
+        const photoUrls = photosWithSignedUrls;
+        const { error: updateError } = await supabase
+          .from('services')
+          .update({ photos: photoUrls })
+          .eq('id', serviceId);
 
-      if (updateError) {
-        console.error('[PhotoUploader] Erro ao atualizar campo photos:', updateError);
+        if (updateError) {
+          console.error('[PhotoUploader] Erro ao atualizar campo photos:', updateError);
+        } else {
+          console.log('[PhotoUploader] Campo photos atualizado com sucesso:', photoUrls.length, 'fotos');
+        }
       } else {
-        console.log('[PhotoUploader] Campo photos atualizado com sucesso:', photoUrls.length, 'fotos');
+        console.log('[PhotoUploader] Nenhuma foto encontrada para atualizar');
       }
     } catch (error) {
       console.error('[PhotoUploader] Erro ao atualizar campo photos:', error);

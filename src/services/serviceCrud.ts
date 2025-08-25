@@ -332,8 +332,14 @@ export const uploadServicePhoto = async (file: File): Promise<string> => {
   const { error: uploadError } = await supabase.storage.from('service-photos').upload(filePath, file);
   if (uploadError) throw uploadError;
 
-  const { data: publicUrlData } = supabase.storage.from('service-photos').getPublicUrl(filePath);
-  if (!publicUrlData) throw new Error("Não foi possível obter a URL pública da imagem.");
+  // Since service-photos is now private, we need to use signed URLs
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    .from('service-photos')
+    .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+  if (signedUrlError || !signedUrlData) {
+    throw new Error("Não foi possível obter a URL da imagem.");
+  }
   
-  return publicUrlData.publicUrl;
+  return signedUrlData.signedUrl;
 };
