@@ -673,14 +673,13 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
   if (service.customFields && service.customFields.length > 0) {
     const fieldsData = service.customFields.map(field => [
       formatForPdf(field.label || 'Campo'),
-      formatForPdf(field.type || 'texto'),
       formatForPdf(field.value ? String(field.value) : 'Não preenchido'),
       formatForPdf('Configurado')
     ]);
 
     autoTable(doc, {
       startY: currentY + 6,
-      head: [['Campo', 'Tipo', 'Valor', 'Status']],
+      head: [['Campo', 'Valor', 'Status']],
       body: fieldsData,
       ...defaultTableTheme('accent'),
       theme: 'grid',
@@ -805,11 +804,32 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
     color: [...PDF_COLORS.primary] as [number, number, number]
   });
 
-  currentY += 10;
+  currentY += 15;
 
-  // Assinatura do cliente
-  if (service.signatures?.client) {
-    currentY = safeAddText(doc, 'Assinatura do Cliente:', PDF_DIMENSIONS.margin, currentY, {
+  const hasClientSig = service.signatures?.client;
+  const hasTechSig = service.signatures?.technician;
+  
+  if (!hasClientSig && !hasTechSig) {
+    currentY = safeAddText(doc, 'Nenhuma assinatura registrada.', PDF_DIMENSIONS.margin, currentY, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+    return currentY + 15;
+  }
+
+  // Calculate layout for horizontal signatures
+  const pageWidth = PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2);
+  const sigWidth = hasClientSig && hasTechSig ? (pageWidth - 20) / 2 : PDF_DIMENSIONS.signatureWidth;
+  const clientX = PDF_DIMENSIONS.margin;
+  const techX = PDF_DIMENSIONS.margin + sigWidth + 20;
+
+  let maxSigHeight = 0;
+
+  // Client signature
+  if (hasClientSig) {
+    const sigY = currentY;
+    
+    safeAddText(doc, 'Assinatura do Cliente:', clientX, sigY, {
       fontSize: 12,
       fontStyle: 'bold',
       color: [...PDF_COLORS.secondary] as [number, number, number]
@@ -821,26 +841,36 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
         doc.addImage(
           clientSigData,
           'PNG',
-          PDF_DIMENSIONS.margin,
-          currentY,
-          PDF_DIMENSIONS.signatureWidth,
+          clientX,
+          sigY + 8,
+          sigWidth,
           PDF_DIMENSIONS.signatureHeight
         );
       }
     } catch (error) {
       console.error('Erro ao processar assinatura do cliente:', error);
-      currentY = safeAddText(doc, '[Assinatura não pôde ser carregada]', PDF_DIMENSIONS.margin, currentY, {
+      safeAddText(doc, '[Assinatura não pôde ser carregada]', clientX, sigY + 8, {
         fontSize: 9,
         color: [...PDF_COLORS.secondary] as [number, number, number]
       });
     }
 
-    currentY += PDF_DIMENSIONS.signatureHeight + 5;
+    // Client name below signature
+    const clientName = service.client || 'Cliente';
+    safeAddText(doc, `Cliente: ${formatForPdf(clientName)}`, clientX, sigY + 8 + PDF_DIMENSIONS.signatureHeight + 5, {
+      fontSize: 10,
+      color: [...PDF_COLORS.text] as [number, number, number]
+    });
+
+    maxSigHeight = Math.max(maxSigHeight, PDF_DIMENSIONS.signatureHeight + 20);
   }
 
-  // Assinatura do técnico
-  if (service.signatures?.technician) {
-    currentY = safeAddText(doc, 'Assinatura do Técnico:', PDF_DIMENSIONS.margin, currentY, {
+  // Technician signature
+  if (hasTechSig) {
+    const sigY = currentY;
+    const xPos = hasClientSig ? techX : clientX;
+    
+    safeAddText(doc, 'Assinatura do Técnico:', xPos, sigY, {
       fontSize: 12,
       fontStyle: 'bold',
       color: [...PDF_COLORS.secondary] as [number, number, number]
@@ -852,32 +882,31 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
         doc.addImage(
           techSigData,
           'PNG',
-          PDF_DIMENSIONS.margin,
-          currentY,
-          PDF_DIMENSIONS.signatureWidth,
+          xPos,
+          sigY + 8,
+          sigWidth,
           PDF_DIMENSIONS.signatureHeight
         );
       }
     } catch (error) {
       console.error('Erro ao processar assinatura do técnico:', error);
-      currentY = safeAddText(doc, '[Assinatura não pôde ser carregada]', PDF_DIMENSIONS.margin, currentY, {
+      safeAddText(doc, '[Assinatura não pôde ser carregada]', xPos, sigY + 8, {
         fontSize: 9,
         color: [...PDF_COLORS.secondary] as [number, number, number]
       });
     }
 
-    currentY += PDF_DIMENSIONS.signatureHeight + 5;
-  }
-
-  if (!service.signatures?.client && !service.signatures?.technician) {
-    currentY = safeAddText(doc, 'Nenhuma assinatura registrada.', PDF_DIMENSIONS.margin, currentY, {
+    // Technician name below signature
+    const technicianName = service.technicians?.[0]?.name || 'Técnico';
+    safeAddText(doc, `Técnico: ${formatForPdf(technicianName)}`, xPos, sigY + 8 + PDF_DIMENSIONS.signatureHeight + 5, {
       fontSize: 10,
-      color: [...PDF_COLORS.secondary] as [number, number, number]
+      color: [...PDF_COLORS.text] as [number, number, number]
     });
-    currentY += 15;
+
+    maxSigHeight = Math.max(maxSigHeight, PDF_DIMENSIONS.signatureHeight + 20);
   }
 
-  return currentY;
+  return currentY + maxSigHeight + 10;
 };
 
 const createPhotosSection = async (doc: any, service: Service, startY: number): Promise<number> => {
@@ -945,7 +974,7 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
     return currentY + 20;
   }
 
-  const photosPerRow = photosWithTitles.length > 3 ? 3 : 2;
+  const photosPerRow = 2;
   const gap = 6;
   const usableWidth = PDF_DIMENSIONS.pageWidth - (PDF_DIMENSIONS.margin * 2);
   const photoWidth = (usableWidth - (gap * (photosPerRow - 1))) / photosPerRow;

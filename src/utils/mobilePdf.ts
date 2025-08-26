@@ -87,12 +87,23 @@ export class MobilePdfHandler {
         });
       }
     } else {
-      // Desktop: open in new tab
-      window.open(url, '_blank');
-      toast({
-        title: "PDF Gerado",
-        description: "Relatório aberto em nova aba.",
-      });
+      // Desktop: try to open in new tab, fallback to download if blocked
+      const newWindow = window.open(url, '_blank');
+      
+      if (newWindow) {
+        toast({
+          title: "PDF Gerado",
+          description: "Relatório aberto em nova aba.",
+        });
+      } else {
+        // If popup blocked on desktop, fallback to download
+        this.triggerDownload(url, filename);
+        toast({
+          title: "PDF Baixado",
+          description: "Relatório salvo na pasta de downloads.",
+          duration: 5000,
+        });
+      }
     }
     
     // Cleanup URL after a delay

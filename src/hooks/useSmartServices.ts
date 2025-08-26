@@ -22,33 +22,40 @@ export const useSmartServices = () => {
     if (!user?.role) return false;
     
     console.log('[SMART SERVICES] User role:', user.role);
-    console.log('[SMART SERVICES] Has role gestor or higher:', hasRoleOrHigher('gestor'));
     
     // Técnicos puros (sem role de gestor ou superior) usam vista de técnico
-    const isTechnician = user.role === 'tecnico' && !hasRoleOrHigher('gestor');
+    const isTechnician = user.role === 'tecnico';
+    const isManagerOrHigher = ['gestor', 'administrador', 'owner', 'super_admin'].includes(user.role);
+    const shouldUseTechView = isTechnician && !isManagerOrHigher;
     
-    console.log('[SMART SERVICES] Should use technician view:', isTechnician);
+    console.log('[SMART SERVICES] Should use technician view:', shouldUseTechView);
     
-    return isTechnician;
-  }, [user?.role, hasRoleOrHigher]);
+    return shouldUseTechView;
+  }, [user?.role]);
   
   // Retornar dados da query apropriada com interface unificada
   if (shouldUseTechnicianView) {
+    const isManager = ['gestor', 'administrador', 'owner', 'super_admin'].includes(user?.role || '');
+    const isAdmin = ['administrador', 'owner', 'super_admin'].includes(user?.role || '');
+    
     return {
       ...technicianServicesQuery,
       services: technicianServicesQuery.data || [],
       isTechnicianView: shouldUseTechnicianView,
-      isManager: hasRoleOrHigher('gestor'),
-      isAdmin: hasRoleOrHigher('administrador'),
+      isManager,
+      isAdmin,
     };
   }
+  
+  const isManager = ['gestor', 'administrador', 'owner', 'super_admin'].includes(user?.role || '');
+  const isAdmin = ['administrador', 'owner', 'super_admin'].includes(user?.role || '');
   
   return {
     ...consolidatedServicesQuery,
     services: consolidatedServicesQuery.services || [],
     isTechnicianView: shouldUseTechnicianView,
-    isManager: hasRoleOrHigher('gestor'),
-    isAdmin: hasRoleOrHigher('administrador'),
+    isManager,
+    isAdmin,
     // Manter compatibilidade com refreshServices
     refreshServices: consolidatedServicesQuery.actions?.refreshServices,
   };
