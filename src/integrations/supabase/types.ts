@@ -748,7 +748,7 @@ export type Database = {
           location: string
           notes?: string | null
           number: string
-          organization_id: string
+          organization_id?: string
           photo_titles?: string[] | null
           photos?: string[] | null
           priority?: string | null
