@@ -97,7 +97,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     
     return { 
       url: signedUrlData.signedUrl,
-      dbId: dbData.id
+      dbId: Number(dbData.id) // Ensure it's a number
     };
   };
 
@@ -203,7 +203,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             file: file,
             url: url,
             title: file.name.replace(/\.[^/.]+$/, ""),
-            dbId: dbId
+            dbId: dbId // Already a number from uploadToSupabase
           };
 
           newPhotos.push(photo);
@@ -254,7 +254,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         const { error } = await supabase
           .from('service_photos')
           .delete()
-          .eq('id', photoToRemove.dbId);
+          .eq('id', photoToRemove.dbId); // photoToRemove.dbId is already a number
           
         if (error) {
           console.error('[PhotoUploader] Erro ao remover do banco:', error);
@@ -296,7 +296,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         const { error } = await supabase
           .from('service_photos')
           .update({ title: title })
-          .eq('id', photoToUpdate.dbId);
+          .eq('id', photoToUpdate.dbId); // photoToUpdate.dbId is already a number
           
         if (error) {
           console.error('[PhotoUploader] Erro ao atualizar título no banco:', error);
