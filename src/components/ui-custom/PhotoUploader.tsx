@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, X, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -250,11 +249,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     
     if (photoToRemove && photoToRemove.dbId) {
       try {
-        // Usar o ID do banco de dados para remover
+        // Usar o ID do banco de dados para remover - convert number to string
         const { error } = await supabase
           .from('service_photos')
           .delete()
-          .eq('id', photoToRemove.dbId); // photoToRemove.dbId is already a number
+          .eq('id', photoToRemove.dbId.toString());
           
         if (error) {
           console.error('[PhotoUploader] Erro ao remover do banco:', error);
@@ -292,11 +291,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     const photoToUpdate = photos.find(p => p.id === photoId);
     if (photoToUpdate && photoToUpdate.dbId) {
       try {
-        // Usar o ID do banco de dados para atualizar
+        // Usar o ID do banco de dados para atualizar - convert number to string
         const { error } = await supabase
           .from('service_photos')
           .update({ title: title })
-          .eq('id', photoToUpdate.dbId); // photoToUpdate.dbId is already a number
+          .eq('id', photoToUpdate.dbId.toString());
           
         if (error) {
           console.error('[PhotoUploader] Erro ao atualizar título no banco:', error);
