@@ -5,7 +5,6 @@ import { PDF_COLORS, PDF_DIMENSIONS, PDF_FONTS } from './pdfConstants';
 import { sanitizeText, wrapText, addText, checkPageBreak } from './pdfHelpers';
 import { processImage } from './imageProcessor';
 import { defaultTableTheme } from './pdfLayout';
-import { modernSectionTitle, infoPanel } from './modernPdfLayout';
 import { getServiceMaterialUsage } from '@/services/inventoryService';
 import { MobilePdfHandler } from '../mobilePdf';
 
@@ -185,80 +184,150 @@ export const generateProfessionalServiceReport = async (
 };
 
 const createProfessionalCover = async (doc: any, service: Service): Promise<number> => {
-  // Fundo preto sólido
-  doc.setFillColor(...PDF_COLORS.black);
-  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+  // Fundo
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 120, 'F');
 
-  // Logo Revo amarela centralizada
+  // Gradiente decorativo secundário
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(0, 100, PDF_DIMENSIONS.pageWidth, 20, 'F');
+
+  // Faixa accent mais destacada
+  doc.setFillColor(...PDF_COLORS.accent);
+  doc.rect(0, 115, PDF_DIMENSIONS.pageWidth, 8, 'F');
+
+  // Elementos geométricos decorativos
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.circle(180, 25, 15, 'F');
+  doc.setFillColor(...PDF_COLORS.primaryLight);
+  doc.rect(170, 35, 30, 3, 'F');
+
+  // Logo modernizado (fallbacks mantidos)
   try {
-    doc.addImage('/assets/logo-revo-amarela.png', 'PNG', 
-                 (PDF_DIMENSIONS.pageWidth - 50) / 2, 50, 50, 50);
+    const logo = await processImage('/logo.svg');
+    if (logo) {
+      doc.addImage(logo, 'PNG', PDF_DIMENSIONS.margin, 15, 20, 20);
+    } else {
+      doc.setFillColor(...PDF_COLORS.white);
+      doc.rect(PDF_DIMENSIONS.margin, 15, 20, 20, 'F');
+      doc.setFillColor(...PDF_COLORS.accent);
+      doc.circle(PDF_DIMENSIONS.margin + 10, 25, 6, 'F');
+    }
   } catch (e) {
-    // Fallback: Yellow circle
-    doc.setFillColor(...PDF_COLORS.revoYellow);
-    doc.circle(PDF_DIMENSIONS.pageWidth / 2, 75, 25, 'F');
+    doc.setFillColor(...PDF_COLORS.white);
+    doc.rect(PDF_DIMENSIONS.margin, 15, 20, 20, 'F');
+    doc.setFillColor(...PDF_COLORS.accent);
+    doc.circle(PDF_DIMENSIONS.margin + 10, 25, 6, 'F');
   }
 
-  // Título principal em branco
-  doc.setFontSize(28);
+  // Título principal
+  doc.setFontSize(32);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
-  doc.setTextColor(...PDF_COLORS.white);
-  doc.text('RELATÓRIO TÉCNICO', PDF_DIMENSIONS.pageWidth / 2, 130, { align: 'center' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatForPdf('RELATÓRIO TÉCNICO'), PDF_DIMENSIONS.pageWidth / 2, 45, { align: 'center' });
 
-  // Subtítulo em cinza escuro
-  doc.setFontSize(16);
+  // Subtítulo
+  doc.setFontSize(18);
   doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.darkGray);
-  doc.text('Sistema Integrado de Gestão', PDF_DIMENSIONS.pageWidth / 2, 145, { align: 'center' });
+  doc.text(formatForPdf('Sistema Integrado de Gestão'), PDF_DIMENSIONS.pageWidth / 2, 62, { align: 'center' });
 
-  // Raio Revo como detalhe gráfico sutil
-  try {
-    doc.addImage('/assets/raio-revo-amarelo.png', 'PNG', 25, 200, 12, 12);
-    doc.addImage('/assets/raio-revo-amarelo.png', 'PNG', 173, 40, 8, 8);
-  } catch (e) {
-    // Fallback: Small yellow accents
-    doc.setFillColor(...PDF_COLORS.revoYellow);
-    doc.circle(30, 206, 3, 'F');
-    doc.circle(177, 44, 2, 'F');
-  }
-
-  // Box amarelo para informações críticas  
-  doc.setFillColor(...PDF_COLORS.revoYellow);
-  doc.rect(30, 170, 150, 80, 'F');
-
-  // Título do box em preto
+  // Badge OS
+  doc.setFillColor(...PDF_COLORS.accentLight);
+  doc.roundedRect(65, 75, 80, 12, 3, 3, 'F');
   doc.setFontSize(16);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
-  doc.setTextColor(...PDF_COLORS.black);
-  doc.text('RESUMO EXECUTIVO', PDF_DIMENSIONS.pageWidth / 2, 185, { align: 'center' });
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.text(formatForPdf(`OS #${service.number || 'N/A'}`), PDF_DIMENSIONS.pageWidth / 2, 83, { align: 'center' });
 
-  // Informações principais em texto preto
-  const resumoInfo = [
-    `OS: ${service.number || 'N/A'}`,
-    `Cliente: ${service.client}`,
-    `Status: ${getStatusText(service.status)}`,
-    `Tipo: ${service.serviceType || 'N/A'}`,
-    `Local: ${service.location || 'N/A'}`
+  // Card principal de informações
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
+
+  // Sombra simulada do card (leve overdraw intencional)
+  doc.setFillColor(...PDF_COLORS.mediumGray);
+  doc.roundedRect(27, 137, 160, 130, 8, 8, 'F');
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'F');
+
+  // Borda decorativa do card
+  doc.setDrawColor(...PDF_COLORS.accent);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(25, 135, 160, 130, 8, 8, 'S');
+
+  // Header do card com background
+  doc.setFillColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(25, 135, 160, 25, 8, 8, 'F');
+  doc.rect(25, 152, 160, 8, 'F');
+
+  // Título do card
+  doc.setTextColor(...PDF_COLORS.primary);
+  doc.setFontSize(18);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.text(formatForPdf('RESUMO EXECUTIVO'), 105, 150, { align: 'center' });
+
+  // Informações organizadas em duas colunas
+  let infoY = 175;
+  const leftCol = 35;
+  const rightCol = 115;
+
+  const leftInfo = [
+    ['Demanda:', formatForPdf(service.title)],
+    ['Cliente:', formatForPdf(service.client)],
+    ['Localização:', formatForPdf(service.location)],
   ];
 
-  let infoY = 200;
+  const rightInfo = [
+    ['Tipo:', formatForPdf(service.serviceType)],
+    ['Status:', formatForPdf(getStatusText(service.status))],
+    ['Prioridade:', formatForPdf(service.priority || 'Normal')],
+  ];
+
   doc.setFontSize(10);
-  doc.setFont(PDF_FONTS.normal, 'normal' as any);
-  doc.setTextColor(...PDF_COLORS.black);
-  
-  resumoInfo.forEach(info => {
-    const wrappedText = doc.splitTextToSize(info, 140);
-    doc.text(wrappedText, PDF_DIMENSIONS.pageWidth / 2, infoY, { align: 'center' });
-    infoY += 8;
+
+  // Coluna esquerda
+  leftInfo.forEach(([label, value]) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(formatForPdf(String(label)), leftCol, infoY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(String(value), 70);
+    doc.text(wrappedValue, leftCol, infoY + 6);
+    infoY += 18;
   });
 
-  // Data de geração na parte inferior
-  doc.setFontSize(8);
-  doc.setTextColor(...PDF_COLORS.darkGray);
-  doc.text(`Documento gerado automaticamente em ${formatDate(new Date().toISOString())}`, 
-           PDF_DIMENSIONS.pageWidth / 2, 275, { align: 'center' });
+  // Coluna direita
+  infoY = 175;
+  rightInfo.forEach(([label, value]) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(formatForPdf(String(label)), rightCol, infoY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    const wrappedValue = doc.splitTextToSize(String(value), 70);
+    doc.text(wrappedValue, rightCol, infoY + 6);
+    infoY += 18;
+  });
 
-  return PDF_DIMENSIONS.pageHeight;
+  // Data de criação e prazo com ícones
+  doc.setFillColor(...PDF_COLORS.accent);
+  doc.circle(leftCol, 235, 3, 'F');
+  doc.setTextColor(...PDF_COLORS.text);
+  doc.setFontSize(9);
+  doc.text(formatForPdf(`Criado: ${formatDate(service.creationDate)}`), leftCol + 8, 237);
+
+  if (service.dueDate) {
+    doc.setFillColor(...PDF_COLORS.warning);
+    doc.circle(rightCol, 235, 3, 'F');
+    doc.text(formatForPdf(`Prazo: ${formatDate(service.dueDate)}`), rightCol + 8, 237);
+  }
+
+  // Rodapé da capa mais elegante
+  doc.setFontSize(8);
+  doc.setTextColor(...PDF_COLORS.textLight);
+  doc.text(formatForPdf(`Documento gerado automaticamente em ${formatDate(new Date().toISOString())}`), 105, 280, { align: 'center' });
+
+  return 290;
 };
 
 const createIndex = (doc: any, startY: number): number => {
@@ -310,12 +379,23 @@ const createIndex = (doc: any, startY: number): number => {
 const createServiceOverview = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  // Título de seção no estilo Revo (fundo preto, texto branco, maiúsculas)
-  currentY = modernSectionTitle(doc, '1. INFORMAÇÕES GERAIS', currentY);
-  currentY += 5;
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('1. INFORMAÇÕES GERAIS', PDF_DIMENSIONS.margin, currentY);
 
-  // Painel de informações usando estilo Revo
-  const serviceData: Array<[string, string]> = [
+  currentY += 10;
+
+  // Card de informações
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'F');
+  doc.setDrawColor(...PDF_COLORS.lightGray);
+  doc.roundedRect(PDF_DIMENSIONS.margin, currentY, 170, 55, 3, 3, 'S');
+
+  const info = [
     ['Número da OS:', formatForPdf(service.number || 'N/A')],
     ['Título:', formatForPdf(service.title)],
     ['Tipo de Serviço:', formatForPdf(service.serviceType || 'Não especificado')],
@@ -324,42 +404,49 @@ const createServiceOverview = (doc: any, service: Service, startY: number): numb
     ['Localização:', formatForPdf(service.location || 'Não informado')]
   ];
 
-  currentY = infoPanel(doc, currentY, serviceData);
+  let colX = PDF_DIMENSIONS.margin + 3;
+  let colY = currentY + 8;
+  doc.setFontSize(10);
+  info.forEach(([label, value], idx) => {
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text(label, colX, colY);
+    doc.setFont(PDF_FONTS.normal, 'normal' as any);
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(value, 120), colX + 35, colY);
+    colY += 8;
+  });
 
-  // Descrição em box separado se existir
+  currentY += 60;
+
   if (service.description) {
-    currentY += 5;
-    
-    // Box amarelo para descrição (informação crítica)
-    doc.setFillColor(...PDF_COLORS.revoYellow);
-    const descHeight = Math.max(25, doc.splitTextToSize(service.description, 160).length * 4 + 10);
-    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, descHeight, 'F');
-    
-    // Título da descrição
     doc.setFontSize(12);
     doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
-    doc.setTextColor(...PDF_COLORS.black);
-    doc.text('DESCRIÇÃO DO SERVIÇO:', PDF_DIMENSIONS.margin + 5, currentY + 8);
-    
-    // Texto da descrição
+    doc.setTextColor(...PDF_COLORS.secondary);
+    doc.text('Descrição do Serviço:', PDF_DIMENSIONS.margin, currentY);
+    currentY += 5;
     doc.setFontSize(10);
     doc.setFont(PDF_FONTS.normal, 'normal' as any);
-    doc.setTextColor(...PDF_COLORS.black);
-    const wrappedDescription = doc.splitTextToSize(service.description, 160);
-    doc.text(wrappedDescription, PDF_DIMENSIONS.margin + 5, currentY + 16);
-    
-    currentY += descHeight + 5;
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(doc.splitTextToSize(service.description, 160), PDF_DIMENSIONS.margin, currentY);
+    currentY += 10;
   }
 
-  return currentY;
+  return currentY + 5;
 };
 
 const createMaterialsSection = async (doc: any, service: Service, startY: number): Promise<number> => {
   let currentY = startY;
 
-  // Título no estilo Revo
-  currentY = modernSectionTitle(doc, '3. MATERIAIS UTILIZADOS', currentY);
-  currentY += 10;
+  // Cabeçalho com faixa
+  doc.setFillColor(...PDF_COLORS.primary);
+  doc.rect(PDF_DIMENSIONS.margin - 2, currentY - 6, 170, 10, 'F');
+  doc.setFontSize(16);
+  doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
+  doc.setTextColor(255, 255, 255);
+  doc.text('3. MATERIAIS UTILIZADOS', PDF_DIMENSIONS.margin, currentY);
+
+  currentY += 15;
 
   try {
     // Buscar dados dos materiais utilizados no serviço
@@ -386,31 +473,27 @@ const createMaterialsSection = async (doc: any, service: Service, startY: number
         return total;
       }, 0);
 
-      // Criar tabela com estilo Revo (cabeçalho preto, linhas alternadas)
+      // Criar tabela de materiais
       autoTable(doc, {
         startY: currentY,
         head: [['Material', 'Unidade', 'Planejado', 'Usado', 'Custo Total', 'Observações']],
         body: tableData,
+        ...defaultTableTheme('accent'),
         theme: 'striped',
         styles: {
           fontSize: 9,
           cellPadding: 3,
-          textColor: PDF_COLORS.black as unknown as [number, number, number],
         },
         headStyles: {
-          fillColor: PDF_COLORS.black as unknown as [number, number, number],
-          textColor: PDF_COLORS.white as unknown as [number, number, number],
+          fillColor: [...PDF_COLORS.accent],
+          textColor: [255, 255, 255],
           fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [248, 248, 248] as [number, number, number], // Cinza muito claro
         },
         columnStyles: {
           2: { halign: 'center' },
           3: { halign: 'center' },
           4: { halign: 'right' }
-        },
-        margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
+        }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 10;
@@ -489,21 +572,29 @@ const createMaterialsSection = async (doc: any, service: Service, startY: number
 const createClientDetails = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  // Título no estilo Revo
-  currentY = modernSectionTitle(doc, '2. DETALHES DO CLIENTE', currentY);
-  currentY += 5;
+  currentY = safeAddText(doc, '4. DETALHES DO CLIENTE', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
-  // Painel de informações do cliente
-  const clientData: Array<[string, string]> = [
-    ['Nome/Razão Social:', formatForPdf(service.client || 'Não informado')],
-    ['Endereço:', formatForPdf(service.address || 'Não informado')],  
-    ['Cidade:', formatForPdf(service.city || 'Não informada')],
-    ['Local do Serviço:', formatForPdf(service.location || 'Não informado')]
+  // Tabela de informações do cliente
+  const clientData = [
+    ['Nome/Razão Social', formatForPdf(service.client || 'Não informado')],
+    ['Endereço', formatForPdf(service.address || 'Não informado')],
+    ['Cidade', formatForPdf(service.city || 'Não informada')],
+    ['Local do Serviço', formatForPdf(service.location || 'Não informado')]
   ];
 
-  currentY = infoPanel(doc, currentY, clientData);
-  
-  return currentY + 5;
+  autoTable(doc, {
+    startY: currentY + 6,
+    head: [['Campo', 'Informação']],
+    body: clientData,
+    ...defaultTableTheme('primary'),
+    theme: 'grid',
+  });
+
+  return (doc as any).lastAutoTable.finalY + 10;
 };
 
 const createTimelineSection = (doc: any, service: Service, startY: number): number => {
@@ -536,36 +627,38 @@ const createTimelineSection = (doc: any, service: Service, startY: number): numb
 const createTechnicianSection = (doc: any, service: Service, startY: number): number => {
   let currentY = startY;
 
-  // Título no estilo Revo  
-  currentY = modernSectionTitle(doc, '5. TÉCNICO RESPONSÁVEL', currentY);
-  currentY += 5;
+  currentY = safeAddText(doc, '6. TÉCNICO RESPONSÁVEL', PDF_DIMENSIONS.margin, currentY, {
+    fontSize: 16,
+    fontStyle: 'bold',
+    color: [...PDF_COLORS.primary] as [number, number, number]
+  });
 
   if (service.technicians && service.technicians.length > 0) {
     const technician = service.technicians[0];
 
-    const techData: Array<[string, string]> = [
-      ['Nome:', formatForPdf(technician.name)],
-      ['Função:', formatForPdf(technician.role || 'Técnico')],
-      ['Email:', formatForPdf(technician.email || 'Não informado')],
-      ['Telefone:', formatForPdf(technician.phone || 'Não informado')]
+    const techData = [
+      ['Nome', formatForPdf(technician.name)],
+      ['Função', formatForPdf(technician.role || 'Técnico')],
+      ['Email', formatForPdf(technician.email || 'Não informado')],
+      ['Telefone', formatForPdf(technician.phone || 'Não informado')]
     ];
 
-    currentY = infoPanel(doc, currentY, techData);
-  } else {
-    // Box amarelo para informação crítica
-    doc.setFillColor(...PDF_COLORS.revoYellow);
-    doc.rect(PDF_DIMENSIONS.margin, currentY, 170, 20, 'F');
-    
-    doc.setFontSize(12);
-    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
-    doc.setTextColor(...PDF_COLORS.black);
-    doc.text('ATENÇÃO: Nenhum técnico foi atribuído a este serviço.', 
-             PDF_DIMENSIONS.pageWidth / 2, currentY + 12, { align: 'center' });
-    
-    currentY += 25;
-  }
+    autoTable(doc, {
+      startY: currentY + 6,
+      head: [['Campo', 'Informação']],
+      body: techData,
+      ...defaultTableTheme('secondary'),
+      theme: 'grid',
+    });
 
-  return currentY;
+    return (doc as any).lastAutoTable.finalY + 10;
+  } else {
+    currentY = safeAddText(doc, 'Nenhum técnico foi atribuído a este serviço.', PDF_DIMENSIONS.margin, currentY + 6, {
+      fontSize: 10,
+      color: [...PDF_COLORS.secondary] as [number, number, number]
+    });
+    return currentY + 20;
+  }
 };
 
 const createTechnicianFieldsSection = (doc: any, service: Service, startY: number): number => {

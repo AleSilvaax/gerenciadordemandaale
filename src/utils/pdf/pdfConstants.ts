@@ -1,25 +1,19 @@
 
 export const PDF_COLORS = {
-  // Revo Corporate Colors
-  black: [0, 0, 0],               // Preto total #000000
-  white: [255, 255, 255],         // Branco #FFFFFF
-  darkGray: [38, 36, 38],         // Cinza escuro #262426 (fundos e bordas)
-  revoYellow: [244, 255, 0],      // Amarelo Revo #F4FF00 (destaques)
-  
-  // Legacy colors for compatibility
-  primary: [0, 0, 0],             // Black as primary
-  primaryLight: [38, 36, 38],     // Dark gray
-  secondary: [38, 36, 38],        // Dark gray for secondary text
-  accent: [244, 255, 0],          // Revo Yellow for accents
-  accentLight: [244, 255, 0],     // Revo Yellow
-  text: [0, 0, 0],                // Black text
-  textLight: [38, 36, 38],        // Dark gray for secondary text
-  lightGray: [248, 248, 248],     // Very light gray background
-  mediumGray: [200, 200, 200],    // Medium gray
-  border: [38, 36, 38],           // Dark gray borders
-  success: [244, 255, 0],         // Revo Yellow for success
-  warning: [244, 255, 0],         // Revo Yellow for warnings
-  danger: [0, 0, 0]               // Black for danger
+  primary: [20, 67, 151],         // Azul vibrante mais escuro
+  primaryLight: [59, 130, 246],   // Azul mais claro
+  secondary: [45, 55, 72],        // Cinza moderno
+  accent: [5, 150, 105],          // Verde esmeralda
+  accentLight: [34, 197, 94],     // Verde claro
+  text: [17, 24, 39],             // Texto mais escuro
+  textLight: [75, 85, 99],        // Texto secundário
+  lightGray: [248, 250, 252],     // Fundo muito claro
+  mediumGray: [226, 232, 240],    // Fundo médio
+  white: [255, 255, 255],         // Branco puro
+  border: [203, 213, 225],        // Borda suave
+  success: [34, 197, 94],         // Verde sucesso
+  warning: [251, 191, 36],        // Amarelo aviso
+  danger: [239, 68, 68]           // Vermelho perigo
 } as const;
 
 export const PDF_DIMENSIONS = {
