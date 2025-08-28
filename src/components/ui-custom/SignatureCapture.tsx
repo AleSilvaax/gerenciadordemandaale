@@ -13,6 +13,7 @@ interface SignatureCaptureProps {
   label?: string;
   width?: number;
   height?: number;
+  disabled?: boolean;
 }
 
 export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
@@ -22,7 +23,8 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   initialValue,
   label = "Assinatura",
   width = 300,
-  height = 150
+  height = 150,
+  disabled = false
 }) => {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -49,7 +51,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   }, [initialSignature, initialValue, hasInitialized]);
   
   const clear = () => {
-    if (sigCanvas.current) {
+    if (sigCanvas.current && !disabled) {
       sigCanvas.current.clear();
       setIsEmpty(true);
       if (onChange) {
@@ -60,7 +62,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   };
   
   const undo = () => {
-    if (sigCanvas.current) {
+    if (sigCanvas.current && !disabled) {
       const data = sigCanvas.current.toData();
       if (data.length > 0) {
         data.pop();
@@ -83,7 +85,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   };
   
   const save = () => {
-    if (sigCanvas.current && !isEmpty) {
+    if (sigCanvas.current && !isEmpty && !disabled) {
       const dataURL = sigCanvas.current.toDataURL('image/png', 1.0); // Qualidade máxima
       console.log("Salvando assinatura manualmente - tamanho:", dataURL.length);
       if (onSave) {
@@ -96,7 +98,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
   };
   
   const handleEnd = () => {
-    if (sigCanvas.current) {
+    if (sigCanvas.current && !disabled) {
       const currentIsEmpty = sigCanvas.current.isEmpty();
       setIsEmpty(currentIsEmpty);
       
@@ -115,7 +117,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
     <Card className="w-full">
       <CardContent className="p-4 space-y-4">
         <div className="text-sm font-medium">{label}</div>
-        <div className="border rounded-md overflow-hidden bg-white">
+        <div className={`border rounded-md overflow-hidden ${disabled ? 'bg-muted' : 'bg-white'}`}>
           <SignatureCanvas
             ref={sigCanvas}
             penColor="black"
@@ -124,16 +126,19 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
               height: height,
               className: "signature-canvas"
             }}
-            onEnd={handleEnd}
-            backgroundColor="rgba(255,255,255,1)"
+            onEnd={disabled ? undefined : handleEnd}
+            backgroundColor={disabled ? "rgba(243,244,246,1)" : "rgba(255,255,255,1)"}
           />
+          {disabled && (
+            <div className="absolute inset-0 cursor-not-allowed" />
+          )}
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={undo}
-            disabled={isEmpty}
+            disabled={isEmpty || disabled}
           >
             <Undo2 className="h-4 w-4 mr-1" />
             Desfazer
@@ -142,7 +147,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
             variant="outline" 
             size="sm" 
             onClick={clear}
-            disabled={isEmpty}
+            disabled={isEmpty || disabled}
           >
             <Trash2 className="h-4 w-4 mr-1" />
             Limpar
@@ -152,13 +157,18 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
               variant="default" 
               size="sm" 
               onClick={save}
-              disabled={isEmpty}
+              disabled={isEmpty || disabled}
             >
               <Save className="h-4 w-4 mr-1" />
               Salvar
             </Button>
           )}
         </div>
+        {disabled && (
+          <p className="text-xs text-muted-foreground text-center">
+            Edição bloqueada - serviço concluído
+          </p>
+        )}
       </CardContent>
     </Card>
   );
