@@ -13,6 +13,7 @@ export interface Photo {
   file: File;
   url: string;
   title: string;
+  dbId?: number; // ID do banco de dados para permitir edição/exclusão
 }
 
 interface PhotoUploaderProps {
@@ -39,7 +40,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     disabled 
   });
 
-  const uploadToSupabase = async (file: File): Promise<string> => {
+  const uploadToSupabase = async (file: File): Promise<{ url: string; dbId: number }> => {
     console.log('[PhotoUploader] Iniciando upload para Supabase:', file.name);
     
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -74,32 +75,30 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     }
 
     console.log('[PhotoUploader] URL assinada gerada:', signedUrlData.signedUrl);
-    return signedUrlData.signedUrl;
-  };
 
-  const savePhotoToDatabase = async (photoUrl: string, title: string) => {
-    if (!serviceId) {
-      console.log('[PhotoUploader] Sem serviceId, pulando salvamento no banco');
-      return;
-    }
-
-    console.log('[PhotoUploader] Salvando no banco:', { serviceId, photoUrl, title });
-    
-    const { data, error } = await supabase
+    // Salvar no banco de dados e retornar o ID
+    const title = file.name.replace(/\.[^/.]+$/, "");
+    const { data: dbData, error: dbError } = await supabase
       .from('service_photos')
       .insert({
         service_id: serviceId,
-        photo_url: photoUrl,
+        photo_url: signedUrlData.signedUrl,
         title: title
       })
-      .select();
+      .select('id')
+      .single();
 
-    if (error) {
-      console.error('[PhotoUploader] Erro ao salvar no banco:', error);
-      throw new Error(`Erro ao salvar foto: ${error.message}`);
+    if (dbError) {
+      console.error('[PhotoUploader] Erro ao salvar no banco:', dbError);
+      throw new Error(`Erro ao salvar foto: ${dbError.message}`);
     }
 
-    console.log('[PhotoUploader] Foto salva no banco com sucesso:', data);
+    console.log('[PhotoUploader] Foto salva no banco com sucesso:', dbData);
+    
+    return { 
+      url: signedUrlData.signedUrl,
+      dbId: dbData.id
+    };
   };
 
   const updateServicePhotosField = async (serviceId: string) => {
@@ -190,28 +189,25 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       for (const file of validFiles) {
         console.log('[PhotoUploader] Processando arquivo:', file.name);
         
-        const title = file.name.replace(/\.[^/.]+$/, "");
-        
         try {
-          // Upload para Supabase Storage
-          const photoUrl = await uploadToSupabase(file);
+          // Upload para Supabase Storage e salvar no banco
+          const { url, dbId } = await uploadToSupabase(file);
           
-          // Salvar no banco de dados
+          // Atualizar também o campo photos na tabela services
           if (serviceId) {
-            await savePhotoToDatabase(photoUrl, title);
-            // Atualizar também o campo photos na tabela services
             await updateServicePhotosField(serviceId);
           }
           
           const photo: Photo = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
             file: file,
-            url: photoUrl,
-            title: title
+            url: url,
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            dbId: dbId
           };
 
           newPhotos.push(photo);
-          console.log('[PhotoUploader] Foto processada com sucesso:', title);
+          console.log('[PhotoUploader] Foto processada com sucesso:', photo.title);
           
         } catch (error) {
           console.error('[PhotoUploader] Erro ao processar foto:', file.name, error);
@@ -252,12 +248,13 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     console.log('[PhotoUploader] Removendo foto:', photoId);
     const photoToRemove = photos.find(p => p.id === photoId);
     
-    if (photoToRemove && serviceId) {
+    if (photoToRemove && photoToRemove.dbId) {
       try {
+        // Usar o ID do banco de dados para remover
         const { error } = await supabase
           .from('service_photos')
           .delete()
-          .eq('photo_url', photoToRemove.url);
+          .eq('id', photoToRemove.dbId);
           
         if (error) {
           console.error('[PhotoUploader] Erro ao remover do banco:', error);
@@ -268,12 +265,18 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         console.log('[PhotoUploader] Foto removida do banco com sucesso');
         
         // Atualizar o campo photos na tabela services
-        await updateServicePhotosField(serviceId);
+        if (serviceId) {
+          await updateServicePhotosField(serviceId);
+        }
       } catch (error) {
         console.error('[PhotoUploader] Erro ao remover foto do banco:', error);
         toast.error('Erro ao remover foto');
         return;
       }
+    } else if (!photoToRemove?.dbId) {
+      console.warn('[PhotoUploader] Foto não tem ID do banco, removendo apenas localmente');
+      toast.warning('Foto ainda não foi sincronizada. Tente novamente em alguns segundos.');
+      return;
     }
     
     const updatedPhotos = photos.filter(p => p.id !== photoId);
@@ -287,12 +290,13 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     console.log('[PhotoUploader] Atualizando título da foto:', photoId, title);
     
     const photoToUpdate = photos.find(p => p.id === photoId);
-    if (photoToUpdate && serviceId) {
+    if (photoToUpdate && photoToUpdate.dbId) {
       try {
+        // Usar o ID do banco de dados para atualizar
         const { error } = await supabase
           .from('service_photos')
           .update({ title: title })
-          .eq('photo_url', photoToUpdate.url);
+          .eq('id', photoToUpdate.dbId);
           
         if (error) {
           console.error('[PhotoUploader] Erro ao atualizar título no banco:', error);
@@ -302,13 +306,17 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       } catch (error) {
         console.error('[PhotoUploader] Erro ao atualizar título:', error);
       }
+    } else if (!photoToUpdate?.dbId) {
+      console.warn('[PhotoUploader] Foto não tem ID do banco, aguarde sincronização');
+      toast.warning('Aguarde a sincronização da foto para editar o título.');
+      return;
     }
     
     const updatedPhotos = photos.map(photo =>
       photo.id === photoId ? { ...photo, title } : photo
     );
     onPhotosChange(updatedPhotos);
-  }, [photos, onPhotosChange, disabled, serviceId]);
+  }, [photos, onPhotosChange, disabled]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -350,7 +358,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   {disabled ? (
-                    'Upload de fotos desabilitado'
+                    'Upload de fotos desabilitado - serviço concluído'
                   ) : (
                     <>
                       Arraste e solte fotos aqui ou clique para selecionar<br />
@@ -392,6 +400,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             <h4 className="text-sm font-medium">
               Fotos Adicionadas ({photos.length}/{maxPhotos})
             </h4>
+            {disabled && (
+              <p className="text-xs text-muted-foreground">
+                Edição bloqueada - serviço concluído
+              </p>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -410,15 +423,18 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                         }}
                       />
                       
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                        onClick={() => removePhoto(photo.id)}
-                        disabled={disabled}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                      {!disabled && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          onClick={() => removePhoto(photo.id)}
+                          disabled={!photo.dbId}
+                          title={!photo.dbId ? "Aguarde sincronização para remover" : "Remover foto"}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                     
                     <div className="flex-1 space-y-2">
@@ -432,7 +448,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                           onChange={(e) => updatePhotoTitle(photo.id, e.target.value)}
                           placeholder="Digite um título..."
                           className="mt-1"
-                          disabled={disabled}
+                          disabled={disabled || !photo.dbId}
+                          title={!photo.dbId ? "Aguarde sincronização para editar" : ""}
                         />
                       </div>
                       
@@ -440,6 +457,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                         <span className="text-xs text-muted-foreground">
                           {formatFileSize(photo.file.size)}
                         </span>
+                        {!photo.dbId && (
+                          <span className="text-xs text-yellow-600">
+                            Sincronizando...
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -95,6 +95,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
     );
   }
 
+  const isServiceConcluded = service.status === 'concluido';
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" role="main">
       <motion.div
@@ -137,7 +139,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             >
               <SectionCard 
                 title="Fotos e Anexos" 
-                description="Documentação visual do atendimento"
+                description={isServiceConcluded ? "Documentação visual do atendimento (somente leitura)" : "Documentação visual do atendimento"}
                 rightSlot={
                   photos.length > 0 ? (
                     <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
@@ -157,6 +159,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
                   onPhotosChange={handlePhotosChange}
                   serviceId={service.id}
                   maxPhotos={10}
+                  disabled={isServiceConcluded}
                 />
               </SectionCard>
             </motion.div>

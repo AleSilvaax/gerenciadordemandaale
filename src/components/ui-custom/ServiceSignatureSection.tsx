@@ -40,6 +40,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
   };
 
   const hasSignatures = clientSignature || technicianSignature;
+  const isServiceConcluded = service.status === 'concluido';
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
@@ -47,6 +48,11 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
         <CardTitle className="text-lg flex items-center gap-2">
           <PenTool className="w-5 h-5" />
           Assinaturas
+          {isServiceConcluded && (
+            <span className="text-xs text-muted-foreground ml-2">
+              (Somente leitura)
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -66,6 +72,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
                 setClientSignature(signature);
               }}
               label="Assinatura do Cliente"
+              disabled={isServiceConcluded}
             />
           </div>
         </div>
@@ -86,21 +93,32 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
                 setTechnicianSignature(signature);
               }}
               label="Assinatura do Técnico"
+              disabled={isServiceConcluded}
             />
           </div>
         </div>
 
         {/* Botão de Salvar */}
-        <div className="flex justify-center pt-4">
-          <Button 
-            onClick={handleSaveSignatures}
-            className="w-full"
-            disabled={!hasSignatures}
-          >
-            <PenTool className="w-4 h-4 mr-2" />
-            Salvar Assinaturas
-          </Button>
-        </div>
+        {!isServiceConcluded && (
+          <div className="flex justify-center pt-4">
+            <Button 
+              onClick={handleSaveSignatures}
+              className="w-full"
+              disabled={!hasSignatures}
+            >
+              <PenTool className="w-4 h-4 mr-2" />
+              Salvar Assinaturas
+            </Button>
+          </div>
+        )}
+        
+        {isServiceConcluded && hasSignatures && (
+          <div className="text-center pt-4">
+            <p className="text-sm text-muted-foreground">
+              Serviço concluído - assinaturas não podem ser alteradas
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

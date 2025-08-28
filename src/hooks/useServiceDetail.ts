@@ -64,6 +64,7 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
               file: new File([], 'existing-photo'),
               url: signedUrlData?.signedUrl || photoData.photo_url,
               title: photoData.title || `Foto ${index + 1}`,
+              dbId: photoData.id, // Incluir o ID do banco de dados
             };
           })
         );
