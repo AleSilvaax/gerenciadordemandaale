@@ -3,15 +3,10 @@ import { Service } from '@/types/serviceTypes';
 import { applyDarkBackground, drawRevoHeader, drawRevoFooter } from './revoLayout';
 
 /**
- * Aplica fundo cinza escuro em todas as páginas e adiciona cabeçalhos/rodapés Revo
+ * Adiciona cabeçalhos e rodapés Revo (fundo já aplicado automaticamente)
  */
 export const addRevoHeadersAndFooters = async (doc: jsPDF, service: Service): Promise<void> => {
   const pageCount = doc.getNumberOfPages();
-
-  // Aplicar fundo cinza escuro em todas as páginas (exceto capa)
-  for (let i = 2; i <= pageCount; i++) {
-    applyDarkBackground(doc, i);
-  }
 
   // Adicionar cabeçalhos Revo em todas as páginas (exceto capa)
   for (let i = 2; i <= pageCount; i++) {

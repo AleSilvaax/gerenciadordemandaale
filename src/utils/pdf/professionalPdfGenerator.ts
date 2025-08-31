@@ -96,6 +96,14 @@ export const generateProfessionalServiceReport = async (
       
       const doc = new jsPDF('portrait', 'mm', 'a4');
 
+      // Monkey-patch addPage to automatically apply dark background
+      const originalAddPage = doc.addPage.bind(doc);
+      doc.addPage = function(...args: any[]) {
+        const result = originalAddPage.apply(this, args);
+        applyDarkBackground(doc);
+        return result;
+      };
+
       let currentY = 0;
 
       // Capa Revo
@@ -103,7 +111,6 @@ export const generateProfessionalServiceReport = async (
 
       // Nova página para o conteúdo com fundo cinza escuro
       doc.addPage();
-      applyDarkBackground(doc);
       currentY = 25;
 
       // Índice
