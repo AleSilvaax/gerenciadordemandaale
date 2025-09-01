@@ -353,7 +353,7 @@ const createMaterialsSection = async (doc: any, service: Service, startY: number
         materialsWithNotes.forEach((usage, index) => {
           doc.setFontSize(10);
           doc.setFont(PDF_FONTS.normal, 'normal');
-          doc.setTextColor(...PDF_COLORS.white);
+          doc.setTextColor(0, 0, 0); // Preto para melhor contraste
           const noteText = `${usage.material?.name}: ${usage.notes}`;
           const wrappedText = doc.splitTextToSize(formatForPdf(noteText), 160);
           doc.text(wrappedText, PDF_DIMENSIONS.margin, currentY);
@@ -464,13 +464,12 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
   if (service.customFields && service.customFields.length > 0) {
     const fieldsData = service.customFields.map(field => [
       formatForPdf(field.label || 'Campo'),
-      formatForPdf(field.value ? String(field.value) : 'Não preenchido'),
-      formatForPdf('Configurado')
+      formatForPdf(field.value ? String(field.value) : 'Não preenchido')
     ]);
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Campo', 'Valor', 'Status']],
+      head: [['Campo', 'Valor']],
       body: fieldsData,
       ...proTableTheme(),
     });
@@ -621,14 +620,32 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
   currentY = revoSectionTitle(doc, '10. ANEXOS FOTOGRÁFICOS', currentY);
   currentY += 8;
 
-  // Preparar fotos com títulos
+  // Buscar fotos com títulos da base de dados
   let photosWithTitles: Array<{url: string, title?: string}> = [];
 
-  if (service.photos && service.photos.length > 0) {
-    photosWithTitles = service.photos.map((url: string, index: number) => ({
-      url,
-      title: service.photoTitles?.[index] || `Foto ${index + 1}`
-    }));
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: photosData, error } = await supabase
+      .from('service_photos')
+      .select('photo_url, title')
+      .eq('service_id', service.id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao carregar fotos para PDF:', error);
+    } else if (photosData && photosData.length > 0) {
+      const { convertToSignedUrl } = await import('@/utils/signedUrlHelper');
+      
+      for (const photo of photosData) {
+        const signedUrl = await convertToSignedUrl(photo.photo_url);
+        photosWithTitles.push({
+          url: signedUrl,
+          title: photo.title || `Foto ${photosWithTitles.length + 1}`
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao processar fotos para PDF:', error);
   }
 
   if (photosWithTitles.length === 0) {
