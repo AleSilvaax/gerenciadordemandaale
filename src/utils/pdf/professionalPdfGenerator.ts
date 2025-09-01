@@ -17,7 +17,6 @@ import {
   revoTableTheme, 
   revoPhotoGrid 
 } from './revoLayout';
-import { addRevoHeadersAndFooters } from './addRevoHeadersAndFooters';
 
 // Enhanced PDF configuration interface
 interface PdfConfig {
@@ -49,6 +48,52 @@ const DEFAULT_PDF_CONFIG: PdfConfig = {
  * - Mantive a assinatura exportada `generateProfessionalServiceReport` e não alterei integrações externas
  */
 
+
+// --- Tema de tabela mais suave e profissional ---
+// Substitui o revoTableTheme por uma versão mais leve, com cabeçalho claro e linhas sutis.
+// Mantém as cores da marca como acento (título/cabeçalho em texto), mas evita blocos sólidos muito fortes.
+type AutoTableTheme = {
+  styles?: any;
+  headStyles?: any;
+  bodyStyles?: any;
+  alternateRowStyles?: any;
+  columnStyles?: any;
+  tableLineColor?: any;
+  tableLineWidth?: number;
+  margin?: any;
+  didDrawPage?: any;
+};
+
+const proTableTheme = (): AutoTableTheme => {
+  return {
+    styles: {
+      font: PDF_FONTS.normal,
+      fontSize: 9,
+      cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+      lineColor: [230, 232, 236],
+      lineWidth: 0.1,
+      textColor: [...PDF_COLORS.black] as any
+    },
+    headStyles: {
+      fillColor: [246, 248, 250],       // cabeçalho super claro
+      textColor: [...PDF_COLORS.primary] as any, // usa cor principal no texto como acento
+      fontStyle: 'bold',
+      halign: 'left',
+      lineColor: [230, 232, 236],
+      lineWidth: 0.1
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [...PDF_COLORS.black] as any
+    },
+    alternateRowStyles: {
+      fillColor: [252, 252, 252]
+    },
+    tableLineColor: [230, 232, 236],
+    tableLineWidth: 0.1,
+    margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin }
+  };
+};
 // --- Helpers locais ---
 const cleanStringForPdf = (input: any): string => {
   if (input === null || input === undefined) return '';
@@ -159,7 +204,7 @@ export const generateProfessionalServiceReport = async (
       }
 
       // Aplicar fundo cinza escuro em todas as páginas e cabeçalhos/rodapés Revo
-      await addRevoHeadersAndFooters(doc, service);
+      addHeadersAndFooters(doc, service);
 
       return doc;
     },
@@ -178,7 +223,7 @@ const createIndex = (doc: any, startY: number): number => {
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, 'ÍNDICE', currentY);
-  currentY += 5;
+  currentY += 8;
 
   const indexItems = [
     '1. Informações Gerais',
@@ -219,7 +264,7 @@ const createServiceOverview = (doc: any, service: Service, startY: number): numb
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '1. INFORMAÇÕES GERAIS', currentY);
-  currentY += 5;
+  currentY += 8;
 
   // Usar o sistema de info box Revo (convert to proper tuple type)
   const info: Array<[string, string]> = [
@@ -250,7 +295,7 @@ const createMaterialsSection = async (doc: any, service: Service, startY: number
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '3. MATERIAIS UTILIZADOS', currentY);
-  currentY += 5;
+  currentY += 8;
 
   try {
     // Buscar dados dos materiais utilizados no serviço
@@ -282,7 +327,7 @@ const createMaterialsSection = async (doc: any, service: Service, startY: number
         startY: currentY,
         head: [['Material', 'Unidade', 'Planejado', 'Usado', 'Custo Total', 'Observações']],
         body: tableData,
-        ...revoTableTheme(),
+        ...proTableTheme(),
         columnStyles: {
           2: { halign: 'center' },
           3: { halign: 'center' },
@@ -342,7 +387,7 @@ const createClientDetails = (doc: any, service: Service, startY: number): number
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '2. DETALHES DO CLIENTE', currentY);
-  currentY += 5;
+  currentY += 8;
 
   // Usar info box Revo
   const clientInfo: Array<[string, string]> = [
@@ -362,7 +407,7 @@ const createTimelineSection = (doc: any, service: Service, startY: number): numb
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '4. CRONOGRAMA E STATUS', currentY);
-  currentY += 5;
+  currentY += 8;
 
   const timelineData = [
     ['Criação', formatForPdf(formatDate(service.creationDate)), formatForPdf('✓ Concluído')],
@@ -375,7 +420,7 @@ const createTimelineSection = (doc: any, service: Service, startY: number): numb
     startY: currentY,
     head: [['Etapa', 'Detalhes', 'Status']],
     body: timelineData,
-    ...revoTableTheme(),
+    ...proTableTheme(),
   });
 
   return (doc as any).lastAutoTable.finalY + 10;
@@ -386,7 +431,7 @@ const createTechnicianSection = (doc: any, service: Service, startY: number): nu
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '5. TÉCNICO RESPONSÁVEL', currentY);
-  currentY += 5;
+  currentY += 8;
 
   if (service.technicians && service.technicians.length > 0) {
     const technician = service.technicians[0];
@@ -414,7 +459,7 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '6. CHECKLIST TÉCNICO', currentY);
-  currentY += 5;
+  currentY += 8;
 
   if (service.customFields && service.customFields.length > 0) {
     const fieldsData = service.customFields.map(field => [
@@ -427,7 +472,7 @@ const createTechnicianFieldsSection = (doc: any, service: Service, startY: numbe
       startY: currentY,
       head: [['Campo', 'Valor', 'Status']],
       body: fieldsData,
-      ...revoTableTheme(),
+      ...proTableTheme(),
     });
 
     return (doc as any).lastAutoTable.finalY + 10;
@@ -445,7 +490,7 @@ const createCommunicationsSection = (doc: any, service: Service, startY: number)
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '7. COMUNICAÇÕES', currentY);
-  currentY += 5;
+  currentY += 8;
 
   if (service.messages && service.messages.length > 0) {
     service.messages.forEach((message, index) => {
@@ -470,7 +515,7 @@ const createFeedbackSection = (doc: any, service: Service, startY: number): numb
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '8. FEEDBACK', currentY);
-  currentY += 5;
+  currentY += 8;
 
   if (service.feedback) {
     const feedbackInfo: Array<[string, string]> = [];
@@ -503,7 +548,7 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '9. ASSINATURAS', currentY);
-  currentY += 5;
+  currentY += 8;
 
   const hasClientSig = service.signatures?.client;
   const hasTechSig = service.signatures?.technician;
@@ -569,7 +614,7 @@ const createPhotosSection = async (doc: any, service: Service, startY: number): 
 
   // Título usando o sistema Revo
   currentY = revoSectionTitle(doc, '10. ANEXOS FOTOGRÁFICOS', currentY);
-  currentY += 5;
+  currentY += 8;
 
   // Preparar fotos com títulos
   let photosWithTitles: Array<{url: string, title?: string}> = [];
@@ -600,12 +645,13 @@ const addHeadersAndFooters = (doc: any, service: Service): void => {
     doc.setPage(i);
 
     // Cabeçalho
-    doc.setFillColor(...PDF_COLORS.primary);
-    doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, 15, 'F');
+    doc.setDrawColor(...PDF_COLORS.primary);
+    doc.setLineWidth(0.6);
+    doc.line(0, 15, PDF_DIMENSIONS.pageWidth, 15);
 
-    doc.setFontSize(10);
+doc.setFontSize(10);
     doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold as any);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...PDF_COLORS.darkGray);
     doc.text(formatForPdf(`OS #${service.number} - ${service.title || ''}`), PDF_DIMENSIONS.margin, 10);
 
     // Rodapé
