@@ -215,7 +215,7 @@ export const generateProfessionalServiceReport = async (
 
       return doc;
     },
-    `OS_${formatForPdf(service.number || 'N_A')}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    `${formatForPdf(service.title || 'Relatório')}_OS_${formatForPdf(service.number || 'N_A')}.pdf`,
     {
       title: `Relatório OS ${service.number}`,
       text: `${service.title} - ${service.client}`
