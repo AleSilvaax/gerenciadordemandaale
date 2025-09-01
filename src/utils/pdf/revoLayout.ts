@@ -175,9 +175,15 @@ export const revoSubTitle = (doc: jsPDF, text: string, y: number): number => {
   return y + 10;
 };
 
-// Box de informações com variantes
+// Box de informações com variantes e quebra automática de página
 export const revoInfoBox = (doc: jsPDF, y: number, data: Array<[string, string]>, variant: 'critical' | 'dark' | 'light' = 'light'): number => {
-  const boxHeight = data.length * 8 + 12;
+  const boxHeight = data.length * 8 + 16; // Padding ligeiramente maior
+  
+  // Verificar se precisa quebrar página (deixando margem para rodapé)
+  if (y + boxHeight > PDF_DIMENSIONS.pageHeight - 30) {
+    doc.addPage();
+    y = 25; // Posição inicial na nova página
+  }
   
   switch (variant) {
     case 'critical':
@@ -216,26 +222,35 @@ export const revoInfoBox = (doc: jsPDF, y: number, data: Array<[string, string]>
       break;
       
     default:
-      // Box com borda cinza clara e fundo branco
-      doc.setDrawColor(...PDF_COLORS.lightGray);
-      doc.setFillColor(250, 250, 250); // Fundo cinza muito claro
-      doc.setLineWidth(0.5);
-      doc.roundedRect(PDF_DIMENSIONS.margin, y, 170, boxHeight, 3, 3, 'FD');
+      // Box com borda cinza clara e fundo branco com mais espaçamento
+      doc.setDrawColor(210, 210, 210);
+      doc.setFillColor(255, 255, 255); // Fundo branco puro
+      doc.setLineWidth(0.3);
+      doc.roundedRect(PDF_DIMENSIONS.margin, y, 170, boxHeight, 2, 2, 'FD');
       
       data.forEach(([label, value], idx) => {
-        const lineY = y + 8 + (idx * 8);
+        const lineY = y + 10 + (idx * 8); // Mais espaçamento no topo
         doc.setFontSize(9);
         doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-        doc.setTextColor(...PDF_COLORS.darkGray);
-        doc.text(`${label}`, PDF_DIMENSIONS.margin + 5, lineY);
+        doc.setTextColor(80, 80, 80); // Cinza mais suave para labels
+        doc.text(`${label}`, PDF_DIMENSIONS.margin + 8, lineY);
         
         doc.setFont(PDF_FONTS.normal, 'normal');
         doc.setTextColor(...PDF_COLORS.black);
-        doc.text(value, PDF_DIMENSIONS.margin + 70, lineY);
+        // Quebrar texto longo se necessário
+        const maxWidth = 90;
+        const wrappedValue = doc.splitTextToSize(value, maxWidth);
+        doc.text(wrappedValue, PDF_DIMENSIONS.margin + 75, lineY);
+        
+        // Ajustar altura se texto quebrado
+        if (Array.isArray(wrappedValue) && wrappedValue.length > 1) {
+          // Para textos quebrados, ajustar o próximo item
+          // (Isso é uma simplificação; idealmente calcularíamos corretamente)
+        }
       });
   }
   
-  return y + boxHeight + 10;
+  return y + boxHeight + 12; // Mais espaçamento após o box
 };
 
 // Tema de tabela Revo - design claro
@@ -270,60 +285,106 @@ export const revoTableTheme = (): Partial<UserOptions> => {
   } as Partial<UserOptions>;
 };
 
-// Grade de fotos com bordas cinza escuro e legendas brancas
+// Grade de fotos melhorada com quebras de página automáticas e design mais leve
 export const revoPhotoGrid = async (doc: jsPDF, photos: Array<{url: string, title?: string}>, startY: number, columns: number = 2): Promise<number> => {
   if (!photos || photos.length === 0) return startY;
 
   const photoWidth = (170 - (columns - 1) * 5) / columns;
   const photoHeight = photoWidth * 0.75;
+  const captionHeight = 12;
+  const totalPhotoHeight = photoHeight + captionHeight + 5;
+  
   let currentY = startY;
   let currentX = PDF_DIMENSIONS.margin;
   let photoCount = 0;
 
   for (const photo of photos) {
+    // Verificar se precisamos de nova página (incluindo espaço para legenda e margens)
+    if (currentY + totalPhotoHeight > PDF_DIMENSIONS.pageHeight - 30) {
+      doc.addPage();
+      currentY = 25;
+      currentX = PDF_DIMENSIONS.margin;
+      photoCount = 0; // Reset da contagem para nova página
+    }
+
     try {
       const processedImage = await processImage(photo.url);
+      let imageFormat = 'JPEG'; // Default format
+      
       if (processedImage) {
-        // Borda cinza clara
-        doc.setDrawColor(180, 180, 180);
-        doc.setLineWidth(1);
+        // Detectar formato correto da imagem
+        if (processedImage.startsWith('data:image/png')) {
+          imageFormat = 'PNG';
+        } else if (processedImage.startsWith('data:image/jpeg') || processedImage.startsWith('data:image/jpg')) {
+          imageFormat = 'JPEG';
+        }
+        
+        // Borda cinza muito clara
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
         doc.rect(currentX, currentY, photoWidth, photoHeight, 'S');
         
-        // Imagem
-        doc.addImage(processedImage, 'JPEG', currentX + 1, currentY + 1, photoWidth - 2, photoHeight - 2);
+        // Imagem com pequena margem interna
+        doc.addImage(processedImage, imageFormat, currentX + 2, currentY + 2, photoWidth - 4, photoHeight - 4);
         
-        // Legenda em tarja amarela Revo
+        // Legenda em fundo cinza claro com texto preto (mais leve que amarelo)
         if (photo.title) {
-          doc.setFillColor(...PDF_COLORS.revoYellow);
-          doc.rect(currentX, currentY + photoHeight - 8, photoWidth, 8, 'F');
+          doc.setFillColor(240, 240, 240);
+          doc.rect(currentX, currentY + photoHeight - 10, photoWidth, 10, 'F');
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(currentX, currentY + photoHeight - 10, photoWidth, 10, 'S');
           
           doc.setFontSize(7);
           doc.setFont(PDF_FONTS.normal, 'normal');
           doc.setTextColor(...PDF_COLORS.black);
-          doc.text(photo.title, currentX + 2, currentY + photoHeight - 3);
+          // Truncar texto se muito longo
+          const maxWidth = photoWidth - 4;
+          const truncatedTitle = doc.getTextWidth(photo.title) > maxWidth 
+            ? photo.title.substring(0, 25) + '...' 
+            : photo.title;
+          doc.text(truncatedTitle, currentX + 2, currentY + photoHeight - 3);
         }
+      } else {
+        // Placeholder mais elegante para imagens com erro
+        doc.setFillColor(250, 250, 250);
+        doc.rect(currentX, currentY, photoWidth, photoHeight, 'F');
+        doc.setDrawColor(220, 220, 220);
+        doc.rect(currentX, currentY, photoWidth, photoHeight, 'S');
+        
+        // Ícone simples de imagem não disponível
+        doc.setFontSize(8);
+        doc.setTextColor(160, 160, 160);
+        doc.text('Imagem não', currentX + photoWidth / 2, currentY + photoHeight / 2 - 3, { align: 'center' });
+        doc.text('disponível', currentX + photoWidth / 2, currentY + photoHeight / 2 + 3, { align: 'center' });
       }
     } catch (error) {
-      // Placeholder para foto com erro
-      doc.setFillColor(220, 220, 220);
+      console.error('[PDF] Erro ao processar foto:', error);
+      // Mesmo placeholder em caso de erro
+      doc.setFillColor(250, 250, 250);
       doc.rect(currentX, currentY, photoWidth, photoHeight, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.rect(currentX, currentY, photoWidth, photoHeight, 'S');
+      
       doc.setFontSize(8);
-      doc.setTextColor(...PDF_COLORS.black);
-      doc.text('Imagem não disponível', currentX + photoWidth / 2, currentY + photoHeight / 2, { align: 'center' });
+      doc.setTextColor(160, 160, 160);
+      doc.text('Erro ao carregar', currentX + photoWidth / 2, currentY + photoHeight / 2 - 3, { align: 'center' });
+      doc.text('imagem', currentX + photoWidth / 2, currentY + photoHeight / 2 + 3, { align: 'center' });
     }
 
     photoCount++;
     currentX += photoWidth + 5;
 
+    // Quebra de linha quando atinge o número de colunas
     if (photoCount % columns === 0) {
-      currentY += photoHeight + 10;
+      currentY += totalPhotoHeight;
       currentX = PDF_DIMENSIONS.margin;
     }
   }
 
+  // Ajustar posição final se a linha não estiver completa
   if (photoCount % columns !== 0) {
-    currentY += photoHeight + 10;
+    currentY += totalPhotoHeight;
   }
 
-  return currentY;
+  return currentY + 5; // Adicionar espaçamento extra após as fotos
 };

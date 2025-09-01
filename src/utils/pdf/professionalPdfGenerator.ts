@@ -494,11 +494,14 @@ const createCommunicationsSection = (doc: any, service: Service, startY: number)
 
   if (service.messages && service.messages.length > 0) {
     service.messages.forEach((message, index) => {
+      // Verificar quebra de página antes de cada mensagem
+      currentY = checkPageBreak(doc, currentY, 35);
+      
       const messageInfo: Array<[string, string]> = [
         [`Mensagem ${index + 1}:`, `${formatDate(message.timestamp)} - ${formatForPdf(message.senderName)}`],
         ['Conteúdo:', formatForPdf(message.message)]
       ];
-      currentY = revoInfoBox(doc, currentY, messageInfo, 'dark');
+      currentY = revoInfoBox(doc, currentY, messageInfo, 'light');
     });
   } else {
     const noMessagesInfo: Array<[string, string]> = [
@@ -532,7 +535,7 @@ const createFeedbackSection = (doc: any, service: Service, startY: number): numb
       feedbackInfo.push(['Avaliação:', `${service.feedback.clientRating}/5 estrelas`]);
     }
 
-    currentY = revoInfoBox(doc, currentY, feedbackInfo, 'dark');
+    currentY = revoInfoBox(doc, currentY, feedbackInfo, 'light');
   } else {
     const noFeedbackInfo: Array<[string, string]> = [
       ['Status:', 'Nenhum feedback registrado.']
@@ -579,7 +582,8 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
     }
     
     doc.setFontSize(10);
-    doc.setTextColor(...PDF_COLORS.revoYellow);
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
+    doc.setTextColor(...PDF_COLORS.black);
     doc.text(`Cliente: ${formatForPdf(service.client || 'N/A')}`, PDF_DIMENSIONS.margin + 5, currentY + 32);
   }
 
@@ -602,7 +606,8 @@ const createSignaturesSection = async (doc: any, service: Service, startY: numbe
     }
     
     doc.setFontSize(10);
-    doc.setTextColor(...PDF_COLORS.revoYellow);
+    doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
+    doc.setTextColor(...PDF_COLORS.black);
     doc.text(`Técnico: ${formatForPdf(service.technicians?.[0]?.name || 'N/A')}`, techX + 5, currentY + 32);
   }
 
