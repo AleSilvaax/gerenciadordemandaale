@@ -107,7 +107,7 @@ export const EnhancedNavbar: React.FC = () => {
     <nav className="bg-background/90 backdrop-blur-md border-b border-border/40 fixed top-0 left-0 w-full z-40">
       <div className="container max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="font-bold text-xl flex items-center gap-2">
-          <img src="/icons/icon-512.png" alt="GD logo" className="h-6 w-6 rounded-md" loading="lazy" />
+          <img src="/lovable-uploads/113553da-c4ac-43d3-8c79-61e75f7e84c1.png" alt="GD logo" className="h-6 w-6 rounded-md" loading="lazy" />
           <span>Gerenciador<span className="text-primary">Demandas</span></span>
         </div>
 

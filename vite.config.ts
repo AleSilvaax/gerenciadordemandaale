@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['/icons/icon-512.png', '/icons/maskable-512.png'],
+      includeAssets: ['/lovable-uploads/113553da-c4ac-43d3-8c79-61e75f7e84c1.png'],
       manifest: {
         name: 'GerenciadorDemandas',
         short_name: 'GDemandas',
@@ -27,8 +27,8 @@ export default defineConfig(({ mode }) => ({
         scope: '/',
         start_url: '/',
         icons: [
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: '/lovable-uploads/113553da-c4ac-43d3-8c79-61e75f7e84c1.png', sizes: '512x512', type: 'image/png' },
+          { src: '/lovable-uploads/113553da-c4ac-43d3-8c79-61e75f7e84c1.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       },
       workbox: {
