@@ -150,12 +150,19 @@ export const validateServiceCompletion = async (serviceId: string): Promise<{
   missing: number;
 }[]> => {
   try {
-    const { data, error } = await supabase.rpc('validate_service_completion', {
+    // Use type assertion to bypass TypeScript error until types are updated
+    const { data, error } = await (supabase as any).rpc('validate_service_completion', {
       p_service_id: serviceId
     });
 
     if (error) throw error;
-    return data || [];
+    
+    // Ensure we return an array and handle the response properly
+    if (Array.isArray(data)) {
+      return data;
+    }
+    
+    return [];
   } catch (error) {
     console.error('Erro ao validar conclusão da demanda:', error);
     throw error;
