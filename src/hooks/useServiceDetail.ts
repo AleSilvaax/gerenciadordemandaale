@@ -12,6 +12,7 @@ import { Service, ServiceMessage, ServiceFeedback, CustomField } from "@/types/s
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useIntelligentNotifications } from "@/hooks/useIntelligentNotifications";
+import { validateServiceCompletion } from "@/services/inventoryService";
 
 interface Photo {
   id: string;
@@ -123,6 +124,31 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
 
 const handleStatusChange = async (newStatus: Service["status"]) => {
   if (!service) return;
+  
+  // Se estiver tentando concluir, validar materiais primeiro
+  if (newStatus === 'concluido') {
+    try {
+      console.log('[useServiceDetail] Validando materiais antes de concluir...');
+      const shortages = await validateServiceCompletion(service.id);
+      
+      if (shortages.length > 0) {
+        console.log('[useServiceDetail] Materiais em falta encontrados:', shortages);
+        // Retornar os materiais em falta para o componente pai decidir o que fazer
+        throw new Error(`MATERIAL_SHORTAGE:${JSON.stringify(shortages)}`);
+      }
+      
+      console.log('[useServiceDetail] Todos os materiais OK, prosseguindo com conclusão...');
+    } catch (error: any) {
+      if (error.message?.startsWith('MATERIAL_SHORTAGE:')) {
+        // Re-throw para que o componente pai possa capturar e mostrar o modal
+        throw error;
+      }
+      console.error('[useServiceDetail] Erro na validação de materiais:', error);
+      toast.error("Erro ao validar materiais para conclusão");
+      return;
+    }
+  }
+  
   try {
     const updatedService = await updateService({ id: service.id, status: newStatus });
     if (updatedService) {
@@ -139,6 +165,7 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
     console.error('[useServiceDetail] Erro ao atualizar status:', error);
     const errorMessage = error?.message || "Erro desconhecido ao atualizar status";
     toast.error(`Erro ao atualizar status: ${errorMessage}`);
+    throw error; // Re-throw para que o componente pai possa capturar
   }
 };
 

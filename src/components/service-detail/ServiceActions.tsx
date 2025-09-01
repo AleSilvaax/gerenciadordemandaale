@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +6,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FileText, CheckCircle, Clock, X, Download, PlayCircle, Pause, AlertTriangle } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
 import SectionCard from "@/components/service-detail/SectionCard";
+import { ServiceCompletionValidationModal } from "./ServiceCompletionValidationModal";
+import { useNavigate } from "react-router-dom";
 
 interface ServiceActionsProps {
   service: Service;
@@ -24,7 +25,10 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
   const [downloading, setDownloading] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  
+  const [validationModalOpen, setValidationModalOpen] = useState(false);
+  const [materialShortages, setMaterialShortages] = useState<any[]>([]);
+  const navigate = useNavigate();
+
   const getStatusIcon = (status: Service["status"]) => {
     switch (status) {
       case "concluido":
@@ -66,142 +70,171 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
       setIsUpdatingStatus(true);
       await onStatusChange('concluido');
       setIsCompleteDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao finalizar demanda:', error);
+      
+      // Verificar se é erro de material em falta
+      if (error?.message?.startsWith('MATERIAL_SHORTAGE:')) {
+        const shortagesData = JSON.parse(error.message.replace('MATERIAL_SHORTAGE:', ''));
+        setMaterialShortages(shortagesData);
+        setValidationModalOpen(true);
+        setIsCompleteDialogOpen(false);
+      }
     } finally {
       setIsUpdatingStatus(false);
     }
   };
 
+  const handleProceedWithCompletion = async () => {
+    try {
+      setIsUpdatingStatus(true);
+      // Forçar atualização diretamente, ignorando validação de materiais
+      // (o trigger do banco ainda vai validar, mas com mensagem mais clara)
+      await onStatusChange('concluido');
+      setValidationModalOpen(false);
+    } catch (error: any) {
+      console.error('Erro ao forçar conclusão:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleAddStock = () => {
+    setValidationModalOpen(false);
+    navigate('/inventory');
+  };
+
   return (
-    <SectionCard 
-      title="Gerenciar Demanda" 
-      description="Controle de status e geração de relatórios"
-      rightSlot={
-        <Badge className={`${getStatusBadgeVariant(service.status)} border flex items-center gap-1.5 px-3 py-1`}>
-          {getStatusIcon(service.status)}
-          {getStatusDisplayName(service.status)}
-        </Badge>
-      }
-    >
-      <div className="space-y-6">
-        {/* Status Management */}
-        <div className="bg-gradient-to-br from-primary/10 via-background/80 to-accent/10 rounded-xl p-6 border border-border/60">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary/30 to-accent/30 rounded-xl flex items-center justify-center">
-              {getStatusIcon(service.status)}
+    <>
+      <SectionCard 
+        title="Gerenciar Demanda" 
+        description="Controle de status e geração de relatórios"
+        rightSlot={
+          <Badge className={`${getStatusBadgeVariant(service.status)} border flex items-center gap-1.5 px-3 py-1`}>
+            {getStatusIcon(service.status)}
+            {getStatusDisplayName(service.status)}
+          </Badge>
+        }
+      >
+        <div className="space-y-6">
+          {/* Status Management */}
+          <div className="bg-gradient-to-br from-primary/10 via-background/80 to-accent/10 rounded-xl p-6 border border-border/60">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary/30 to-accent/30 rounded-xl flex items-center justify-center">
+                {getStatusIcon(service.status)}
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Status da Demanda</h4>
+                <p className="text-xs text-muted-foreground">Controle do ciclo de vida do atendimento</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">Status da Demanda</h4>
-              <p className="text-xs text-muted-foreground">Controle do ciclo de vida do atendimento</p>
-            </div>
+
+            {!editMode && (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
+                  <Select onValueChange={onStatusChange} value={service.status}>
+                    <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pendente">
+                        <div className="flex items-center gap-3">
+                          <Pause className="w-4 h-4 text-warning" />
+                          <div>
+                            <div className="font-medium">Pendente</div>
+                            <div className="text-xs text-muted-foreground">Aguardando início</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="em_andamento">
+                        <div className="flex items-center gap-3">
+                          <PlayCircle className="w-4 h-4 text-primary" />
+                          <div>
+                            <div className="font-medium">Em Andamento</div>
+                            <div className="text-xs text-muted-foreground">Execução em progresso</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="concluido">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-4 h-4 text-success" />
+                          <div>
+                            <div className="font-medium">Concluído</div>
+                            <div className="text-xs text-muted-foreground">Atendimento finalizado</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="cancelado">
+                        <div className="flex items-center gap-3">
+                          <X className="w-4 h-4 text-danger" />
+                          <div>
+                            <div className="font-medium">Cancelado</div>
+                            <div className="text-xs text-muted-foreground">Atendimento cancelado</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {service.status !== 'concluido' && (
+                  <div className="pt-2 border-t border-border/50">
+                    <Button 
+                      onClick={() => setIsCompleteDialogOpen(true)}
+                      disabled={isUpdatingStatus}
+                      className="w-full h-11 bg-success text-success-foreground hover:bg-success/90 border border-success/30 shadow-sm hover:shadow-md transition-all duration-200"
+                      aria-label="Finalizar demanda"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {isUpdatingStatus ? 'Finalizando...' : 'Finalizar Demanda'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {!editMode && (
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
-                <Select onValueChange={onStatusChange} value={service.status}>
-                  <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendente">
-                      <div className="flex items-center gap-3">
-                        <Pause className="w-4 h-4 text-warning" />
-                        <div>
-                          <div className="font-medium">Pendente</div>
-                          <div className="text-xs text-muted-foreground">Aguardando início</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="em_andamento">
-                      <div className="flex items-center gap-3">
-                        <PlayCircle className="w-4 h-4 text-primary" />
-                        <div>
-                          <div className="font-medium">Em Andamento</div>
-                          <div className="text-xs text-muted-foreground">Execução em progresso</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="concluido">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="w-4 h-4 text-success" />
-                        <div>
-                          <div className="font-medium">Concluído</div>
-                          <div className="text-xs text-muted-foreground">Atendimento finalizado</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="cancelado">
-                      <div className="flex items-center gap-3">
-                        <X className="w-4 h-4 text-danger" />
-                        <div>
-                          <div className="font-medium">Cancelado</div>
-                          <div className="text-xs text-muted-foreground">Atendimento cancelado</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {service.status !== 'concluido' && (
-                <div className="pt-2 border-t border-border/50">
-                  <Button 
-                    onClick={() => setIsCompleteDialogOpen(true)}
-                    disabled={isUpdatingStatus}
-                    className="w-full h-11 bg-success text-success-foreground hover:bg-success/90 border border-success/30 shadow-sm hover:shadow-md transition-all duration-200"
-                    aria-label="Finalizar demanda"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {isUpdatingStatus ? 'Finalizando...' : 'Finalizar Demanda'}
-                  </Button>
+          {/* Report Generation */}
+          {onGenerateReport && (
+            <div className="bg-gradient-to-br from-accent/10 via-background/80 to-secondary/10 rounded-xl p-6 border border-border/60">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-accent" />
                 </div>
-              )}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Relatório Profissional</h4>
+                  <p className="text-xs text-muted-foreground">Documento completo com todas as informações</p>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={async () => {
+                  if (!onGenerateReport) return;
+                  try {
+                    setDownloading(true);
+                    await onGenerateReport();
+                  } finally {
+                    setDownloading(false);
+                  }
+                }} 
+                className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:border disabled:border-border/60 disabled:cursor-not-allowed"
+                disabled={downloading}
+                aria-label="Gerar relatório PDF da demanda"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {downloading ? 'Gerando Relatório...' : 'Baixar Relatório PDF'}
+              </Button>
+              
+              <div className="mt-3 p-3 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/30">
+                <p className="text-xs text-muted-foreground text-center">
+                  📋 Inclui detalhes completos, cronograma, fotos, assinaturas e comunicações
+                </p>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Report Generation */}
-        {onGenerateReport && (
-          <div className="bg-gradient-to-br from-accent/10 via-background/80 to-secondary/10 rounded-xl p-6 border border-border/60">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
-                <FileText className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">Relatório Profissional</h4>
-                <p className="text-xs text-muted-foreground">Documento completo com todas as informações</p>
-              </div>
-            </div>
-            
-            <Button 
-              onClick={async () => {
-                if (!onGenerateReport) return;
-                try {
-                  setDownloading(true);
-                  await onGenerateReport();
-                } finally {
-                  setDownloading(false);
-                }
-              }} 
-              className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:border disabled:border-border/60 disabled:cursor-not-allowed"
-              disabled={downloading}
-              aria-label="Gerar relatório PDF da demanda"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {downloading ? 'Gerando Relatório...' : 'Baixar Relatório PDF'}
-            </Button>
-            
-            <div className="mt-3 p-3 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/30">
-              <p className="text-xs text-muted-foreground text-center">
-                📋 Inclui detalhes completos, cronograma, fotos, assinaturas e comunicações
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+      </SectionCard>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
@@ -212,7 +245,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
               Finalizar Demanda
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja marcar esta demanda como concluída? Esta ação não pode ser desfeita automaticamente.
+              Tem certeza que deseja marcar esta demanda como concluída? Esta ação irá validar o estoque dos materiais utilizados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -229,6 +262,16 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SectionCard>
+
+      {/* Material Validation Modal */}
+      <ServiceCompletionValidationModal
+        isOpen={validationModalOpen}
+        onClose={() => setValidationModalOpen(false)}
+        onProceedAnyway={handleProceedWithCompletion}
+        onAddStock={handleAddStock}
+        shortages={materialShortages}
+        isLoading={isUpdatingStatus}
+      />
+    </>
   );
 };

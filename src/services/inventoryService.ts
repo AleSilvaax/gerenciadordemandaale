@@ -141,6 +141,27 @@ export const deleteMaterial = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
+// Função para validar se uma demanda pode ser concluída
+export const validateServiceCompletion = async (serviceId: string): Promise<{
+  material_id: string;
+  material_name: string;
+  used_quantity: number;
+  current_stock: number;
+  missing: number;
+}[]> => {
+  try {
+    const { data, error } = await supabase.rpc('validate_service_completion', {
+      p_service_id: serviceId
+    });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Erro ao validar conclusão da demanda:', error);
+    throw error;
+  }
+};
+
 // Serviços para Estoque
 export const getInventory = async (): Promise<Inventory[]> => {
   const { data, error } = await supabase
