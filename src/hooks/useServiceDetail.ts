@@ -132,9 +132,13 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
         // Notificação contextual quando concluído
         notifyServiceCompleted(updatedService);
       }
+    } else {
+      toast.error("Erro ao atualizar status: Resposta inválida do servidor");
     }
-  } catch (error) {
-    toast.error("Erro ao atualizar status");
+  } catch (error: any) {
+    console.error('[useServiceDetail] Erro ao atualizar status:', error);
+    const errorMessage = error?.message || "Erro desconhecido ao atualizar status";
+    toast.error(`Erro ao atualizar status: ${errorMessage}`);
   }
 };
 

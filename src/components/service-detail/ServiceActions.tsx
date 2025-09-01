@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { FileText, CheckCircle, Clock, X, Download, PlayCircle, Pause, AlertTriangle } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
 import SectionCard from "@/components/service-detail/SectionCard";
@@ -21,6 +22,8 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
   onGenerateReport
 }) => {
   const [downloading, setDownloading] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
   const getStatusIcon = (status: Service["status"]) => {
     switch (status) {
@@ -58,6 +61,18 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
     }
   };
 
+  const handleCompleteService = async () => {
+    try {
+      setIsUpdatingStatus(true);
+      await onStatusChange('concluido');
+      setIsCompleteDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao finalizar demanda:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return (
     <SectionCard 
       title="Gerenciar Demanda" 
@@ -83,51 +98,67 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
           </div>
 
           {!editMode && (
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
-              <Select onValueChange={onStatusChange} value={service.status}>
-                <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pendente">
-                    <div className="flex items-center gap-3">
-                      <Pause className="w-4 h-4 text-warning" />
-                      <div>
-                        <div className="font-medium">Pendente</div>
-                        <div className="text-xs text-muted-foreground">Aguardando início</div>
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
+                <Select onValueChange={onStatusChange} value={service.status}>
+                  <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">
+                      <div className="flex items-center gap-3">
+                        <Pause className="w-4 h-4 text-warning" />
+                        <div>
+                          <div className="font-medium">Pendente</div>
+                          <div className="text-xs text-muted-foreground">Aguardando início</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="em_andamento">
-                    <div className="flex items-center gap-3">
-                      <PlayCircle className="w-4 h-4 text-primary" />
-                      <div>
-                        <div className="font-medium">Em Andamento</div>
-                        <div className="text-xs text-muted-foreground">Execução em progresso</div>
+                    </SelectItem>
+                    <SelectItem value="em_andamento">
+                      <div className="flex items-center gap-3">
+                        <PlayCircle className="w-4 h-4 text-primary" />
+                        <div>
+                          <div className="font-medium">Em Andamento</div>
+                          <div className="text-xs text-muted-foreground">Execução em progresso</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="concluido">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-success" />
-                      <div>
-                        <div className="font-medium">Concluído</div>
-                        <div className="text-xs text-muted-foreground">Atendimento finalizado</div>
+                    </SelectItem>
+                    <SelectItem value="concluido">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-4 h-4 text-success" />
+                        <div>
+                          <div className="font-medium">Concluído</div>
+                          <div className="text-xs text-muted-foreground">Atendimento finalizado</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="cancelado">
-                    <div className="flex items-center gap-3">
-                      <X className="w-4 h-4 text-danger" />
-                      <div>
-                        <div className="font-medium">Cancelado</div>
-                        <div className="text-xs text-muted-foreground">Atendimento cancelado</div>
+                    </SelectItem>
+                    <SelectItem value="cancelado">
+                      <div className="flex items-center gap-3">
+                        <X className="w-4 h-4 text-danger" />
+                        <div>
+                          <div className="font-medium">Cancelado</div>
+                          <div className="text-xs text-muted-foreground">Atendimento cancelado</div>
+                        </div>
                       </div>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {service.status !== 'concluido' && (
+                <div className="pt-2 border-t border-border/50">
+                  <Button 
+                    onClick={() => setIsCompleteDialogOpen(true)}
+                    disabled={isUpdatingStatus}
+                    className="w-full h-11 bg-success text-success-foreground hover:bg-success/90 border border-success/30 shadow-sm hover:shadow-md transition-all duration-200"
+                    aria-label="Finalizar demanda"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {isUpdatingStatus ? 'Finalizando...' : 'Finalizar Demanda'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -171,6 +202,33 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-success" />
+              Finalizar Demanda
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja marcar esta demanda como concluída? Esta ação não pode ser desfeita automaticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingStatus}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCompleteService}
+              disabled={isUpdatingStatus}
+              className="bg-success text-success-foreground hover:bg-success/90"
+            >
+              {isUpdatingStatus ? 'Finalizando...' : 'Sim, Finalizar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SectionCard>
   );
 };

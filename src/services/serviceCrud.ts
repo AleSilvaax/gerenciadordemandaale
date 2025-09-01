@@ -284,9 +284,21 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     if (service.photos !== undefined) updateData.photos = service.photos;
     if (service.photoTitles !== undefined) updateData.photo_titles = service.photoTitles;
 
+    console.log('[UPDATE SERVICE] Tentando atualizar:', { serviceId: service.id, updateData });
+
     const { data, error } = await supabase.from('services').update(updateData).eq('id', service.id).select().single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('[UPDATE SERVICE] Erro do Supabase:', { 
+        error, 
+        serviceId: service.id, 
+        updateData,
+        message: error.message,
+        code: error.code,
+        details: error.details
+      });
+      throw new Error(`Erro ao atualizar serviço: ${error.message}`);
+    }
     
     if (service.technicians !== undefined && service.technicians[0]) {
       await assignTechnician(service.id, service.technicians[0].id);
@@ -295,8 +307,9 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
     const updatedService = await getServiceByIdFromDatabase(data.id);
     return updatedService;
   } catch (error: any) {
-    toast.error("Falha ao atualizar serviço.");
-    return null;
+    console.error('[UPDATE SERVICE] Erro geral:', error);
+    // Re-throw the error so it can be handled by the caller
+    throw error;
   }
 };
 
