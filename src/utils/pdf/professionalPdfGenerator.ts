@@ -96,20 +96,12 @@ export const generateProfessionalServiceReport = async (
       
       const doc = new jsPDF('portrait', 'mm', 'a4');
 
-      // Monkey-patch addPage to automatically apply dark background
-      const originalAddPage = doc.addPage.bind(doc);
-      doc.addPage = function(...args: any[]) {
-        const result = originalAddPage.apply(this, args);
-        applyDarkBackground(doc);
-        return result;
-      };
-
       let currentY = 0;
 
-      // Capa Revo
+      // Capa Revo (com fundo escuro)
       await drawRevoCover(doc, 'RELATÓRIO TÉCNICO', 'Sistema Integrado de Gestão', service.number);
 
-      // Nova página para o conteúdo com fundo cinza escuro
+      // Nova página para o conteúdo com fundo branco
       doc.addPage();
       currentY = 25;
 
@@ -202,21 +194,21 @@ const createIndex = (doc: any, startY: number): number => {
   ];
 
   doc.setFontSize(10);
-  doc.setTextColor(...PDF_COLORS.white); // Texto branco para fundo cinza escuro
+  doc.setTextColor(...PDF_COLORS.black); // Texto preto para fundo branco
   indexItems.forEach((item, idx) => {
     const yPos = currentY + (idx * 7);
     doc.text(item, PDF_DIMENSIONS.margin, yPos);
-    // linha tracejada amarela até a margem direita
+    // linha tracejada cinza até a margem direita
     const lineStartX = PDF_DIMENSIONS.margin + doc.getTextWidth(item) + 2;
-    doc.setDrawColor(...PDF_COLORS.revoYellow);
+    doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.3);
     for (let x = lineStartX; x < PDF_DIMENSIONS.pageWidth - 25; x += 3) {
       doc.line(x, yPos - 1, x + 1, yPos - 1);
     }
-    // número da página em amarelo
-    doc.setTextColor(...PDF_COLORS.revoYellow);
+    // número da página em cinza escuro
+    doc.setTextColor(...PDF_COLORS.darkGray);
     doc.text(String(idx + 2), PDF_DIMENSIONS.pageWidth - PDF_DIMENSIONS.margin, yPos, { align: 'right' });
-    doc.setTextColor(...PDF_COLORS.white);
+    doc.setTextColor(...PDF_COLORS.black);
   });
 
   return currentY + indexItems.length * 7 + 5;
@@ -245,7 +237,7 @@ const createServiceOverview = (doc: any, service: Service, startY: number): numb
     currentY = revoSubTitle(doc, 'Descrição do Serviço', currentY);
     doc.setFontSize(10);
     doc.setFont(PDF_FONTS.normal, 'normal');
-    doc.setTextColor(...PDF_COLORS.white);
+    doc.setTextColor(...PDF_COLORS.black);
     doc.text(doc.splitTextToSize(formatForPdf(service.description), 160), PDF_DIMENSIONS.margin, currentY);
     currentY += Math.ceil(doc.splitTextToSize(formatForPdf(service.description), 160).length / 2) * 5 + 5;
   }

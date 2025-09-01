@@ -144,27 +144,27 @@ export const drawRevoFooter = (doc: jsPDF, pageOffset: number = 1) => {
   }
 };
 
-// Título de seção: faixa preta, texto branco em caixa alta
+// Título de seção: faixa amarela Revo, texto preto em caixa alta
 export const revoSectionTitle = (doc: jsPDF, text: string, y: number): number => {
-  // Faixa preta
-  doc.setFillColor(...PDF_COLORS.black);
+  // Faixa amarela Revo
+  doc.setFillColor(...PDF_COLORS.revoYellow);
   doc.rect(PDF_DIMENSIONS.margin - 5, y - 8, 180, 12, 'F');
   
-  // Texto em branco, caixa alta
+  // Texto em preto, caixa alta
   doc.setFontSize(14);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-  doc.setTextColor(...PDF_COLORS.white);
+  doc.setTextColor(...PDF_COLORS.black);
   doc.text(text.toUpperCase(), PDF_DIMENSIONS.margin, y);
   
   return y + 15;
 };
 
-// Subtítulo: texto cinza claro com linha divisória amarela abaixo
+// Subtítulo: texto preto com linha divisória amarela abaixo
 export const revoSubTitle = (doc: jsPDF, text: string, y: number): number => {
-  // Texto em cinza claro
+  // Texto em preto
   doc.setFontSize(12);
   doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-  doc.setTextColor(180, 180, 180);
+  doc.setTextColor(...PDF_COLORS.black);
   doc.text(text, PDF_DIMENSIONS.margin, y);
   
   // Linha divisória amarela
@@ -216,20 +216,21 @@ export const revoInfoBox = (doc: jsPDF, y: number, data: Array<[string, string]>
       break;
       
     default:
-      // Box transparente com texto branco (sobre fundo cinza escuro)
+      // Box com borda cinza clara e fundo branco
       doc.setDrawColor(...PDF_COLORS.lightGray);
+      doc.setFillColor(250, 250, 250); // Fundo cinza muito claro
       doc.setLineWidth(0.5);
-      doc.roundedRect(PDF_DIMENSIONS.margin, y, 170, boxHeight, 3, 3, 'S');
+      doc.roundedRect(PDF_DIMENSIONS.margin, y, 170, boxHeight, 3, 3, 'FD');
       
       data.forEach(([label, value], idx) => {
         const lineY = y + 8 + (idx * 8);
         doc.setFontSize(9);
         doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-        doc.setTextColor(...PDF_COLORS.revoYellow);
+        doc.setTextColor(...PDF_COLORS.darkGray);
         doc.text(`${label}`, PDF_DIMENSIONS.margin + 5, lineY);
         
         doc.setFont(PDF_FONTS.normal, 'normal');
-        doc.setTextColor(...PDF_COLORS.white);
+        doc.setTextColor(...PDF_COLORS.black);
         doc.text(value, PDF_DIMENSIONS.margin + 70, lineY);
       });
   }
@@ -237,21 +238,21 @@ export const revoInfoBox = (doc: jsPDF, y: number, data: Array<[string, string]>
   return y + boxHeight + 10;
 };
 
-// Tema de tabela Revo
+// Tema de tabela Revo - design claro
 export const revoTableTheme = (): Partial<UserOptions> => {
   return {
     theme: 'grid',
     styles: {
       fontSize: 9,
-      textColor: [255, 255, 255] as [number, number, number], // Texto branco
+      textColor: [0, 0, 0] as [number, number, number], // Texto preto
       cellPadding: 3,
-      lineColor: [100, 100, 100] as [number, number, number], // Bordas cinza claro
+      lineColor: [200, 200, 200] as [number, number, number], // Bordas cinza claro
       lineWidth: 0.3,
       fillColor: [255, 255, 255] as [number, number, number], // Fundo branco
     },
     headStyles: {
-      fillColor: [0, 0, 0] as [number, number, number], // Cabeçalho preto
-      textColor: [255, 255, 255] as [number, number, number], // Texto branco
+      fillColor: [244, 255, 0] as [number, number, number], // Cabeçalho amarelo Revo
+      textColor: [0, 0, 0] as [number, number, number], // Texto preto
       fontStyle: 'bold',
       fontSize: 10,
       cellPadding: 4,
@@ -260,9 +261,10 @@ export const revoTableTheme = (): Partial<UserOptions> => {
       fontSize: 9,
       textColor: [0, 0, 0] as [number, number, number], // Texto preto no corpo
       cellPadding: 3,
+      fillColor: [255, 255, 255] as [number, number, number], // Fundo branco
     },
     alternateRowStyles: {
-      fillColor: [240, 240, 240] as [number, number, number], // Linhas alternadas cinza claro
+      fillColor: [248, 248, 248] as [number, number, number], // Linhas alternadas cinza muito claro
     },
     margin: { left: PDF_DIMENSIONS.margin, right: PDF_DIMENSIONS.margin },
   } as Partial<UserOptions>;
@@ -282,31 +284,31 @@ export const revoPhotoGrid = async (doc: jsPDF, photos: Array<{url: string, titl
     try {
       const processedImage = await processImage(photo.url);
       if (processedImage) {
-        // Borda cinza escuro
-        doc.setDrawColor(...PDF_COLORS.darkGray);
+        // Borda cinza clara
+        doc.setDrawColor(180, 180, 180);
         doc.setLineWidth(1);
         doc.rect(currentX, currentY, photoWidth, photoHeight, 'S');
         
         // Imagem
         doc.addImage(processedImage, 'JPEG', currentX + 1, currentY + 1, photoWidth - 2, photoHeight - 2);
         
-        // Legenda em tarja preta
+        // Legenda em tarja amarela Revo
         if (photo.title) {
-          doc.setFillColor(...PDF_COLORS.black);
+          doc.setFillColor(...PDF_COLORS.revoYellow);
           doc.rect(currentX, currentY + photoHeight - 8, photoWidth, 8, 'F');
           
           doc.setFontSize(7);
           doc.setFont(PDF_FONTS.normal, 'normal');
-          doc.setTextColor(...PDF_COLORS.white);
+          doc.setTextColor(...PDF_COLORS.black);
           doc.text(photo.title, currentX + 2, currentY + photoHeight - 3);
         }
       }
     } catch (error) {
       // Placeholder para foto com erro
-      doc.setFillColor(60, 60, 60);
+      doc.setFillColor(220, 220, 220);
       doc.rect(currentX, currentY, photoWidth, photoHeight, 'F');
       doc.setFontSize(8);
-      doc.setTextColor(...PDF_COLORS.white);
+      doc.setTextColor(...PDF_COLORS.black);
       doc.text('Imagem não disponível', currentX + photoWidth / 2, currentY + photoHeight / 2, { align: 'center' });
     }
 
