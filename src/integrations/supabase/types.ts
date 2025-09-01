@@ -1165,6 +1165,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      validate_service_completion: {
+        Args: { p_service_id: string }
+        Returns: {
+          current_stock: number
+          material_id: string
+          material_name: string
+          missing: number
+          used_quantity: number
+        }[]
+      }
     }
     Enums: {
       user_role:

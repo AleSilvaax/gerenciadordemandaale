@@ -125,6 +125,8 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
 const handleStatusChange = async (newStatus: Service["status"]) => {
   if (!service) return;
   
+  console.log('[useServiceDetail] Alterando status para:', newStatus);
+  
   // Se estiver tentando concluir, validar materiais primeiro
   if (newStatus === 'concluido') {
     try {
@@ -150,6 +152,7 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
   }
   
   try {
+    console.log('[useServiceDetail] Atualizando status do serviço...');
     const updatedService = await updateService({ id: service.id, status: newStatus });
     if (updatedService) {
       setService(updatedService);

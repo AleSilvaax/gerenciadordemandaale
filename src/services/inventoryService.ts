@@ -150,12 +150,18 @@ export const validateServiceCompletion = async (serviceId: string): Promise<{
   missing: number;
 }[]> => {
   try {
-    // Use type assertion to bypass TypeScript error until types are updated
-    const { data, error } = await (supabase as any).rpc('validate_service_completion', {
+    console.log('[validateServiceCompletion] Validando conclusão para service ID:', serviceId);
+    
+    const { data, error } = await supabase.rpc('validate_service_completion', {
       p_service_id: serviceId
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[validateServiceCompletion] Erro na RPC:', error);
+      throw error;
+    }
+    
+    console.log('[validateServiceCompletion] Resultado da validação:', data);
     
     // Ensure we return an array and handle the response properly
     if (Array.isArray(data)) {
@@ -164,7 +170,7 @@ export const validateServiceCompletion = async (serviceId: string): Promise<{
     
     return [];
   } catch (error) {
-    console.error('Erro ao validar conclusão da demanda:', error);
+    console.error('[validateServiceCompletion] Erro ao validar conclusão da demanda:', error);
     throw error;
   }
 };
@@ -228,7 +234,9 @@ export const getInventoryMovements = async (materialId?: string): Promise<Invent
 
 export const createInventoryMovement = async (movement: MovementFormData): Promise<string> => {
   try {
-    // Tentar usar a função RPC primeiro
+    console.log('[createInventoryMovement] Criando movimentação:', movement);
+    
+    // Usar a função RPC que agora está robusta
     const { data, error } = await supabase.rpc('create_inventory_movement', {
       p_material_id: movement.material_id,
       p_movement_type: movement.movement_type,
@@ -238,76 +246,21 @@ export const createInventoryMovement = async (movement: MovementFormData): Promi
     });
 
     if (error) {
-      console.error('Erro na função RPC:', error);
+      console.error('[createInventoryMovement] Erro na função RPC:', error);
       throw error;
     }
     
+    console.log('[createInventoryMovement] Movimentação criada com sucesso, ID:', data);
     return data;
-  } catch (rpcError) {
-    console.warn('RPC falhou, tentando fallback manual:', rpcError);
+  } catch (rpcError: any) {
+    console.error('[createInventoryMovement] Erro ao criar movimentação:', rpcError);
     
-    // Fallback: fazer manualmente se RPC falhar
-    // 1. Buscar estoque atual
-    const { data: currentInventory } = await supabase
-      .from('inventory')
-      .select('current_stock')
-      .eq('material_id', movement.material_id)
-      .single();
-    
-    const currentStock = currentInventory?.current_stock || 0;
-    
-    // 2. Calcular novo estoque
-    let newStock: number;
-    switch (movement.movement_type) {
-      case 'entrada':
-        newStock = currentStock + movement.quantity;
-        break;
-      case 'saida':
-        newStock = currentStock - movement.quantity;
-        break;
-      case 'ajuste':
-        newStock = movement.quantity;
-        break;
-      default:
-        newStock = currentStock;
+    // Se for erro de estoque insuficiente, repassar com informação mais clara
+    if (rpcError?.message?.includes('Estoque insuficiente')) {
+      throw new Error(`Estoque insuficiente: ${rpcError.message}`);
     }
     
-    // 3. Validar estoque negativo
-    if (newStock < 0) {
-      throw new Error(`Estoque insuficiente. Atual: ${currentStock}, Tentativa: ${movement.quantity}`);
-    }
-    
-    // 4. Inserir movimentação
-    const { data: movementData, error: movementError } = await supabase
-      .from('inventory_movements')
-      .insert({
-        material_id: movement.material_id,
-        movement_type: movement.movement_type,
-        quantity: movement.quantity,
-        previous_stock: currentStock,
-        new_stock: newStock,
-        notes: movement.notes,
-        cost_per_unit: movement.cost_per_unit || 0,
-        total_cost: (movement.cost_per_unit || 0) * movement.quantity
-      })
-      .select('id')
-      .single();
-    
-    if (movementError) throw movementError;
-    
-    // 5. Atualizar estoque
-    const { error: updateError } = await supabase
-      .from('inventory')
-      .upsert({
-        material_id: movement.material_id,
-        current_stock: newStock,
-        available_stock: newStock,
-        last_movement_at: new Date().toISOString()
-      });
-    
-    if (updateError) throw updateError;
-    
-    return movementData.id;
+    throw rpcError;
   }
 };
 
