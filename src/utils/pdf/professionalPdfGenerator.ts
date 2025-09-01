@@ -149,7 +149,7 @@ export const generateProfessionalServiceReport = async (
         'RELATÓRIO TÉCNICO', 
         'Sistema Integrado de Gestão', 
         service.number,
-        '/public/lovable-uploads/e8144b55-8f09-4d05-bee1-568575cd0162.png',
+        '/lovable-uploads/741b794f-f964-4731-852c-e007bcbaf586.png',
         0.4 // Opacidade do overlay
       );
 
