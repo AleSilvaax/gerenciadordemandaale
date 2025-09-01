@@ -17,11 +17,43 @@ export const applyDarkBackground = (doc: jsPDF, pageNumber?: number) => {
   doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
 };
 
-// Revo cover page with black background and yellow logo
-export const drawRevoCover = async (doc: jsPDF, title: string, subtitle?: string, serviceNumber?: string) => {
-  // Fundo preto sólido
-  doc.setFillColor(...PDF_COLORS.black);
-  doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+// Revo cover page with background image and overlays
+export const drawRevoCover = async (
+  doc: jsPDF, 
+  title: string, 
+  subtitle?: string, 
+  serviceNumber?: string,
+  backgroundImageUrl?: string,
+  overlayOpacity: number = 0.4
+) => {
+  // Apply background image if provided
+  if (backgroundImageUrl) {
+    try {
+      const bgImage = await processImage(backgroundImageUrl);
+      if (bgImage) {
+        // Full bleed background image
+        doc.addImage(bgImage, 'JPEG', 0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight);
+        
+        // Dark overlay for text readability
+        doc.setGState(doc.GState({ opacity: overlayOpacity }));
+        doc.setFillColor(...PDF_COLORS.black);
+        doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+        doc.setGState(doc.GState({ opacity: 1 }));
+      } else {
+        // Fallback to solid black background
+        doc.setFillColor(...PDF_COLORS.black);
+        doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+      }
+    } catch (error) {
+      // Fallback to solid black background
+      doc.setFillColor(...PDF_COLORS.black);
+      doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+    }
+  } else {
+    // Default: Fundo preto sólido
+    doc.setFillColor(...PDF_COLORS.black);
+    doc.rect(0, 0, PDF_DIMENSIONS.pageWidth, PDF_DIMENSIONS.pageHeight, 'F');
+  }
 
   // Logo Revo amarela centralizada
   try {
@@ -61,13 +93,17 @@ export const drawRevoCover = async (doc: jsPDF, title: string, subtitle?: string
     doc.text(subtitle, PDF_DIMENSIONS.pageWidth / 2, 150, { align: 'center' });
   }
 
-  // Badge da OS em amarelo
+  // Badge da OS com borda amarela e fundo transparente
   if (serviceNumber) {
-    doc.setFillColor(...PDF_COLORS.revoYellow);
-    doc.roundedRect(PDF_DIMENSIONS.pageWidth / 2 - 40, 170, 80, 16, 8, 8, 'F');
+    // Borda amarela
+    doc.setDrawColor(...PDF_COLORS.revoYellow);
+    doc.setLineWidth(2);
+    doc.roundedRect(PDF_DIMENSIONS.pageWidth / 2 - 40, 170, 80, 16, 8, 8, 'S');
+    
+    // Texto branco
     doc.setFontSize(14);
     doc.setFont(PDF_FONTS.normal, PDF_FONTS.bold);
-    doc.setTextColor(...PDF_COLORS.black);
+    doc.setTextColor(...PDF_COLORS.white);
     doc.text(`OS #${serviceNumber}`, PDF_DIMENSIONS.pageWidth / 2, 182, { align: 'center' });
   }
 
@@ -83,9 +119,9 @@ export const drawRevoCover = async (doc: jsPDF, title: string, subtitle?: string
     // Silently fail for watermark
   }
 
-  // Data de geração
+  // Data de geração em branco
   doc.setFontSize(10);
-  doc.setTextColor(120, 120, 120);
+  doc.setTextColor(...PDF_COLORS.white);
   doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 
            PDF_DIMENSIONS.pageWidth / 2, PDF_DIMENSIONS.pageHeight - 20, { align: 'center' });
 };

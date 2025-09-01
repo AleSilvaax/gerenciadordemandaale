@@ -143,8 +143,15 @@ export const generateProfessionalServiceReport = async (
 
       let currentY = 0;
 
-      // Capa Revo (com fundo escuro)
-      await drawRevoCover(doc, 'RELATÓRIO TÉCNICO', 'Sistema Integrado de Gestão', service.number);
+      // Capa Revo com imagem de fundo
+      await drawRevoCover(
+        doc, 
+        'RELATÓRIO TÉCNICO', 
+        'Sistema Integrado de Gestão', 
+        service.number,
+        '/public/lovable-uploads/e8144b55-8f09-4d05-bee1-568575cd0162.png',
+        0.4 // Opacidade do overlay
+      );
 
       // Nova página para o conteúdo com fundo branco
       doc.addPage();
