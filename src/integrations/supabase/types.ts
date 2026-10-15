@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "12.2.3"
   }
   public: {
     Tables: {
@@ -1077,30 +1077,15 @@ export type Database = {
         }
         Returns: undefined
       }
-      create_service_messages_if_not_exists: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      create_service_messages_if_not_exists: { Args: never; Returns: undefined }
       create_team: {
         Args: { creator_id: string; name: string }
         Returns: string
       }
-      generate_random_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_organization_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_team_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_random_code: { Args: never; Returns: string }
+      get_current_user_organization_id: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
+      get_current_user_team_id: { Args: never; Returns: string }
       get_effective_user_role: {
         Args: { check_org_id?: string }
         Returns: string
@@ -1117,26 +1102,14 @@ export type Database = {
           team_name: string
         }[]
       }
-      get_user_organization_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_organization_id: { Args: never; Returns: string }
       get_user_organization_role: {
         Args: { target_org_id: string; target_user_id: string }
         Returns: string
       }
-      get_user_organization_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
-      get_user_role_safe: {
-        Args: { target_user_id: string }
-        Returns: string
-      }
+      get_user_organization_safe: { Args: never; Returns: string }
+      get_user_role: { Args: { user_id: string }; Returns: string }
+      get_user_role_safe: { Args: { target_user_id: string }; Returns: string }
       has_permission: {
         Args: { required_role: string; user_id: string }
         Returns: boolean
@@ -1145,10 +1118,7 @@ export type Database = {
         Args: { check_user_id: string; org_id: string }
         Returns: boolean
       }
-      is_super_admin: {
-        Args: { check_user_id?: string }
-        Returns: boolean
-      }
+      is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_technician_for_service: {
         Args: { service_uuid: string }
         Returns: boolean
@@ -1157,14 +1127,8 @@ export type Database = {
         Args: { code: string; user_id: string }
         Returns: string
       }
-      nextval_for_service: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      setup_initial_hierarchy: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      nextval_for_service: { Args: never; Returns: number }
+      setup_initial_hierarchy: { Args: never; Returns: undefined }
       validate_service_completion: {
         Args: { p_service_id: string }
         Returns: {
@@ -1199,12 +1163,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1228,11 +1192,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1253,11 +1217,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1278,11 +1242,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1295,11 +1259,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
