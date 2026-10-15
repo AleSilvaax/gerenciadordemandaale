@@ -26,11 +26,11 @@ A leitura das rotas, telas, serviços e algumas funções/regras do Supabase con
 
 **Limite do diagnóstico:** ainda faltam testes completos com sessões reais, revisão integral das permissões e comprovação da instalação/sincronização do aplicativo. Não assumir que a análise anterior comprovou tudo. Não remover arquivos aparentemente antigos sem verificar também importações dinâmicas; o PDF profissional é chamado dinamicamente nos detalhes da demanda.
 
-## 3. Direção visual: console corporativo REVO
+## 3. Direção visual: identidade própria e corporativa
 
-Adotar a identidade REVO já trabalhada nos relatórios como referência, preservando a logo correta existente, sem inventar uma nova marca.
+Criar uma identidade visual própria para o sistema, independente da REVO. Definir uma linguagem original e consistente de cores, tipografia, símbolos e aplicação da marca, sem importar a identidade dos relatórios nem assumir um novo nome ou uma nova logo sem aprovação.
 
-- Superfícies claras, texto grafite, divisórias discretas e amarelo REVO `#F4FF00` em pontos de destaque. Amarelo nunca como texto de baixo contraste sobre branco.
+- Superfícies claras, texto grafite e divisórias discretas, com uma paleta de destaque própria a ser apresentada para aprovação. Não usar o amarelo REVO como referência; priorizar contraste, personalidade e sobriedade corporativa.
 - Navegação lateral no computador e navegação inferior enxuta no celular, com nomes claros e ações acessíveis. Eliminar a duplicação da marca no cabeçalho e na barra inferior do computador.
 - Tipografia sem serifa, hierarquia objetiva, números fáceis de comparar, espaçamento consistente e cantos discretos. Sem gradientes decorativos, brilho, sombras pesadas, emojis ou caixas dentro de caixas.
 - Listas e tabelas para gestão; informações agrupadas e ações grandes para execução em campo. O técnico vê sua agenda e atendimentos; o gestor vê pendências e operação, sem uma nova tela de indicadores decorativos.
