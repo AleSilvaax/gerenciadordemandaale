@@ -308,6 +308,18 @@
   .h-11 { height: 2.375rem !important; }
   .h-16.w-16 { height: 2.75rem !important; width: 2.75rem !important; }
   .rounded-2xl { border-radius: 0.75rem !important; }
+  /* Distribuir horizontalmente: grades de cards em 2 colunas no celular */
+  .grid.grid-cols-1.lg\:grid-cols-4,
+  .grid.grid-cols-1.md\:grid-cols-4,
+  .grid.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid.grid-cols-1.md\:grid-cols-3:not(form .grid) { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  /* Cabeçalhos e conteúdo de cards mais baixos */
+  .rounded-lg.border > .flex.flex-col.space-y-1\.5.p-6,
+  [class*="CardHeader"] { padding: 0.625rem 0.75rem 0.25rem !important; }
+  .rounded-lg.border > .p-6.pt-0 { padding: 0 0.75rem 0.625rem !important; }
+  .grid > .rounded-lg.border .text-2xl,
+  .grid > .rounded-xl.border .text-2xl { font-size: 1.125rem !important; }
+  .grid > .rounded-lg.border p, .grid > .rounded-xl.border p { font-size: 0.7rem; }
   
   /* Ensure content doesn't get hidden behind fixed navbar */
   .mobile-safe-area {

@@ -7,12 +7,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { User, Mail, Phone, Edit2, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, Edit2, Save, ArrowLeft, Camera } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) { toast.error('Escolha uma imagem'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Imagem maior que 5MB'); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      await updateUser({ avatar: data.publicUrl });
+    } catch (err: any) {
+      toast.error('Erro ao enviar foto', { description: err?.message });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -105,18 +129,24 @@ export const ProfilePage: React.FC = () => {
             
             <CardContent className="space-y-6">
               {/* Avatar Section */}
-              <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24">
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="relative shrink-0 rounded-full" aria-label="Alterar foto de perfil">
+                <Avatar className="h-20 w-20">
                   <AvatarImage src={user?.avatar || ""} alt={user?.name || "Usuário"} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                     {getUserInitials(user?.name || "U")}
                   </AvatarFallback>
                 </Avatar>
+                  <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground border-2 border-background">
+                    <Camera className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">{user?.name || 'Usuário'}</h3>
                   <p className="text-muted-foreground capitalize">{user?.role || 'técnico'}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Membro desde {new Date().toLocaleDateString('pt-BR')}
+                    {uploading ? 'Enviando foto...' : 'Toque na foto para alterar'} · Membro desde {new Date().toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
