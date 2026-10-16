@@ -86,7 +86,7 @@ export const RealtimeMetrics: React.FC = () => {
 
     // Configurar escuta em tempo real
     const channel = supabase
-      .channel('metrics-updates')
+      .channel(`metrics-updates_${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

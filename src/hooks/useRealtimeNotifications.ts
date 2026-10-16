@@ -32,7 +32,8 @@ export const useRealtimeNotifications = () => {
 
     // Enhanced real-time channel with comprehensive event listening
     const channel = supabase
-      .channel(`user_notifications_${user.id}`)
+      // Unique name: supabase.channel() reuses an existing (already subscribed) channel with the same topic
+      .channel(`user_notifications_${user.id}_${crypto.randomUUID()}`)
       
       // Direct notifications from database
       .on('postgres_changes', {
