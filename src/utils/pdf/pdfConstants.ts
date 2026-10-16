@@ -4,21 +4,21 @@ export const PDF_COLORS = {
   black: [0, 0, 0],               // Preto total #000000
   white: [255, 255, 255],         // Branco #FFFFFF
   darkGray: [38, 36, 38],         // Cinza escuro #262426
-  revoYellow: [244, 255, 0],      // Amarelo Revo #F4FF00
+  revoYellow: [236, 239, 243],    // Destaque neutro (cinza claro) — sem amarelo
   
   // Legacy colors for compatibility
   primary: [0, 0, 0],             // Preto como primário
   primaryLight: [38, 36, 38],     // Cinza escuro
   secondary: [38, 36, 38],        // Cinza escuro
-  accent: [244, 255, 0],          // Amarelo Revo
+  accent: [236, 239, 243],        // Destaque neutro
   accentLight: [244, 255, 0],     // Amarelo Revo
   text: [255, 255, 255],          // Texto branco
   textLight: [200, 200, 200],     // Texto cinza claro
   lightGray: [60, 60, 60],        // Cinza claro
   mediumGray: [38, 36, 38],       // Cinza médio
   border: [100, 100, 100],        // Borda cinza
-  success: [244, 255, 0],         // Amarelo Revo
-  warning: [244, 255, 0],         // Amarelo Revo
+  success: [71, 85, 105],          // Grafite
+  warning: [71, 85, 105],          // Grafite
   danger: [255, 100, 100]         // Vermelho claro
 } as const;
 

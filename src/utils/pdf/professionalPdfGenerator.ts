@@ -143,15 +143,8 @@ export const generateProfessionalServiceReport = async (
 
       let currentY = 0;
 
-      // Capa Revo com imagem de fundo
-      await drawRevoCover(
-        doc, 
-        'RELATÓRIO TÉCNICO', 
-        'Sistema Integrado de Gestão', 
-        service.number,
-        '/lovable-uploads/741b794f-f964-4731-852c-e007bcbaf586.png',
-        0.4 // Opacidade do overlay
-      );
+      // Capa neutra e corporativa (sem imagem de marca)
+      drawCleanCover(doc, service);
 
       // Nova página para o conteúdo com fundo branco
       doc.addPage();
@@ -222,7 +215,43 @@ export const generateProfessionalServiceReport = async (
   );
 };
 
-// A capa agora é gerenciada pelo revoLayout.ts
+const drawCleanCover = (doc: any, service: Service): void => {
+  const W = PDF_DIMENSIONS.pageWidth;
+  const M = PDF_DIMENSIONS.margin;
+  doc.setFillColor(30, 41, 59);
+  doc.rect(0, 0, W, 6, 'F');
+  doc.setFont(PDF_FONTS.normal, 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(formatForPdf('RELATÓRIO TÉCNICO DE SERVIÇO'), M, 60);
+  doc.setFont(PDF_FONTS.normal, 'bold');
+  doc.setFontSize(26);
+  doc.setTextColor(15, 23, 42);
+  const title = doc.splitTextToSize(formatForPdf(service.title || 'Ordem de Serviço'), W - M * 2);
+  doc.text(title, M, 75);
+  let y = 75 + title.length * 11 + 6;
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.4);
+  doc.line(M, y, W - M, y);
+  y += 14;
+  const rows: Array<[string, string]> = [
+    ['OS', `#${service.number || 'N/A'}`],
+    ['Cliente', service.client || 'Não informado'],
+    ['Local', (service as any).location || 'Não informado'],
+    ['Emitido em', new Date().toLocaleDateString('pt-BR')],
+  ];
+  rows.forEach(([k, v]) => {
+    doc.setFont(PDF_FONTS.normal, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(formatForPdf(k.toUpperCase()), M, y);
+    doc.setFont(PDF_FONTS.normal, 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text(doc.splitTextToSize(formatForPdf(v), W - M * 2 - 40), M + 40, y);
+    y += 12;
+  });
+};
 
 const createIndex = (doc: any, startY: number): number => {
   let currentY = startY;
