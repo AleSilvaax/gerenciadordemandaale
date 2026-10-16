@@ -76,7 +76,7 @@ export const processImage = async (imageUrl: string): Promise<string | null> => 
 
     // Converter URLs do Supabase privadas para signed URLs se necessário
     let finalUrl = imageUrl;
-    if (imageUrl.includes('/storage/v1/object/public/service-photos/') && !imageUrl.includes('token=')) {
+    if (imageUrl.includes('service-photos') || !/^(https?:|data:|blob:)/i.test(imageUrl)) {
       try {
         const { convertToSignedUrl } = await import('@/utils/signedUrlHelper');
         finalUrl = await convertToSignedUrl(imageUrl);
