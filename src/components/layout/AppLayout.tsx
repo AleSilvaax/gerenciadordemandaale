@@ -28,7 +28,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Header Unificado */}
       {user && (
-        <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 sticky top-0 z-50">
+        <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 px-3 py-2 md:p-4 sticky top-0 z-50">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center space-x-2 font-bold text-xl text-primary">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

@@ -162,10 +162,7 @@ export const updateTeamMember = async (memberId: string, data: Partial<TeamMembe
     .from('profiles')
     .update({
       name: data.name,
-      avatar: data.avatar,
-      email: data.email,
-      phone: data.phone,
-      signature: data.signature
+      avatar: data.avatar
     })
     .eq('id', memberId);
 

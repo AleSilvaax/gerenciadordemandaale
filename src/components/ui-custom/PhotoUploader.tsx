@@ -81,7 +81,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       .from('service_photos')
       .insert({
         service_id: serviceId,
-        photo_url: signedUrlData.signedUrl,
+        // Store the permanent storage path; signed URLs expire and break on other devices
+        photo_url: data.path,
         title: title
       })
       .select('id')
@@ -119,24 +120,9 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       if (photosData && photosData.length > 0) {
         // Convert existing photos to signed URLs since bucket is now private
         console.log('[PhotoUploader] Convertendo URLs para URLs assinadas');
-        const photosWithSignedUrls = await Promise.all(
-          photosData.map(async (photo) => {
-            // Extract file path from existing URL
-            let filePath = photo.photo_url;
-            if (photo.photo_url.includes('/service-photos/')) {
-              filePath = photo.photo_url.split('/service-photos/')[1];
-            } else if (photo.photo_url.includes('/object/public/service-photos/')) {
-              filePath = photo.photo_url.split('/object/public/service-photos/')[1];
-            }
-            
-            const { data: signedUrlData } = await supabase.storage
-              .from('service-photos')
-              .createSignedUrl(filePath, 3600);
-            return signedUrlData?.signedUrl || photo.photo_url;
-          })
-        );
-        
-        const photoUrls = photosWithSignedUrls;
+        // Keep permanent paths in services.photos (never expiring signed URLs)
+        const { extractFilePathFromUrl } = await import('@/utils/signedUrlHelper');
+        const photoUrls = photosData.map((photo) => extractFilePathFromUrl(photo.photo_url) || photo.photo_url);
         const { error: updateError } = await supabase
           .from('services')
           .update({ photos: photoUrls })

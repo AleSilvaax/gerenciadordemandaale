@@ -286,7 +286,7 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
     console.log('[UPDATE SERVICE] Tentando atualizar:', { serviceId: service.id, updateData });
 
-    const { data, error } = await supabase.from('services').update(updateData).eq('id', service.id).select().single();
+    const { data, error } = await supabase.from('services').update(updateData as any).eq('id', service.id).select().single();
     
     if (error) {
       console.error('[UPDATE SERVICE] Erro do Supabase:', { 

@@ -49,13 +49,8 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
         // Convert photos to signed URLs for display since bucket is now private
         const photosWithSignedUrls = await Promise.all(
           photosData.map(async (photoData, index) => {
-            let filePath = photoData.photo_url;
-            if (photoData.photo_url.includes('/service-photos/')) {
-              filePath = photoData.photo_url.split('/service-photos/')[1];
-            } else if (photoData.photo_url.includes('/object/public/service-photos/')) {
-              filePath = photoData.photo_url.split('/object/public/service-photos/')[1];
-            }
-            
+            const { extractFilePathFromUrl } = await import('@/utils/signedUrlHelper');
+            const filePath = extractFilePathFromUrl(photoData.photo_url) || photoData.photo_url;
             const { data: signedUrlData } = await supabase.storage
               .from('service-photos')
               .createSignedUrl(filePath, 3600);

@@ -277,9 +277,22 @@
 
 /* Mobile layout adjustments - Melhor responsividade */
 @media (max-width: 768px) {
+  /* Escala compacta no celular: todos os tamanhos em rem diminuem proporcionalmente */
+  html {
+    font-size: 14px;
+  }
   body {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  /* Sombras e espaçamentos mais leves para reduzir poluição visual */
+  .shadow-lg, .shadow-xl, .shadow-md { box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06) !important; }
+  .p-6 { padding: 0.875rem !important; }
+  .p-8 { padding: 1rem !important; }
+  .space-y-6 > * + * { margin-top: 0.875rem !important; }
+  .gap-6 { gap: 0.75rem !important; }
+  .mb-8 { margin-bottom: 1rem !important; }
+  .text-3xl { font-size: 1.375rem !important; }
+  .text-4xl { font-size: 1.5rem !important; }
   
   /* Ensure content doesn't get hidden behind fixed navbar */
   .mobile-safe-area {
