@@ -8,7 +8,6 @@ import { getServiceMaterialUsage } from '@/services/inventoryService';
 import { MobilePdfHandler } from '../mobilePdf';
 import { 
   applyDarkBackground, 
-  drawRevoCover, 
   drawRevoHeader, 
   drawRevoFooter, 
   revoSectionTitle, 

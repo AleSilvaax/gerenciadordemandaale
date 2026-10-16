@@ -293,6 +293,21 @@
   .mb-8 { margin-bottom: 1rem !important; }
   .text-3xl { font-size: 1.375rem !important; }
   .text-4xl { font-size: 1.5rem !important; }
+  .text-2xl { font-size: 1.25rem !important; }
+  .text-xl { font-size: 1.0625rem !important; }
+  .p-5 { padding: 0.75rem !important; }
+  .p-4 { padding: 0.75rem !important; }
+  .px-6 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+  .py-6 { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
+  .space-y-8 > * + * { margin-top: 1rem !important; }
+  .space-y-4 > * + * { margin-top: 0.625rem !important; }
+  .gap-4 { gap: 0.5rem !important; }
+  .gap-8 { gap: 1rem !important; }
+  .mb-6 { margin-bottom: 0.75rem !important; }
+  .h-12 { height: 2.5rem !important; }
+  .h-11 { height: 2.375rem !important; }
+  .h-16.w-16 { height: 2.75rem !important; width: 2.75rem !important; }
+  .rounded-2xl { border-radius: 0.75rem !important; }
   
   /* Ensure content doesn't get hidden behind fixed navbar */
   .mobile-safe-area {
@@ -452,14 +467,14 @@
 
   /* Melhorias adicionais para mobile service cards */
   .mobile-service-card {
-    padding: 1.25rem !important;
-    margin-bottom: 1rem !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
     border-radius: 0.75rem !important;
   }
   
   .mobile-service-card .card-header {
-    padding-bottom: 1rem !important;
-    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
   }
   
   .mobile-service-card .card-content {
@@ -467,18 +482,18 @@
   }
   
   .mobile-service-card .space-y-4 > * + * {
-    margin-top: 1rem !important;
+    margin-top: 0.5rem !important;
   }
   
   .mobile-service-card .space-y-5 > * + * {
-    margin-top: 1.25rem !important;
+    margin-top: 0.625rem !important;
   }
   
   /* Melhores espaçamentos para elementos interativos */
   .mobile-interactive-element {
-    padding: 0.75rem 1rem !important;
+    padding: 0.5rem 0.75rem !important;
     border-radius: 0.5rem !important;
-    min-height: 48px !important;
+    min-height: 40px !important;
   }
   
   .mobile-interactive-element:active {
@@ -487,8 +502,8 @@
   
   /* Seções mobile com melhor hierarquia visual */
   .mobile-section {
-    margin-bottom: 1.5rem !important;
-    padding: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    padding: 0.75rem !important;
     border-radius: 0.5rem !important;
   }
   
