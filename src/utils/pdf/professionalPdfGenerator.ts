@@ -205,10 +205,9 @@ export const generateProfessionalServiceReport = async (
       }
 
       // Fotos
-      if (service.photos && service.photos.length > 0) {
-        currentY = checkPageBreak(doc, currentY, 80);
-        await createPhotosSection(doc, service, currentY);
-      }
+      // Sempre consultar a base: a lista local pode estar desatualizada em outro aparelho
+      currentY = checkPageBreak(doc, currentY, 80);
+      await createPhotosSection(doc, service, currentY);
 
       // Aplicar fundo cinza escuro em todas as páginas e cabeçalhos/rodapés Revo
       addHeadersAndFooters(doc, service);
