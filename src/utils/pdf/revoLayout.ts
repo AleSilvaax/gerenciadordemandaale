@@ -302,7 +302,7 @@ export const revoTableTheme = (): Partial<UserOptions> => {
       fillColor: [255, 255, 255] as [number, number, number], // Fundo branco
     },
     headStyles: {
-      fillColor: [244, 255, 0] as [number, number, number], // Cabeçalho amarelo Revo
+      fillColor: [236, 239, 243] as [number, number, number], // Cabeçalho neutro
       textColor: [0, 0, 0] as [number, number, number], // Texto preto
       fontStyle: 'bold',
       fontSize: 10,
