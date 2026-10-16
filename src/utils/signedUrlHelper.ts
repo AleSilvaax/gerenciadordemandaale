@@ -31,20 +31,18 @@ export const generateSignedUrl = async (
  * This is needed when converting from public URLs to signed URLs
  */
 export const extractFilePathFromUrl = (url: string): string | null => {
+  if (!url) return null;
+  // Already a plain storage path (e.g. "serviceId/file.jpg")
+  if (!/^https?:\/\//i.test(url)) {
+    return decodeURIComponent(url.split('?')[0].replace(/^service-photos\//, ''));
+  }
   try {
-    // Extract path from both public URLs and signed URLs
     const urlObj = new URL(url);
-    const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/(public|sign)\/([^/]+)\/(.+)$/);
-    
-    if (pathMatch) {
-      return pathMatch[3]; // Return the file path part
+    const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/);
+    if (pathMatch) return decodeURIComponent(pathMatch[2]);
+    if (urlObj.pathname.includes('/service-photos/')) {
+      return decodeURIComponent(urlObj.pathname.split('/service-photos/')[1]);
     }
-    
-    // Fallback for direct file paths
-    if (url.includes('/service-photos/')) {
-      return url.split('/service-photos/')[1];
-    }
-    
     return null;
   } catch (error) {
     console.error('Error extracting file path from URL:', error);
@@ -53,20 +51,15 @@ export const extractFilePathFromUrl = (url: string): string | null => {
 };
 
 /**
- * Convert existing photo URLs to signed URLs for private buckets
+ * Always generate a FRESH signed URL. Stored signed URLs expire (1h),
+ * so reusing them breaks photos on other devices / later sessions.
  */
-export const convertToSignedUrl = async (photoUrl: string): Promise<string> => {
-  // If already a signed URL, return as is
-  if (photoUrl.includes('token=')) {
-    return photoUrl;
-  }
-
+export const convertToSignedUrl = async (photoUrl: string, expiresIn = 3600): Promise<string> => {
   const filePath = extractFilePathFromUrl(photoUrl);
   if (!filePath) {
     console.warn('Could not extract file path from URL:', photoUrl);
     return photoUrl;
   }
-
-  const signedUrl = await generateSignedUrl('service-photos', filePath);
+  const signedUrl = await generateSignedUrl('service-photos', filePath, expiresIn);
   return signedUrl || photoUrl;
 };
