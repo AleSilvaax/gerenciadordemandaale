@@ -59,7 +59,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   };
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 border border-border/50 bg-gradient-to-br from-card/80 to-card backdrop-blur-sm hover:border-primary/20">
+    <Card className={`group hover:shadow-xl transition-all duration-300 border border-border/50 bg-gradient-to-br from-card/80 to-card backdrop-blur-sm hover:border-primary/20 border-l-4 ${service.priority === "alta" || service.priority === "urgente" ? "border-l-rose-500" : service.priority === "media" ? "border-l-amber-500" : "border-l-emerald-500"}`}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0">
@@ -69,7 +69,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               {service.number && (
                 <Badge variant="outline" className="text-xs font-mono">
-                  #{service.number}
+                  OS #{String(service.number).split('-').pop()}
                 </Badge>
               )}
               {service.creationDate && (

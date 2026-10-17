@@ -46,12 +46,11 @@ const Navbar = () => {
     return true;
   });
 
+  const mobileItems = navItems.filter(i => ["/", "/demandas", "/calendar", "/estoque", "/estatisticas"].includes(i.path));
+
   return (
-    <nav className={`
-      fixed bottom-0 left-0 right-0 z-50 h-16
-      bg-card/95 backdrop-blur-sm border-t border-border/50
-    `}>
-      <div className="container mx-auto px-2 md:px-4">
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 h-16 ${isMobile ? 'bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]' : 'bg-card/95 backdrop-blur-sm border-t border-border/50'}`}>
+      <div className={isMobile ? "" : "container mx-auto px-2 md:px-4"}>
         {/* Desktop Navigation */}
         {!isMobile && (
           <div className="flex items-center justify-between h-16">
@@ -112,47 +111,24 @@ const Navbar = () => {
           </div>
         )}
 
-        {/* Mobile Navigation */}
+        {/* Mobile TabBar */}
         {isMobile && (
-          <div className="flex justify-around items-center h-16">
-            {filteredNavItems.map((item) => {
+          <div className="grid grid-cols-5 h-16">
+            {mobileItems.map((item) => {
               const Icon = item.icon;
+              const active = isActive(item.path);
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`
-                    flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
-                    ${isActive(item.path)
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                    }
-                  `}
+                  className={`relative flex flex-col items-center justify-center gap-1 ${active ? 'text-blue-600' : 'text-slate-500'}`}
                 >
-                  <Icon className="w-6 h-6 flex-shrink-0" />
-                  {isActive(item.path) && (
-                    <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
-                  )}
+                  {active && <span className="absolute top-0 h-0.5 w-8 bg-blue-600 rounded-full" />}
+                  <Icon className="h-5 w-5" />
+                  <span className="text-[11px] font-medium">{item.name}</span>
                 </Link>
               );
             })}
-            
-            {/* Configurações - Mobile */}
-            <Link
-              to="/settings"
-              className={`
-                flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 min-w-0 relative
-                ${isActive("/settings")
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-                }
-              `}
-            >
-              <Settings className="w-6 h-6 flex-shrink-0" />
-              {isActive("/settings") && (
-                <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full" />
-              )}
-            </Link>
           </div>
         )}
       </div>

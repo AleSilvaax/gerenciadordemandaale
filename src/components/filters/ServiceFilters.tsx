@@ -29,6 +29,7 @@ export const ServiceFilters: React.FC<ServiceFiltersProps> = ({
   const statusOptions: { value: ServiceStatus | 'todos'; label: string }[] = [
     { value: 'todos', label: 'Todos os Status' },
     { value: 'pendente', label: 'Pendente' },
+    { value: 'em_andamento', label: 'Em Andamento' },
     { value: 'concluido', label: 'Concluído' },
     { value: 'cancelado', label: 'Cancelado' }
   ];
@@ -80,7 +81,7 @@ export const ServiceFilters: React.FC<ServiceFiltersProps> = ({
       </div>
 
       {/* Segunda linha - Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Status */}
         <Select 
           value={filters.status} 

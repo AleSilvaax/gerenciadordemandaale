@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, AlertCircle } from "lucide-react";
+import { Package, AlertCircle, Lightbulb } from "lucide-react";
 import { useServiceTypeMaterials } from "@/hooks/useInventory";
 
 interface ServiceMaterialsPreloaderProps {
@@ -72,7 +72,7 @@ export const ServiceMaterialsPreloader: React.FC<ServiceMaterialsPreloaderProps>
             </div>
           ))}
           <div className="text-xs text-muted-foreground text-center mt-3 p-2 bg-accent/10 rounded border border-accent/30">
-            💡 Estes materiais serão automaticamente adicionados à demanda quando ela for criada
+            <Lightbulb className="inline h-4 w-4 mr-1" aria-hidden="true" /> Estes materiais serão automaticamente adicionados à demanda quando ela for criada
           </div>
         </div>
       </CardContent>

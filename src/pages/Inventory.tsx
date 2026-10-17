@@ -115,23 +115,23 @@ const Inventory: React.FC = () => {
           <TabsList className="grid w-full min-w-[400px] grid-cols-4">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs sm:text-sm">
               <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Dash</span>
+              <span className="hidden sm:inline">Resumo</span>
+              <span className="sm:hidden">Resumo</span>
             </TabsTrigger>
             <TabsTrigger value="materials" className="flex items-center gap-2 text-xs sm:text-sm">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Materiais</span>
-              <span className="sm:hidden">Mat</span>
+              <span className="sm:hidden">Materiais</span>
             </TabsTrigger>
             <TabsTrigger value="inventory" className="flex items-center gap-2 text-xs sm:text-sm">
               <AlertTriangle className="h-4 w-4" />
               <span className="hidden sm:inline">Estoque</span>
-              <span className="sm:hidden">Est</span>
+              <span className="sm:hidden">Estoque</span>
             </TabsTrigger>
             <TabsTrigger value="movements" className="flex items-center gap-2 text-xs sm:text-sm">
               <Activity className="h-4 w-4" />
-              <span className="hidden sm:inline">Movimentações</span>
-              <span className="sm:hidden">Mov</span>
+              <span className="hidden sm:inline">Histórico</span>
+              <span className="sm:hidden">Histórico</span>
             </TabsTrigger>
           </TabsList>
         </div>

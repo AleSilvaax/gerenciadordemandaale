@@ -28,48 +28,44 @@ export const DashboardStatsCards: React.FC = () => {
 
   return (
     <motion.div 
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="blue"
           title="TOTAL DE DEMANDAS"
           value="15"
-          icon={<TrendingUp className="h-5 w-5 text-blue-500" />}
+          icon={<TrendingUp className="h-5 w-5" />}
           description="Demandas registradas no período"
-          className="card-enhanced border-l-4 border-l-blue-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="emerald"
           title="CONCLUÍDAS"
           value="1"
-          icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+          icon={<CheckCircle className="h-5 w-5" />}
           description="7% de taxa de conclusão"
-          className="card-enhanced border-l-4 border-l-green-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="amber"
           title="PENDENTES"
           value="14"
-          icon={<Clock className="h-5 w-5 text-yellow-500" />}
+          icon={<Clock className="h-5 w-5" />}
           description="Aguardando execução"
-          className="card-enhanced border-l-4 border-l-yellow-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="rose"
           title="ATRASADAS"
           value="0"
-          icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+          icon={<AlertTriangle className="h-5 w-5" />}
           description="Passaram do prazo"
-          className="card-enhanced border-l-4 border-l-red-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
     </motion.div>

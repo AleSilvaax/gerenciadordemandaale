@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Calendar, CheckSquare, ClipboardList, FileText, Hash, Pencil, Wrench } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -116,13 +117,13 @@ export const TechnicalFieldsRenderer: React.FC<TechnicalFieldsRendererProps> = (
 
   const getFieldIcon = (type: string) => {
     switch (type) {
-      case 'text': return '📝';
-      case 'number': return '🔢';
-      case 'textarea': return '📄';
-      case 'boolean': return '✅';
-      case 'select': return '📋';
-      case 'date': return '📅';
-      default: return '📝';
+      case 'text': return <Pencil className="h-5 w-5" aria-hidden="true" />;
+      case 'number': return <Hash className="h-5 w-5" aria-hidden="true" />;
+      case 'textarea': return <FileText className="h-5 w-5" aria-hidden="true" />;
+      case 'boolean': return <CheckSquare className="h-5 w-5" aria-hidden="true" />;
+      case 'select': return <ClipboardList className="h-5 w-5" aria-hidden="true" />;
+      case 'date': return <Calendar className="h-5 w-5" aria-hidden="true" />;
+      default: return <Pencil className="h-5 w-5" aria-hidden="true" />;
     }
   };
 
@@ -130,7 +131,7 @@ export const TechnicalFieldsRenderer: React.FC<TechnicalFieldsRendererProps> = (
     <div className="space-y-6">
       <div className="flex items-center gap-3 pb-4 border-b border-border/30">
         <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
-          <span className="text-xl">🔧</span>
+          <Wrench className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
           <h3 className="text-lg font-bold text-foreground">Checklist Técnico</h3>

@@ -86,9 +86,9 @@ export const RealTimeStatsCards: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-card rounded-xl border border-border/50 p-6 animate-pulse">
+          <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 p-4 animate-pulse">
             <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
             <div className="h-8 bg-muted rounded w-1/2 mb-2"></div>
             <div className="h-3 bg-muted rounded w-full"></div>
@@ -100,48 +100,44 @@ export const RealTimeStatsCards: React.FC = () => {
 
   return (
     <motion.div 
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="blue"
           title="TOTAL DE DEMANDAS"
           value={stats.total.toString()}
-          icon={<TrendingUp className="h-5 w-5 text-blue-500" />}
+          icon={<TrendingUp className="h-5 w-5" />}
           description="Demandas registradas no sistema"
-          className="card-enhanced border-l-4 border-l-blue-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="emerald"
           title="CONCLUÍDAS"
           value={stats.completed.toString()}
-          icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+          icon={<CheckCircle className="h-5 w-5" />}
           description={`${stats.completionRate}% de taxa de conclusão`}
-          className="card-enhanced border-l-4 border-l-green-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="amber"
           title="PENDENTES"
           value={stats.pending.toString()}
-          icon={<Clock className="h-5 w-5 text-yellow-500" />}
+          icon={<Clock className="h-5 w-5" />}
           description="Aguardando execução"
-          className="card-enhanced border-l-4 border-l-yellow-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <StatCard
+        <StatCard tone="rose"
           title="ATRASADAS"
           value={stats.overdue.toString()}
-          icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+          icon={<AlertTriangle className="h-5 w-5" />}
           description="Passaram do prazo"
-          className="card-enhanced border-l-4 border-l-red-500 hover:shadow-xl transition-all duration-300"
         />
       </motion.div>
     </motion.div>

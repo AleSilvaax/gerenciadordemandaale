@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, PlusCircle, Trash2, UserPlus, Upload, User, Loader2, Settings, Edit, Mail, Phone, Shield, Calendar, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -55,6 +56,7 @@ const Equipe: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [isLoading, setIsLoading] = useState(true);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [teamStats, setTeamStats] = useState({
     total: 0,
@@ -86,10 +88,12 @@ const Equipe: React.FC = () => {
         const members = await getTeamMembers();
         if (members && members.length > 0) {
           setTeam(members);
-          calculateTeamStats(members);
+          await calculateTeamStats(members);
         }
       } catch (error) {
         console.error("Error loading team members:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -322,6 +326,21 @@ const Equipe: React.FC = () => {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 space-y-6" role="status" aria-label="Carregando">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-44 rounded-xl" />)}
+        </div>
+        <span className="sr-only">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -655,26 +674,7 @@ const Equipe: React.FC = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-background/30 border border-border/30">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5" />
-                        Relatórios
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Visualize relatórios de desempenho
-                      </p>
-                      <Button 
-                        variant="outline"
-                        className="w-full"
-                        disabled
-                      >
-                        Em Breve
-                      </Button>
-                    </CardContent>
-                  </Card>
+
                 </div>
               </div>
             </TabsContent>

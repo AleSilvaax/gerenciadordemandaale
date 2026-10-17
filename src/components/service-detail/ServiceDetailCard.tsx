@@ -232,7 +232,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({ service, o
         </div>
 
         {/* Gerenciar Atribuição (apenas para gestores) */}
-        {hasGestorPermission && (
+        {hasGestorPermission && service.status !== 'concluido' && (
           <div className="space-y-3">
             <h4 className="text-base font-semibold text-foreground pb-2 border-b border-border/30">
               Gerenciar Atribuição

@@ -20,6 +20,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, small = false 
           {small ? 'OK' : 'Concluído'}
         </Badge>
       );
+    case 'em_andamento':
+      return (
+        <Badge className="bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-950 dark:text-amber-400">
+          <Clock className="mr-1" width={iconSize} height={iconSize} />
+          {small ? 'Andam.' : 'Em Andamento'}
+        </Badge>
+      );
     case 'pendente':
       return (
         <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border border-warning/30 dark:bg-warning/20">
