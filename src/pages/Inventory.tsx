@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, TrendingUp, AlertTriangle, Activity, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useInventory, useInventoryDashboard, useMaterials } from "@/hooks/useInventory";
-import { InventoryDashboardCards } from "@/components/inventory/InventoryDashboardCards";
+import { useInventory, useInventoryResumoboard, useMaterials } from "@/hooks/useInventory";
+import { InventoryResumoboardCards } from "@/components/inventory/InventoryResumoboardCards";
 import { MaterialsTable } from "@/components/inventory/MaterialsTable";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { MovementsTable } from "@/components/inventory/MovementsTable";
@@ -25,7 +25,7 @@ const Inventory: React.FC = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
-  const { data: dashboardData, isLoading: isDashboardLoading } = useInventoryDashboard();
+  const { data: dashboardData, isLoading: isResumoboardLoading } = useInventoryResumoboard();
   const { data: materials, isLoading: isMaterialsLoading } = useMaterials();
   const { data: inventory, isLoading: isInventoryLoading } = useInventory();
   const isMobile = useIsMobile();
@@ -115,32 +115,32 @@ const Inventory: React.FC = () => {
           <TabsList className="grid w-full min-w-[400px] grid-cols-4">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs sm:text-sm">
               <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Dash</span>
+              <span className="hidden sm:inline">Resumoboard</span>
+              <span className="sm:hidden">Resumo</span>
             </TabsTrigger>
             <TabsTrigger value="materials" className="flex items-center gap-2 text-xs sm:text-sm">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Materiais</span>
-              <span className="sm:hidden">Mat</span>
+              <span className="sm:hidden">Materiais</span>
             </TabsTrigger>
             <TabsTrigger value="inventory" className="flex items-center gap-2 text-xs sm:text-sm">
               <AlertTriangle className="h-4 w-4" />
               <span className="hidden sm:inline">Estoque</span>
-              <span className="sm:hidden">Est</span>
+              <span className="sm:hidden">Estoque</span>
             </TabsTrigger>
             <TabsTrigger value="movements" className="flex items-center gap-2 text-xs sm:text-sm">
               <Activity className="h-4 w-4" />
-              <span className="hidden sm:inline">Movimentações</span>
-              <span className="sm:hidden">Mov</span>
+              <span className="hidden sm:inline">Histórico</span>
+              <span className="sm:hidden">Histórico</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
-          {/* Dashboard Tab */}
+          {/* Resumoboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
-            <InventoryDashboardCards 
+            <InventoryResumoboardCards 
               dashboard={dashboardData} 
-              isLoading={isDashboardLoading} 
+              isLoading={isResumoboardLoading} 
             />
             
             {/* Quick Actions */}

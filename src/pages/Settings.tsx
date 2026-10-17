@@ -165,43 +165,7 @@ const Settings: React.FC = () => {
                           </CardContent>
                         </Card>
 
-                        {/* Organization Settings */}
-                        <Card className="bg-gradient-to-r from-amber-50/50 to-amber-100/50 dark:from-amber-900/10 dark:to-amber-800/10 border border-amber-200/50 dark:border-amber-800/50">
-                          <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Crown className="w-5 h-5 text-amber-500" />
-                              Configurações da Organização
-                            </CardTitle>
-                            <CardDescription>
-                              Configure informações gerais da empresa e branding
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Button variant="outline" className="w-full border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20">
-                              <SettingsIcon className="w-4 h-4 mr-2" />
-                              Em Desenvolvimento
-                            </Button>
-                          </CardContent>
-                        </Card>
 
-                        {/* System Logs */}
-                        <Card className="bg-gradient-to-r from-slate-50/50 to-slate-100/50 dark:from-slate-900/10 dark:to-slate-800/10 border border-slate-200/50 dark:border-slate-800/50">
-                          <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Shield className="w-5 h-5 text-slate-500" />
-                              Logs do Sistema
-                            </CardTitle>
-                            <CardDescription>
-                              Monitore atividades e eventos do sistema
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Button variant="outline" className="w-full border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/20">
-                              <Shield className="w-4 h-4 mr-2" />
-                              Em Desenvolvimento
-                            </Button>
-                          </CardContent>
-                        </Card>
                       </div>
                     </div>
                   </TabsContent>

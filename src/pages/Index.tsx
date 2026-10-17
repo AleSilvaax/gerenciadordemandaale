@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import React, { useState, useEffect } from "react";
 import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock, Plus } from "lucide-react";
@@ -68,6 +69,8 @@ const Index: React.FC = () => {
       if (filters.priority !== 'all' && service.priority !== filters.priority) {
         return false;
       }
+
+      if (filters.technician !== 'all' && !service.technicians?.some(technician => technician.id === filters.technician)) return false;
 
       // Filtro de tipo de serviço
       if (filters.serviceType !== 'all' && service.serviceType !== filters.serviceType) {
@@ -257,12 +260,31 @@ const Index: React.FC = () => {
 
         {/* Busca Avançada - Simplificada */}
         <motion.div variants={itemVariants}>
+          {isMobile ? (
+            <div className="space-y-3">
+              <Input aria-label="Buscar demandas" placeholder="Buscar demandas..." value={filters.searchTerm} onChange={event => setFilters(previous => ({ ...previous, searchTerm: event.target.value }))} />
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: 'status', label: 'Status', options: [['all', 'Todos os Status'], ['pendente', 'Pendente'], ['em_andamento', 'Em Andamento'], ['concluido', 'Concluído'], ['cancelado', 'Cancelado']] },
+                  { key: 'priority', label: 'Prioridade', options: [['all', 'Todas as Prioridades'], ['urgente', 'Urgente'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']] },
+                  { key: 'technician', label: 'Técnico', options: [['all', 'Todos os Técnicos'], ...Array.from(new Map(services.flatMap(service => service.technicians ?? []).map(technician => [technician.id, technician.name])).entries())] }
+                ] as const).map(({ key, label, options }) => (
+                  <Select key={key} value={filters[key]} onValueChange={value => setFilters(previous => ({ ...previous, [key]: value }))}>
+                    <SelectTrigger aria-label={label} className="min-w-0"><SelectValue placeholder={label} /></SelectTrigger>
+                    <SelectContent>{options.map(([value, text]) => <SelectItem key={value} value={value}>{text}</SelectItem>)}</SelectContent>
+                  </Select>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={clearFilters}>Limpar filtros</Button>
+            </div>
+          ) : (
           <AdvancedSearch
             filters={filters}
             onFiltersChange={setFilters}
             onClearFilters={clearFilters}
             className="w-full max-w-full !px-0"
           />
+          )}
         </motion.div>
 
         {/* Conteúdo Principal - Simplificado */}
