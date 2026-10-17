@@ -465,26 +465,8 @@ export const generateProfessionalServiceReport = async (
     .replace(/\s+/g, "_");
   const fileName = `Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`;
 
-  // 💡 EXPORTAÇÃO COMPATÍVEL COM MÓVEIS (BLOB DOWNLOAD SEGURO)
-  try {
-    const pdfBlob = doc.output("blob");
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    
-    const downloadLink = document.createElement("a");
-    downloadLink.href = blobUrl;
-    downloadLink.download = fileName;
-    downloadLink.style.display = "none";
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(downloadLink);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 1000);
-  } catch (e) {
-    console.warn("Fallback para doc.save nativo:", e);
-    doc.save(fileName);
-  }
+  // 💡 MÉTODO PADRÃO ESTÁVEL DO jsPDF (Funciona perfeitamente em qualquer rota e telemóvel)
+  doc.save(fileName);
 };
 
 export default generateProfessionalServiceReport;
