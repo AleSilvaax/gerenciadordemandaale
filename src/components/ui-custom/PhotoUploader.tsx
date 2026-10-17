@@ -439,9 +439,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs text-muted-foreground">
-                          {formatFileSize(photo.file.size)}
-                        </span>
+                        {!disabled && photo.file.size > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatFileSize(photo.file.size)}
+                          </span>
+                        )}
                         {!photo.dbId && (
                           <span className="text-xs text-yellow-600">
                             Sincronizando...

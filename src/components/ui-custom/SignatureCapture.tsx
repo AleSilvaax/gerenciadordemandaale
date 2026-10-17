@@ -133,6 +133,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
             <div className="absolute inset-0 cursor-not-allowed" />
           )}
         </div>
+        {!disabled && (
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -164,6 +165,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
             </Button>
           )}
         </div>
+        )}
         {disabled && (
           <p className="text-xs text-muted-foreground text-center">
             Edição bloqueada - serviço concluído
