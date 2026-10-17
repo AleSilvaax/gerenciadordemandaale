@@ -7,12 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Inventory } from "@/types/inventoryTypes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMaterials } from "@/hooks/useInventory";
 
 interface InventoryTableProps {
   inventory: Inventory[];
@@ -23,145 +23,151 @@ interface InventoryTableProps {
 export const InventoryTable: React.FC<InventoryTableProps> = ({
   inventory,
   isLoading,
-  searchTerm
+  searchTerm,
 }) => {
+  const { data: materials, isLoading: loadingMaterials } = useMaterials();
+
+  // Mescla todos os materiais cadastrados com suas posições de estoque
+  const mergedInventory = useMemo(() => {
+    const invMap = new Map<string, Inventory>();
+    (inventory || []).forEach((item) => {
+      invMap.set(item.material_id, item);
+    });
+
+    if (materials && materials.length > 0) {
+      return materials.map((mat) => {
+        const existing = invMap.get(mat.id);
+        if (existing) {
+          return { ...existing, material: existing.material || mat };
+        }
+        return {
+          id: `virtual-${mat.id}`,
+          material_id: mat.id,
+          organization_id: mat.organization_id,
+          current_stock: 0,
+          reserved_stock: 0,
+          available_stock: 0,
+          last_movement_at: mat.created_at || new Date().toISOString(),
+          updated_at: mat.updated_at || new Date().toISOString(),
+          material: mat,
+        } as Inventory;
+      });
+    }
+
+    return inventory || [];
+  }, [inventory, materials]);
+
   const filteredInventory = useMemo(() => {
-    return inventory.filter(item =>
-      item.material?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.material?.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+    return mergedInventory.filter(
+      (item) =>
+        item.material?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.material?.sku?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [inventory, searchTerm]);
+  }, [mergedInventory, searchTerm]);
 
   const getStockStatus = (item: Inventory) => {
-    if (!item.material) return 'normal';
-    
-    if (item.current_stock <= 0) return 'out';
-    if (item.current_stock <= item.material.min_stock) return 'low';
-    if (item.current_stock >= item.material.max_stock) return 'high';
-    return 'normal';
+    if (!item.material) return "normal";
+    if (item.current_stock <= 0) return "out";
+    if (item.current_stock <= (item.material.min_stock || 0)) return "low";
+    if (item.material.max_stock && item.current_stock >= item.material.max_stock)
+      return "high";
+    return "normal";
   };
 
   const getStockBadge = (status: string) => {
     switch (status) {
-      case 'out':
-        return <Badge variant="destructive">Esgotado</Badge>;
-      case 'low':
-        return <Badge variant="secondary" className="text-orange-600 border-orange-300">Baixo</Badge>;
-      case 'high':
-        return <Badge variant="secondary" className="text-blue-600 border-blue-300">Alto</Badge>;
+      case "out":
+        return (
+          <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">
+            Sem Estoque
+          </Badge>
+        );
+      case "low":
+        return (
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            Estoque Baixo
+          </Badge>
+        );
       default:
-        return <Badge variant="default">Normal</Badge>;
+        return (
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+            Normal
+          </Badge>
+        );
     }
   };
 
-  if (isLoading) {
+  if (isLoading || loadingMaterials) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-12 rounded" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-[200px]" />
-                  <Skeleton className="h-4 w-[150px]" />
-                </div>
-                <Skeleton className="h-8 w-[80px]" />
-                <Skeleton className="h-8 w-[100px]" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
+    <Card className="border border-slate-200/80 shadow-2xs rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+      <Table>
+        <TableHeader className="bg-slate-50/80">
+          <TableRow>
+            <TableHead className="text-xs font-semibold uppercase">Material</TableHead>
+            <TableHead className="text-xs font-semibold uppercase text-right">Atual</TableHead>
+            <TableHead className="text-xs font-semibold uppercase text-right">Reservado</TableHead>
+            <TableHead className="text-xs font-semibold uppercase text-right">Disponível</TableHead>
+            <TableHead className="text-xs font-semibold uppercase text-right">Mín.</TableHead>
+            <TableHead className="text-xs font-semibold uppercase">Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredInventory.length === 0 ? (
             <TableRow>
-              <TableHead>Material</TableHead>
-              <TableHead>Estoque Atual</TableHead>
-              <TableHead>Estoque Reservado</TableHead>
-              <TableHead>Disponível</TableHead>
-              <TableHead>Estoque Mín.</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Última Movimentação</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableCell colSpan={6} className="text-center py-8 text-sm text-slate-500">
+                {searchTerm
+                  ? "Nenhum material encontrado para esta busca."
+                  : "Nenhum material cadastrado."}
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInventory.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? 'Nenhum item encontrado no estoque' : 'Estoque vazio'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredInventory.map((item) => {
-                const status = getStockStatus(item);
-                
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {status === 'low' && <AlertTriangle className="h-4 w-4 text-orange-500" />}
-                        {status === 'out' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                        <div>
-                          <div className="font-medium">{item.material?.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.material?.unit}
-                          </div>
-                        </div>
+          ) : (
+            filteredInventory.map((item) => {
+              const status = getStockStatus(item);
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {(status === "low" || status === "out") && (
+                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                          {item.material?.name}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">
+                          {item.material?.sku || item.material?.unit}
+                        </p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono font-medium">
-                        {item.current_stock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-muted-foreground">
-                        {item.reserved_stock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono font-medium">
-                        {item.available_stock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-muted-foreground">
-                        {item.material?.min_stock || 0}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {getStockBadge(status)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(item.last_movement_at).toLocaleDateString('pt-BR')}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" title="Entrada">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="Saída">
-                          <TrendingDown className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-semibold">
+                    {item.current_stock} {item.material?.unit}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-slate-500">
+                    {item.reserved_stock}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-semibold text-blue-600">
+                    {item.available_stock ?? item.current_stock - item.reserved_stock}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-slate-500">
+                    {item.material?.min_stock || 0}
+                  </TableCell>
+                  <TableCell>{getStockBadge(status)}</TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
     </Card>
   );
 };
