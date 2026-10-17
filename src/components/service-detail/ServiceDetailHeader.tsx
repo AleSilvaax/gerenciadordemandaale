@@ -1,29 +1,51 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
-export const ServiceDetailHeader: React.FC<{ title?: string; number?: string | number; }> = ({ title, number }) => {
+export const ServiceDetailHeader: React.FC<{
+  title?: string;
+  number?: string | number;
+}> = ({ title, number }) => {
+  const formatShortOS = (num?: string | number) => {
+    if (!num) return null;
+    const parts = String(num).split("-");
+    const last = parts[parts.length - 1].replace("#", "");
+    return `OS #${last}`;
+  };
+
+  const shortOS = formatShortOS(number);
+
   return (
-    <motion.div 
-      className="flex items-center gap-4 mb-8"
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-    >
-      <Link 
-        to="/demandas" 
-        aria-label="Voltar às demandas"
-        className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
-      >
-        <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-      </Link>
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-          {number ? `Demanda #${number}` : 'Detalhes da Demanda'}{title ? ` — ${title}` : ''}
-        </h1>
-        <p className="text-muted-foreground mt-1">Visualize e gerencie os detalhes da demanda</p>
+    <div className="flex items-center justify-between gap-3 pb-2">
+      <div className="flex items-center gap-3 min-w-0">
+        <Button
+          asChild
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 shrink-0 rounded-lg border-slate-200 bg-white hover:bg-slate-50 shadow-2xs"
+        >
+          <Link to="/demandas" aria-label="Voltar para demandas">
+            <ArrowLeft className="h-4 w-4 text-slate-700" />
+          </Link>
+        </Button>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {shortOS && (
+              <span className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-md">
+                {shortOS}
+              </span>
+            )}
+            <span className="text-xs font-medium text-slate-500">
+              Ordem de Serviço
+            </span>
+          </div>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate mt-0.5">
+            {title || "Detalhes da Demanda"}
+          </h1>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
