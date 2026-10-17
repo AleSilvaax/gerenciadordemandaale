@@ -96,7 +96,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
   return (
     <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl overflow-hidden">
       <CardContent className="p-5 space-y-5">
-        {/* Topo: Localidade, Status e Botão Editar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
@@ -122,7 +121,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Faixa de Resumo */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -167,7 +165,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Cliente e Endereço */}
         <div className="space-y-2.5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5 text-blue-600" />
@@ -204,7 +201,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Cronograma */}
         <div className="space-y-2.5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5 text-blue-600" />
@@ -239,7 +235,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Descrição */}
         {service.description && (
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -252,7 +247,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         )}
 
-        {/* Técnico Responsável */}
         <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <User className="h-3.5 w-3.5 text-blue-600" />
