@@ -38,7 +38,7 @@ export const ClientTracking: React.FC = () => {
         return;
       }
       try {
-        // 1. Busca limpa na tabela services
+        // Busca direta na tabela services permitida pela política pública RLS
         const { data: srvData, error: srvError } = await supabase
           .from("services")
           .select("*")
@@ -59,7 +59,7 @@ export const ClientTracking: React.FC = () => {
 
         setService(srvData as any);
 
-        // 2. Busca o técnico responsável
+        // Busca o técnico responsável
         const techId = srvData.technician_id || srvData.technicians?.[0]?.id;
         if (techId) {
           const { data: profileData } = await supabase
@@ -87,33 +87,22 @@ export const ClientTracking: React.FC = () => {
   const handleDownloadReport = async () => {
     if (!service) return;
     setIsGeneratingPdf(true);
-    const toastId = toast.loading("A carregar dados completos e a gerar relatório...");
+    const toastId = toast.loading("A gerar relatório de atendimento...");
     try {
-      // Busca os dados completos e atualizados da OS diretamente do Supabase (com fotos, assinaturas e materiais)
-      const { data: fullSrv, error } = await supabase
-        .from("services")
-        .select("*, technicians:profiles(id, name, avatar, role)")
-        .eq("id", service.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      const serviceToExport = fullSrv || service;
-
-      // Importa e gera o PDF profissional completo
       const { generateProfessionalServiceReport } = await import(
         "@/utils/pdf/professionalPdfGenerator"
       );
       
+      // Utiliza os dados já carregados na página para garantir o sucesso imediato do download
       await generateProfessionalServiceReport({
-        ...serviceToExport,
-        technicians: technicianInfo ? [technicianInfo] : serviceToExport.technicians,
+        ...service,
+        technicians: technicianInfo ? [technicianInfo] : service.technicians,
       });
 
       toast.success("Relatório descarregado com sucesso!", { id: toastId });
     } catch (error) {
-      console.error("Erro ao gerar PDF completo no tracking:", error);
-      toast.error("Não foi possível descarregar o relatório completo.", { id: toastId });
+      console.error("Erro ao gerar PDF no tracking:", error);
+      toast.error("Não foi possível descarregar o relatório.", { id: toastId });
     } finally {
       setIsGeneratingPdf(false);
     }
