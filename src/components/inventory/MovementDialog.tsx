@@ -28,15 +28,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useCreateInventoryMovement, useMaterials } from "@/hooks/useInventory";
+import { toast } from "sonner";
 
 const movementSchema = z.object({
-  material_id: z.string().min(1, "Material é obrigatório"),
+  material_id: z.string().min(1, "Selecione um material"),
   movement_type: z.enum(["entrada", "saida", "ajuste"], {
-    required_error: "Tipo de movimentação é obrigatório",
+    required_error: "Selecione o tipo de movimentação",
   }),
-  quantity: z.coerce.number().min(1, "Quantidade deve ser maior que 0"),
+  quantity: z.coerce.number().min(0.01, "A quantidade deve ser maior que 0"),
   notes: z.string().optional(),
-  cost_per_unit: z.coerce.number().min(0, "Custo deve ser maior ou igual a 0").optional(),
+  cost_per_unit: z.coerce.number().min(0).optional(),
 });
 
 type MovementFormData = z.infer<typeof movementSchema>;
@@ -48,7 +49,7 @@ interface MovementDialogProps {
 
 export const MovementDialog: React.FC<MovementDialogProps> = ({
   open,
-  onClose
+  onClose,
 }) => {
   const { data: materials } = useMaterials();
   const createMovement = useCreateInventoryMovement();
@@ -64,13 +65,31 @@ export const MovementDialog: React.FC<MovementDialogProps> = ({
     },
   });
 
+  const handleMaterialChange = (materialId: string) => {
+    form.setValue("material_id", materialId, { shouldValidate: true });
+    const selectedMat = materials?.find((m) => m.id === materialId);
+    if (selectedMat && selectedMat.cost_per_unit) {
+      form.setValue("cost_per_unit", selectedMat.cost_per_unit);
+    }
+  };
+
   const onSubmit = async (data: MovementFormData) => {
     try {
-      await createMovement.mutateAsync(data as any);
+      await createMovement.mutateAsync({
+        material_id: data.material_id,
+        movement_type: data.movement_type,
+        quantity: Number(data.quantity),
+        cost_per_unit: Number(data.cost_per_unit || 0),
+        notes: data.notes || "",
+      } as any);
+      toast.success("Movimentação de estoque registrada!");
       form.reset();
       onClose();
-    } catch (error) {
-      console.error('Erro ao criar movimentação:', error);
+    } catch (error: any) {
+      console.error("Erro ao criar movimentação:", error);
+      toast.error("Erro ao registrar movimentação", {
+        description: error?.message || "Verifique os dados informados.",
+      });
     }
   };
 
@@ -83,11 +102,13 @@ export const MovementDialog: React.FC<MovementDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Nova Movimentação</DialogTitle>
-          <DialogDescription>
-            Registre uma entrada, saída ou ajuste de estoque
+          <DialogTitle className="text-lg font-bold">
+            Nova Movimentação
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            Registre uma entrada, saída ou ajuste de saldo no estoque
           </DialogDescription>
         </DialogHeader>
 
@@ -98,21 +119,26 @@ export const MovementDialog: React.FC<MovementDialogProps> = ({
               name="material_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Material *</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Material *
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={handleMaterialChange}
+                  >
+                    <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um material" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {materials?.map((material) => (
-                          <SelectItem key={material.id} value={material.id}>
-                            {material.name} ({material.unit})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </FormControl>
+                    <SelectContent>
+                      {materials?.map((material) => (
+                        <SelectItem key={material.id} value={material.id}>
+                          {material.name} ({material.unit})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -123,76 +149,80 @@ export const MovementDialog: React.FC<MovementDialogProps> = ({
               name="movement_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tipo de Movimentação *</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Tipo de Movimentação *
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="entrada">Entrada</SelectItem>
-                        <SelectItem value="saida">Saída</SelectItem>
-                        <SelectItem value="ajuste">Ajuste</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="entrada">Entrada (+)</SelectItem>
+                      <SelectItem value="saida">Saída (-)</SelectItem>
+                      <SelectItem value="ajuste">Ajuste de Saldo (=)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {movementType === "ajuste" ? "Nova Quantidade Total *" : "Quantidade *"}
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      placeholder={movementType === "ajuste" ? "Quantidade final no estoque" : "Quantidade a movimentar"}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {movementType === "entrada" && (
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name="cost_per_unit"
+                name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Custo por Unidade</FormLabel>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                      {movementType === "ajuste"
+                        ? "Novo Saldo *"
+                        : "Quantidade *"}
+                    </FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        placeholder="0.00" 
-                        {...field} 
-                      />
+                      <Input type="number" step="any" min="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
+
+              {movementType === "entrada" && (
+                <FormField
+                  control={form.control}
+                  name="cost_per_unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                        Custo Unit. (R$)
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" min="0" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
 
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observações</FormLabel>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Observações
+                  </FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Motivo da movimentação, fornecedor, etc." 
-                      {...field} 
+                    <Textarea
+                      placeholder="Nota fiscal, fornecedor ou motivo..."
+                      rows={2}
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -200,17 +230,18 @@ export const MovementDialog: React.FC<MovementDialogProps> = ({
               )}
             />
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={createMovement.isPending}
-              >
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMovement.isPending}>
-                {createMovement.isPending ? "Registrando..." : "Registrar Movimentação"}
+              <Button
+                type="submit"
+                disabled={createMovement.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {createMovement.isPending
+                  ? "Registrando..."
+                  : "Registrar Movimentação"}
               </Button>
             </div>
           </form>
