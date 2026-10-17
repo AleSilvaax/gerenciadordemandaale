@@ -60,7 +60,7 @@ const loadImageWithDimensions = (
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
         resolve({
           dataUrl,
           width: canvas.width,
@@ -94,9 +94,25 @@ export const generateProfessionalServiceReport = async (
     minute: "2-digit",
   });
 
-  // 1. Buscar materiais reais vinculados à demanda no Supabase
+  // 1. Buscar materiais reais e fotos atualizadas do Supabase se necessário
   let materialRows: Array<[string, string, string, string, string]> = [];
+  let fullServiceData = { ...service };
+
   try {
+    const { data: srvDetails } = await supabase
+      .from("services")
+      .select("*, technicians:profiles(id, name, avatar, role)")
+      .eq("id", service.id)
+      .maybeSingle();
+
+    if (srvDetails) {
+      fullServiceData = {
+        ...fullServiceData,
+        ...srvDetails,
+        technicians: srvDetails.technicians ? [srvDetails.technicians] : fullServiceData.technicians,
+      };
+    }
+
     const { data: srvMaterials } = await supabase
       .from("service_materials")
       .select("*, material:materials(name, unit, cost_per_unit)")
@@ -108,9 +124,8 @@ export const generateProfessionalServiceReport = async (
         const unit = item.material?.unit || "un";
         const planned = Number(item.planned_quantity || item.quantity || 0);
         const rawUsed = Number(item.used_quantity || 0);
-        // Se a demanda está concluída e o usado ficou 0, assume o planejado
         const effectiveUsed =
-          service.status === "concluido" && rawUsed === 0 ? planned : rawUsed;
+          fullServiceData.status === "concluido" && rawUsed === 0 ? planned : rawUsed;
         const unitCost = Number(
           item.cost_per_unit || item.material?.cost_per_unit || 0
         );
@@ -129,10 +144,16 @@ export const generateProfessionalServiceReport = async (
       });
     }
   } catch (err) {
-    console.warn("Aviso ao carregar materiais para o PDF:", err);
+    console.warn("Aviso ao carregar dados complementares para o PDF:", err);
   }
 
-  // 2. Cabeçalho Corporativo (Página 1)
+  // Nome do técnico formatado
+  const techName =
+    fullServiceData.technicians?.[0]?.name ||
+    (fullServiceData as any).technician_name ||
+    "Não atribuído";
+
+  // 2. Cabeçalho Corporativo Moderno (Slate-900 com Accent Azul)
   doc.setFillColor(15, 23, 42); // Slate-900
   doc.rect(0, 0, pageWidth, 36, "F");
   doc.setFillColor(37, 99, 235); // Blue-600
@@ -140,18 +161,17 @@ export const generateProfessionalServiceReport = async (
 
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
+  doc.setFontSize(14);
   doc.text("RELATÓRIO TÉCNICO DE ATENDIMENTO", margin, 15);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
+  doc.setFontSize(9);
   doc.setTextColor(203, 213, 225);
-  doc.text(`${shortOS}  •  ${service.title || "Ordem de Serviço"}`, margin, 22);
+  doc.text(`${shortOS}  •  ${fullServiceData.title || "Ordem de Serviço"}`, margin, 22);
   doc.text(`Emitido em: ${emittedAt}`, margin, 28);
 
-  // Marca à direita
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
   doc.text("ServiceFlow", pageWidth - margin, 15, { align: "right" });
 
@@ -161,28 +181,26 @@ export const generateProfessionalServiceReport = async (
     pendente: "PENDENTE",
     cancelado: "CANCELADO",
   };
-  const statusLabel = statusMap[service.status] || "PENDENTE";
-  doc.setFontSize(9);
+  const statusLabel = statusMap[fullServiceData.status] || "PENDENTE";
+  doc.setFontSize(8.5);
   doc.setTextColor(147, 197, 253);
-  doc.text(`STATUS: ${statusLabel}`, pageWidth - margin, 22, {
-    align: "right",
-  });
+  doc.text(`STATUS: ${statusLabel}`, pageWidth - margin, 22, { align: "right" });
 
-  let currentY = 45;
+  let currentY = 44;
   let sectionIndex = 1;
 
   const drawSectionHeader = (title: string) => {
-    if (currentY > pageHeight - 40) {
+    if (currentY > pageHeight - 35) {
       doc.addPage();
       currentY = 20;
     }
-    doc.setFillColor(241, 245, 249); // Slate-100
+    doc.setFillColor(241, 245, 249);
     doc.rect(margin, currentY, contentWidth, 8, "F");
     doc.setFillColor(37, 99, 235);
     doc.rect(margin, currentY, 2, 8, "F");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
+    doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
     doc.text(
       `${sectionIndex}. ${title.toUpperCase()}`,
@@ -204,41 +222,36 @@ export const generateProfessionalServiceReport = async (
     fontSize: 8.5,
   };
 
-  // SECÇÃO 1: Informações Gerais e Cliente
+  // SECÇÃO 1: Informações Gerais
   drawSectionHeader("Informações Gerais e Cliente");
   autoTable(doc, {
     startY: currentY,
     head: [["Campo", "Informação", "Campo", "Informação"]],
     body: [
-      [
-        "Ordem de Serviço",
-        shortOS,
-        "Status Atual",
-        statusLabel,
-      ],
+      ["Ordem de Serviço", shortOS, "Status Atual", statusLabel],
       [
         "Tipo de Serviço",
-        service.serviceType || "Vistoria",
+        fullServiceData.serviceType || "Vistoria",
         "Prioridade",
-        (service.priority || "Média").toUpperCase(),
+        (fullServiceData.priority || "Média").toUpperCase(),
       ],
       [
         "Cliente",
-        service.client || "-",
+        fullServiceData.client || "Não informado",
         "Cidade / Local",
-        service.city || service.location || "São Paulo",
+        fullServiceData.city || fullServiceData.location || "São Paulo",
       ],
       [
         "Endereço",
-        service.address || service.location || "-",
+        fullServiceData.address || fullServiceData.location || "Não informado",
         "Técnico Responsável",
-        service.technicians?.[0]?.name || "Não atribuído",
+        techName,
       ],
       [
         "Data de Criação",
-        formatDateBR(service.creationDate),
+        formatDateBR(fullServiceData.creationDate),
         "Prazo / Vencimento",
-        formatDateBR(service.dueDate),
+        formatDateBR(fullServiceData.dueDate),
       ],
     ],
     headStyles: tableHeadStyles,
@@ -253,15 +266,15 @@ export const generateProfessionalServiceReport = async (
   });
   currentY = (doc as any).lastAutoTable.finalY + 8;
 
-  // SECÇÃO 2: Escopo / Descrição Técnica (se existir)
-  if (service.description || service.notes) {
+  // SECÇÃO 2: Descrição e Observações
+  if (fullServiceData.description || fullServiceData.notes) {
     drawSectionHeader("Descrição e Observações do Serviço");
     const descRows: Array<[string, string]> = [];
-    if (service.description) {
-      descRows.push(["Descrição Técnica", service.description]);
+    if (fullServiceData.description) {
+      descRows.push(["Descrição Técnica", fullServiceData.description]);
     }
-    if (service.notes) {
-      descRows.push(["Observações", service.notes]);
+    if (fullServiceData.notes) {
+      descRows.push(["Observações", fullServiceData.notes]);
     }
     autoTable(doc, {
       startY: currentY,
@@ -275,10 +288,10 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 3: Checklist / Campos Técnicos (se preenchidos)
-  if (service.customFields && service.customFields.length > 0) {
+  // SECÇÃO 3: Checklist / Campos Customizados
+  if (fullServiceData.customFields && fullServiceData.customFields.length > 0) {
     drawSectionHeader("Checklist Técnico");
-    const customRows = service.customFields.map((f) => [
+    const customRows = fullServiceData.customFields.map((f) => [
       f.label || f.id,
       typeof f.value === "boolean"
         ? f.value
@@ -297,7 +310,7 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 4: Materiais Utilizados
+  // SECÇÃO 4: Materiais
   if (materialRows.length > 0) {
     drawSectionHeader("Materiais Utilizados");
     autoTable(doc, {
@@ -311,14 +324,14 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 5: Fotografias do Atendimento (Mantendo Proporção Original)
+  // SECÇÃO 5: Fotografias (Garantindo que todas apareçam)
   const rawPhotos: Array<{ url: string; title: string }> = (
-    service.photos || []
+    fullServiceData.photos || []
   ).map((p: any, idx: number) => {
     if (typeof p === "string") {
       return {
         url: p,
-        title: service.photoTitles?.[idx] || `Registo Fotográfico ${idx + 1}`,
+        title: fullServiceData.photoTitles?.[idx] || `Registo Fotográfico ${idx + 1}`,
       };
     }
     return {
@@ -337,8 +350,8 @@ export const generateProfessionalServiceReport = async (
     if (loadedPhotos.length > 0) {
       drawSectionHeader(`Anexos Fotográficos (${loadedPhotos.length})`);
 
-      const boxWidth = (contentWidth - 6) / 2; // 2 colunas
-      const boxHeight = 64;
+      const boxWidth = (contentWidth - 6) / 2;
+      const boxHeight = 66;
       const imgAreaHeight = 52;
 
       for (let i = 0; i < loadedPhotos.length; i += 2) {
@@ -351,12 +364,10 @@ export const generateProfessionalServiceReport = async (
         pair.forEach((photo, colIdx) => {
           const boxX = margin + colIdx * (boxWidth + 6);
 
-          // Moldura do cartão da foto
           doc.setDrawColor(226, 232, 240);
           doc.setFillColor(248, 250, 252);
           doc.roundedRect(boxX, currentY, boxWidth, boxHeight, 2, 2, "FD");
 
-          // Cálculo de proporção (object-contain) para não achatar a imagem
           const maxW = boxWidth - 6;
           const maxH = imgAreaHeight - 4;
           const ratio = Math.min(maxW / photo.width, maxH / photo.height);
@@ -367,7 +378,6 @@ export const generateProfessionalServiceReport = async (
 
           doc.addImage(photo.dataUrl, "JPEG", imgX, imgY, drawW, drawH);
 
-          // Legenda
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8);
           doc.setTextColor(51, 65, 85);
@@ -383,12 +393,12 @@ export const generateProfessionalServiceReport = async (
     }
   }
 
-  // SECÇÃO 6: Assinaturas (se existirem)
+  // SECÇÃO 6: Assinaturas
   const clientSig =
-    service.signatures?.client || service.reportData?.clientSignature;
-  const techSig = service.signatures?.technician;
+    fullServiceData.signatures?.client || (fullServiceData as any).reportData?.clientSignature;
+  const techSig = fullServiceData.signatures?.technician;
 
-  if (clientSig || techSig) {
+  if (clientSig || techSig || true) {
     if (currentY + 45 > pageHeight - 20) {
       doc.addPage();
       currentY = 20;
@@ -398,55 +408,39 @@ export const generateProfessionalServiceReport = async (
     const sigBoxW = (contentWidth - 8) / 2;
     const sigBoxH = 32;
 
-    // Caixa Cliente
     doc.setDrawColor(203, 213, 225);
     doc.roundedRect(margin, currentY, sigBoxW, sigBoxH, 2, 2, "S");
     if (clientSig && clientSig.startsWith("data:image")) {
       try {
-        doc.addImage(
-          clientSig,
-          "PNG",
-          margin + 10,
-          currentY + 3,
-          sigBoxW - 20,
-          20
-        );
+        doc.addImage(clientSig, "PNG", margin + 10, currentY + 3, sigBoxW - 20, 20);
       } catch {}
     }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
     doc.text(
-      `Cliente: ${service.client || "Responsável"}`,
+      `Cliente: ${fullServiceData.client || "Responsável"}`,
       margin + sigBoxW / 2,
       currentY + sigBoxH - 3,
       { align: "center" }
     );
 
-    // Caixa Técnico
     const techBoxX = margin + sigBoxW + 8;
     doc.roundedRect(techBoxX, currentY, sigBoxW, sigBoxH, 2, 2, "S");
     if (techSig && techSig.startsWith("data:image")) {
       try {
-        doc.addImage(
-          techSig,
-          "PNG",
-          techBoxX + 10,
-          currentY + 3,
-          sigBoxW - 20,
-          20
-        );
+        doc.addImage(techSig, "PNG", techBoxX + 10, currentY + 3, sigBoxW - 20, 20);
       } catch {}
     }
     doc.text(
-      `Técnico: ${service.technicians?.[0]?.name || "Responsável Técnico"}`,
+      `Técnico: ${techName}`,
       techBoxX + sigBoxW / 2,
       currentY + sigBoxH - 3,
       { align: "center" }
     );
   }
 
-  // Rodapé de Paginação Exato em Todas as Páginas
+  // Rodapé Exato em Todas as Páginas
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
@@ -469,7 +463,7 @@ export const generateProfessionalServiceReport = async (
     );
   }
 
-  const safeTitle = (service.title || "OS")
+  const safeTitle = (fullServiceData.title || "OS")
     .replace(/[^\w\s-]/gi, "")
     .trim()
     .replace(/\s+/g, "_");
