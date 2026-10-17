@@ -25,9 +25,9 @@ import { toast } from "sonner";
 export const ClientTracking: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [service, setService] = useState<Service | null>(null);
+  const [technicianInfo, setTechnicianInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
@@ -38,28 +38,44 @@ export const ClientTracking: React.FC = () => {
         return;
       }
       try {
-        // Tenta buscar a demanda pelo ID (token)
-        const { data, error } = await supabase
+        // 1. Busca limpa apenas na tabela services (sem joins problemáticos)
+        const { data: srvData, error: srvError } = await supabase
           .from("services")
-          .select("*, technicians:profiles(id, name, avatar, role)")
+          .select("*")
           .eq("id", token)
           .maybeSingle();
 
-        if (error) {
-          console.error("Erro Supabase RLS:", error);
+        if (srvError) {
+          console.error("Erro ao buscar serviço:", srvError);
           setErrorMessage("Erro ao aceder à base de dados.");
-          setDebugDetail(error.message);
-          throw error;
+          throw srvError;
         }
 
-        if (data) {
-          setService(data as any);
-        } else {
-          setErrorMessage("Atendimento não encontrado.");
-          setDebugDetail(`Nenhum registo encontrado para o ID: ${token}`);
+        if (!srvData) {
+          setErrorMessage("Atendimento não encontrado com este identificador.");
+          setIsLoading(false);
+          return;
+        }
+
+        setService(srvData as any);
+
+        // 2. Tenta buscar o técnico responsável se houver ID ou se estiver no array technicians
+        const techId = srvData.technician_id || srvData.technicians?.[0]?.id;
+        if (techId) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, name, avatar, role")
+            .eq("id", techId)
+            .maybeSingle();
+
+          if (profileData) {
+            setTechnicianInfo(profileData);
+          }
+        } else if (srvData.technicians?.[0]) {
+          setTechnicianInfo(srvData.technicians[0]);
         }
       } catch (err: any) {
-        console.error("Erro ao carregar rastreio:", err);
+        console.error("Erro no rastreio:", err);
       } finally {
         setIsLoading(false);
       }
@@ -76,7 +92,10 @@ export const ClientTracking: React.FC = () => {
       const { generateProfessionalServiceReport } = await import(
         "@/utils/pdf/professionalPdfGenerator"
       );
-      await generateProfessionalServiceReport(service);
+      await generateProfessionalServiceReport({
+        ...service,
+        technicians: technicianInfo ? [technicianInfo] : service.technicians,
+      });
       toast.success("Relatório descarregado com sucesso!", { id: toastId });
     } catch (error) {
       console.error("Erro ao gerar PDF no tracking:", error);
@@ -103,18 +122,13 @@ export const ClientTracking: React.FC = () => {
         </div>
         <h1 className="text-lg font-bold text-slate-900 dark:text-white">Não foi possível carregar o rastreio</h1>
         <p className="text-xs text-slate-500 mt-1 max-w-xs">
-          {errorMessage}
+          {errorMessage || "O link de acompanhamento pode ter expirado."}
         </p>
-        {debugDetail && (
-          <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 max-w-sm overflow-x-auto">
-            <p className="text-[10px] font-mono text-rose-600 text-left">Detalhe técnico: {debugDetail}</p>
-          </div>
-        )}
       </div>
     );
   }
 
-  const technician = service.technicians?.[0];
+  const tech = technicianInfo || service.technicians?.[0];
   const isConcluded = service.status === "concluido";
 
   return (
@@ -170,17 +184,17 @@ export const ClientTracking: React.FC = () => {
               </p>
               <div className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white">
                 <Avatar className="h-10 w-10 border border-slate-200">
-                  <AvatarImage src={technician?.avatar} />
+                  <AvatarImage src={tech?.avatar} />
                   <AvatarFallback className="bg-blue-50 text-blue-600 text-xs font-bold">
-                    {technician?.name ? technician.name.slice(0, 2).toUpperCase() : "T"}
+                    {tech?.name ? tech.name.slice(0, 2).toUpperCase() : "T"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="text-sm font-bold text-slate-900 capitalize">
-                    {technician?.name || "Técnico em designação"}
+                    {tech?.name || "Técnico em designação"}
                   </p>
                   <p className="text-xs text-slate-500 capitalize">
-                    {technician?.role || "Especialista em Campo"}
+                    {tech?.role || "Especialista em Campo"}
                   </p>
                 </div>
               </div>
