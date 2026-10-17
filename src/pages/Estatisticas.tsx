@@ -75,3 +75,11 @@
       toast.error("Erro ao exportar PDF.", { id: toastId });
     }
   };
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+};
+
+export default Estatisticas;
