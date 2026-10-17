@@ -27,6 +27,7 @@ import { ServiceErrorBoundary } from '@/components/common/ServiceErrorBoundary';
 import Reports from '@/pages/Reports';
 import ServiceTypes from '@/pages/ServiceTypes';
 import Inventory from '@/pages/Inventory';
+import ClientTracking from '@/pages/ClientTracking';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function App() {
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/tracking/:token" element={<ClientTracking />} />
             
             {/* Rotas protegidas */}
             <Route path="/*" element={
