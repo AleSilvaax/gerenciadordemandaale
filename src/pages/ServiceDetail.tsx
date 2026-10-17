@@ -73,8 +73,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       });
       toast.success("Relatório PDF gerado com sucesso!", { id: toastId });
     } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      toast.error("Não foi possível gerar o relatório PDF.", { id: toastId });
+      console.error("Erro ao gerar relatório da demanda:", error);
+      toast.error("Não foi possível gerar o PDF da demanda.", { id: toastId });
     }
   };
 
