@@ -2,8 +2,9 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronRight, TrendingUp, Calendar } from "lucide-react";
+import { ChevronRight, CheckCircle2, Clock, Star } from "lucide-react";
 import { TeamMember } from "@/types/serviceTypes";
+import { cn } from "@/lib/utils";
 
 interface CompactTeamMemberCardProps {
   member: TeamMember;
@@ -20,110 +21,120 @@ interface CompactTeamMemberCardProps {
   };
 }
 
-export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({ 
-  member, 
+export const CompactTeamMemberCard: React.FC<CompactTeamMemberCardProps> = ({
+  member,
   onEdit,
-  stats
+  stats,
 }) => {
-  // Usar apenas stats reais do membro - sem fallback para dados mock
-  const memberStats = stats || member.stats || {
-    completedServices: 0,
-    pendingServices: 0,
-    inProgressServices: 0,
-    totalServices: 0,
-    highPriorityServices: 0,
-    avgRating: 0,
-    completionRate: 0,
-    joinDate: new Date().toLocaleDateString('pt-BR')
-  };
+  const memberStats = stats ||
+    member.stats || {
+      completedServices: 0,
+      pendingServices: 0,
+      avgRating: 0,
+      joinDate: new Date().toLocaleDateString("pt-BR"),
+    };
+
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case "tecnico": return "Técnico";
-      case "administrador": return "Admin";
-      case "gestor": return "Gestor";
-      case "requisitor": return "Requisitor";
-      default: return role;
+      case "tecnico":
+        return "Técnico";
+      case "administrador":
+        return "Administrador";
+      case "gestor":
+        return "Gestor";
+      case "requisitor":
+        return "Requisitor";
+      default:
+        return role;
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleBadgeStyle = (role: string) => {
     switch (role) {
-      case "administrador": return "bg-destructive/20 text-destructive border-destructive/30";
-      case "gestor": return "bg-primary/20 text-primary border-primary/30";
-      case "tecnico": return "bg-success/20 text-success border-success/30";
-      case "requisitor": return "bg-warning/20 text-warning border-warning/30";
-      default: return "bg-muted/20 text-muted-foreground border-muted/30";
+      case "administrador":
+        return "bg-rose-50 text-rose-700 border-rose-200";
+      case "gestor":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      case "tecnico":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      default:
+        return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
+
+  // Oculta e-mails fictícios gerados com @empresa.com ou @exemplo.com
+  const hasRealEmail =
+    member.email &&
+    !member.email.endsWith("@empresa.com") &&
+    !member.email.endsWith("@exemplo.com");
 
   return (
-    <Card 
-      className="hover:shadow-md transition-all duration-200 border border-border/60 bg-card cursor-pointer active:scale-[0.98]"
+    <Card
       onClick={() => onEdit?.(member)}
+      className="group cursor-pointer bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all rounded-xl"
     >
       <CardContent className="p-4">
-        {/* Linha Superior: Avatar, Nome e Role */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Avatar className="w-10 h-10 border-2 border-background">
-              <AvatarImage src={member.avatar} alt={member.name} />
-              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                {member.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-10 w-10 border border-slate-200">
+              <AvatarImage src={member.avatar} />
+              <AvatarFallback className="bg-blue-50 text-blue-600 text-xs font-bold">
+                {member.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2) || "U"}
               </AvatarFallback>
             </Avatar>
-            
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-base truncate">{member.name}</h3>
-              <p className="text-xs text-muted-foreground truncate">
-                {member.email || `${member.name.toLowerCase().replace(' ', '.')}@empresa.com`}
+
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate capitalize">
+                {member.name}
+              </h3>
+              <p className="text-xs text-slate-500 truncate">
+                {hasRealEmail
+                  ? member.email
+                  : `Função: ${getRoleDisplayName(member.role)}`}
               </p>
             </div>
           </div>
-          
-          <Badge 
-            variant="outline" 
-            className={`text-xs px-2 py-1 font-medium border ${getRoleColor(member.role)}`}
+
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[11px] font-medium px-2.5 py-0.5 shrink-0",
+              getRoleBadgeStyle(member.role)
+            )}
           >
             {getRoleDisplayName(member.role)}
           </Badge>
         </div>
 
-        {/* Linha de Estatísticas REAIS */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3 text-green-500" />
-                <span className="font-medium text-green-600 dark:text-green-400">{memberStats.completedServices}</span>
-                <span className="text-muted-foreground">concluídos</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-orange-500" />
-                <span className="font-medium text-orange-600 dark:text-orange-400">{memberStats.pendingServices}</span>
-                <span className="text-muted-foreground">pendentes</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <span className="font-medium text-foreground">
-                {memberStats.avgRating > 0 ? memberStats.avgRating.toFixed(1) : 'N/A'}
-              </span>
-              <span className="text-yellow-500">★</span>
-            </div>
-          </div>
-          
-          {/* Estatísticas extras visíveis em desktop */}
-          <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <span>Desde: <span className="font-medium text-foreground">{memberStats.joinDate}</span></span>
-            </div>
-          </div>
-        </div>
+        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-4">
+            <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {memberStats.completedServices} concluído
+              {memberStats.completedServices !== 1 ? "s" : ""}
+            </span>
 
-        {/* Indicador de navegação */}
-        <div className="flex justify-end mt-2">
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span className="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+              <Clock className="h-3.5 w-3.5" />
+              {memberStats.pendingServices} pendente
+              {memberStats.pendingServices !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {memberStats.completedServices > 0 && memberStats.avgRating > 0 && (
+              <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-600">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                {memberStats.avgRating.toFixed(1)}
+              </span>
+            )}
+            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+          </div>
         </div>
       </CardContent>
     </Card>
