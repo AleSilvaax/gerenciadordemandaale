@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { FileText, CheckCircle, Clock, X, Download, PlayCircle, Pause, AlertTriangle } from "lucide-react";
+import { FileText, CheckCircle, Clock, X, Download, PlayCircle, Pause, AlertTriangle, Share2 } from "lucide-react";
 import { Service } from "@/types/serviceTypes";
 import SectionCard from "@/components/service-detail/SectionCard";
 import { ServiceCompletionValidationModal } from "./ServiceCompletionValidationModal";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface ServiceActionsProps {
   service: Service;
@@ -73,7 +74,6 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
     } catch (error: any) {
       console.error('Erro ao finalizar demanda:', error);
       
-      // Verificar se é erro de material em falta
       if (error?.message?.startsWith('MATERIAL_SHORTAGE:')) {
         const shortagesData = JSON.parse(error.message.replace('MATERIAL_SHORTAGE:', ''));
         setMaterialShortages(shortagesData);
@@ -88,8 +88,6 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
   const handleProceedWithCompletion = async () => {
     try {
       setIsUpdatingStatus(true);
-      // Forçar atualização diretamente, ignorando validação de materiais
-      // (o trigger do banco ainda vai validar, mas com mensagem mais clara)
       await onStatusChange('concluido');
       setValidationModalOpen(false);
     } catch (error: any) {
@@ -102,6 +100,12 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
   const handleAddStock = () => {
     setValidationModalOpen(false);
     navigate('/inventory');
+  };
+
+  const handleCopyTrackingLink = () => {
+    const trackingUrl = `${window.location.origin}/tracking/${service.id}`;
+    navigator.clipboard.writeText(trackingUrl);
+    toast.success("Link de acompanhamento copiado para a área de transferência!");
   };
 
   return (
@@ -195,44 +199,58 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
             )}
           </div>
 
-          {/* Report Generation */}
-          {onGenerateReport && (
-            <div className="bg-gradient-to-br from-accent/10 via-background/80 to-secondary/10 rounded-xl p-6 border border-border/60">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-accent" />
+          {/* Report Generation & Client Tracking */}
+          <div className="space-y-3">
+            {onGenerateReport && (
+              <div className="bg-gradient-to-br from-accent/10 via-background/80 to-secondary/10 rounded-xl p-6 border border-border/60 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-accent" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">Relatório e Partilha</h4>
+                    <p className="text-xs text-muted-foreground">Documentação e Portal do Cliente</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">Relatório Profissional</h4>
-                  <p className="text-xs text-muted-foreground">Documento completo com todas as informações</p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <Button 
+                    onClick={async () => {
+                      if (!onGenerateReport) return;
+                      try {
+                        setDownloading(true);
+                        await onGenerateReport();
+                      } finally {
+                        setDownloading(false);
+                      }
+                    }} 
+                    className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground"
+                    disabled={downloading}
+                    aria-label="Gerar relatório PDF da demanda"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {downloading ? 'Gerando...' : 'Baixar PDF'}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCopyTrackingLink}
+                    className="w-full h-11 border-border bg-card hover:bg-accent/10 text-foreground"
+                  >
+                    <Share2 className="w-4 h-4 mr-2 text-primary" />
+                    Copiar Link Cliente
+                  </Button>
+                </div>
+                
+                <div className="p-3 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/30">
+                  <p className="text-xs text-muted-foreground text-center">
+                    🌐 Envie o link do cliente para acompanhamento em tempo real ou baixe o PDF completo.
+                  </p>
                 </div>
               </div>
-              
-              <Button 
-                onClick={async () => {
-                  if (!onGenerateReport) return;
-                  try {
-                    setDownloading(true);
-                    await onGenerateReport();
-                  } finally {
-                    setDownloading(false);
-                  }
-                }} 
-                className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:border disabled:border-border/60 disabled:cursor-not-allowed"
-                disabled={downloading}
-                aria-label="Gerar relatório PDF da demanda"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {downloading ? 'Gerando Relatório...' : 'Baixar Relatório PDF'}
-              </Button>
-              
-              <div className="mt-3 p-3 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/30">
-                <p className="text-xs text-muted-foreground text-center">
-                  📋 Inclui detalhes completos, cronograma, fotos, assinaturas e comunicações
-                </p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </SectionCard>
 
@@ -275,3 +293,5 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
     </>
   );
 };
+
+export default ServiceActions;
