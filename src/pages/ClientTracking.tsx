@@ -26,27 +26,36 @@ export const ClientTracking: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     const fetchServiceByToken = async () => {
       if (!token) {
+        setErrorMessage("Link de rastreio inválido.");
         setIsLoading(false);
         return;
       }
       try {
-        // Tenta buscar a demanda pelo ID direto ou por campo de tracking se houver
+        // Consulta ao Supabase com tratamento de erro robusto
         const { data, error } = await supabase
           .from("services")
           .select("*, technicians:profiles(id, name, avatar, role)")
           .eq("id", token)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erro Supabase RLS:", error);
+          setErrorMessage("Erro ao carregar os dados de atendimento. Verifique as permissões de acesso.");
+          throw error;
+        }
+
         if (data) {
           setService(data as any);
+        } else {
+          setErrorMessage("Atendimento não encontrado com este identificador.");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Erro ao carregar rastreio:", err);
       } finally {
         setIsLoading(false);
@@ -83,15 +92,15 @@ export const ClientTracking: React.FC = () => {
     );
   }
 
-  if (!service) {
+  if (errorMessage || !service) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600 mb-3">
           <AlertCircle className="h-6 w-6" />
         </div>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-white">Atendimento não encontrado</h1>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-white">Não foi possível carregar o rastreio</h1>
         <p className="text-xs text-slate-500 mt-1 max-w-xs">
-          O link de acompanhamento pode ter expirado ou o endereço está incorreto.
+          {errorMessage || "O link de acompanhamento pode ter expirado ou as políticas de acesso público (RLS) precisam de ser aplicadas na base de dados."}
         </p>
       </div>
     );
