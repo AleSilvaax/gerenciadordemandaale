@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { StatCard } from '@/components/ui-custom/StatCard';
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -170,78 +171,11 @@ const Estatisticas: React.FC = () => {
 
         {/* KPI Cards */}
         <motion.div variants={itemVariants}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Total de Demandas</p>
-                    <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{total}</p>
-                    <div className="flex items-center mt-2 text-blue-600">
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Trending</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-blue-200 dark:bg-blue-800/50 rounded-full">
-                    <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 border-green-200 dark:border-green-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700 dark:text-green-300">Concluídas</p>
-                    <p className="text-3xl font-bold text-green-900 dark:text-green-100">{completed}</p>
-                    <div className="flex items-center mt-2 text-green-600">
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Success</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-green-200 dark:bg-green-800/50 rounded-full">
-                    <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30 border-yellow-200 dark:border-yellow-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Taxa de Conclusão</p>
-                    <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{completionRate}%</p>
-                    <div className="flex items-center mt-2 text-yellow-600">
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Rate</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-yellow-200 dark:bg-yellow-800/50 rounded-full">
-                    <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Tempo Médio</p>
-                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{avgResolutionTime}h</p>
-                    <div className="flex items-center mt-2 text-purple-600">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Average</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-purple-200 dark:bg-purple-800/50 rounded-full">
-                    <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard tone="blue" title="Total de Demandas" value={total} description="Total no período" icon={<Activity />} />
+            <StatCard tone="emerald" title="Concluídas" value={completed} description="Finalizadas" icon={<CheckCircle />} />
+            <StatCard tone="amber" title="Taxa de Conclusão" value={`${completionRate}%`} description="Taxa de sucesso" icon={<TrendingUp />} />
+            <StatCard tone="rose" title="Tempo Médio" value={`${avgResolutionTime}h`} description="Tempo médio" icon={<Clock />} />
           </div>
         </motion.div>
 
@@ -262,19 +196,6 @@ const Estatisticas: React.FC = () => {
                 {pieData.length > 0 ? (
                   <div className="space-y-4">
                     <AnimatedPieChart data={pieData} />
-                    <div className="flex flex-wrap justify-center gap-4">
-                      {pieData.map((entry, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: entry.color }}
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {entry.name}: {entry.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-64 text-muted-foreground">

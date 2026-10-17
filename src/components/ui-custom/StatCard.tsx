@@ -1,7 +1,15 @@
-
 import React, { ReactNode } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+export type KpiTone = "blue" | "emerald" | "amber" | "rose" | "slate";
+
+const toneClasses: Record<KpiTone, string> = {
+  blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+  emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+  amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+  rose: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400",
+  slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+};
 
 interface StatCardProps {
   title: string;
@@ -9,43 +17,28 @@ interface StatCardProps {
   icon?: ReactNode;
   description?: string;
   className?: string;
+  tone?: KpiTone;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({
-  title,
-  value,
-  icon,
-  description,
-  className
-}) => {
-  return (
-    <Card
-      className={cn(
-        "overflow-hidden transition-all hover:scale-[1.02] bg-card/70 backdrop-blur-sm",
-        "w-full max-w-full",
-        className
-      )}
-    >
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 sm:mb-2 text-left-force truncate">
-              {title}
-            </p>
-            <div className="text-2xl sm:text-3xl font-bold text-left-force mb-1 truncate">{value}</div>
-            {description && (
-              <p className="text-xs sm:text-sm text-muted-foreground text-left-force truncate">
-                {description}
-              </p>
-            )}
-          </div>
-          {icon && (
-            <div className="rounded-full bg-background/60 p-2 sm:p-3 backdrop-blur-sm border border-border/20 ml-2 sm:ml-4 flex-shrink-0">
-              {icon}
-            </div>
-          )}
+/** Card de KPI padronizado: fundo branco, título pequeno, valor mono, ícone em box suave. */
+export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, description, className, tone = "slate" }) => (
+  <div
+    className={cn(
+      "w-full min-w-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 shadow-sm",
+      className
+    )}
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider truncate">{title}</p>
+        <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white truncate">{value}</div>
+        {description && <p className="mt-0.5 text-xs text-slate-500 truncate">{description}</p>}
+      </div>
+      {icon && (
+        <div className={cn("h-9 w-9 shrink-0 rounded-lg flex items-center justify-center [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-current", toneClasses[tone])}>
+          {icon}
         </div>
-      </CardContent>
-    </Card>
-  );
-};
+      )}
+    </div>
+  </div>
+);
