@@ -38,7 +38,7 @@ export const ClientTracking: React.FC = () => {
         return;
       }
       try {
-        // Busca completa na tabela services para garantir fotos, assinaturas e checklists
+        // Busca completa na tabela services
         const { data: srvData, error: srvError } = await supabase
           .from("services")
           .select("*")
@@ -59,7 +59,7 @@ export const ClientTracking: React.FC = () => {
 
         setService(srvData as any);
 
-        // Busca o técnico responsável na tabela profiles
+        // Busca o técnico responsável
         const techId = srvData.technician_id || srvData.technicians?.[0]?.id;
         if (techId) {
           const { data: profileData } = await supabase
@@ -87,22 +87,24 @@ export const ClientTracking: React.FC = () => {
   const handleDownloadReport = async () => {
     if (!service) return;
     setIsGeneratingPdf(true);
-    const toastId = toast.loading("A gerar relatório completo...");
+    const toastId = toast.loading("A preparar relatório completo com fotos e assinaturas...");
     try {
       const { generateProfessionalServiceReport } = await import(
         "@/utils/pdf/professionalPdfGenerator"
       );
       
-      // Passa o serviço completo com todas as fotos, assinaturas e o técnico enriquecido
+      // Garante que passamos o objeto com as fotos, assinaturas e técnico devidamente mapeados
       await generateProfessionalServiceReport({
         ...service,
         technicians: technicianInfo ? [technicianInfo] : service.technicians,
+        photos: service.photos || [],
+        signatures: service.signatures || {},
       });
 
-      toast.success("Relatório gerado com sucesso!", { id: toastId });
+      toast.success("Relatório descarregado com sucesso!", { id: toastId });
     } catch (error) {
       console.error("Erro ao gerar PDF no tracking:", error);
-      toast.error("Não foi possível gerar o relatório.", { id: toastId });
+      toast.error("Não foi possível descarregar o relatório.", { id: toastId });
     } finally {
       setIsGeneratingPdf(false);
     }
