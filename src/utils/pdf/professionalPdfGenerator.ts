@@ -465,8 +465,20 @@ export const generateProfessionalServiceReport = async (
     .replace(/\s+/g, "_");
   const fileName = `Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`;
 
-  // 💡 MÉTODO PADRÃO ESTÁVEL DO jsPDF (Funciona perfeitamente em qualquer rota e telemóvel)
-  doc.save(fileName);
+  // 💡 COMPATIBILIDADE TOTAL (Gera blob e abre/descarrega de forma infalível)
+  try {
+    const pdfBlob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    // Tenta abrir numa nova aba (compatível com iPhone/Safari e Android)
+    const opened = window.open(blobUrl, "_blank");
+    if (!opened) {
+      // Se o browser barrar a aba, faz o download direto padrão do jsPDF
+      doc.save(fileName);
+    }
+  } catch (e) {
+    doc.save(fileName);
+  }
 };
 
 export default generateProfessionalServiceReport;
