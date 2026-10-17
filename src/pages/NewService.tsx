@@ -1,531 +1,439 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { createService, getServiceTypesFromDatabase, getTeamMembers } from "@/services/servicesDataService";
-import { useAuth } from "@/context/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Plus,
+  User,
+  Loader2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  getTeamMembers,
+  getServiceTypesFromDatabase,
+} from "@/services/servicesDataService";
+import { createServiceInDatabase } from "@/services/serviceCrud";
+import {
+  TeamMember,
+  ServicePriority,
+  ServiceTypeConfig,
+} from "@/types/serviceTypes";
 import { ServiceMaterialsPreloader } from "@/components/service-detail/ServiceMaterialsPreloader";
-import { useAddMaterialUsageToService } from "@/hooks/useInventory";
-// Ícone para o novo campo de Prioridade
-import { ArrowLeft, Plus, Calendar, MapPin, FileText, User, AlertTriangle } from "lucide-react";
-import { Link } from "react-router-dom";
-import { ServiceTypeConfig, TeamMember, ServicePriority } from "@/types/serviceTypes";
 
-// 1. ADICIONADO 'priority' À INTERFACE DO FORMULÁRIO
-interface ServiceFormData {
-  title: string;
-  serviceType: string;
-  client: string;
-  location: string;
-  address: string;
-  city: string;
-  description: string;
-  notes: string;
-  dueDate: string;
-  dueTime: string;
-  technicianId: string;
-  priority: ServicePriority;
-}
-
-const NewService: React.FC = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<string>("");
-  const [preloadedMaterials, setPreloadedMaterials] = useState<Array<{ materialId: string; quantity: number; required: boolean }>>([]);
+const NewService = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const addMaterialUsage = useAddMaterialUsageToService();
 
-  const hasGestorPermission = user?.role === 'gestor' || user?.role === 'administrador';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [technicians, setTechnicians] = useState<TeamMember[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeConfig[]>([]);
 
-  const form = useForm<ServiceFormData>({
-    defaultValues: {
-      title: "",
-      serviceType: "",
-      client: "",
-      location: "",
-      address: "",
-      city: "",
-      description: "",
-      notes: "",
-      dueDate: "",
-      dueTime: "",
-      technicianId: "none",
-      priority: "media",
-    },
-  });
+  const [title, setTitle] = useState("");
+  const [serviceType, setServiceType] = useState("Vistoria");
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState("");
+  const [client, setClient] = useState("");
+  const [priority, setPriority] = useState<ServicePriority>("media");
+  const [location, setLocation] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
+  const [dueTime, setDueTime] = useState("15:00");
+  const [technicianId, setTechnicianId] = useState("none");
+  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const types = await getServiceTypesFromDatabase();
-        setServiceTypes(types);
-        
-        if (hasGestorPermission) {
-          const members = await getTeamMembers();
-          setTeamMembers(members);
+    getTeamMembers()
+      .then((data) => setTechnicians(data || []))
+      .catch(() => {});
+
+    getServiceTypesFromDatabase()
+      .then((types) => {
+        if (types && types.length > 0) {
+          setServiceTypes(types);
         }
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        toast.error("Erro ao carregar tipos de serviço");
-      }
-    };
+      })
+      .catch(() => {});
+  }, []);
 
-    fetchData();
-  }, [hasGestorPermission]);
+  const handleServiceTypeChange = (val: string) => {
+    setServiceType(val);
+    const found = serviceTypes.find((t) => t.name === val);
+    setSelectedServiceTypeId(found?.id || "");
+  };
 
-  const onSubmit = async (data: ServiceFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Informe o título da demanda.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      console.log("Criando nova demanda:", data);
-
-      let selectedTechnician = null;
-      if (hasGestorPermission && data.technicianId && data.technicianId !== "none") {
-        const technician = teamMembers.find(t => t.id === data.technicianId);
-        if (technician) {
-          selectedTechnician = {
-            id: technician.id,
-            name: technician.name,
-            avatar: technician.avatar,
-            role: technician.role,
-            email: technician.email,
-            phone: technician.phone,
-            signature: technician.signature
-          };
+      let finalDueDate: string | undefined = undefined;
+      if (dueDate) {
+        const composed = new Date(dueDate);
+        if (dueTime) {
+          const [hours, minutes] = dueTime.split(":").map(Number);
+          composed.setHours(hours || 0, minutes || 0, 0, 0);
         }
-      } else if (!hasGestorPermission && user) {
-        selectedTechnician = {
-          id: user.id,
-          name: user.name || "Usuário",
-          avatar: user.avatar || "",
-          role: user.role || "tecnico",
-          email: user.email,
-          phone: "",
-          signature: ""
-        };
+        finalDueDate = composed.toISOString();
       }
 
-      const serviceData = {
-        title: data.title,
-        serviceType: data.serviceType,
-        client: data.client,
-        location: data.location,
-        address: data.address,
-        city: data.city,
-        description: data.description,
-        notes: data.notes,
-        dueDate: data.dueDate ? new Date(data.dueDate + 'T' + (data.dueTime || '00:00:00')).toISOString() : undefined,
-        technicians: selectedTechnician ? [selectedTechnician] : [],
-        status: "pendente" as const,
-        priority: data.priority,
-        createdBy: user?.id,
-        creationDate: new Date().toISOString(),
-      };
+      const selectedTech =
+        technicianId !== "none"
+          ? technicians.find((t) => t.id === technicianId)
+          : undefined;
 
-      const result = await createService(serviceData);
-      
-      if (!result?.created?.id) {
-        throw new Error("Falha ao criar demanda: resposta inválida do servidor");
-      }
-      
-      const newService = result.created;
-      console.log("Demanda criada:", newService);
+      const created = await createServiceInDatabase({
+        title: title.trim(),
+        serviceType,
+        client: client.trim(),
+        priority,
+        location: location.trim() || city.trim() || "São Paulo",
+        address: address.trim(),
+        city: city.trim(),
+        dueDate: finalDueDate,
+        description: description.trim(),
+        notes: notes.trim(),
+        technicians: selectedTech ? [selectedTech] : [],
+        status: "pendente",
+      } as any);
 
-      // Adicionar materiais precarregados ao serviço
-      if (preloadedMaterials.length > 0) {
-        for (const material of preloadedMaterials) {
-          try {
-            await addMaterialUsage.mutateAsync({
-              serviceId: newService.id,
-              materialId: material.materialId,
-              plannedQuantity: material.quantity,
-              usedQuantity: 0,
-              notes: material.required ? "Material obrigatório" : "Material opcional"
-            });
-          } catch (error) {
-            console.warn("Erro ao adicionar material precarregado:", error);
-          }
-        }
-      }
-      
-      if (result.technicianError) {
-        toast.warning(`Demanda criada com sucesso! ${result.technicianError}`);
-      } else {
+      if (created) {
         toast.success("Demanda criada com sucesso!");
+        navigate("/demandas");
+      } else {
+        toast.error("Não foi possível criar a demanda.");
       }
-      
-      navigate(`/demanda/${newService.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar demanda:", error);
-      toast.error("Erro ao criar a demanda");
+      toast.error("Erro ao criar demanda", { description: error?.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const timeOptions = [
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Header */}
-        <motion.div 
-          className="flex items-center gap-4 mb-8"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="h-9 w-9 rounded-lg border-slate-200 bg-white"
         >
-          <Link 
-            to="/demandas" 
-            className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Nova Demanda
-            </h1>
-            <p className="text-muted-foreground mt-1">Crie uma nova demanda de serviço</p>
-          </div>
-        </motion.div>
+          <ArrowLeft className="h-4 w-4 text-slate-700" />
+        </Button>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Nova Demanda
+          </h1>
+          <p className="text-xs text-slate-500">
+            Cadastre uma nova ordem de serviço para a operação
+          </p>
+        </div>
+      </div>
 
-        {/* Main Form */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Informações da Demanda
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Título */}
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Título da Demanda
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Digite o título da demanda"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+      <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Plus className="h-4 w-4 text-blue-600" />
+            Informações da Ordem de Serviço
+          </CardTitle>
+        </CardHeader>
 
-                    {/* Tipo de Serviço */}
-                    <FormField
-                      control={form.control}
-                      name="serviceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Serviço/Demanda</FormLabel>
-                          <Select onValueChange={(value) => {
-                            field.onChange(value);
-                            const selectedType = serviceTypes.find(t => t.name === value);
-                            setSelectedServiceTypeId(selectedType?.id || "");
-                          }} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-background/50">
-                                <SelectValue placeholder="Selecione o tipo de serviço" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {serviceTypes.map(type => (
-                                <SelectItem key={type.id} value={type.name}>
-                                  {type.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Título e Tipo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Título da Demanda *
+                </Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Vistoria de Instalação"
+                  required
+                  className="h-10"
+                />
+              </div>
 
-                    {/* Cliente */}
-                    <FormField
-                      control={form.control}
-                      name="client"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cliente</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Nome do cliente"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Prioridade */}
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4" />
-                            Prioridade
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-background/50">
-                                <SelectValue placeholder="Selecione a prioridade" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="baixa">Baixa</SelectItem>
-                              <SelectItem value="media">Média</SelectItem>
-                              <SelectItem value="alta">Alta</SelectItem>
-                              <SelectItem value="urgente">Urgente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Localidade */}
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Localidade
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Localidade do serviço"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Endereço */}
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Endereço completo"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Cidade */}
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Cidade"
-                              className="bg-background/50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                     {/* Data de Vencimento */}
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Data de Vencimento
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="date"
-                              className="bg-background/50"
-                              onChange={(e) => {
-                                const selectedDate = e.target.value;
-                                if (selectedDate) {
-                                  const localDate = new Date(selectedDate + 'T00:00:00');
-                                  field.onChange(localDate.toISOString().split('T')[0]);
-                                } else {
-                                  field.onChange('');
-                                }
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Hora de Vencimento */}
-                    <FormField
-                      control={form.control}
-                      name="dueTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Hora de Vencimento
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="time"
-                              className="bg-background/50"
-                              placeholder="00:00"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Técnico Responsável (apenas para gestores) */}
-                    {hasGestorPermission && (
-                      <FormField
-                        control={form.control}
-                        name="technicianId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              Técnico Responsável
-                            </FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="bg-background/50">
-                                  <SelectValue placeholder="Selecionar técnico" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">Não atribuído</SelectItem>
-                                {teamMembers.map((tech) => (
-                                  <SelectItem key={tech.id} value={tech.id}>
-                                    {tech.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Tipo de Serviço
+                </Label>
+                <Select
+                  value={serviceType}
+                  onValueChange={handleServiceTypeChange}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceTypes.length > 0 ? (
+                      serviceTypes.map((t) => (
+                        <SelectItem key={t.id} value={t.name}>
+                          {t.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="Vistoria">Vistoria</SelectItem>
+                        <SelectItem value="Instalação">Instalação</SelectItem>
+                        <SelectItem value="Manutenção">Manutenção</SelectItem>
+                      </>
                     )}
-                  </div>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                  {/* Materials Preloader */}
-                  {selectedServiceTypeId && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Materiais Padrão</h3>
-                      <ServiceMaterialsPreloader 
-                        serviceTypeId={selectedServiceTypeId}
-                        onMaterialsLoaded={setPreloadedMaterials}
-                      />
-                    </div>
-                  )}
+            {selectedServiceTypeId && (
+              <ServiceMaterialsPreloader
+                serviceTypeId={selectedServiceTypeId}
+              />
+            )}
 
-                  {/* Descrição */}
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Descreva os detalhes da demanda"
-                            rows={4}
-                            className="bg-background/50"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+            {/* Cliente e Prioridade */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Cliente
+                </Label>
+                <Input
+                  value={client}
+                  onChange={(e) => setClient(e.target.value)}
+                  placeholder="Nome do cliente ou condomínio"
+                  className="h-10"
+                />
+              </div>
 
-                  {/* Notas Adicionais */}
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notas Adicionais</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Informações adicionais relevantes"
-                            rows={3}
-                            className="bg-background/50"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Prioridade
+                </Label>
+                <Select
+                  value={priority}
+                  onValueChange={(v) => setPriority(v as ServicePriority)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                  {/* Botões */}
-                  <div className="flex justify-end gap-4 pt-6 border-t">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => navigate("/demandas")}
+            {/* Endereço, Cidade e Localidade */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  Endereço Completo
+                </Label>
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Rua, número, bairro"
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Cidade / Região
+                </Label>
+                <Input
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    if (!location) setLocation(e.target.value);
+                  }}
+                  placeholder="Ex: São Paulo"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {/* Data e Hora de Vencimento (100% compatível com iOS sem esticar) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5 text-slate-400" />
+                  Data de Vencimento
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full h-10 justify-start text-left font-normal border-slate-200",
+                        !dueDate && "text-slate-400"
+                      )}
                     >
-                      Cancelar
+                      <CalendarIcon className="mr-2 h-4 w-4 text-slate-500" />
+                      {dueDate ? (
+                        format(dueDate, "dd 'de' MMMM 'de' yyyy", {
+                          locale: ptBR,
+                        })
+                      ) : (
+                        <span>Selecionar data</span>
+                      )}
                     </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="min-w-[120px]"
-                    >
-                      {isSubmitting ? "Criando..." : "Criar Demanda"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  Horário Previsto
+                </Label>
+                <Select value={dueTime} onValueChange={setDueTime}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o horário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Técnico Responsável */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                <User className="h-3.5 w-3.5 text-slate-400" />
+                Técnico Responsável
+              </Label>
+              <Select value={technicianId} onValueChange={setTechnicianId}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Não atribuído" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não atribuído</SelectItem>
+                  {technicians
+                    .filter((t) => t && t.name)
+                    .map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Descrição e Notas */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Descrição do Serviço
+              </Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descreva o escopo técnico do atendimento..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Observações Adicionais
+              </Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Informações de acesso, portaria, contato no local..."
+                rows={2}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(-1)}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  "Criar Demanda"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
