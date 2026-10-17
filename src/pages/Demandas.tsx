@@ -1,493 +1,305 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
-import React, { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { getServices } from "@/services/servicesDataService";
+import { Service } from "@/types/serviceTypes";
+import { StatisticsCards } from "@/components/ui-custom/StatisticsCards";
+import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Plus, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  Users,
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ClipboardList,
+  Plus,
+  RefreshCw,
   Search,
   Filter,
-  X,
-  Activity,
-  Target,
-  TrendingUp,
-  RefreshCcw,
-  Download
+  RotateCcw,
 } from "lucide-react";
-import { useSmartServices } from "@/hooks/useSmartServices";
-import { RoleBasedAccess } from "@/components/admin/RoleBasedAccess";
-import { Link, useNavigate } from "react-router-dom";
-import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/context/AuthContext";
-import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
-import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
-import { ServiceFilters } from "@/components/filters/ServiceFilters";
-import { MobileServiceFilters } from "@/components/filters/MobileServiceFilters";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { usePermissions } from "@/hooks/usePermissions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Demandas = () => {
-  // Usar o hook inteligente que decide automaticamente qual estratégia usar
-  const smartServicesResult = useSmartServices();
-  const { 
-    services = [], 
-    isLoading, 
-    isTechnicianView, 
-    isManager
-  } = smartServicesResult;
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  console.log('[DEMANDAS] User view type:', { isTechnicianView, isManager });
-  console.log('[DEMANDAS] Services count:', services?.length || 0);
-  
-  // Função de refresh que funciona para ambos os hooks
-  const refreshServices = () => {
-    if ('refetch' in smartServicesResult && typeof smartServicesResult.refetch === 'function') {
-      smartServicesResult.refetch();
-    } else if ('actions' in smartServicesResult && smartServicesResult.actions?.refreshServices) {
-      smartServicesResult.actions.refreshServices();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"todas" | "ativas" | "concluidas">(
+    "todas"
+  );
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("todas");
+
+  const loadServices = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getServices();
+      setServices(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar demandas:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const { teamMembers } = useTeamMembers();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [technicianFilter, setTechnicianFilter] = useState("all");
-  const [serviceTypeFilter, setServiceTypeFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  // Indicadores globais sempre baseados no total de demandas do sistema
+  const globalStats = useMemo(() => {
+    const total = services.length;
+    const completed = services.filter((s) => s.status === "concluido").length;
+    const inProgress = services.filter(
+      (s) => (s.status as string) === "em_andamento"
+    ).length;
+    const pending = services.filter(
+      (s) => s.status === "pendente" || (s.status as string) === "em_andamento"
+    ).length;
+    const highPriority = services.filter(
+      (s) =>
+        (s.priority === "alta" || s.priority === "urgente") &&
+        s.status !== "concluido"
+    ).length;
+    const completionRate =
+      total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    return {
+      total,
+      pending,
+      inProgress,
+      completed,
+      highPriority,
+      completionRate,
+    };
+  }, [services]);
 
   const filteredServices = useMemo(() => {
-    if (!services) return [];
-
-    let baseServices = services;
-    
-    // Filtrar por aba ativa
-    if (activeTab === "active") {
-      baseServices = services.filter(service => 
-        ['pendente', 'em_andamento', 'agendado'].includes(service.status)
-      );
-    } else if (activeTab === "completed") {
-      baseServices = services.filter(service => 
-        ['concluido', 'cancelado'].includes(service.status)
-      );
-    }
-
-    return baseServices.filter(service => {
-      const matchesSearch = !searchTerm || 
-        service.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.number?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || service.status === statusFilter;
-      const matchesTechnician = technicianFilter === "all" || 
-        service.technicians?.some(tech => tech.id === technicianFilter);
-      const matchesServiceType = serviceTypeFilter === "all" || service.serviceType === serviceTypeFilter;
-      const matchesPriority = priorityFilter === "all" || service.priority === priorityFilter;
-
-      return matchesSearch && matchesStatus && matchesTechnician && matchesServiceType && matchesPriority;
-    }).sort((a, b) => {
-      // Para aba ativa: priorizar por status primeiro (em_andamento > pendente > agendado)
-      if (activeTab === "active") {
-        const statusOrder = {
-          em_andamento: 3,
-          pendente: 2,
-          agendado: 1,
-          concluido: 0,
-          cancelado: 0
-        };
-        
-        const statusDiff = statusOrder[b.status] - statusOrder[a.status];
-        if (statusDiff !== 0) return statusDiff;
+    return services.filter((service) => {
+      // Filtro de Aba: "Ativas" inclui Pendentes + Em Andamento
+      if (activeTab === "ativas") {
+        const isActive =
+          service.status === "pendente" ||
+          (service.status as string) === "em_andamento";
+        if (!isActive) return false;
+      } else if (activeTab === "concluidas") {
+        if (service.status !== "concluido") return false;
       }
-      
-      // Ordenação por prioridade
-      const priorityOrder = {
-        urgente: 4,
-        alta: 3,
-        media: 2,
-        baixa: 1
-      };
-      
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-      if (priorityDiff !== 0) return priorityDiff;
-      
-      // Depois por data de criação (mais recente primeiro)
-      return new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime();
+
+      // Busca por texto
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const match =
+          service.title?.toLowerCase().includes(term) ||
+          service.client?.toLowerCase().includes(term) ||
+          service.location?.toLowerCase().includes(term) ||
+          String(service.number || "")
+            .toLowerCase()
+            .includes(term);
+        if (!match) return false;
+      }
+
+      // Filtro de prioridade
+      if (
+        priorityFilter !== "todas" &&
+        service.priority !== priorityFilter
+      ) {
+        return false;
+      }
+
+      return true;
     });
-  }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter, activeTab]);
+  }, [services, activeTab, searchTerm, priorityFilter]);
 
-  const stats = useMemo(() => {
-    const total = services.length;
-    const pending = services.filter(s => s.status === 'pendente').length;
-    const completed = services.filter(s => s.status === 'concluido').length;
-    const highPriority = services.filter(s => s.priority === 'alta').length;
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return { total, pending, completed, highPriority, completionRate };
-  }, [services]);
-
-  const serviceTypes = useMemo(() => {
-    const types = new Set(services?.map(s => s.serviceType).filter(Boolean));
-    return Array.from(types);
-  }, [services]);
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setTechnicianFilter("all");
-    setServiceTypeFilter("all");
-    setPriorityFilter("all");
-  };
-
-  const hasActiveFilters = searchTerm || statusFilter !== "all" || 
-    technicianFilter !== "all" || serviceTypeFilter !== "all" || priorityFilter !== "all";
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 space-y-6" role="status" aria-label="Carregando">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-44 rounded-xl" />)}
-        </div>
-        <span className="sr-only">Carregando...</span>
-      </div>
+  const canCreate =
+    user &&
+    ["super_admin", "owner", "administrador", "gestor", "requisitor"].includes(
+      user.role
     );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      <motion.div 
-        className="container mx-auto p-6 pb-24 space-y-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Header */}
-        <motion.div 
-          className="flex flex-col lg:flex-row lg:items-center justify-between gap-6"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-r from-primary to-primary/70 text-primary-foreground">
-              <FileText className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Demandas
-              </h1>
-              <p className="text-muted-foreground mt-1">Gerencie e acompanhe todas as demandas de serviço</p>
-            </div>
+    <div className="space-y-5">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+            <ClipboardList className="h-5 w-5" />
           </div>
-
-          <div className="flex items-center gap-4">
-            {/* Search Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSearch(!showSearch)}
-              className={showSearch ? "bg-primary/10 text-primary border-primary/20" : ""}
-            >
-              <Search className="w-4 h-4" />
-              {!isMobile && <span className="ml-2">Buscar</span>}
-            </Button>
-
-            {/* Refresh Button */}
-            <Button variant="outline" size="sm" onClick={() => refreshServices()}>
-              <RefreshCcw className="w-4 h-4" />
-              {!isMobile && <span className="ml-2">Atualizar</span>}
-            </Button>
-
-            {/* Export Button */}
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4" />
-              {!isMobile && <span className="ml-2">Exportar</span>}
-            </Button>
-
-            {/* New Service Button - Only for managers and above */}
-            <RoleBasedAccess allowedRoles={['super_admin', 'owner', 'administrador', 'gestor']}>
-              <Link to="/nova-demanda">
-                <Button className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
-                  <Plus className="w-4 h-4" />
-                  <span className="ml-2 hidden sm:inline">Nova Demanda</span>
-                  <span className="ml-2 sm:hidden">Nova</span>
-                </Button>
-              </Link>
-            </RoleBasedAccess>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Demandas
+            </h1>
+            <p className="text-xs text-slate-500">
+              Gerencie e acompanhe todas as ordens de serviço
+            </p>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Search Bar */}
-        {showSearch && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-9 w-9 border-slate-200 bg-white"
+            title="Buscar e filtrar"
           >
-            <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Search className="w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por título, cliente, local ou descrição..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setShowSearch(false)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Statistics Cards */}
-        <motion.div 
-          className="grid grid-cols-2 md:grid-cols-5 gap-4"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                </div>
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                  <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Pendentes</p>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
-                </div>
-                <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-full">
-                  <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Concluídas</p>
-                  <p className="text-2xl font-bold">{stats.completed}</p>
-                </div>
-                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-full">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Alta Prioridade</p>
-                  <p className="text-2xl font-bold">{stats.highPriority}</p>
-                </div>
-                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
-                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Taxa de Conclusão</p>
-                  <p className="text-2xl font-bold">{stats.completionRate}%</p>
-                </div>
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-                  <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Tabs for Active/Completed */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">Todas</TabsTrigger>
-              <TabsTrigger value="active">Ativas</TabsTrigger>
-              <TabsTrigger value="completed">Concluídas</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </motion.div>
-
-        {/* Filters and Controls */}
-        <motion.div 
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            <span>Filtros e Busca</span>
-            <Badge variant="secondary" className="ml-2">
-              {filteredServices.length} resultado{filteredServices.length !== 1 ? 's' : ''}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
-                <X className="w-4 h-4 mr-1" />
-                Limpar
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="w-4 h-4" />
-              <span className="ml-2 hidden sm:inline">Filtros</span>
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            <Search className="h-4 w-4 text-slate-600" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={loadServices}
+            className="h-9 w-9 border-slate-200 bg-white"
+            title="Atualizar lista"
           >
-            {isMobile ? (
-              <MobileServiceFilters
-                filters={{
-                  search: searchTerm,
-                  status: statusFilter === "all" ? "todos" : statusFilter as any,
-                  serviceType: serviceTypeFilter,
-                  technicianId: technicianFilter,
-                  dateRange: { from: null, to: null }
-                }}
-                onFilterChange={(key, value) => {
-                  if (key === 'search') setSearchTerm(value);
-                  if (key === 'status') setStatusFilter(value === "todos" ? "all" : value);
-                  if (key === 'serviceType') setServiceTypeFilter(value);
-                  if (key === 'technicianId') setTechnicianFilter(value);
-                }}
-                onClearFilters={clearFilters}
-                serviceTypes={serviceTypes}
-                totalResults={filteredServices.length}
-              />
-            ) : (
-              <ServiceFilters
-                filters={{
-                  search: searchTerm,
-                  status: statusFilter === "all" ? "todos" : statusFilter as any,
-                  serviceType: serviceTypeFilter,
-                  technicianId: technicianFilter,
-                  dateRange: { from: null, to: null }
-                }}
-                onFilterChange={(key, value) => {
-                  if (key === 'search') setSearchTerm(value);
-                  if (key === 'status') setStatusFilter(value === "todos" ? "all" : value);
-                  if (key === 'serviceType') setServiceTypeFilter(value);
-                  if (key === 'technicianId') setTechnicianFilter(value);
-                }}
-                onClearFilters={clearFilters}
-                technicians={teamMembers}
-                serviceTypes={serviceTypes}
-                totalResults={filteredServices.length}
-              />
-            )}
-          </motion.div>
-        )}
-
-        {/* Services List */}
-        <motion.div 
-          className="space-y-4"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-        >
-          {filteredServices.length === 0 ? (
-            <Card className="bg-card/50 backdrop-blur-sm border border-border/50">
-              <CardContent className="p-8 text-center">
-                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma demanda encontrada</h3>
-                <p className="text-muted-foreground mb-4">
-                  {hasActiveFilters 
-                    ? "Tente ajustar os filtros para encontrar as demandas desejadas."
-                    : "Ainda não há demandas cadastradas no sistema."
-                  }
-                </p>
-                {hasActiveFilters && (
-                  <Button variant="outline" onClick={clearFilters}>
-                    <X className="w-4 h-4 mr-2" />
-                    Limpar Filtros
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredServices.map((service) => {
-                if (isMobile) {
-                  return <CompactMobileServiceCard key={service.id} service={service} />;
-                } else {
-                  return <CompactServiceCard key={service.id} service={service} />;
-                }
-              })}
-            </div>
+            <RefreshCw className="h-4 w-4 text-slate-600" />
+          </Button>
+          {canCreate && (
+            <Button
+              onClick={() => navigate("/nova-demanda")}
+              className="h-9 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3.5 rounded-lg"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nova
+            </Button>
           )}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
+
+      {/* Cards de Resumo Globais */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <StatisticsCards {...globalStats} />
+      )}
+
+      {/* Abas de Status */}
+      <div className="space-y-3">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as any)}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-3 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-10">
+            <TabsTrigger
+              value="todas"
+              className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-2xs"
+            >
+              Todas ({globalStats.total})
+            </TabsTrigger>
+            <TabsTrigger
+              value="ativas"
+              className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-2xs"
+            >
+              Ativas ({globalStats.pending})
+            </TabsTrigger>
+            <TabsTrigger
+              value="concluidas"
+              className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-2xs"
+            >
+              Concluídas ({globalStats.completed})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Barra de Filtros Expansível */}
+        {showFilters && (
+          <div className="flex flex-col sm:flex-row gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 shadow-2xs">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Pesquisar por título, cliente ou nº da OS..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="h-9 text-xs w-full sm:w-44">
+                  <SelectValue placeholder="Prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Prioridades</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+              {(searchTerm || priorityFilter !== "todas") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setPriorityFilter("todas");
+                  }}
+                  className="h-9 text-xs"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Contagem e Botão de Filtro Rápido */}
+        <div className="flex items-center justify-between px-1">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-600"
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filtros e Busca
+          </button>
+          <span className="font-mono text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+            {filteredServices.length} resultado
+            {filteredServices.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {/* Lista de Demandas */}
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white dark:bg-slate-900 border border-slate-200/80 rounded-xl">
+            <ClipboardList className="h-10 w-10 text-slate-300 mb-2" />
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Nenhuma demanda encontrada
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Não há ordens de serviço para o filtro selecionado.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredServices.map((service) => (
+              <CompactMobileServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
