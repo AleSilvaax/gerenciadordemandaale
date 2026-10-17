@@ -38,7 +38,7 @@ export const ClientTracking: React.FC = () => {
         return;
       }
       try {
-        // 1. Busca limpa apenas na tabela services (sem joins problemáticos)
+        // 1. Busca limpa na tabela services
         const { data: srvData, error: srvError } = await supabase
           .from("services")
           .select("*")
@@ -59,7 +59,7 @@ export const ClientTracking: React.FC = () => {
 
         setService(srvData as any);
 
-        // 2. Tenta buscar o técnico responsável se houver ID ou se estiver no array technicians
+        // 2. Busca o técnico responsável
         const techId = srvData.technician_id || srvData.technicians?.[0]?.id;
         if (techId) {
           const { data: profileData } = await supabase
@@ -92,6 +92,7 @@ export const ClientTracking: React.FC = () => {
       const { generateProfessionalServiceReport } = await import(
         "@/utils/pdf/professionalPdfGenerator"
       );
+      // Enriquecemos o objeto com o técnico e garantimos que as fotos e assinaturas vão completas
       await generateProfessionalServiceReport({
         ...service,
         technicians: technicianInfo ? [technicianInfo] : service.technicians,
