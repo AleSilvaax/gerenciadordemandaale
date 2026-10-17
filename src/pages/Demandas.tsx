@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -69,7 +70,7 @@ const Demandas = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("all");
 
   const filteredServices = useMemo(() => {
     if (!services) return [];
@@ -134,14 +135,14 @@ const Demandas = () => {
   }, [services, searchTerm, statusFilter, technicianFilter, serviceTypeFilter, priorityFilter, activeTab]);
 
   const stats = useMemo(() => {
-    const total = filteredServices.length;
-    const pending = filteredServices.filter(s => s.status === 'pendente').length;
-    const completed = filteredServices.filter(s => s.status === 'concluido').length;
-    const highPriority = filteredServices.filter(s => s.priority === 'alta').length;
+    const total = services.length;
+    const pending = services.filter(s => s.status === 'pendente').length;
+    const completed = services.filter(s => s.status === 'concluido').length;
+    const highPriority = services.filter(s => s.priority === 'alta').length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { total, pending, completed, highPriority, completionRate };
-  }, [filteredServices]);
+  }, [services]);
 
   const serviceTypes = useMemo(() => {
     const types = new Set(services?.map(s => s.serviceType).filter(Boolean));
@@ -161,11 +162,15 @@ const Demandas = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando demandas...</p>
+      <div className="container mx-auto p-4 space-y-6" role="status" aria-label="Carregando">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-44 rounded-xl" />)}
+        </div>
+        <span className="sr-only">Carregando...</span>
       </div>
     );
   }

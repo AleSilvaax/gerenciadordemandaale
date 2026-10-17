@@ -67,7 +67,7 @@ export const CompactMobileServiceCard: React.FC<CompactMobileServiceCardProps> =
 
   return (
     <Card 
-      className="hover:shadow-md transition-all duration-200 border border-border/60 bg-card cursor-pointer active:scale-[0.98]"
+      className={`hover:shadow-md transition-all duration-200 border border-border/60 bg-card cursor-pointer active:scale-[0.98] border-l-4 ${service.priority === "alta" || service.priority === "urgente" ? "border-l-rose-500" : service.priority === "media" ? "border-l-amber-500" : "border-l-emerald-500"}`}
       onClick={handleCardClick}
     >
       <CardContent className="p-4">
@@ -118,7 +118,7 @@ export const CompactMobileServiceCard: React.FC<CompactMobileServiceCardProps> =
           <div className="flex items-center gap-4">
             {service.number && (
               <span className="font-mono bg-muted/50 px-2 py-1 rounded">
-                #{service.number}
+                OS #{String(service.number).split('-').pop()}
               </span>
             )}
             

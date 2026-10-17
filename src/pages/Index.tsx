@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import React, { useState, useEffect } from "react";
 import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -136,6 +137,21 @@ const Index: React.FC = () => {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 space-y-6" role="status" aria-label="Carregando">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-44 rounded-xl" />)}
+        </div>
+        <span className="sr-only">Carregando...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
