@@ -94,7 +94,6 @@ export const generateProfessionalServiceReport = async (
     minute: "2-digit",
   });
 
-  // 1. Buscar materiais reais e fotos atualizadas do Supabase se necessário
   let materialRows: Array<[string, string, string, string, string]> = [];
   let fullServiceData = { ...service };
 
@@ -147,16 +146,15 @@ export const generateProfessionalServiceReport = async (
     console.warn("Aviso ao carregar dados complementares para o PDF:", err);
   }
 
-  // Nome do técnico formatado
   const techName =
     fullServiceData.technicians?.[0]?.name ||
     (fullServiceData as any).technician_name ||
     "Não atribuído";
 
-  // 2. Cabeçalho Corporativo Moderno (Slate-900 com Accent Azul)
-  doc.setFillColor(15, 23, 42); // Slate-900
+  // Cabeçalho Corporativo
+  doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, pageWidth, 36, "F");
-  doc.setFillColor(37, 99, 235); // Blue-600
+  doc.setFillColor(37, 99, 235);
   doc.rect(0, 36, pageWidth, 1.5, "F");
 
   doc.setTextColor(255, 255, 255);
@@ -172,7 +170,6 @@ export const generateProfessionalServiceReport = async (
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(255, 255, 255);
   doc.text("ServiceFlow", pageWidth - margin, 15, { align: "right" });
 
   const statusMap: Record<string, string> = {
@@ -222,7 +219,7 @@ export const generateProfessionalServiceReport = async (
     fontSize: 8.5,
   };
 
-  // SECÇÃO 1: Informações Gerais
+  // SECÇÃO 1
   drawSectionHeader("Informações Gerais e Cliente");
   autoTable(doc, {
     startY: currentY,
@@ -266,7 +263,7 @@ export const generateProfessionalServiceReport = async (
   });
   currentY = (doc as any).lastAutoTable.finalY + 8;
 
-  // SECÇÃO 2: Descrição e Observações
+  // SECÇÃO 2
   if (fullServiceData.description || fullServiceData.notes) {
     drawSectionHeader("Descrição e Observações do Serviço");
     const descRows: Array<[string, string]> = [];
@@ -288,7 +285,7 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 3: Checklist / Campos Customizados
+  // SECÇÃO 3
   if (fullServiceData.customFields && fullServiceData.customFields.length > 0) {
     drawSectionHeader("Checklist Técnico");
     const customRows = fullServiceData.customFields.map((f) => [
@@ -310,7 +307,7 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 4: Materiais
+  // SECÇÃO 4
   if (materialRows.length > 0) {
     drawSectionHeader("Materiais Utilizados");
     autoTable(doc, {
@@ -324,7 +321,7 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 5: Fotografias (Garantindo que todas apareçam)
+  // SECÇÃO 5: Fotos
   const rawPhotos: Array<{ url: string; title: string }> = (
     fullServiceData.photos || []
   ).map((p: any, idx: number) => {
@@ -398,49 +395,47 @@ export const generateProfessionalServiceReport = async (
     fullServiceData.signatures?.client || (fullServiceData as any).reportData?.clientSignature;
   const techSig = fullServiceData.signatures?.technician;
 
-  if (clientSig || techSig || true) {
-    if (currentY + 45 > pageHeight - 20) {
-      doc.addPage();
-      currentY = 20;
-    }
-    drawSectionHeader("Assinaturas de Conformidade");
-
-    const sigBoxW = (contentWidth - 8) / 2;
-    const sigBoxH = 32;
-
-    doc.setDrawColor(203, 213, 225);
-    doc.roundedRect(margin, currentY, sigBoxW, sigBoxH, 2, 2, "S");
-    if (clientSig && clientSig.startsWith("data:image")) {
-      try {
-        doc.addImage(clientSig, "PNG", margin + 10, currentY + 3, sigBoxW - 20, 20);
-      } catch {}
-    }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text(
-      `Cliente: ${fullServiceData.client || "Responsável"}`,
-      margin + sigBoxW / 2,
-      currentY + sigBoxH - 3,
-      { align: "center" }
-    );
-
-    const techBoxX = margin + sigBoxW + 8;
-    doc.roundedRect(techBoxX, currentY, sigBoxW, sigBoxH, 2, 2, "S");
-    if (techSig && techSig.startsWith("data:image")) {
-      try {
-        doc.addImage(techSig, "PNG", techBoxX + 10, currentY + 3, sigBoxW - 20, 20);
-      } catch {}
-    }
-    doc.text(
-      `Técnico: ${techName}`,
-      techBoxX + sigBoxW / 2,
-      currentY + sigBoxH - 3,
-      { align: "center" }
-    );
+  if (currentY + 45 > pageHeight - 20) {
+    doc.addPage();
+    currentY = 20;
   }
+  drawSectionHeader("Assinaturas de Conformidade");
 
-  // Rodapé Exato em Todas as Páginas
+  const sigBoxW = (contentWidth - 8) / 2;
+  const sigBoxH = 32;
+
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(margin, currentY, sigBoxW, sigBoxH, 2, 2, "S");
+  if (clientSig && clientSig.startsWith("data:image")) {
+    try {
+      doc.addImage(clientSig, "PNG", margin + 10, currentY + 3, sigBoxW - 20, 20);
+    } catch {}
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(
+    `Cliente: ${fullServiceData.client || "Responsável"}`,
+    margin + sigBoxW / 2,
+    currentY + sigBoxH - 3,
+    { align: "center" }
+  );
+
+  const techBoxX = margin + sigBoxW + 8;
+  doc.roundedRect(techBoxX, currentY, sigBoxW, sigBoxH, 2, 2, "S");
+  if (techSig && techSig.startsWith("data:image")) {
+    try {
+      doc.addImage(techSig, "PNG", techBoxX + 10, currentY + 3, sigBoxW - 20, 20);
+    } catch {}
+  }
+  doc.text(
+    `Técnico: ${techName}`,
+    techBoxX + sigBoxW / 2,
+    currentY + sigBoxH - 3,
+    { align: "center" }
+  );
+
+  // Rodapé em todas as páginas
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
@@ -467,7 +462,35 @@ export const generateProfessionalServiceReport = async (
     .replace(/[^\w\s-]/gi, "")
     .trim()
     .replace(/\s+/g, "_");
-  doc.save(`Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`);
+  const fileName = `Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`;
+
+  // 💡 COMPATIBILIDADE UNIVERSAL PARA iPHONE (SAFARI) E ANDROID
+  try {
+    const pdfBlob = doc.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    // No iOS (Safari), abrir em nova aba é o método mais fiável para evitar o bloqueio de downloads automáticos
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (isIOS) {
+      const newWindow = window.open(blobUrl, "_blank");
+      if (!newWindow) {
+        // Se o popup estiver bloqueado, força o download direto via link temporário
+        const downloadLink = document.createElement("a");
+        downloadLink.href = blobUrl;
+        downloadLink.download = fileName;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      }
+    } else {
+      // Método standard para Android e Desktop
+      doc.save(fileName);
+    }
+  } catch (e) {
+    console.warn("Fallback para doc.save nativo:", e);
+    doc.save(fileName);
+  }
 };
 
 export default generateProfessionalServiceReport;
