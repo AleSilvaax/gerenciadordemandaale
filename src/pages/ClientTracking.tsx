@@ -87,20 +87,33 @@ export const ClientTracking: React.FC = () => {
   const handleDownloadReport = async () => {
     if (!service) return;
     setIsGeneratingPdf(true);
-    const toastId = toast.loading("A descarregar o relatório oficial...");
+    const toastId = toast.loading("A carregar dados completos e a gerar relatório...");
     try {
+      // Busca os dados completos e atualizados da OS diretamente do Supabase (com fotos, assinaturas e materiais)
+      const { data: fullSrv, error } = await supabase
+        .from("services")
+        .select("*, technicians:profiles(id, name, avatar, role)")
+        .eq("id", service.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const serviceToExport = fullSrv || service;
+
+      // Importa e gera o PDF profissional completo
       const { generateProfessionalServiceReport } = await import(
         "@/utils/pdf/professionalPdfGenerator"
       );
-      // Enriquecemos o objeto com o técnico e garantimos que as fotos e assinaturas vão completas
+      
       await generateProfessionalServiceReport({
-        ...service,
-        technicians: technicianInfo ? [technicianInfo] : service.technicians,
+        ...serviceToExport,
+        technicians: technicianInfo ? [technicianInfo] : serviceToExport.technicians,
       });
+
       toast.success("Relatório descarregado com sucesso!", { id: toastId });
     } catch (error) {
-      console.error("Erro ao gerar PDF no tracking:", error);
-      toast.error("Não foi possível descarregar o relatório.", { id: toastId });
+      console.error("Erro ao gerar PDF completo no tracking:", error);
+      toast.error("Não foi possível descarregar o relatório completo.", { id: toastId });
     } finally {
       setIsGeneratingPdf(false);
     }
