@@ -27,6 +27,7 @@ export const ClientTracking: React.FC = () => {
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export const ClientTracking: React.FC = () => {
         return;
       }
       try {
-        // Consulta ao Supabase com tratamento de erro robusto
+        // Tenta buscar a demanda pelo ID (token)
         const { data, error } = await supabase
           .from("services")
           .select("*, technicians:profiles(id, name, avatar, role)")
@@ -46,14 +47,16 @@ export const ClientTracking: React.FC = () => {
 
         if (error) {
           console.error("Erro Supabase RLS:", error);
-          setErrorMessage("Erro ao carregar os dados de atendimento. Verifique as permissões de acesso.");
+          setErrorMessage("Erro ao aceder à base de dados.");
+          setDebugDetail(error.message);
           throw error;
         }
 
         if (data) {
           setService(data as any);
         } else {
-          setErrorMessage("Atendimento não encontrado com este identificador.");
+          setErrorMessage("Atendimento não encontrado.");
+          setDebugDetail(`Nenhum registo encontrado para o ID: ${token}`);
         }
       } catch (err: any) {
         console.error("Erro ao carregar rastreio:", err);
@@ -100,8 +103,13 @@ export const ClientTracking: React.FC = () => {
         </div>
         <h1 className="text-lg font-bold text-slate-900 dark:text-white">Não foi possível carregar o rastreio</h1>
         <p className="text-xs text-slate-500 mt-1 max-w-xs">
-          {errorMessage || "O link de acompanhamento pode ter expirado ou as políticas de acesso público (RLS) precisam de ser aplicadas na base de dados."}
+          {errorMessage}
         </p>
+        {debugDetail && (
+          <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 max-w-sm overflow-x-auto">
+            <p className="text-[10px] font-mono text-rose-600 text-left">Detalhe técnico: {debugDetail}</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -112,7 +120,6 @@ export const ClientTracking: React.FC = () => {
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6">
       <div className="max-w-xl mx-auto space-y-5">
-        {/* Topo / Marca Branca */}
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
             <Layers className="h-5 w-5" />
@@ -121,7 +128,6 @@ export const ClientTracking: React.FC = () => {
           <p className="text-xs text-slate-500">Portal de Acompanhamento em Tempo Real</p>
         </div>
 
-        {/* Card Principal de Status */}
         <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 shadow-xs rounded-2xl overflow-hidden">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex flex-row items-center justify-between">
             <div>
@@ -136,7 +142,6 @@ export const ClientTracking: React.FC = () => {
           </CardHeader>
 
           <CardContent className="p-6 space-y-5">
-            {/* Informações do Cliente e Morada */}
             <div className="grid grid-cols-1 gap-3">
               <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100">
                 <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
@@ -159,7 +164,6 @@ export const ClientTracking: React.FC = () => {
               </div>
             </div>
 
-            {/* Profissional Designado */}
             <div className="space-y-2.5 pt-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Profissional Responsável
@@ -182,7 +186,6 @@ export const ClientTracking: React.FC = () => {
               </div>
             </div>
 
-            {/* Ação de Download do Relatório se Concluído */}
             {isConcluded && (
               <div className="pt-2">
                 <Button
