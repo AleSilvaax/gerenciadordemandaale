@@ -1,385 +1,574 @@
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Download, 
-  Filter, 
-  Calendar,
-  Users,
-  TrendingUp,
-  BarChart3,
-  PieChart,
-  FileBarChart,
-  Clock,
-  CheckCircle,
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { getServices, getTeamMembers } from "@/services/servicesDataService";
+import { Service, TeamMember } from "@/types/serviceTypes";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
-  Sparkles
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useServices } from '@/hooks/useServices';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
-import { useToast } from '@/hooks/use-toast';
-import { generateExecutiveReport, generateOperationalReport, generateTeamPerformanceReport, generateServiceAnalysisReport } from '@/utils/pdf/reportGenerators';
+  FileText,
+  Download,
+  BarChart3,
+  Users,
+  ClipboardCheck,
+  PieChart,
+  Loader2,
+  Filter,
+} from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 
-const Reports: React.FC = () => {
-  const { services, isLoading } = useServices();
-  const { teamMembers } = useTeamMembers();
-  const { toast } = useToast();
-  
-  const [selectedPeriod, setSelectedPeriod] = useState('30');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedTechnician, setSelectedTechnician] = useState('all');
-  const [generatingReport, setGeneratingReport] = useState<string | null>(null);
+const Reports = () => {
+  const navigate = useNavigate();
+  const [services, setServices] = useState<Service[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [generatingType, setGeneratingType] = useState<string | null>(null);
+
+  const [period, setPeriod] = useState("30d");
+  const [techFilter, setTechFilter] = useState("todos");
+  const [typeFilter, setTypeFilter] = useState("todos");
+
+  useEffect(() => {
+    Promise.all([getServices(), getTeamMembers().catch(() => [])])
+      .then(([srv, tm]) => {
+        setServices(srv || []);
+        setTeam(tm || []);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const formatShortOS = (num?: string | number) => {
+    if (!num) return "-";
+    const parts = String(num).split("-");
+    return `#${parts[parts.length - 1].replace("#", "")}`;
+  };
+
+  const filteredServices = useMemo(() => {
+    return services.filter((s) => {
+      if (techFilter !== "todos") {
+        const hasTech = s.technicians?.some(
+          (t) => t.id === techFilter || t.name === techFilter
+        );
+        if (!hasTech) return false;
+      }
+      if (typeFilter !== "todos" && s.serviceType !== typeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [services, techFilter, typeFilter]);
+
+  const metrics = useMemo(() => {
+    const total = filteredServices.length;
+    const completed = filteredServices.filter(
+      (s) => s.status === "concluido"
+    ).length;
+    const inProgress = filteredServices.filter(
+      (s) => (s.status as string) === "em_andamento"
+    ).length;
+    const pending = filteredServices.filter(
+      (s) => s.status === "pendente"
+    ).length;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, inProgress, pending, rate };
+  }, [filteredServices]);
+
+  const generateCorporatePDF = async (
+    reportKey: "executivo" | "operacional" | "equipe" | "servicos",
+    title: string,
+    subtitle: string
+  ) => {
+    setGeneratingType(reportKey);
+    try {
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const nowStr = new Date().toLocaleString("pt-BR");
+
+      // 1. Cabeçalho Corporativo Sóbrio (Slate-900 + Linha Azul)
+      doc.setFillColor(15, 23, 42); // #0F172A
+      doc.rect(0, 0, pageWidth, 34, "F");
+      doc.setFillColor(37, 99, 235); // #2563EB
+      doc.rect(0, 34, pageWidth, 1.5, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(title.toUpperCase(), 14, 15);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(203, 213, 225);
+      doc.text(subtitle, 14, 22);
+      doc.text(`Emitido em: ${nowStr}`, 14, 28);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text("ServiceFlow", pageWidth - 14, 15, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text("Gestão de Operações", pageWidth - 14, 21, { align: "right" });
+
+      // 2. Bloco de KPIs com Alto Contraste
+      let currentY = 44;
+      doc.setFillColor(248, 250, 252); // #F8FAFC
+      doc.setDrawColor(226, 232, 240); // #E2E8F0
+      doc.roundedRect(14, currentY, pageWidth - 28, 22, 2, 2, "FD");
+
+      const kpis = [
+        { label: "TOTAL DE OS", val: String(metrics.total) },
+        { label: "CONCLUÍDAS", val: String(metrics.completed) },
+        { label: "PENDENTES", val: String(metrics.pending) },
+        { label: "TAXA DE CONCLUSÃO", val: `${metrics.rate}%` },
+      ];
+
+      const colW = (pageWidth - 28) / 4;
+      kpis.forEach((k, idx) => {
+        const xPos = 14 + idx * colW + colW / 2;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(k.label, xPos, currentY + 8, { align: "center" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(15, 23, 42);
+        doc.text(k.val, xPos, currentY + 17, { align: "center" });
+      });
+
+      currentY += 32;
+
+      // 3. Tabelas Específicas por Tipo de Relatório (Alto Contraste)
+      const headStyles = {
+        fillColor: [30, 41, 59] as [number, number, number], // Slate-800
+        textColor: [255, 255, 255] as [number, number, number],
+        fontSize: 9,
+        fontStyle: "bold" as const,
+      };
+      const bodyStyles = {
+        textColor: [30, 41, 59] as [number, number, number],
+        fontSize: 8.5,
+      };
+      const alternateRowStyles = {
+        fillColor: [248, 250, 252] as [number, number, number],
+      };
+
+      if (reportKey === "executivo") {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("1. Indicadores Estratégicos da Operação", 14, currentY);
+
+        autoTable(doc, {
+          startY: currentY + 4,
+          head: [["Indicador Operacional", "Resultado Atual", "Status"]],
+          body: [
+            ["Total de Ordens de Serviço", String(metrics.total), "Monitorado"],
+            ["Ordens Concluídas", String(metrics.completed), "Finalizadas"],
+            ["Ordens em Execução", String(metrics.inProgress), "Em Campo"],
+            ["Ordens Pendentes", String(metrics.pending), "Aguardando"],
+            ["Eficiência Operacional", `${metrics.rate}%`, metrics.rate >= 70 ? "Meta Atingida" : "Em Evolução"],
+          ],
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+
+        const nextY = (doc as any).lastAutoTable.finalY + 12;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("2. Produtividade por Colaborador", 14, nextY);
+
+        const teamRows = team.map((m) => {
+          const assigned = filteredServices.filter((s) =>
+            s.technicians?.some(
+              (t) =>
+                t.id === m.id ||
+                t.name?.toLowerCase() === m.name?.toLowerCase()
+            )
+          );
+          const done = assigned.filter((s) => s.status === "concluido").length;
+          const pend = assigned.filter((s) => s.status !== "concluido").length;
+          return [
+            m.name || "Colaborador",
+            (m.role || "técnico").toUpperCase(),
+            String(done),
+            String(pend),
+            String(assigned.length),
+          ];
+        });
+
+        autoTable(doc, {
+          startY: nextY + 4,
+          head: [["Colaborador", "Função", "Concluídas", "Pendentes", "Total"]],
+          body:
+            teamRows.length > 0
+              ? teamRows
+              : [["Nenhum colaborador listado", "-", "0", "0", "0"]],
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+      } else if (reportKey === "operacional") {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Listagem Detalhada de Ordens de Serviço", 14, currentY);
+
+        const srvRows = filteredServices.map((s) => [
+          formatShortOS(s.number),
+          s.title || "-",
+          s.serviceType || "Vistoria",
+          s.client || "-",
+          s.technicians?.[0]?.name || "Não atribuído",
+          (s.priority || "média").toUpperCase(),
+          (s.status || "pendente").toUpperCase(),
+        ]);
+
+        autoTable(doc, {
+          startY: currentY + 4,
+          head: [
+            ["OS", "Título", "Tipo", "Cliente", "Técnico", "Prioridade", "Status"],
+          ],
+          body:
+            srvRows.length > 0
+              ? srvRows
+              : [["-", "Nenhuma demanda encontrada", "-", "-", "-", "-", "-"]],
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+      } else if (reportKey === "equipe") {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Quadro de Desempenho Técnico", 14, currentY);
+
+        const teamRows = team.map((m) => {
+          const assigned = filteredServices.filter((s) =>
+            s.technicians?.some(
+              (t) =>
+                t.id === m.id ||
+                t.name?.toLowerCase() === m.name?.toLowerCase()
+            )
+          );
+          const done = assigned.filter((s) => s.status === "concluido").length;
+          const pend = assigned.filter((s) => s.status !== "concluido").length;
+          const pct =
+            assigned.length > 0
+              ? `${Math.round((done / assigned.length) * 100)}%`
+              : "0%";
+          return [
+            m.name || "-",
+            (m.role || "técnico").toUpperCase(),
+            String(done),
+            String(pend),
+            pct,
+          ];
+        });
+
+        autoTable(doc, {
+          startY: currentY + 4,
+          head: [
+            [
+              "Nome",
+              "Cargo",
+              "OS Concluídas",
+              "OS Pendentes",
+              "Taxa de Entrega",
+            ],
+          ],
+          body:
+            teamRows.length > 0
+              ? teamRows
+              : [["Nenhum membro encontrado", "-", "0", "0", "0%"]],
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+      } else {
+        // Análise de Serviços
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("1. Distribuição por Status", 14, currentY);
+
+        const total = Math.max(filteredServices.length, 1);
+        const statusRows = [
+          [
+            "Pendente",
+            String(metrics.pending),
+            `${Math.round((metrics.pending / total) * 100)}%`,
+          ],
+          [
+            "Em Andamento",
+            String(metrics.inProgress),
+            `${Math.round((metrics.inProgress / total) * 100)}%`,
+          ],
+          [
+            "Concluído",
+            String(metrics.completed),
+            `${Math.round((metrics.completed / total) * 100)}%`,
+          ],
+        ];
+
+        autoTable(doc, {
+          startY: currentY + 4,
+          head: [["Status", "Quantidade", "Participação (%)"]],
+          body: statusRows,
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+
+        const nextY = (doc as any).lastAutoTable.finalY + 12;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text("2. Distribuição por Prioridade", 14, nextY);
+
+        const priorities = ["baixa", "media", "alta", "urgente"];
+        const prioRows = priorities.map((p) => {
+          const count = filteredServices.filter((s) => s.priority === p).length;
+          return [
+            p.toUpperCase(),
+            String(count),
+            `${Math.round((count / total) * 100)}%`,
+          ];
+        });
+
+        autoTable(doc, {
+          startY: nextY + 4,
+          head: [["Prioridade", "Quantidade", "Participação (%)"]],
+          body: prioRows,
+          headStyles,
+          bodyStyles,
+          alternateRowStyles,
+          margin: { left: 14, right: 14 },
+        });
+      }
+
+      // 4. Rodapé Exato em Todas as Páginas
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          "ServiceFlow — Relatório Corporativo de Operações",
+          14,
+          pageHeight - 8
+        );
+        doc.text(
+          `Página ${i} de ${totalPages}`,
+          pageWidth - 14,
+          pageHeight - 8,
+          { align: "right" }
+        );
+      }
+
+      const fileName = `relatorio-${reportKey}-${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      toast.success(`${title} gerado com sucesso!`);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Não foi possível gerar o PDF.");
+    } finally {
+      setGeneratingType(null);
+    }
+  };
 
   const reportTypes = [
     {
-      id: 'executive',
-      title: 'Relatório Executivo',
-      description: 'Visão geral estratégica com KPIs e métricas principais para tomada de decisão',
-      icon: TrendingUp,
-      gradient: 'from-blue-500 to-blue-600',
-      accent: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-    },
-    {
-      id: 'operational',
-      title: 'Relatório Operacional',
-      description: 'Análise detalhada de processos, performance técnica e métricas operacionais',
+      key: "executivo" as const,
+      title: "Relatório Executivo",
+      description:
+        "Visão geral estratégica com KPIs e indicadores para tomada de decisão",
       icon: BarChart3,
-      gradient: 'from-emerald-500 to-emerald-600',
-      accent: 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+      iconStyle: "bg-blue-50 text-blue-600",
     },
     {
-      id: 'team_performance',
-      title: 'Performance da Equipe',
-      description: 'Avaliação individual e coletiva dos técnicos com métricas de produtividade',
+      key: "operacional" as const,
+      title: "Relatório Operacional",
+      description:
+        "Listagem completa de ordens de serviço, clientes, técnicos e status",
+      icon: ClipboardCheck,
+      iconStyle: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      key: "equipe" as const,
+      title: "Performance da Equipe",
+      description:
+        "Avaliação individual e coletiva dos técnicos com métricas de entrega",
       icon: Users,
-      gradient: 'from-purple-500 to-purple-600',
-      accent: 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
+      iconStyle: "bg-indigo-50 text-indigo-600",
     },
     {
-      id: 'service_analysis',
-      title: 'Análise de Serviços',
-      description: 'Breakdown completo por tipo, prioridade, status e tendências temporais',
+      key: "servicos" as const,
+      title: "Análise de Serviços",
+      description:
+        "Distribuição detalhada por tipo de serviço, prioridade e status",
       icon: PieChart,
-      gradient: 'from-orange-500 to-orange-600',
-      accent: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
-    }
+      iconStyle: "bg-amber-50 text-amber-600",
+    },
   ];
 
-  const handleGenerateReport = async (reportType: string) => {
-    setGeneratingReport(reportType);
-    
-    toast({
-      title: "🚀 Gerando relatório profissional...",
-      description: "Processando dados e criando documento PDF...",
-    });
-    
-    try {
-      // Filter data based on selections
-      const filteredServices = services.filter(service => {
-        if (selectedPeriod !== 'all') {
-          const now = new Date();
-          const serviceDate = new Date(service.date || new Date());
-          const diffDays = Math.floor((now.getTime() - serviceDate.getTime()) / (1000 * 3600 * 24));
-          
-          const periodDays = parseInt(selectedPeriod);
-          if (diffDays > periodDays) return false;
-        }
-        
-        if (selectedType !== 'all' && service.serviceType !== selectedType) {
-          return false;
-        }
-        
-        if (selectedTechnician !== 'all' && !service.technicians?.some(t => t.id === selectedTechnician)) {
-          return false;
-        }
-        
-        return true;
-      });
-
-      const filteredTeamMembers = selectedTechnician !== 'all' 
-        ? teamMembers.filter(member => member.id === selectedTechnician)
-        : teamMembers;
-
-      switch (reportType) {
-        case 'executive':
-          await generateExecutiveReport(filteredServices, filteredTeamMembers);
-          break;
-        case 'operational':
-          await generateOperationalReport(filteredServices, filteredTeamMembers);
-          break;
-        case 'team_performance':
-          await generateTeamPerformanceReport(filteredServices, filteredTeamMembers);
-          break;
-        case 'service_analysis':
-          await generateServiceAnalysisReport(filteredServices, filteredTeamMembers);
-          break;
-        default:
-          throw new Error("Tipo de relatório inválido");
-      }
-      
-      toast({
-        title: "✅ Relatório gerado com sucesso!",
-        description: "O download foi iniciado automaticamente.",
-      });
-    } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      toast({
-        title: "❌ Erro ao gerar relatório",
-        description: "Tente novamente em alguns instantes.",
-      });
-    } finally {
-      setGeneratingReport(null);
-    }
-  };
-
-  const calculateStats = () => {
-    const total = services.length;
-    const completed = services.filter(s => s.status === 'concluido').length;
-    const pending = services.filter(s => s.status === 'pendente').length;
-    const inProgress = services.filter(s => s.status === 'em_andamento').length;
-    
-    return { total, completed, pending, inProgress };
-  };
-
-  const stats = calculateStats();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando dados...</p>
+  return (
+    <div className="space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="h-9 w-9 rounded-lg border-slate-200 bg-white"
+        >
+          <ArrowLeft className="h-4 w-4 text-slate-700" />
+        </Button>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Relatórios Corporativos
+          </h1>
+          <p className="text-xs text-slate-500">
+            Exporte relatórios executivos em PDF prontos para apresentação
+          </p>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto p-6 pb-24 space-y-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 mb-8"
-        >
-          <Link 
-            to="/estatisticas" 
-            className="h-12 w-12 rounded-xl flex items-center justify-center bg-card/50 backdrop-blur-sm border border-border/50 hover:bg-accent hover:border-accent/50 transition-all duration-200 group"
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-          </Link>
-          
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-primary to-primary/70 text-primary-foreground">
-                <FileBarChart className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  Relatórios Profissionais
-                </h1>
-                <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Gere relatórios detalhados com dados em tempo real
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      {/* Filtros */}
+      <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 rounded-xl shadow-2xs">
+        <CardHeader className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4 text-blue-600" />
+            Parâmetros dos Relatórios
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="all">Todo o período</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Filtros */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Filter className="w-5 h-5 text-primary" />
-                </div>
-                Filtros de Relatório
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Período</label>
-                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="7">Últimos 7 dias</SelectItem>
-                    <SelectItem value="30">Últimos 30 dias</SelectItem>
-                    <SelectItem value="90">Últimos 3 meses</SelectItem>
-                    <SelectItem value="365">Último ano</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <Select value={techFilter} onValueChange={setTechFilter}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Técnico" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Técnicos</SelectItem>
+              {team
+                .filter((t) => t && t.name)
+                .map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Técnico</label>
-                <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {teamMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Tipo de Serviço" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Tipos</SelectItem>
+              <SelectItem value="Vistoria">Vistoria</SelectItem>
+              <SelectItem value="Instalação">Instalação</SelectItem>
+              <SelectItem value="Manutenção">Manutenção</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo de Serviço</label>
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Vistoria">Vistoria</SelectItem>
-                    <SelectItem value="Manutenção">Manutenção</SelectItem>
-                    <SelectItem value="Instalação">Instalação</SelectItem>
-                    <SelectItem value="Reparo">Reparo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Status Overview */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4"
-        >
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total</p>
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.total}</p>
-                </div>
-                <FileText className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border-emerald-200 dark:border-emerald-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Concluídos</p>
-                  <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats.completed}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-emerald-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">Em Andamento</p>
-                  <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.inProgress}</p>
-                </div>
-                <Clock className="w-8 h-8 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">Pendentes</p>
-                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.pending}</p>
-                </div>
-                <Calendar className="w-8 h-8 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Tipos de Relatório */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
-          {reportTypes.map((report, index) => {
-            const Icon = report.icon;
-            const isGenerating = generatingReport === report.id;
-            
-            return (
-              <motion.div
-                key={report.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 * index }}
-              >
-                <Card className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group overflow-hidden relative">
-                  <div className={`absolute inset-0 bg-gradient-to-r ${report.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
-                  
-                  <CardHeader className="relative">
-                    <CardTitle className="flex items-center gap-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-r ${report.gradient} text-white shadow-lg`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold">{report.title}</h3>
-                        <Badge variant="outline" className={`mt-1 ${report.accent} border-0`}>
-                          PDF Profissional
-                        </Badge>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4 relative">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {report.description}
+      {/* Cards de Exportação de Relatórios */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {reportTypes.map((rep) => {
+          const Icon = rep.icon;
+          const isGenerating = generatingType === rep.key;
+          return (
+            <Card
+              key={rep.key}
+              className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all rounded-xl"
+            >
+              <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${rep.iconStyle}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                        {rep.title}
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] bg-slate-50 text-slate-600 border-slate-200"
+                      >
+                        PDF A4
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      {rep.description}
                     </p>
-                    
-                    <Button 
-                      onClick={() => handleGenerateReport(report.id)}
-                      disabled={isGenerating}
-                      className={`w-full bg-gradient-to-r ${report.gradient} hover:opacity-90 text-white shadow-lg hover:shadow-xl transition-all duration-200`}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 mr-2" />
-                          Gerar Relatório
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  disabled={isLoading || isGenerating}
+                  onClick={() =>
+                    generateCorporatePDF(rep.key, rep.title, rep.description)
+                  }
+                  className="w-full h-9 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando Documento...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar {rep.title}
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
