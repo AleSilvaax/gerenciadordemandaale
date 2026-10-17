@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const UserProfileMenu = () => {
@@ -47,8 +47,8 @@ const UserProfileMenu = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+          <Avatar className="h-9 w-9">
             <AvatarImage src={user.avatar || ""} alt={user.name || "Usuário"} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {getUserInitials(user.name || "U")}
@@ -70,6 +70,10 @@ const UserProfileMenu = () => {
         <DropdownMenuItem onClick={handleViewProfile} className="cursor-pointer">
           <User className="mr-2 h-4 w-4" />
           <span>Ver Perfil</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/equipe")} className="cursor-pointer">
+          <Users className="mr-2 h-4 w-4" />
+          <span>Equipe</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
           <Settings className="mr-2 h-4 w-4" />

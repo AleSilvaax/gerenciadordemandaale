@@ -3,9 +3,9 @@
 import React from "react";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Layers } from "lucide-react";
+import { Link } from "react-router-dom";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 interface AppLayoutProps {
@@ -13,7 +13,6 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
-  const isMobile = useIsMobile();
   const { isLoading, user } = useAuth();
   
   if (isLoading) {
@@ -25,35 +24,31 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }
   
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {/* Header Unificado */}
+    <div className="flex flex-col min-h-[100dvh] bg-slate-50/80 dark:bg-slate-950 text-foreground">
       {user && (
-        <header className="bg-card/80 backdrop-blur-sm border-b border-border/50 px-3 py-2 md:p-4 sticky top-0 z-50">
-          <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center space-x-2 font-bold text-xl text-primary">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground text-sm font-bold">GD</span>
+        <header className="sticky top-0 z-50 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2.5 min-w-0">
+              <div className="h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center">
+                <Layers className="h-5 w-5" />
               </div>
-              <span className={isMobile ? "hidden sm:block" : ""}>GerenciadorDemandas</span>
-              {isMobile && <span className="sm:hidden">GD</span>}
-            </div>
-
-            {/* ✅ 2. Adicionamos o sino de notificações aqui, ao lado do perfil */}
-            <div className="flex items-center gap-2">
+              <div className="leading-tight min-w-0">
+                <p className="font-bold text-slate-900 dark:text-white truncate">ServiceFlow</p>
+                <p className="text-[11px] text-slate-500 truncate">Gestão de Operações</p>
+              </div>
+            </Link>
+            <div className="flex items-center gap-1.5">
               <NotificationCenter />
               <UserProfileMenu />
             </div>
-
           </div>
         </header>
       )}
 
-      <main className={`flex-1 ${isMobile ? 'pb-20' : 'pb-4'} overflow-y-auto`}>
-        <div className="pt-0 min-w-full">
-          {children}
-        </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-5 pb-24 md:pb-8">
+        {children}
       </main>
-      
+
       <Navbar />
     </div>
   );
