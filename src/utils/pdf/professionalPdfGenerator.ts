@@ -422,6 +422,7 @@ export const generateProfessionalServiceReport = async (
   );
 
   const techBoxX = margin + sigBoxW + 8;
+  doc.setDrawColor(203, 213, 225);
   doc.roundedRect(techBoxX, currentY, sigBoxW, sigBoxH, 2, 2, "S");
   if (techSig && techSig.startsWith("data:image")) {
     try {
@@ -464,29 +465,22 @@ export const generateProfessionalServiceReport = async (
     .replace(/\s+/g, "_");
   const fileName = `Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`;
 
-  // 💡 COMPATIBILIDADE UNIVERSAL PARA iPHONE (SAFARI) E ANDROID
+  // 💡 EXPORTAÇÃO COMPATÍVEL COM MÓVEIS (BLOB DOWNLOAD SEGURO)
   try {
     const pdfBlob = doc.output("blob");
     const blobUrl = URL.createObjectURL(pdfBlob);
     
-    // No iOS (Safari), abrir em nova aba é o método mais fiável para evitar o bloqueio de downloads automáticos
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = blobUrl;
+    downloadLink.download = fileName;
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
     
-    if (isIOS) {
-      const newWindow = window.open(blobUrl, "_blank");
-      if (!newWindow) {
-        // Se o popup estiver bloqueado, força o download direto via link temporário
-        const downloadLink = document.createElement("a");
-        downloadLink.href = blobUrl;
-        downloadLink.download = fileName;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      }
-    } else {
-      // Método standard para Android e Desktop
-      doc.save(fileName);
-    }
+    setTimeout(() => {
+      document.body.removeChild(downloadLink);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1000);
   } catch (e) {
     console.warn("Fallback para doc.save nativo:", e);
     doc.save(fileName);
