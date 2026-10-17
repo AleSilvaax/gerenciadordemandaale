@@ -18,9 +18,10 @@ import { Service, TeamMember } from "@/types/serviceTypes";
 import { StatusBadge } from "@/components/ui-custom/StatusBadge";
 import { TechnicianAssigner } from "@/components/ui-custom/TechnicianAssigner";
 import { ServiceEditForm } from "./ServiceEditForm";
-import { assignTechnicianToService } from "@/services/servicesDataService";
+import { updateServiceInDatabase } from "@/services/serviceCrud";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ServiceDetailCardProps {
   service: Service;
@@ -65,8 +66,16 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
   };
 
   const handleAssignTechnician = async (technician: TeamMember | null) => {
-    await assignTechnicianToService(service.id, technician?.id || null);
-    onServiceUpdate();
+    try {
+      await updateServiceInDatabase({
+        id: service.id,
+        technicians: technician ? [technician] : [],
+      } as any);
+      toast.success("Técnico atribuído com sucesso!");
+      onServiceUpdate();
+    } catch (error) {
+      toast.error("Erro ao atribuir técnico.");
+    }
   };
 
   if (isEditing && !isConcluded) {
@@ -87,7 +96,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
   return (
     <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl overflow-hidden">
       <CardContent className="p-5 space-y-5">
-        {/* Topo: Localidade, Status e Botão Editar (oculto se concluído) */}
+        {/* Topo: Localidade, Status e Botão Editar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
@@ -113,7 +122,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Faixa de Resumo Rápido: Prioridade e Tipo */}
+        {/* Faixa de Resumo */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -158,7 +167,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Dados do Cliente e Endereço */}
+        {/* Cliente e Endereço */}
         <div className="space-y-2.5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5 text-blue-600" />
@@ -230,7 +239,7 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
           </div>
         </div>
 
-        {/* Descrição (se existir) */}
+        {/* Descrição */}
         {service.description && (
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -276,7 +285,6 @@ export const ServiceDetailCard: React.FC<ServiceDetailCardProps> = ({
             </div>
           </div>
 
-          {/* Só permite alterar atribuição se a demanda NÃO estiver concluída */}
           {!isConcluded && canManage && (
             <div className="pt-1">
               <p className="text-xs font-medium text-slate-500 mb-2">
