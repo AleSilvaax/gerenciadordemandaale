@@ -1,416 +1,325 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import React, { useState, useEffect } from "react";
-import { Settings, Search, Filter, Calendar, ChevronRight, TrendingUp, Users, Clock, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
-import { CompactServiceCard } from "@/components/ui-custom/CompactServiceCard";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { getServices, getTeamMembers } from "@/services/servicesDataService";
+import { Service, TeamMember } from "@/types/serviceTypes";
 import { CompactMobileServiceCard } from "@/components/ui-custom/CompactMobileServiceCard";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { StatusBadge } from "@/components/ui-custom/StatusBadge";
-import { Button } from "@/components/ui/button";
+import { StatCard } from "@/components/ui-custom/StatCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { useSmartServices } from "@/hooks/useSmartServices";
-import { Service } from "@/types/serviceTypes";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { DashboardStatsCards } from "@/components/dashboard/DashboardStatsCards";
-import { AdvancedSearch, SearchFilters } from "@/components/search/AdvancedSearch";
-import { RealtimeMetrics } from "@/components/dashboard/RealtimeMetrics";
-import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ClipboardList,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Search,
+  Plus,
+  ArrowRight,
+  RotateCcw,
+} from "lucide-react";
 
-const Index: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState("overview");
-  const isMobile = useIsMobile();
-  const [filters, setFilters] = useState<SearchFilters>({
-    searchTerm: '',
-    status: 'all',
-    priority: 'all',
-    serviceType: 'all',
-    client: '',
-    location: '',
-    dateFrom: null,
-    dateTo: null,
-    technician: 'all'
-  });
+const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Ativar notificações em tempo real
-  const { isConnected } = useRealtimeNotifications();
-  
-  // Usar hook inteligente que decide automaticamente qual estratégia usar
-  const { 
-    services = [], 
-    isLoading, 
-    isTechnicianView, 
-    isManager 
-  } = useSmartServices();
+  const [services, setServices] = useState<Service[]>([]);
+  const [technicians, setTechnicians] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const applyFilters = (services: Service[]): Service[] => {
-    return services.filter(service => {
-      // Filtro de texto geral
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const matchesSearch = 
-          service.title.toLowerCase().includes(searchLower) ||
-          service.client?.toLowerCase().includes(searchLower) ||
-          service.location.toLowerCase().includes(searchLower) ||
-          service.description?.toLowerCase().includes(searchLower);
-        
-        if (!matchesSearch) return false;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [priorityFilter, setPriorityFilter] = useState("todas");
+  const [techFilter, setTechFilter] = useState("todos");
+
+  useEffect(() => {
+    let mounted = true;
+    const loadDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [servicesData, teamData] = await Promise.all([
+          getServices(),
+          getTeamMembers().catch(() => []),
+        ]);
+        if (mounted) {
+          setServices(servicesData || []);
+          setTechnicians(teamData || []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
+    };
 
-      // Filtro de status
-      if (filters.status !== 'all' && service.status !== filters.status) {
-        return false;
-      }
+    loadDashboardData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-      // Filtro de prioridade
-      if (filters.priority !== 'all' && service.priority !== filters.priority) {
-        return false;
-      }
+  const stats = useMemo(() => {
+    const total = services.length;
+    const completed = services.filter((s) => s.status === "concluido").length;
+    const pending = services.filter(
+      (s) => s.status === "pendente" || (s.status as string) === "em_andamento"
+    ).length;
+    const highPriority = services.filter(
+      (s) =>
+        (s.priority === "alta" || s.priority === "urgente") &&
+        s.status !== "concluido" &&
+        s.status !== "cancelado"
+    ).length;
 
-      if (filters.technician !== 'all' && !service.technicians?.some(technician => technician.id === filters.technician)) return false;
+    return { total, completed, pending, highPriority };
+  }, [services]);
 
-      // Filtro de tipo de serviço
-      if (filters.serviceType !== 'all' && service.serviceType !== filters.serviceType) {
-        return false;
-      }
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
+      const matchesSearch =
+        !searchTerm ||
+        service.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(service.number || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
 
-      // Filtro de cliente
-      if (filters.client && !service.client?.toLowerCase().includes(filters.client.toLowerCase())) {
-        return false;
-      }
+      const matchesStatus =
+        statusFilter === "todos" || service.status === statusFilter;
 
-      // Filtro de local
-      if (filters.location) {
-        const locationMatch = 
-          service.location.toLowerCase().includes(filters.location.toLowerCase()) ||
-          service.city?.toLowerCase().includes(filters.location.toLowerCase());
-        
-        if (!locationMatch) return false;
-      }
+      const matchesPriority =
+        priorityFilter === "todas" || service.priority === priorityFilter;
 
-      // Filtro de data
-      if (filters.dateFrom || filters.dateTo) {
-        const serviceDate = new Date(service.creationDate || service.date || new Date());
-        
-        if (filters.dateFrom && serviceDate < filters.dateFrom) return false;
-        if (filters.dateTo && serviceDate > filters.dateTo) return false;
-      }
+      const matchesTech =
+        techFilter === "todos" ||
+        service.technicians?.some(
+          (t) => t.id === techFilter || t.name === techFilter
+        );
 
-      return true;
+      return matchesSearch && matchesStatus && matchesPriority && matchesTech;
     });
-  };
+  }, [services, searchTerm, statusFilter, priorityFilter, techFilter]);
 
-  const filteredServices = applyFilters(services);
-  const recentServices = filteredServices.slice(0, 3);
+  const hasActiveFilters =
+    searchTerm !== "" ||
+    statusFilter !== "todos" ||
+    priorityFilter !== "todas" ||
+    techFilter !== "todos";
 
   const clearFilters = () => {
-    setFilters({
-      searchTerm: '',
-      status: 'all',
-      priority: 'all',
-      serviceType: 'all',
-      client: '',
-      location: '',
-      dateFrom: null,
-      dateTo: null,
-      technician: 'all'
-    });
+    setSearchTerm("");
+    setStatusFilter("todos");
+    setPriorityFilter("todas");
+    setTechFilter("todos");
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.4
-      }
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 space-y-6" role="status" aria-label="Carregando">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-44 rounded-xl" />)}
-        </div>
-        <span className="sr-only">Carregando...</span>
-      </div>
+  const canCreateService =
+    user &&
+    ["super_admin", "owner", "administrador", "gestor", "requisitor"].includes(
+      user.role
     );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
-      <motion.div
-        className="container mx-auto p-2 sm:p-4 pb-24 space-y-6"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        {/* Header */}
-        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent text-left-force">
-                Dashboard
-              </h1>
-              {isConnected && (
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                  ● Tempo Real
-                </Badge>
+    <div className="space-y-6">
+      {/* Cabeçalho Executivo */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Painel Operacional
+            </h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Tempo Real
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Visão geral das ordens de serviço e produtividade em campo
+          </p>
+        </div>
+
+        {canCreateService && (
+          <Button
+            onClick={() => navigate("/nova-demanda")}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-xs h-9 px-4 text-xs sm:text-sm font-medium rounded-lg self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nova Demanda
+          </Button>
+        )}
+      </div>
+
+      {/* KPI Cards Limpos (Design System Industrial Precision) */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            title="Total de Demandas"
+            value={stats.total}
+            description="Registradas no sistema"
+            icon={<ClipboardList className="h-4 w-4 text-blue-600" />}
+          />
+          <StatCard
+            title="Concluídas"
+            value={stats.completed}
+            description="Atendimentos finalizados"
+            icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+          />
+          <StatCard
+            title="Em Aberto"
+            value={stats.pending}
+            description="Pendentes ou em execução"
+            icon={<Clock className="h-4 w-4 text-amber-600" />}
+          />
+          <StatCard
+            title="Alta Prioridade"
+            value={stats.highPriority}
+            description="Atenção prioritária"
+            icon={<AlertTriangle className="h-4 w-4 text-rose-600" />}
+          />
+        </div>
+      )}
+
+      {/* Barra de Busca e Filtros Compacta */}
+      <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl">
+        <CardContent className="p-3.5 sm:p-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Buscar por título, cliente, endereço ou nº da OS..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-10 bg-slate-50/70 dark:bg-slate-950 border-slate-200 text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-900 border-slate-200">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Status</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluido">Concluído</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-900 border-slate-200">
+                <SelectValue placeholder="Prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as Prioridades</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="urgente">Urgente</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="col-span-2 sm:col-span-1 flex items-center gap-2">
+              <Select value={techFilter} onValueChange={setTechFilter}>
+                <SelectTrigger className="h-9 text-xs bg-white dark:bg-slate-900 border-slate-200 flex-1">
+                  <SelectValue placeholder="Técnico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Técnicos</SelectItem>
+                  {technicians
+                    .filter((t) => t && t.name)
+                    .map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-9 px-2.5 text-xs text-slate-600 hover:text-slate-900 shrink-0"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Limpar
+                </Button>
               )}
             </div>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1 text-left-force">
-              Bem-vindo ao sistema de gerenciamento
-            </p>
           </div>
-          
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/settings">
-              <Button variant="outline" size="sm" className="card-enhanced">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">Configurações</span>
-              </Button>
+        </CardContent>
+      </Card>
+
+      {/* Lista de Demandas Recentes */}
+      <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl">
+        <CardHeader className="flex flex-row items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+              Demandas Recentes
+            </CardTitle>
+          </div>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            <Link to="/demandas">
+              Ver Todas
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Link>
-            {/* O BOTÃO "NOVA DEMANDA" FOI REMOVIDO DESTA SEÇÃO */}
-          </div>
-        </motion.div>
+          </Button>
+        </CardHeader>
 
-        {/* Cards de Estatísticas Principais - Simplificados */}
-        <motion.div variants={itemVariants}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-            <Card className="card-enhanced bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 dark:from-blue-950/20 dark:to-blue-900/30 dark:border-blue-800/50 hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-blue-500/10 dark:bg-blue-400/20 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  Total de Demandas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{services.length}</div>
-                <p className="text-sm text-muted-foreground">Demandas no sistema</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-enhanced bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 dark:from-green-950/20 dark:to-green-900/30 dark:border-green-800/50 hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-green-500/10 dark:bg-green-400/20 rounded-lg">
-                    <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  Concluídas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{services.filter(s => s.status === 'concluido').length}</div>
-                <p className="text-sm text-muted-foreground">Demandas finalizadas</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-enhanced bg-gradient-to-br from-orange-50/50 to-orange-100/30 border-orange-200/50 dark:from-orange-950/20 dark:to-orange-900/30 dark:border-orange-800/50 hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-orange-500/10 dark:bg-orange-400/20 rounded-lg">
-                    <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  Pendentes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">{services.filter(s => s.status === 'pendente').length}</div>
-                <p className="text-sm text-muted-foreground">Aguardando execução</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-enhanced bg-gradient-to-br from-red-50/50 to-red-100/30 border-red-200/50 dark:from-red-950/20 dark:to-red-900/30 dark:border-red-800/50 hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="p-2 bg-red-500/10 dark:bg-red-400/20 rounded-lg">
-                    <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  </div>
-                  Alta Prioridade
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">{services.filter(s => s.priority === 'alta').length}</div>
-                <p className="text-sm text-muted-foreground">Demandas urgentes</p>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.div>
-
-        {/* Busca Avançada - Simplificada */}
-        <motion.div variants={itemVariants}>
-          {isMobile ? (
+        <CardContent className="p-4">
+          {isLoading ? (
             <div className="space-y-3">
-              <Input aria-label="Buscar demandas" placeholder="Buscar demandas..." value={filters.searchTerm} onChange={event => setFilters(previous => ({ ...previous, searchTerm: event.target.value }))} />
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { key: 'status', label: 'Status', options: [['all', 'Todos os Status'], ['pendente', 'Pendente'], ['em_andamento', 'Em Andamento'], ['concluido', 'Concluído'], ['cancelado', 'Cancelado']] },
-                  { key: 'priority', label: 'Prioridade', options: [['all', 'Todas as Prioridades'], ['urgente', 'Urgente'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']] },
-                  { key: 'technician', label: 'Técnico', options: [['all', 'Todos os Técnicos'], ...Array.from(new Map(services.flatMap(service => service.technicians ?? []).map(technician => [technician.id, technician.name])).entries())] }
-                ] as const).map(({ key, label, options }) => (
-                  <Select key={key} value={filters[key]} onValueChange={value => setFilters(previous => ({ ...previous, [key]: value }))}>
-                    <SelectTrigger aria-label={label} className="min-w-0"><SelectValue placeholder={label} /></SelectTrigger>
-                    <SelectContent>{options.map(([value, text]) => <SelectItem key={value} value={value}>{text}</SelectItem>)}</SelectContent>
-                  </Select>
-                ))}
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : filteredServices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+                <ClipboardList className="h-6 w-6" />
               </div>
-              <Button variant="outline" size="sm" onClick={clearFilters}>Limpar filtros</Button>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Nenhuma demanda encontrada
+              </p>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                {hasActiveFilters
+                  ? "Tente limpar os filtros para visualizar todas as ordens de serviço."
+                  : "Comece criando a primeira ordem de serviço do sistema."}
+              </p>
             </div>
           ) : (
-          <AdvancedSearch
-            filters={filters}
-            onFiltersChange={setFilters}
-            onClearFilters={clearFilters}
-            className="w-full max-w-full !px-0"
-          />
-          )}
-        </motion.div>
-
-        {/* Conteúdo Principal - Simplificado */}
-        <motion.div variants={itemVariants}>
-          <div className="space-y-6">
-            {/* Demandas Recentes */}
-            <Card className="bg-gradient-to-br from-background/95 via-background/90 to-primary/5 backdrop-blur-xl border border-border/30 shadow-xl">
-              <CardHeader className="pb-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/20">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <CardTitle className="text-xl flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
-                      <Calendar className="w-5 h-5 text-primary" />
-                    </div>
-                    Demandas {filteredServices.length !== services.length ? 'Filtradas' : 'Recentes'}
-                    {filteredServices.length !== services.length && (
-                      <Badge variant="secondary" className="ml-2">
-                        {filteredServices.length} de {services.length}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <div className="flex items-center gap-3">
-                    <Link to="/demandas">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        Ver Todas
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                {recentServices.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentServices.map((service, index) => (
-                      <motion.div
-                        key={service.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        {isMobile ? (
-                          <CompactMobileServiceCard service={service} />
-                        ) : (
-                          <CompactServiceCard service={service} />
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="p-4 bg-muted/20 rounded-2xl w-fit mx-auto mb-4">
-                      <Search className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">Nenhuma demanda encontrada</h3>
-                    <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
-                      {filters.searchTerm || filters.status !== 'all' || filters.priority !== 'all'
-                        ? 'Tente ajustar os filtros de busca para encontrar demandas.'
-                        : 'Não há demandas no sistema. Que tal criar a primeira?'}
-                    </p>
-                    <Link to="/nova-demanda">
-                      <Button className="gap-2">
-                        <Plus className="w-4 h-4" />
-                        Nova Demanda
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Ações Rápidas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <Card className="card-enhanced bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 dark:from-primary/10 dark:to-primary/20 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <Link to="/estatisticas" className="block">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <TrendingUp className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">Relatórios</h3>
-                        <p className="text-sm text-muted-foreground">Estatísticas detalhadas</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-
-              <Card className="card-enhanced bg-gradient-to-br from-green-50/50 to-green-100/30 border-green-200/50 dark:from-green-950/20 dark:to-green-900/30 dark:border-green-800/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <Link to="/equipe" className="block">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-green-500/10 dark:bg-green-400/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">Equipe</h3>
-                        <p className="text-sm text-muted-foreground">Gerenciar membros</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-
-              <Card className="card-enhanced bg-gradient-to-br from-blue-50/50 to-blue-100/30 border-blue-200/50 dark:from-blue-950/20 dark:to-blue-900/30 dark:border-blue-800/50 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <Link to="/calendar" className="block">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-blue-500/10 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 transition-transform">
-                        <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">Calendário</h3>
-                        <p className="text-sm text-muted-foreground">Agenda completa</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
+            <div className="space-y-3">
+              {filteredServices.slice(0, 8).map((service) => (
+                <CompactMobileServiceCard key={service.id} service={service} />
+              ))}
             </div>
-          </div>
-        </motion.div>
-      </motion.div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
