@@ -1,102 +1,64 @@
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Package, TrendingDown, DollarSign, Activity } from "lucide-react";
 import { InventoryDashboard } from "@/types/inventoryTypes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/ui-custom/StatCard";
 
 interface InventoryDashboardCardsProps {
   dashboard?: InventoryDashboard;
   isLoading: boolean;
 }
 
-export const InventoryDashboardCards: React.FC<InventoryDashboardCardsProps> = ({ 
-  dashboard, 
-  isLoading 
-}) => {
+export const InventoryDashboardCards: React.FC<
+  InventoryDashboardCardsProps
+> = ({ dashboard, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-[100px]" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-[60px] mb-2" />
-              <Skeleton className="h-3 w-[120px]" />
-            </CardContent>
-          </Card>
+          <Skeleton key={i} className="h-28 w-full rounded-xl" />
         ))}
       </div>
     );
   }
 
+  const formattedValue = `R$ ${(dashboard?.totalValue || 0).toLocaleString(
+    "pt-BR",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )}`;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Total de Materiais */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Materiais</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{dashboard?.totalMaterials || 0}</div>
-          <p className="text-xs text-muted-foreground">
-            materiais cadastrados
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatCard
+        title="Total de Materiais"
+        value={dashboard?.totalMaterials || 0}
+        description="Itens no catálogo"
+        icon={<Package className="h-4 w-4 text-blue-600" />}
+      />
 
-      {/* Estoque Baixo */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
-          <TrendingDown className="h-4 w-4 text-destructive" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-destructive">
-            {dashboard?.lowStockItems || 0}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            itens precisando reposição
-          </p>
-        </CardContent>
-      </Card>
+      <StatCard
+        title="Estoque Baixo"
+        value={dashboard?.lowStockItems || 0}
+        description="Precisando reposição"
+        icon={<TrendingDown className="h-4 w-4 text-rose-600" />}
+      />
 
-      {/* Valor Total do Estoque */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor do Estoque</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            R$ {(dashboard?.totalValue || 0).toLocaleString('pt-BR', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            valor total investido
-          </p>
-        </CardContent>
-      </Card>
+      <StatCard
+        title="Valor em Estoque"
+        value={formattedValue}
+        description="Total investido"
+        icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
+      />
 
-      {/* Movimentações Recentes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Movimentações (7d)</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{dashboard?.recentMovements || 0}</div>
-          <p className="text-xs text-muted-foreground">
-            últimos 7 dias
-          </p>
-        </CardContent>
-      </Card>
+      <StatCard
+        title="Movimentações (7d)"
+        value={dashboard?.recentMovements || 0}
+        description="Nos últimos 7 dias"
+        icon={<Activity className="h-4 w-4 text-indigo-600" />}
+      />
     </div>
   );
 };
