@@ -341,7 +341,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         {event.technician && (
                           <span className="inline-flex items-center gap-1 capitalize">
                             <User className="h-3.5 w-3.5 text-slate-400" />
-                            {event.technician}
+                            {event.technician.name}
                           </span>
                         )}
                         {event.location && (

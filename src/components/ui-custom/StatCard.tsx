@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
+  tone?: string;
   title: string;
   value: number | string;
   icon?: ReactNode;
