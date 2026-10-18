@@ -69,7 +69,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
       );
       await generateProfessionalServiceReport({
         ...service,
-        photos: photos && photos.length > 0 ? photos : service.photos || [],
+        photos: photos.length > 0 ? photos.map(photo => typeof photo === "string" ? photo : photo.url) : service.photos || [],
       });
       toast.success("Relatório PDF gerado com sucesso!", { id: toastId });
     } catch (error) {

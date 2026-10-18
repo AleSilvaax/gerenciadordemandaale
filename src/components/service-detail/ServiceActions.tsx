@@ -9,6 +9,7 @@ import SectionCard from "@/components/service-detail/SectionCard";
 import { ServiceCompletionValidationModal } from "./ServiceCompletionValidationModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ServiceActionsProps {
   service: Service;
@@ -102,10 +103,13 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
     navigate('/inventory');
   };
 
-  const handleCopyTrackingLink = () => {
-    const trackingUrl = `${window.location.origin}/tracking/${service.id}`;
-    navigator.clipboard.writeText(trackingUrl);
-    toast.success("Link de acompanhamento copiado para a área de transferência!");
+  const handleCopyTrackingLink = async () => {
+    try {
+      const { data, error } = await supabase.rpc("create_service_tracking_link", { p_service_id: service.id });
+      if (error || !data) throw error || new Error("Link indisponível");
+      await navigator.clipboard.writeText(`${window.location.origin}/tracking/${data}`);
+      toast.success("Link do cliente copiado. Envie pelo WhatsApp.");
+    } catch { toast.error("Não foi possível copiar o link do cliente."); }
   };
 
   return (
