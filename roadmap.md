@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Link seguro do cliente: fotos, assinaturas e relatório completo
+- [ ] Feedback enviado pelo link do cliente
+- [ ] Assinatura ampliada em tela cheia no celular
+
 - [x] Fotos do relatório funcionando entre aparelhos diferentes
 - [x] Compactação geral da versão celular (primeira passada)
 - [x] Foto de perfil (upload na página de perfil)
