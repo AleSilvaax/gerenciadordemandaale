@@ -1,16 +1,19 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Service } from "@/types/serviceTypes";
-import { supabase } from "@/integrations/supabase/client";
 import { getServiceByIdFromDatabase } from "@/services/serviceCrud";
 import { convertToSignedUrl } from "@/utils/signedUrlHelper";
 
 export interface ReportMaterial {
- planned_quantity?: number | null;
- used_quantity?: number | null;
- materials?: { name: string; unit: string; cost_per_unit?: number | null } | null;
+  planned_quantity?: number | null;
+  used_quantity?: number | null;
+  materials?: { name: string; unit: string; cost_per_unit?: number | null } | null;
 }
-interface ReportOptions { preloaded?: boolean; materials?: ReportMaterial[]; }
+
+interface ReportOptions {
+  preloaded?: boolean;
+  materials?: ReportMaterial[];
+}
 
 interface LoadedImageInfo {
   dataUrl: string;
@@ -106,29 +109,17 @@ export const generateProfessionalServiceReport = async (
 
   let materialRows: Array<[string, string, string, string, string]> = [];
   let fullServiceData = { ...service };
-
   let materials = options.materials || [];
-  if (!options.preloaded) {
-    const fresh = await getServiceByIdFromDatabase(service.id);
-    if (!fresh) throw new Error("Não foi possível carregar todos os dados do relatório.");
-    fullServiceData = { ...service, ...fresh };
-    const [photoResult, materialResult] = await Promise.all([
-      supabase.from("service_photos").select("photo_url,title").eq("service_id", service.id).order("created_at"),
-      supabase.from("service_material_usage").select("planned_quantity,used_quantity,materials(name,unit,cost_per_unit)").eq("service_id", service.id),
-    ]);
-    if (photoResult.error || materialResult.error) throw new Error("Não foi possível carregar fotos ou materiais do relatório.");
-    const entries = new Map<string, string>();
-    (fullServiceData.photos || []).forEach((url, i) => entries.set(url, fullServiceData.photoTitles?.[i] || ""));
-    (photoResult.data || []).forEach(p => entries.set(p.photo_url, p.title || entries.get(p.photo_url) || ""));
-    fullServiceData.photos = [...entries.keys()];
-    fullServiceData.photoTitles = [...entries.values()];
-    materials = materialResult.data || [];
+
+  try {
+    if (!options.preloaded) {
+      const fresh = await getServiceByIdFromDatabase(service.id);
+      if (!fresh) throw new Error("Não foi possível carregar todos os dados do relatório.");
+      fullServiceData = { ...service, ...fresh };
+    }
+  } catch (err) {
+    console.warn("Aviso ao carregar dados complementares:", err);
   }
-  materialRows = materials.map(item => {
-    const used = Number(item.used_quantity || 0);
-    const total = used * Number(item.materials?.cost_per_unit || 0);
-    return [item.materials?.name || "Material", item.materials?.unit || "un", String(item.planned_quantity || 0), String(used), `R$ ${total.toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`];
-  });
 
   const techName =
     fullServiceData.technicians?.[0]?.name ||
@@ -269,30 +260,20 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 3
-  if (fullServiceData.customFields && fullServiceData.customFields.length > 0) {
-    drawSectionHeader("Checklist Técnico");
-    const customRows = fullServiceData.customFields.map((f) => [
-      f.label || f.id,
-      typeof f.value === "boolean"
-        ? f.value
-          ? "Sim"
-          : "Não"
-        : String(f.value ?? "-"),
-    ]);
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Item Verificado", "Resposta / Medição"]],
-      body: customRows,
-      headStyles: tableHeadStyles,
-      bodyStyles: tableBodyStyles,
-      margin: { left: margin, right: margin },
+  // Materiais
+  if (materials.length > 0) {
+    materialRows = materials.map((item) => {
+      const used = Number(item.used_quantity || 0);
+      const total = used * Number(item.materials?.cost_per_unit || 0);
+      return [
+        item.materials?.name || "Material",
+        item.materials?.unit || "un",
+        String(item.planned_quantity || 0),
+        String(used),
+        `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      ];
     });
-    currentY = (doc as any).lastAutoTable.finalY + 8;
-  }
 
-  // SECÇÃO 4
-  if (materialRows.length > 0) {
     drawSectionHeader("Materiais Utilizados");
     autoTable(doc, {
       startY: currentY,
@@ -305,7 +286,7 @@ export const generateProfessionalServiceReport = async (
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // SECÇÃO 5: Fotos
+  // SECÇÃO 3: Fotos
   const rawPhotos: Array<{ url: string; title: string }> = (
     fullServiceData.photos || []
   ).map((p: any, idx: number) => {
@@ -324,11 +305,13 @@ export const generateProfessionalServiceReport = async (
   if (rawPhotos.length > 0) {
     const loadedPhotos = (
       await Promise.all(
-        rawPhotos.map(async (p) => loadImageWithDimensions(options.preloaded ? p.url : await convertToSignedUrl(p.url), p.title))
+        rawPhotos.map(async (p) => {
+          const resolvedUrl = options.preloaded ? p.url : await convertToSignedUrl(p.url);
+          return loadImageWithDimensions(resolvedUrl, p.title);
+        })
       )
     ).filter(Boolean) as LoadedImageInfo[];
 
-    if (loadedPhotos.length !== rawPhotos.length) throw new Error("Algumas fotos não puderam ser carregadas. Tente baixar novamente.");
     if (loadedPhotos.length > 0) {
       drawSectionHeader(`Anexos Fotográficos (${loadedPhotos.length})`);
 
@@ -375,12 +358,22 @@ export const generateProfessionalServiceReport = async (
     }
   }
 
-  if (fullServiceData.feedback?.clientRating) {
-    drawSectionHeader("Avaliação do cliente");
-    autoTable(doc, { startY: currentY, body: [["Nota", `${fullServiceData.feedback.clientRating}/5`], ["Comentário", fullServiceData.feedback.clientComment || "—"]], bodyStyles: tableBodyStyles, margin: {left: margin, right: margin} });
+  // Avaliação do Cliente (se houver)
+  if ((fullServiceData as any).feedback?.clientRating) {
+    drawSectionHeader("Avaliação do Cliente");
+    autoTable(doc, {
+      startY: currentY,
+      body: [
+        ["Nota", `${(fullServiceData as any).feedback.clientRating}/5`],
+        ["Comentário", (fullServiceData as any).feedback.clientComment || "-"],
+      ],
+      bodyStyles: tableBodyStyles,
+      margin: { left: margin, right: margin },
+    });
     currentY = (doc as any).lastAutoTable.finalY + 8;
   }
-  // SECÇÃO 6: Assinaturas
+
+  // SECÇÃO 4: Assinaturas
   const clientSig =
     fullServiceData.signatures?.client || (fullServiceData as any).reportData?.clientSignature;
   const techSig = fullServiceData.signatures?.technician;
@@ -456,7 +449,6 @@ export const generateProfessionalServiceReport = async (
   const fileName = `${safeTitle}_${shortOS.replace(/[\s#]/g, "")}.pdf`;
 
   doc.save(fileName);
-  return;
 };
 
 export default generateProfessionalServiceReport;
