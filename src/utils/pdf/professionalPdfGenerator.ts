@@ -2,6 +2,15 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Service } from "@/types/serviceTypes";
 import { supabase } from "@/integrations/supabase/client";
+import { getServiceByIdFromDatabase } from "@/services/serviceCrud";
+import { convertToSignedUrl } from "@/utils/signedUrlHelper";
+
+export interface ReportMaterial {
+ planned_quantity?: number | null;
+ used_quantity?: number | null;
+ materials?: { name: string; unit: string; cost_per_unit?: number | null } | null;
+}
+interface ReportOptions { preloaded?: boolean; materials?: ReportMaterial[]; }
 
 interface LoadedImageInfo {
   dataUrl: string;
@@ -77,7 +86,8 @@ const loadImageWithDimensions = (
 };
 
 export const generateProfessionalServiceReport = async (
-  service: Service
+  service: Service,
+  options: ReportOptions = {}
 ): Promise<void> => {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -97,54 +107,28 @@ export const generateProfessionalServiceReport = async (
   let materialRows: Array<[string, string, string, string, string]> = [];
   let fullServiceData = { ...service };
 
-  try {
-    const { data: srvDetails } = await supabase
-      .from("services")
-      .select("*, technicians:profiles(id, name, avatar, role)")
-      .eq("id", service.id)
-      .maybeSingle();
-
-    if (srvDetails) {
-      fullServiceData = {
-        ...fullServiceData,
-        ...srvDetails,
-        technicians: srvDetails.technicians ? [srvDetails.technicians] : fullServiceData.technicians,
-      };
-    }
-
-    const { data: srvMaterials } = await supabase
-      .from("service_materials")
-      .select("*, material:materials(name, unit, cost_per_unit)")
-      .eq("service_id", service.id);
-
-    if (srvMaterials && srvMaterials.length > 0) {
-      materialRows = srvMaterials.map((item: any) => {
-        const name = item.material?.name || "Material";
-        const unit = item.material?.unit || "un";
-        const planned = Number(item.planned_quantity || item.quantity || 0);
-        const rawUsed = Number(item.used_quantity || 0);
-        const effectiveUsed =
-          fullServiceData.status === "concluido" && rawUsed === 0 ? planned : rawUsed;
-        const unitCost = Number(
-          item.cost_per_unit || item.material?.cost_per_unit || 0
-        );
-        const totalCost = effectiveUsed * unitCost;
-
-        return [
-          name,
-          unit,
-          String(planned),
-          String(effectiveUsed),
-          `R$ ${totalCost.toLocaleString("pt-BR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`,
-        ];
-      });
-    }
-  } catch (err) {
-    console.warn("Aviso ao carregar dados complementares para o PDF:", err);
+  let materials = options.materials || [];
+  if (!options.preloaded) {
+    const fresh = await getServiceByIdFromDatabase(service.id);
+    if (!fresh) throw new Error("Não foi possível carregar todos os dados do relatório.");
+    fullServiceData = { ...service, ...fresh };
+    const [photoResult, materialResult] = await Promise.all([
+      supabase.from("service_photos").select("photo_url,title").eq("service_id", service.id).order("created_at"),
+      supabase.from("service_material_usage").select("planned_quantity,used_quantity,materials(name,unit,cost_per_unit)").eq("service_id", service.id),
+    ]);
+    if (photoResult.error || materialResult.error) throw new Error("Não foi possível carregar fotos ou materiais do relatório.");
+    const entries = new Map<string, string>();
+    (fullServiceData.photos || []).forEach((url, i) => entries.set(url, fullServiceData.photoTitles?.[i] || ""));
+    (photoResult.data || []).forEach(p => entries.set(p.photo_url, p.title || entries.get(p.photo_url) || ""));
+    fullServiceData.photos = [...entries.keys()];
+    fullServiceData.photoTitles = [...entries.values()];
+    materials = materialResult.data || [];
   }
+  materialRows = materials.map(item => {
+    const used = Number(item.used_quantity || 0);
+    const total = used * Number(item.materials?.cost_per_unit || 0);
+    return [item.materials?.name || "Material", item.materials?.unit || "un", String(item.planned_quantity || 0), String(used), `R$ ${total.toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`];
+  });
 
   const techName =
     fullServiceData.technicians?.[0]?.name ||
@@ -340,10 +324,11 @@ export const generateProfessionalServiceReport = async (
   if (rawPhotos.length > 0) {
     const loadedPhotos = (
       await Promise.all(
-        rawPhotos.map((p) => loadImageWithDimensions(p.url, p.title))
+        rawPhotos.map(async (p) => loadImageWithDimensions(options.preloaded ? p.url : await convertToSignedUrl(p.url), p.title))
       )
     ).filter(Boolean) as LoadedImageInfo[];
 
+    if (loadedPhotos.length !== rawPhotos.length) throw new Error("Algumas fotos não puderam ser carregadas. Tente baixar novamente.");
     if (loadedPhotos.length > 0) {
       drawSectionHeader(`Anexos Fotográficos (${loadedPhotos.length})`);
 
@@ -390,6 +375,11 @@ export const generateProfessionalServiceReport = async (
     }
   }
 
+  if (fullServiceData.feedback?.clientRating) {
+    drawSectionHeader("Avaliação do cliente");
+    autoTable(doc, { startY: currentY, body: [["Nota", `${fullServiceData.feedback.clientRating}/5`], ["Comentário", fullServiceData.feedback.clientComment || "—"]], bodyStyles: tableBodyStyles, margin: {left: margin, right: margin} });
+    currentY = (doc as any).lastAutoTable.finalY + 8;
+  }
   // SECÇÃO 6: Assinaturas
   const clientSig =
     fullServiceData.signatures?.client || (fullServiceData as any).reportData?.clientSignature;
@@ -463,22 +453,10 @@ export const generateProfessionalServiceReport = async (
     .replace(/[^\w\s-]/gi, "")
     .trim()
     .replace(/\s+/g, "_");
-  const fileName = `Relatorio_${shortOS.replace(/[\s#]/g, "")}_${safeTitle}.pdf`;
+  const fileName = `${safeTitle}_${shortOS.replace(/[\s#]/g, "")}.pdf`;
 
-  // 💡 COMPATIBILIDADE TOTAL (Gera blob e abre/descarrega de forma infalível)
-  try {
-    const pdfBlob = doc.output("blob");
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    
-    // Tenta abrir numa nova aba (compatível com iPhone/Safari e Android)
-    const opened = window.open(blobUrl, "_blank");
-    if (!opened) {
-      // Se o browser barrar a aba, faz o download direto padrão do jsPDF
-      doc.save(fileName);
-    }
-  } catch (e) {
-    doc.save(fileName);
-  }
+  doc.save(fileName);
+  return;
 };
 
 export default generateProfessionalServiceReport;

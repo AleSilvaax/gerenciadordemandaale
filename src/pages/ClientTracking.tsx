@@ -1,236 +1,62 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Service } from "@/types/serviceTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { StatusBadge } from "@/components/ui-custom/StatusBadge";
-import {
-  Layers,
-  MapPin,
-  Calendar,
-  Clock,
-  User,
-  Download,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { toast } from "sonner";
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Service } from '@/types/serviceTypes';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { StatusBadge } from '@/components/ui-custom/StatusBadge';
+import { Download, Loader2, AlertCircle, Star, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import type { ReportMaterial } from '@/utils/pdf/professionalPdfGenerator';
 
 export const ClientTracking: React.FC = () => {
-  const { token } = useParams<{ token: string }>();
-  const [service, setService] = useState<Service | null>(null);
-  const [technicianInfo, setTechnicianInfo] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
-  useEffect(() => {
-    const fetchServiceByToken = async () => {
-      if (!token) {
-        setErrorMessage("Link de rastreio inválido.");
-        setIsLoading(false);
-        return;
-      }
-      try {
-        // Busca completa na tabela services
-        const { data: srvData, error: srvError } = await supabase
-          .from("services")
-          .select("*")
-          .eq("id", token)
-          .maybeSingle();
-
-        if (srvError) {
-          console.error("Erro ao buscar serviço:", srvError);
-          setErrorMessage("Erro ao aceder à base de dados.");
-          throw srvError;
-        }
-
-        if (!srvData) {
-          setErrorMessage("Atendimento não encontrado com este identificador.");
-          setIsLoading(false);
-          return;
-        }
-
-        setService(srvData as any);
-
-        // Busca o técnico responsável
-        const techId = srvData.technician_id || srvData.technicians?.[0]?.id;
-        if (techId) {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id, name, avatar, role")
-            .eq("id", techId)
-            .maybeSingle();
-
-          if (profileData) {
-            setTechnicianInfo(profileData);
-          }
-        } else if (srvData.technicians?.[0]) {
-          setTechnicianInfo(srvData.technicians[0]);
-        }
-      } catch (err: any) {
-        console.error("Erro no rastreio:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchServiceByToken();
-  }, [token]);
-
-  const handleDownloadReport = async () => {
-    if (!service) return;
-    setIsGeneratingPdf(true);
-    const toastId = toast.loading("A preparar relatório completo com fotos e assinaturas...");
-    try {
-      const { generateProfessionalServiceReport } = await import(
-        "@/utils/pdf/professionalPdfGenerator"
-      );
-      
-      // Garante que passamos o objeto com as fotos, assinaturas e técnico devidamente mapeados
-      await generateProfessionalServiceReport({
-        ...service,
-        technicians: technicianInfo ? [technicianInfo] : service.technicians,
-        photos: service.photos || [],
-        signatures: service.signatures || {},
-      });
-
-      toast.success("Relatório descarregado com sucesso!", { id: toastId });
-    } catch (error) {
-      console.error("Erro ao gerar PDF no tracking:", error);
-      toast.error("Não foi possível descarregar o relatório.", { id: toastId });
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-sm font-medium text-slate-600">A carregar detalhes do atendimento...</p>
-      </div>
-    );
-  }
-
-  if (errorMessage || !service) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600 mb-3">
-          <AlertCircle className="h-6 w-6" />
-        </div>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-white">Não foi possível carregar o rastreio</h1>
-        <p className="text-xs text-slate-500 mt-1 max-w-xs">
-          {errorMessage || "O link de acompanhamento pode ter expirado."}
-        </p>
-      </div>
-    );
-  }
-
-  const tech = technicianInfo || service.technicians?.[0];
-  const isConcluded = service.status === "concluido";
-
-  return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto space-y-5">
-        <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-            <Layers className="h-5 w-5" />
-          </div>
-          <span className="text-sm font-bold text-slate-900 dark:text-white">ServiceFlow</span>
-          <p className="text-xs text-slate-500">Portal de Acompanhamento em Tempo Real</p>
-        </div>
-
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 shadow-xs rounded-2xl overflow-hidden">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex flex-row items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                Ordem de Serviço
-              </p>
-              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-                {service.title}
-              </CardTitle>
-            </div>
-            <StatusBadge status={service.status} />
-          </CardHeader>
-
-          <CardContent className="p-6 space-y-5">
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100">
-                <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-slate-400">Local do Atendimento</p>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {[service.address, service.city].filter(Boolean).join(", ") || service.location || "São Paulo"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100">
-                <Calendar className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-slate-400">Previsão / Vencimento</p>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white font-mono">
-                    {service.dueDate ? format(new Date(service.dueDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "A definir"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 pt-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Profissional Responsável
-              </p>
-              <div className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white">
-                <Avatar className="h-10 w-10 border border-slate-200">
-                  <AvatarImage src={tech?.avatar} />
-                  <AvatarFallback className="bg-blue-50 text-blue-600 text-xs font-bold">
-                    {tech?.name ? tech.name.slice(0, 2).toUpperCase() : "T"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-bold text-slate-900 capitalize">
-                    {tech?.name || "Técnico em designação"}
-                  </p>
-                  <p className="text-xs text-slate-500 capitalize">
-                    {tech?.role || "Especialista em Campo"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {isConcluded && (
-              <div className="pt-2">
-                <Button
-                  onClick={handleDownloadReport}
-                  disabled={isGeneratingPdf}
-                  className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs"
-                >
-                  {isGeneratingPdf ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      A preparar documento...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Descarregar Relatório de Atendimento (PDF)
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+ const { token } = useParams<{token:string}>();
+ const [service,setService]=useState<Service|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [error,setError]=useState('');
+ const [busy,setBusy]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const [rating,setRating]=useState(0);
+ const [comment,setComment]=useState('');
+ const [saved,setSaved]=useState(false);
+ const read = async (extra: Record<string,unknown> = {}) => {
+  const {data,error}=await supabase.functions.invoke('client-tracking',{body:{token,...extra}});
+  if(error || data?.error || !data?.service) throw new Error(data?.error || 'Não foi possível carregar o atendimento. Solicite um novo link à equipe.');
+  return data as {service:Service;materials:ReportMaterial[]};
+ };
+ const load = async () => {
+  setLoading(true);setError('');
+  try { const data=await read();setService(data.service);setRating(data.service.feedback?.clientRating || 0);setComment(data.service.feedback?.clientComment || '');setSaved(Boolean(data.service.feedback?.clientRating)); }
+  catch(e) {setError(e instanceof Error ? e.message : 'Link indisponível.');}
+  finally {setLoading(false);}
+ };
+ useEffect(()=>{void load();},[token]);
+ const download = async () => {
+  setBusy(true);
+  try {
+   const data=await read();setService(data.service);
+   const {generateProfessionalServiceReport}=await import('@/utils/pdf/professionalPdfGenerator');
+   await generateProfessionalServiceReport(data.service,{preloaded:true,materials:data.materials});
+   toast.success('Relatório baixado.');
+  } catch(e) {toast.error(e instanceof Error ? e.message : 'Não foi possível baixar o relatório.');}
+  finally {setBusy(false);}
+ };
+ const submit = async (e:React.FormEvent) => {
+  e.preventDefault();if(!rating)return;setSaving(true);
+  try { const data=await read({action:'feedback',rating,comment});setService(data.service);setSaved(true);toast.success('Avaliação enviada.'); }
+  catch {toast.error('Não foi possível enviar a avaliação. Tente novamente.');}
+  finally {setSaving(false);}
+ };
+ if(loading) return <main className="min-h-dvh bg-background flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Carregando atendimento" /></main>;
+ if(error || !service) return <main className="min-h-dvh bg-background flex flex-col items-center justify-center gap-4 px-6 text-center"><AlertCircle className="h-8 w-8 text-destructive"/><h1 className="text-lg font-semibold">Acompanhamento indisponível</h1><p className="text-sm text-muted-foreground max-w-sm">{error}</p><Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4"/>Tentar novamente</Button></main>;
+ const concluded=service.status==='concluido';
+ return <main className="min-h-dvh bg-background px-4 py-6 text-foreground"><div className="mx-auto max-w-2xl space-y-6">
+  <header className="border-b border-border pb-4"><p className="text-sm font-semibold text-primary">ServiceFlow</p><div className="mt-3 flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs text-muted-foreground">OS #{service.number?.split('-').pop()}</p><h1 className="text-xl font-semibold break-words">{service.title}</h1></div><StatusBadge status={service.status}/></div></header>
+  <section className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm"><div><p className="text-xs text-muted-foreground">Cliente</p><p className="font-medium break-words">{service.client || 'Não informado'}</p></div><div><p className="text-xs text-muted-foreground">Previsão</p><p className="font-medium">{service.dueDate ? new Date(service.dueDate).toLocaleDateString('pt-BR') : 'A definir'}</p></div><div className="col-span-2"><p className="text-xs text-muted-foreground">Local</p><p>{[service.address,service.city].filter(Boolean).join(', ') || service.location}</p></div><div className="col-span-2"><p className="text-xs text-muted-foreground">Equipe responsável</p><p>{service.technicians.map(t=>t.name).join(', ') || 'A definir'}</p></div></section>
+  {Boolean(service.photos?.length) && <section className="border-t border-border pt-4"><h2 className="text-base font-semibold mb-3">Fotos do atendimento</h2><div className="grid grid-cols-2 gap-3">{service.photos?.map((url,i)=><figure key={url} className="min-w-0"><a href={url} target="_blank" rel="noreferrer"><img src={url} alt={service.photoTitles?.[i] || 'Foto do atendimento'} className="w-full aspect-[4/3] object-contain bg-muted rounded-md"/></a><figcaption className="text-xs mt-1 break-words">{service.photoTitles?.[i]}</figcaption></figure>)}</div></section>}
+  {service.signatures?.client && <section className="border-t border-border pt-4"><h2 className="text-base font-semibold mb-3">Assinatura do cliente</h2><img src={service.signatures.client} alt="Assinatura do cliente" className="w-full h-40 object-contain border border-border rounded-md bg-card"/></section>}
+  {concluded && <><section className="border-t border-border pt-4"><Button onClick={download} disabled={busy} className="w-full sm:w-auto">{busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Download className="h-4 w-4 mr-2"/>}{busy ? 'Preparando relatório…' : 'Baixar relatório PDF'}</Button></section>
+   <form onSubmit={submit} className="border-t border-border pt-4 space-y-3"><h2 className="text-base font-semibold">Avaliação do atendimento</h2><div className="flex gap-1" role="group" aria-label="Nota do atendimento">{[1,2,3,4,5].map(n=><Button key={n} type="button" size="icon" variant="ghost" aria-label={`${n} ${n===1?'estrela':'estrelas'}`} aria-pressed={n===rating} onClick={()=>{setRating(n);setSaved(false);}} className={n<=rating?'text-primary':'text-muted-foreground'}><Star className={`h-6 w-6 ${n<=rating?'fill-current':''}`}/></Button>)}</div><label htmlFor="client-comment" className="block text-sm">Comentário</label><Textarea id="client-comment" value={comment} maxLength={2000} onChange={e=>{setComment(e.target.value);setSaved(false);}}/><div className="flex items-center gap-3"><Button type="submit" disabled={!rating || saving || saved}>{saving?'Enviando…':saved?'Avaliação enviada':'Enviar avaliação'}</Button></div></form></>}
+ </div></main>;
 };
-
 export default ClientTracking;
