@@ -614,6 +614,38 @@ export type Database = {
           },
         ]
       }
+      service_tracking_links: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_tracking_links_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_type_materials: {
         Row: {
           created_at: string
@@ -1078,6 +1110,10 @@ export type Database = {
         Returns: undefined
       }
       create_service_messages_if_not_exists: { Args: never; Returns: undefined }
+      create_service_tracking_link: {
+        Args: { p_service_id: string }
+        Returns: string
+      }
       create_team: {
         Args: { creator_id: string; name: string }
         Returns: string
@@ -1129,6 +1165,10 @@ export type Database = {
       }
       nextval_for_service: { Args: never; Returns: number }
       setup_initial_hierarchy: { Args: never; Returns: undefined }
+      submit_tracking_feedback: {
+        Args: { p_comment: string; p_rating: number; p_token: string }
+        Returns: undefined
+      }
       validate_service_completion: {
         Args: { p_service_id: string }
         Returns: {
