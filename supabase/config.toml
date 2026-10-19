@@ -28,5 +28,8 @@ verify_jwt = true
 [functions.send-invite]
 verify_jwt = true
 
+[functions.client-tracking]
+verify_jwt = false
+
 [storage]
 enabled = true

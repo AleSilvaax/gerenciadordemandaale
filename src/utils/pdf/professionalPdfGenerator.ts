@@ -392,7 +392,7 @@ export const generateProfessionalServiceReport = async (
   if (clientSig && clientSig.startsWith("data:image")) {
     try {
       doc.addImage(clientSig, "PNG", margin + 10, currentY + 3, sigBoxW - 20, 20);
-    } catch {}
+    } catch { throw new Error("Não foi possível incluir a assinatura do cliente no PDF."); }
   }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
@@ -410,7 +410,7 @@ export const generateProfessionalServiceReport = async (
   if (techSig && techSig.startsWith("data:image")) {
     try {
       doc.addImage(techSig, "PNG", techBoxX + 10, currentY + 3, sigBoxW - 20, 20);
-    } catch {}
+    } catch { throw new Error("Não foi possível incluir a assinatura do técnico no PDF."); }
   }
   doc.text(
     `Técnico: ${techName}`,
