@@ -3,6 +3,7 @@
 - [ ] Link seguro do cliente: fotos, assinaturas e relatório completo
 - [ ] Feedback enviado pelo link do cliente
 - [ ] Assinatura ampliada em tela cheia no celular
+- [ ] Desenhar trajetos e infraestrutura sobre fotos do atendimento
 
 - [x] Fotos do relatório funcionando entre aparelhos diferentes
 - [x] Compactação geral da versão celular (primeira passada)
