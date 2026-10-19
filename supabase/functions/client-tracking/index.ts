@@ -33,7 +33,10 @@ Deno.serve(async (req) => {
   (s.photos ?? []).forEach((p:string,i:number)=>add(p,s.photo_titles?.[i] ?? ''));
   (photos ?? []).forEach(p=>add(p.photo_url,p.title ?? ''));
   const signed=await Promise.all([...entries.values()].map(async(p,i)=>{ const {data,error}=await db.storage.from('service-photos').createSignedUrl(p.path,3600); if(error) throw error; return {url:data.signedUrl,title:p.title || `Registro fotográfico ${i+1}`}; }));
-  const feedback=s.feedback && typeof s.feedback==='object' ? s.feedback : {};
-  return reply({service:{...s,creationDate:s.created_at,dueDate:s.due_date,serviceType:s.service_type,customFields:s.custom_fields ?? [],photoTitles:signed.map(p=>p.title),photos:signed.map(p=>p.url),technicians:(assignments ?? []).flatMap(a=>a.profiles ? [{...a.profiles,role:'tecnico'}] : []),feedback:{clientRating:feedback.clientRating,clientComment:feedback.clientComment}},materials:usage ?? []});
+  const parse = (value: unknown) => { if (typeof value === 'string') { try { return JSON.parse(value); } catch { return {}; } } return value ?? {}; };
+  const feedback=parse(s.feedback);
+  const signatures=parse(s.signatures);
+  const fields=parse(s.custom_fields);
+  return reply({service:{...s,creationDate:s.created_at,dueDate:s.due_date,serviceType:s.service_type,customFields:Array.isArray(fields) ? fields : [],signatures,photoTitles:signed.map(p=>p.title),photos:signed.map(p=>p.url),technicians:(assignments ?? []).flatMap(a=>a.profiles ? [{...a.profiles,role:'tecnico'}] : []),feedback:{clientRating:feedback.clientRating,clientComment:feedback.clientComment}},materials:usage ?? []});
  } catch(err) { if(err instanceof z.ZodError) return reply({error:'Dados inválidos.'},400); console.error('client-tracking request failed'); return reply({error:'Não foi possível carregar o atendimento. Tente novamente.'},500); }
 });

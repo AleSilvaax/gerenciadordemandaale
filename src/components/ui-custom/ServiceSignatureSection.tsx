@@ -27,7 +27,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
 
   const handleSaveSignatures = async () => {
     try {
-      console.log("Salvando assinaturas:", { client: clientSignature, technician: technicianSignature });
+
       await onUpdateSignatures({
         client: clientSignature || undefined,
         technician: technicianSignature || undefined,
@@ -68,7 +68,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
             <SignatureCapture
               initialSignature={clientSignature}
               onChange={(signature) => {
-                console.log("Cliente assinatura mudou:", signature);
+
                 setClientSignature(signature);
               }}
               label="Assinatura do Cliente"
@@ -89,7 +89,7 @@ export const ServiceSignatureSection: React.FC<ServiceSignatureSectionProps> = (
             <SignatureCapture
               initialSignature={technicianSignature}
               onChange={(signature) => {
-                console.log("Técnico assinatura mudou:", signature);
+
                 setTechnicianSignature(signature);
               }}
               label="Assinatura do Técnico"

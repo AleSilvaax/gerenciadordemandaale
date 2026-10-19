@@ -1,161 +1,37 @@
-import React, { useRef, useState, useEffect } from "react";
-import SignatureCanvas from "react-signature-canvas";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Undo2, Save, Trash2, Lock, PenTool } from "lucide-react";
-
-interface SignatureCaptureProps {
-  onSave?: (signatureUrl: string) => void;
-  onChange?: (dataUrl: string) => void;
-  initialSignature?: string;
-  initialValue?: string;
-  label?: string;
-  width?: number;
-  height?: number;
-  disabled?: boolean;
-}
-
-export const SignatureCapture: React.FC<SignatureCaptureProps> = ({
-  onSave,
-  onChange,
-  initialSignature,
-  initialValue,
-  label = "Assinatura",
-  width = 300,
-  height = 150,
-  disabled = false,
-}) => {
-  const sigCanvas = useRef<SignatureCanvas | null>(null);
-  const [isEmpty, setIsEmpty] = useState(true);
-  const [hasInitialized, setHasInitialized] = useState(false);
-
-  useEffect(() => {
-    if (sigCanvas.current && !hasInitialized) {
-      const signatureData = initialSignature || initialValue;
-      if (signatureData) {
-        try {
-          sigCanvas.current.clear();
-          sigCanvas.current.fromDataURL(signatureData);
-          setIsEmpty(false);
-        } catch (error) {
-          console.error("Erro ao carregar assinatura inicial:", error);
-        }
-      }
-      setHasInitialized(true);
-    }
-  }, [initialSignature, initialValue, hasInitialized]);
-
-  const clear = () => {
-    if (sigCanvas.current && !disabled) {
-      sigCanvas.current.clear();
-      setIsEmpty(true);
-      onChange?.("");
-    }
-  };
-
-  const undo = () => {
-    if (sigCanvas.current && !disabled) {
-      const data = sigCanvas.current.toData();
-      if (data.length > 0) {
-        data.pop();
-        sigCanvas.current.fromData(data);
-        const newIsEmpty = data.length === 0;
-        setIsEmpty(newIsEmpty);
-        onChange?.(newIsEmpty ? "" : sigCanvas.current.toDataURL("image/png", 1.0));
-      }
-    }
-  };
-
-  const save = () => {
-    if (sigCanvas.current && !isEmpty && !disabled) {
-      const dataURL = sigCanvas.current.toDataURL("image/png", 1.0);
-      onSave?.(dataURL);
-      onChange?.(dataURL);
-    }
-  };
-
-  const handleEnd = () => {
-    if (sigCanvas.current && !disabled) {
-      const currentIsEmpty = sigCanvas.current.isEmpty();
-      setIsEmpty(currentIsEmpty);
-      onChange?.(currentIsEmpty ? "" : sigCanvas.current.toDataURL("image/png", 1.0));
-    }
-  };
-
-  return (
-    <Card className="border border-slate-200/80 dark:border-slate-800 shadow-none rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-            <PenTool className="h-3.5 w-3.5 text-blue-600" />
-            <span>{label}</span>
-          </div>
-          {disabled && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-              <Lock className="h-3 w-3" />
-              Assinatura bloqueada
-            </span>
-          )}
-        </div>
-
-        <div className="relative rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-950/50 overflow-hidden flex justify-center">
-          <SignatureCanvas
-            ref={sigCanvas}
-            penColor="#0f172a"
-            canvasProps={{
-              width,
-              height,
-              className: `w-full h-[140px] ${disabled ? "pointer-events-none opacity-80" : "cursor-crosshair"}`,
-            }}
-            onEnd={handleEnd}
-          />
-          {isEmpty && disabled && (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">
-              Nenhuma assinatura registrada
-            </div>
-          )}
-        </div>
-
-        {/* Só renderiza os botões se NÃO estiver bloqueado/concluído */}
-        {!disabled && (
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={undo}
-              disabled={isEmpty}
-              className="h-8 text-xs"
-            >
-              <Undo2 className="h-3.5 w-3.5 mr-1" />
-              Desfazer
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={clear}
-              disabled={isEmpty}
-              className="h-8 text-xs text-rose-600 hover:text-rose-700"
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1" />
-              Limpar
-            </Button>
-            {onSave && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={save}
-                disabled={isEmpty}
-                className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Save className="h-3.5 w-3.5 mr-1" />
-                Confirmar
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+import React, { useRef, useState, useEffect } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Undo2, Check, Trash2, PenTool } from 'lucide-react';
+interface Props { onSave?: (value:string)=>void; onChange?: (value:string)=>void; initialSignature?:string; initialValue?:string; label?:string; width?:number; height?:number; disabled?:boolean; }
+export const SignatureCapture: React.FC<Props> = ({onSave,onChange,initialSignature,initialValue,label='Assinatura',disabled=false}) => {
+ const [value,setValue]=useState(initialSignature || initialValue || '');
+ const [open,setOpen]=useState(false);
+ const [empty,setEmpty]=useState(true);
+ const [size,setSize]=useState({width:300,height:300});
+ const pad=useRef<SignatureCanvas|null>(null);
+ const area=useRef<HTMLDivElement>(null);
+ useEffect(()=>setValue(initialSignature || initialValue || ''),[initialSignature,initialValue]);
+ useEffect(()=>{
+  if(!open)return;
+  const frame=requestAnimationFrame(()=>{
+   const node=area.current;if(!node)return;
+   const observer=new ResizeObserver(()=>{
+    const rect=node.getBoundingClientRect();
+    setSize({width:Math.max(1,Math.floor(rect.width)),height:Math.max(1,Math.floor(rect.height))});
+   });observer.observe(node);
+   cleanup=()=>observer.disconnect();
+  });
+  let cleanup=()=>{};
+  return ()=>{cancelAnimationFrame(frame);cleanup();};
+ },[open]);
+ const confirm=()=>{
+  const canvas=pad.current;if(!canvas || canvas.isEmpty())return;
+  const data=canvas.getTrimmedCanvas().toDataURL('image/png');
+  setValue(data);onChange?.(data);onSave?.(data);setOpen(false);
+ };
+ return <div className="space-y-2">
+  {disabled ? <div className="border border-border rounded-md bg-card h-40 flex items-center justify-center">{value ? <img src={value} alt={label} className="w-full h-full object-contain p-2"/>:<span className="text-xs text-muted-foreground">Nenhuma assinatura registrada</span>}</div> : <Button type="button" variant="outline" className="w-full h-40 p-2 rounded-md bg-card" aria-label={`Abrir ${label} em tela cheia`} onClick={()=>{setEmpty(true);setOpen(true);}}>{value ? <img src={value} alt={label} className="w-full h-full object-contain"/>:<span className="flex items-center gap-2"><PenTool className="h-4 w-4"/>Assinar</span>}</Button>}
+  <Dialog open={open} onOpenChange={setOpen}><DialogContent aria-describedby={undefined} className="!inset-0 !translate-x-0 !translate-y-0 !max-w-none !w-screen !h-[100dvh] !rounded-none !p-4 flex flex-col gap-3"><DialogTitle className="pr-8">{label}</DialogTitle><div ref={area} className="flex-1 min-h-0 overflow-hidden border border-border rounded-md bg-card text-foreground"><SignatureCanvas ref={pad} penColor="currentColor" canvasProps={{width:size.width,height:size.height,className:'touch-none block'}} onEnd={()=>setEmpty(pad.current?.isEmpty() ?? true)}/></div><div className="flex flex-wrap items-center justify-between gap-2 pb-[env(safe-area-inset-bottom)]"><div className="flex gap-2"><Button type="button" variant="outline" size="icon" title="Desfazer" aria-label="Desfazer" onClick={()=>{const data=pad.current?.toData() || [];data.pop();pad.current?.fromData(data);setEmpty(data.length===0);}}><Undo2 className="h-4 w-4"/></Button><Button type="button" variant="outline" size="icon" title="Limpar" aria-label="Limpar" onClick={()=>{pad.current?.clear();setEmpty(true);}}><Trash2 className="h-4 w-4"/></Button></div><Button type="button" disabled={empty} onClick={confirm}><Check className="mr-2 h-4 w-4"/>Confirmar assinatura</Button></div></DialogContent></Dialog>
+ </div>;
 };

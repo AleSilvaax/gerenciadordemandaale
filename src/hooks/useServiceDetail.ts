@@ -209,6 +209,7 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
       }
     } catch (error) {
       toast.error("Erro ao atualizar assinaturas");
+      throw error;
     }
   };
 

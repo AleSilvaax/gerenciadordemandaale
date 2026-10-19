@@ -232,9 +232,9 @@ export const createServiceInDatabase = async (
       description: service.description ?? null,
       client: service.client ?? null, address: service.address ?? null, city: service.city ?? null,
       notes: service.notes ?? null, estimated_hours: service.estimatedHours ?? null,
-      custom_fields: service.customFields ? JSON.stringify(service.customFields) : null,
-      signatures: service.signatures ? JSON.stringify(service.signatures) : null,
-      feedback: service.feedback ? JSON.stringify(service.feedback) : null,
+      custom_fields: service.customFields ?? null,
+      signatures: service.signatures ?? null,
+      feedback: service.feedback ?? null,
       photos: service.photos ?? null, photo_titles: service.photoTitles ?? null,
       date: service.date ?? null,
       created_by: user.id,
@@ -274,13 +274,14 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
 
     for (const key in fieldMapping) {
       if (service[key as keyof Service] !== undefined) {
-        updateData[fieldMapping[key as keyof Service]!] = service[key as keyof Service];
+        const column = fieldMapping[key as keyof Service];
+        if (column) updateData[column] = service[key as keyof Service];
       }
     }
     
-    if (service.customFields !== undefined) updateData.custom_fields = service.customFields ? JSON.stringify(service.customFields) : null;
-    if (service.signatures !== undefined) updateData.signatures = service.signatures ? JSON.stringify(service.signatures) : null;
-    if (service.feedback !== undefined) updateData.feedback = service.feedback ? JSON.stringify(service.feedback) : null;
+    if (service.customFields !== undefined) updateData.custom_fields = service.customFields ?? null;
+    if (service.signatures !== undefined) updateData.signatures = service.signatures ?? null;
+    if (service.feedback !== undefined) updateData.feedback = service.feedback ?? null;
     if (service.photos !== undefined) updateData.photos = service.photos;
     if (service.photoTitles !== undefined) updateData.photo_titles = service.photoTitles;
 
