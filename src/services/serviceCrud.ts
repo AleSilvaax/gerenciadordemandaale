@@ -3,6 +3,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Service, TeamMember, ServicePriority, ServiceStatus } from '@/types/serviceTypes';
 import { toast } from "sonner";
+import { toJsonValue } from "@/utils/jsonFields";
 
 // A função de transformação dos dados foi mantida, pois está correta.
 const transformServiceData = (service: any): Service => {
@@ -232,9 +233,9 @@ export const createServiceInDatabase = async (
       description: service.description ?? null,
       client: service.client ?? null, address: service.address ?? null, city: service.city ?? null,
       notes: service.notes ?? null, estimated_hours: service.estimatedHours ?? null,
-      custom_fields: service.customFields ?? null,
-      signatures: service.signatures ?? null,
-      feedback: service.feedback ?? null,
+      custom_fields: toJsonValue(service.customFields ?? null),
+      signatures: toJsonValue(service.signatures ?? null),
+      feedback: toJsonValue(service.feedback ?? null),
       photos: service.photos ?? null, photo_titles: service.photoTitles ?? null,
       date: service.date ?? null,
       created_by: user.id,
@@ -279,9 +280,9 @@ export const updateServiceInDatabase = async (service: Partial<Service> & { id: 
       }
     }
     
-    if (service.customFields !== undefined) updateData.custom_fields = service.customFields ?? null;
-    if (service.signatures !== undefined) updateData.signatures = service.signatures ?? null;
-    if (service.feedback !== undefined) updateData.feedback = service.feedback ?? null;
+    if (service.customFields !== undefined) updateData.custom_fields = toJsonValue(service.customFields ?? null);
+    if (service.signatures !== undefined) updateData.signatures = toJsonValue(service.signatures ?? null);
+    if (service.feedback !== undefined) updateData.feedback = toJsonValue(service.feedback ?? null);
     if (service.photos !== undefined) updateData.photos = service.photos;
     if (service.photoTitles !== undefined) updateData.photo_titles = service.photoTitles;
 
