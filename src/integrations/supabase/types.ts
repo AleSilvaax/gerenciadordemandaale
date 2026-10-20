@@ -696,6 +696,7 @@ export type Database = {
       }
       service_types: {
         Row: {
+          checklist_steps: Json | null
           created_at: string
           default_priority: string | null
           description: string | null
@@ -703,9 +704,11 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          photo_slots: Json | null
           updated_at: string
         }
         Insert: {
+          checklist_steps?: Json | null
           created_at?: string
           default_priority?: string | null
           description?: string | null
@@ -713,9 +716,11 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          photo_slots?: Json | null
           updated_at?: string
         }
         Update: {
+          checklist_steps?: Json | null
           created_at?: string
           default_priority?: string | null
           description?: string | null
@@ -723,6 +728,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          photo_slots?: Json | null
           updated_at?: string
         }
         Relationships: [

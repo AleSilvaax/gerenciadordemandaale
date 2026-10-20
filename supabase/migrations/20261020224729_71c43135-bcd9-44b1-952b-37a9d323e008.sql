@@ -1,0 +1,1 @@
+ALTER TABLE public.service_types ADD COLUMN IF NOT EXISTS checklist_steps jsonb, ADD COLUMN IF NOT EXISTS photo_slots jsonb;
