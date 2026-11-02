@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
-import { TechnicalFieldsManager } from "@/components/ui-custom/TechnicalFieldsManager";
 import { PhotoUploader } from "@/components/ui-custom/PhotoUploader";
+import { ChecklistSection } from "@/components/checklist/ChecklistSection";
 import { ServiceSignatureSection } from "@/components/ui-custom/ServiceSignatureSection";
 import SectionCard from "@/components/service-detail/SectionCard";
 import { toast } from "sonner";

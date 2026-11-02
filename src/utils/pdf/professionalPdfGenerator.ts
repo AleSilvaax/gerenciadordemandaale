@@ -358,6 +358,51 @@ export const generateProfessionalServiceReport = async (
     }
   }
 
+  // Checklist técnico (custom_fields), agrupado por etapa quando disponível
+  const formatFieldValue = (field: any): string => {
+    const v = field?.value;
+    if (v === undefined || v === null || v === "") return "";
+    if (field.type === "timestamp") {
+      const d = new Date(String(v));
+      return isNaN(d.getTime()) ? String(v) : d.toLocaleString("pt-BR");
+    }
+    if (field.type === "binary_list" && typeof v === "object") {
+      return Object.entries(v as Record<string, string>)
+        .map(([item, answer]) => `${item}: ${answer}`)
+        .join("\n");
+    }
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
+
+  const rawFields: any[] = Array.isArray((fullServiceData as any).customFields)
+    ? (fullServiceData as any).customFields
+    : [];
+  const filledFields = rawFields.filter(f => formatFieldValue(f) !== "");
+  if (filledFields.length > 0) {
+    const groups = new Map<string, any[]>();
+    for (const field of filledFields) {
+      const group = typeof field.step === "string" && field.step ? field.step : "Campos Técnicos";
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group)!.push(field);
+    }
+    for (const [groupTitle, fields] of groups) {
+      drawSectionHeader(`Checklist — ${groupTitle}`);
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Item", "Informação"]],
+        body: fields.map(f => [f.label || f.id, formatFieldValue(f)]),
+        headStyles: tableHeadStyles,
+        bodyStyles: tableBodyStyles,
+        columnStyles: {
+          0: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 55 },
+        },
+        margin: { left: margin, right: margin },
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
   // Avaliação do Cliente (se houver)
   if ((fullServiceData as any).feedback?.clientRating) {
     drawSectionHeader("Avaliação do Cliente");
