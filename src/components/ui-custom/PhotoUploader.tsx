@@ -49,103 +49,16 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   });
 
   const uploadToSupabase = async (
-    file: File
-  ): Promise<{ url: string; dbId: string }> => {
-    console.log('[PhotoUploader] Iniciando upload para Supabase:', file.name);
-
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 9);
-    const filename = `${serviceId || 'temp'}-${timestamp}-${randomId}.${fileExt}`;
-
-    console.log('[PhotoUploader] Nome do arquivo gerado:', filename);
-
-    const { data, error } = await supabase.storage
-      .from('service-photos')
-      .upload(filename, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('[PhotoUploader] Erro no upload do storage:', error);
-      throw new Error(`Falha no upload: ${error.message}`);
-    }
-
-    console.log('[PhotoUploader] Upload no storage bem-sucedido:', data.path);
-
-    // Since service-photos is now private, we need to use signed URLs
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage
-        .from('service-photos')
-        .createSignedUrl(data.path, 3600); // 1 hour expiry
-
-    if (signedUrlError) {
-      console.error(
-        '[PhotoUploader] Erro ao gerar URL assinada:',
-        signedUrlError
-      );
-      throw new Error(`Erro ao gerar URL da foto: ${signedUrlError.message}`);
-    }
-
-    console.log(
-      '[PhotoUploader] URL assinada gerada:',
-      signedUrlData.signedUrl
-    );
-
-    // Salvar no banco de dados e retornar o ID
-    const title = file.name.replace(/\.[^/.]+$/, '');
-    const { data: dbData, error: dbError } = await supabase
-      .from('service_photos')
-      .insert({
-        service_id: serviceId,
-        // Store the permanent storage path; signed URLs expire and break on other devices
-        photo_url: data.path,
-        title: title,
-      })
-      .select('id')
-      .single();
-
-    if (dbError) {
-      console.error('[PhotoUploader] Erro ao salvar no banco:', dbError);
-      throw new Error(`Erro ao salvar foto: ${dbError.message}`);
-    }
-
-    console.log('[PhotoUploader] Foto salva no banco com sucesso:', dbData);
-
-    return {
-      url: signedUrlData.signedUrl,
-      dbId: dbData.id, // Ensure it's a number
-    };
+    file: File,
+    title?: string
+  ): Promise<{ url: string; dbId: string; title: string }> => {
+    const uploaded = await uploadServicePhoto(serviceId || 'temp', file, title);
+    return { url: uploaded.signedUrl, dbId: uploaded.dbId, title: uploaded.title };
   };
 
-  const updateServicePhotosField = async (serviceId: string) => {
+  const updateServicePhotosField = async (targetServiceId: string) => {
     try {
-      console.log(
-        '[PhotoUploader] Atualizando campo photos na tabela services'
-      );
-
-      // Buscar todas as fotos do serviço
-      const { data: photosData, error: photosError } = await supabase
-        .from('service_photos')
-        .select('photo_url,title')
-        .eq('service_id', serviceId)
-        .order('created_at', { ascending: true });
-
-      if (photosError) {
-        console.error('[PhotoUploader] Erro ao buscar fotos:', photosError);
-        return;
-      }
-
-      const photoUrls = (photosData || []).map(photo => photo.photo_url);
-      const { error: updateError } = await supabase
-        .from('services')
-        .update({
-          photos: photoUrls,
-          photo_titles: (photosData || []).map(photo => photo.title || ''),
-        })
-        .eq('id', serviceId);
-      if (updateError) throw updateError;
+      await syncServicePhotosFields(targetServiceId);
     } catch (error) {
       console.error('[PhotoUploader] Erro ao atualizar campo photos:', error);
     }
