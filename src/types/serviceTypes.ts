@@ -41,9 +41,11 @@ export interface ServiceFeedback {
 export interface CustomField {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select' | 'date';
-  value: string | number | boolean;
+  type: 'text' | 'number' | 'textarea' | 'boolean' | 'select' | 'date' | 'pills' | 'cards' | 'binary_list' | 'timestamp' | 'computed';
+  value: string | number | boolean | Record<string, string>;
   options?: string[];
+  /** etapa do checklist guiado a que a resposta pertence */
+  step?: string;
 }
 
 export interface Service {
