@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadServicePhoto, syncServicePhotosFields } from '@/services/photoUpload';
 import { PhotoAnnotator } from './PhotoAnnotator';
 
 export interface Photo {

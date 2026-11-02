@@ -136,11 +136,20 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
           />
 
           {service.serviceType && (
-            <TechnicalFieldsManager
-              serviceType={service.serviceType}
-              currentFields={service.customFields || []}
-              onFieldsUpdate={handleUpdateCustomFields}
-            />
+            <SectionCard
+              title="Checklist Técnico"
+              description="Campos e evidências exigidos pelo tipo de serviço"
+            >
+              <ChecklistSection
+                serviceType={service.serviceType}
+                currentFields={service.customFields || []}
+                photos={photos}
+                serviceId={service.id}
+                onFieldsUpdate={handleUpdateCustomFields}
+                onPhotosChange={handlePhotosChange}
+                disabled={isServiceConcluded}
+              />
+            </SectionCard>
           )}
 
           <SectionCard
