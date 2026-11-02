@@ -12,7 +12,7 @@ interface ChecklistSectionProps {
   currentFields: Array<{ id: string; value: unknown }>;
   photos: Photo[];
   serviceId: string;
-  onFieldsUpdate: (fields: Array<Record<string, unknown>>) => Promise<void> | void;
+  onFieldsUpdate: (fields: CustomField[]) => Promise<void> | void;
   onPhotosChange: (photos: Photo[]) => void;
   disabled?: boolean;
 }
