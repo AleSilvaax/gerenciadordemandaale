@@ -1,32 +1,16 @@
-
 import { describe, it, expect, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useOptimizedServices } from '../useOptimizedServices';
 import { mockService } from '@/test/utils';
 
-// Mock the store
-vi.mock('@/store/serviceStore', () => ({
-  useServiceStore: () => ({
-    services: [mockService],
-    isLoading: false,
-    error: null,
-    filters: {
-      status: 'all',
-      priority: 'all',
-      serviceType: 'all',
-      searchTerm: '',
-    },
-    setFilters: vi.fn(),
-    loadServices: vi.fn(),
-    clearError: vi.fn(),
-  }),
+vi.mock('@/services/servicesDataService', () => ({
+  getServices: vi.fn(() => Promise.resolve([mockService])),
 }));
 
-// Mock performance utils
 vi.mock('@/utils/performance', () => ({
   useFilteredServices: vi.fn(() => [mockService]),
-  useDebounce: vi.fn((fn) => fn),
+  useDebounce: vi.fn((value) => value),
 }));
 
 describe('useOptimizedServices', () => {
@@ -36,7 +20,7 @@ describe('useOptimizedServices', () => {
         queries: { retry: false },
       },
     });
-    
+
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         {children}
@@ -44,21 +28,22 @@ describe('useOptimizedServices', () => {
     );
   };
 
-  it('returns optimized services data', () => {
+  it('returns optimized services data', async () => {
     const { result } = renderHook(() => useOptimizedServices(), {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.services).toEqual([mockService]);
+    await waitFor(() => expect(result.current.services).toEqual([mockService]));
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
   });
 
-  it('calculates service statistics correctly', () => {
+  it('calculates service statistics correctly', async () => {
     const { result } = renderHook(() => useOptimizedServices(), {
       wrapper: createWrapper(),
     });
 
+    await waitFor(() => expect(result.current.serviceStats.total).toBe(1));
     expect(result.current.serviceStats).toEqual({
       total: 1,
       pending: 1,
