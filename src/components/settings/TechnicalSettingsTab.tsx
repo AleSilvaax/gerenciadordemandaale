@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Save, RotateCw, FileText, Pencil } from "lucide-react";
+import { Plus, Trash2, Save, RotateCw, FileText, Pencil, Zap } from "lucide-react";
+import { EV_TEMPLATE_NAME, evChargerTemplate } from "@/templates/evChargerTemplate";
 import { toast } from "sonner";
 import { 
   Table, 
