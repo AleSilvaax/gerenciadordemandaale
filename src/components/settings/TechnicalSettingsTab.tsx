@@ -23,6 +23,7 @@ import { ServiceTypeConfig, TechnicalField } from "@/types/serviceTypes";
 import {
   getServiceTypesFromDatabase,
   createServiceType,
+  createGuidedServiceType,
   updateServiceType,
   deleteServiceType,
   createTechnicalField,
