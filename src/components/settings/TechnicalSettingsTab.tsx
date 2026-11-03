@@ -293,6 +293,29 @@ export const TechnicalSettingsTab = () => {
         </CardContent>
         <CardFooter className="flex justify-between border-t pt-5">
           <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              disabled={isSaving}
+              onClick={async () => {
+                setIsSaving(true);
+                try {
+                  await createGuidedServiceType(
+                    EV_TEMPLATE_NAME,
+                    "Vistoria técnica para instalação de carregador veicular com checklist guiado e slots de fotos.",
+                    evChargerTemplate.steps,
+                    evChargerTemplate.photoSlots
+                  );
+                  await refreshTypes();
+                  toast.success("Template de Vistoria EV adicionado.");
+                } catch {
+                  toast.error("Erro ao adicionar o template. Verifique se ele já existe.");
+                }
+                setIsSaving(false);
+              }}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Adicionar Template Vistoria EV
+            </Button>
             <Button variant="outline" onClick={resetToDefaults}>
               <RotateCw className="h-4 w-4 mr-2" />
               Restaurar Padrões
