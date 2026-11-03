@@ -15,6 +15,7 @@ import type {
   ChecklistAnswers, ChecklistFieldDef, ChecklistStep, ChecklistTemplate,
 } from '@/types/checklist';
 import { computations } from '@/templates/computations';
+import type { CustomField } from '@/types/serviceTypes';
 import { PhotoSlots } from './PhotoSlots';
 import type { Photo } from '@/components/ui-custom/PhotoUploader';
 
@@ -140,8 +141,8 @@ export const GuidedChecklist: React.FC<GuidedChecklistProps> = ({
     setStepIndex(i => Math.min(i + 1, totalSteps - 1));
   };
 
-  const buildPayload = () => {
-    const payload: Array<Record<string, unknown>> = [];
+  const buildPayload = (): CustomField[] => {
+    const payload: CustomField[] = [];
     for (const step of template.steps) {
       for (const field of step.fields) {
         let value = answers[field.id];

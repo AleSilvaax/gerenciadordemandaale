@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TechnicalFieldsManager } from '@/components/ui-custom/TechnicalFieldsManager';
 import type { Photo } from '@/components/ui-custom/PhotoUploader';
 import type { ChecklistTemplate } from '@/types/checklist';
+import type { CustomField } from '@/types/serviceTypes';
 import { GuidedChecklist } from './GuidedChecklist';
 import { EV_TEMPLATE_NAME, evChargerTemplate } from '@/templates/evChargerTemplate';
 
