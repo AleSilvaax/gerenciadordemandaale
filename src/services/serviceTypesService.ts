@@ -140,6 +140,28 @@ export const createServiceType = async (type: Partial<ServiceTypeConfig>) => {
   }
 };
 
+/** Cria um tipo de serviço com checklist guiado e slots de fotos (template coringa). */
+export const createGuidedServiceType = async (
+  name: string,
+  description: string,
+  checklistSteps: unknown,
+  photoSlots: unknown
+) => {
+  const { data, error } = await supabase
+    .from("service_types")
+    .insert({
+      name,
+      description,
+      organization_id: (await getCurrentOrganizationId()),
+      checklist_steps: checklistSteps as never,
+      photo_slots: photoSlots as never,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
 export const updateServiceType = async (type: ServiceTypeConfig) => {
   const { data, error } = await supabase
     .from("service_types")

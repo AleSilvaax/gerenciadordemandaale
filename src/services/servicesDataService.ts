@@ -18,6 +18,7 @@ export {
 export {
   getServiceTypesFromDatabase,
   createServiceType,
+  createGuidedServiceType,
   updateServiceType,
   deleteServiceType,
   createTechnicalField,
