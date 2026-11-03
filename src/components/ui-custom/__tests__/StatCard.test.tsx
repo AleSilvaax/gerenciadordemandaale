@@ -31,7 +31,7 @@ describe('StatCard', () => {
       />
     );
 
-    const statCard = screen.getByText('Test').closest('div');
+    const statCard = screen.getByText('Test').closest('[class*="rounded-xl"]');
     expect(statCard).toHaveClass('custom-class');
   });
 
