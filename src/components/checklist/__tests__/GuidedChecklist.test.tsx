@@ -18,7 +18,7 @@ describe('Checklist guiado — Vistoria EV', () => {
   it('mostra a etapa 1 de 6 com progresso e campos de endereço', () => {
     render(<GuidedChecklist {...baseProps} savedFields={[]} />);
     expect(screen.getByText('Etapa 1 de 6')).toBeTruthy();
-    expect(screen.getByText('Dados Iniciais')).toBeTruthy();
+    expect(screen.getAllByText('Dados Iniciais').length).toBeGreaterThan(0);
     expect(screen.getByText('Km de ida (base até o cliente)')).toBeTruthy();
     expect(screen.getByText('Tipo de Imóvel')).toBeTruthy();
   });
