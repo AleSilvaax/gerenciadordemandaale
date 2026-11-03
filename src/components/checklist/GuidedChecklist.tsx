@@ -148,7 +148,7 @@ export const GuidedChecklist: React.FC<GuidedChecklistProps> = ({
         let value = answers[field.id];
         if (field.type === 'computed') value = computedValue(field);
         if (isEmpty(value)) continue;
-        payload.push({ id: field.id, label: field.label, type: field.type, value, step: step.title });
+        payload.push({ id: field.id, label: field.label, type: field.type, value: value as CustomField['value'], step: step.title });
       }
     }
     return payload;
