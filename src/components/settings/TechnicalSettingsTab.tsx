@@ -30,6 +30,10 @@ import {
   updateTechnicalField,
   deleteTechnicalField,
 } from "@/services/servicesDataService";
+import { updateServiceTypeTemplate } from "@/services/serviceTypesService";
+import type { ChecklistStep, PhotoSlotDef } from "@/types/checklist";
+import { ChecklistBuilder } from "./ChecklistBuilder";
+import { validateTemplate } from "./validateTemplate";
 
 // Remover mocks e usaremos apenas dados do Supabase:
 export const TechnicalSettingsTab = () => {
@@ -55,6 +59,61 @@ export const TechnicalSettingsTab = () => {
     }
     setIsSaving(false);
   }
+
+  // Checklist guiado (rascunho em edição)
+  const [isGuided, setIsGuided] = useState(false);
+  const [draftSteps, setDraftSteps] = useState<ChecklistStep[]>([]);
+  const [draftSlots, setDraftSlots] = useState<PhotoSlotDef[]>([]);
+
+  useEffect(() => {
+    const steps = selectedType?.checklistSteps || [];
+    setIsGuided(steps.length > 0);
+    setDraftSteps(steps);
+    setDraftSlots(selectedType?.photoSlots || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedType?.id]);
+
+  const toggleGuided = async (on: boolean) => {
+    if (on) {
+      setIsGuided(true);
+      if (draftSteps.length === 0) {
+        setDraftSteps([{ id: "etapa_1", title: "Etapa 1", fields: [] }]);
+      }
+      return;
+    }
+    if (!selectedType) return;
+    if (selectedType.checklistSteps?.length && !window.confirm("Remover o checklist guiado deste tipo? As demandas voltarão a usar os campos simples.")) return;
+    setIsSaving(true);
+    try {
+      await updateServiceTypeTemplate(selectedType.id, null, null);
+      setIsGuided(false);
+      await refreshTypes();
+    } catch {
+      toast.error("Erro ao remover checklist.");
+    }
+    setIsSaving(false);
+  };
+
+  const loadEvModel = () => {
+    if (draftSteps.some(s => s.fields.length) && !window.confirm("Substituir o checklist atual pelo modelo EV?")) return;
+    setDraftSteps(structuredClone(evChargerTemplate.steps));
+    setDraftSlots(structuredClone(evChargerTemplate.photoSlots));
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!selectedType) return;
+    const problem = validateTemplate(draftSteps, draftSlots);
+    if (problem) { toast.error(problem); return; }
+    setIsSaving(true);
+    try {
+      await updateServiceTypeTemplate(selectedType.id, draftSteps, draftSlots);
+      await refreshTypes();
+      toast.success("Checklist salvo. Novas demandas deste tipo já usam este fluxo.");
+    } catch {
+      toast.error("Erro ao salvar checklist.");
+    }
+    setIsSaving(false);
+  };
 
   // Selecionar tipo
   const handleSelectType = (type: ServiceTypeConfig) => {
@@ -246,7 +305,7 @@ export const TechnicalSettingsTab = () => {
             />
 
             {/* Detalhes do Tipo Selecionado */}
-            <div className="lg:col-span-5 border rounded-lg p-4 h-[500px] flex flex-col">
+            <div className="lg:col-span-5 border rounded-lg p-4 min-h-[500px] flex flex-col">
               {selectedType ? (
                 <>
                   <ServiceTypeForm
@@ -257,8 +316,38 @@ export const TechnicalSettingsTab = () => {
                     isSaving={isSaving}
                   />
 
-                  <div className="mt-6 flex-1 flex flex-col overflow-y-auto">
-                    {editingField ? (
+                  <div className="mt-4 flex items-center justify-between gap-2 flex-wrap border-b pb-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={isGuided}
+                        onCheckedChange={toggleGuided}
+                        aria-label="Checklist guiado"
+                      />
+                      <div>
+                        <p className="text-sm font-medium">Checklist guiado por etapas</p>
+                        <p className="text-xs text-muted-foreground">Etapas, campos e fotos obrigatórias com título</p>
+                      </div>
+                    </div>
+                    {isGuided && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={loadEvModel}>
+                          <Zap className="h-4 w-4 mr-1" />Usar modelo EV
+                        </Button>
+                        <Button size="sm" onClick={handleSaveTemplate} disabled={isSaving}>
+                          <Save className="h-4 w-4 mr-1" />Salvar checklist
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex-1 flex flex-col">
+                    {isGuided ? (
+                      <ChecklistBuilder
+                        steps={draftSteps}
+                        photoSlots={draftSlots}
+                        onChange={(s, p) => { setDraftSteps(s); setDraftSlots(p); }}
+                      />
+                    ) : editingField ? (
                       <TechnicalFieldForm
                         editingField={editingField}
                         isNewField={isNewField}
