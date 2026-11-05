@@ -200,4 +200,6 @@ export interface ServiceTypeConfig {
   name: string;
   fields: TechnicalField[];
   description: string;
+  checklistSteps?: import('./checklist').ChecklistStep[] | null;
+  photoSlots?: import('./checklist').PhotoSlotDef[] | null;
 }

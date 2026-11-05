@@ -56,6 +56,8 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
         id: type.id,
         name: type.name.trim(),
         description: type.description?.trim() || "",
+        checklistSteps: Array.isArray(type.checklist_steps) ? (type.checklist_steps as any) : null,
+        photoSlots: Array.isArray(type.photo_slots) ? (type.photo_slots as any) : null,
         fields: (allFields || [])
           .filter((f) => f && f.service_type_id === type.id && f.name && f.name.trim() !== '')
           .map((f) => {
@@ -171,6 +173,19 @@ export const updateServiceType = async (type: ServiceTypeConfig) => {
     .single();
   if (error) throw error;
   return data;
+};
+
+/** Salva (ou remove, com null) o checklist guiado e os slots de fotos de um tipo. */
+export const updateServiceTypeTemplate = async (
+  id: string,
+  checklistSteps: unknown[] | null,
+  photoSlots: unknown[] | null
+) => {
+  const { error } = await supabase
+    .from("service_types")
+    .update({ checklist_steps: checklistSteps as never, photo_slots: photoSlots as never })
+    .eq("id", id);
+  if (error) throw error;
 };
 
 export const deleteServiceType = async (id: string) => {
