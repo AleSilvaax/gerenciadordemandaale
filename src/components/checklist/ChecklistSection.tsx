@@ -10,6 +10,8 @@ import { EV_TEMPLATE_NAME, evChargerTemplate } from '@/templates/evChargerTempla
 
 interface ChecklistSectionProps {
   serviceType: string;
+  serviceTypeId?: string;
+  organizationId?: string;
   currentFields: Array<{ id: string; value: unknown }>;
   photos: Photo[];
   serviceId: string;
@@ -25,6 +27,8 @@ interface ChecklistSectionProps {
  */
 export const ChecklistSection: React.FC<ChecklistSectionProps> = ({
   serviceType,
+  serviceTypeId,
+  organizationId,
   currentFields,
   photos,
   serviceId,
@@ -36,24 +40,27 @@ export const ChecklistSection: React.FC<ChecklistSectionProps> = ({
 
   useEffect(() => {
     let active = true;
+    setTemplate(undefined);
     const load = async () => {
       try {
-        const { data } = await supabase
+        let query = supabase
           .from('service_types')
-          .select('checklist_steps, photo_slots')
-          .eq('name', serviceType)
-          .limit(1)
-          .maybeSingle();
+          .select('checklist_steps, photo_slots');
+        if (serviceTypeId) query = query.eq('id', serviceTypeId);
+        else if (organizationId) query = query.eq('organization_id', organizationId).eq('name', serviceType);
+        else { setTemplate(null); return; }
+        const { data, error } = await query.limit(1).maybeSingle();
+        if (error) throw error;
 
         if (!active) return;
-        if (data?.checklist_steps && Array.isArray(data.checklist_steps)) {
+        if (Array.isArray(data?.checklist_steps) && data.checklist_steps.length > 0) {
           setTemplate({
             steps: data.checklist_steps as unknown as ChecklistTemplate['steps'],
             photoSlots: Array.isArray(data.photo_slots)
               ? (data.photo_slots as unknown as ChecklistTemplate['photoSlots'])
               : [],
           });
-        } else if (serviceType === EV_TEMPLATE_NAME) {
+        } else if (!data && serviceType === EV_TEMPLATE_NAME) {
           // Template nativo: funciona mesmo sem seed no banco
           setTemplate(evChargerTemplate);
         } else {
@@ -65,7 +72,7 @@ export const ChecklistSection: React.FC<ChecklistSectionProps> = ({
     };
     load();
     return () => { active = false; };
-  }, [serviceType]);
+  }, [serviceType, serviceTypeId, organizationId]);
 
   if (template === undefined) {
     return <Skeleton className="h-56 w-full rounded-xl" />;

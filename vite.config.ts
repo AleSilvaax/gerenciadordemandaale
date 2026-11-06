@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
+
+const appManifest = JSON.parse(readFileSync(new URL('./public/manifest.webmanifest', import.meta.url), 'utf8'));
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,21 +19,8 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png'],
-      manifest: {
-        name: 'GerenciadorDemandas',
-        short_name: 'GDemandas',
-        description: 'Gestão de demandas, serviços e equipe',
-        theme_color: '#2962B8',
-        background_color: '#ffffff',
-        display: 'standalone',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: '/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png', sizes: '512x512', type: 'image/png' },
-          { src: '/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-      },
+      includeAssets: ['favicon.png', 'pacto-apple-180.png', 'pacto-icon-192.png', 'pacto-icon-512.png', 'pacto-maskable-512.png'],
+      manifest: appManifest,
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],

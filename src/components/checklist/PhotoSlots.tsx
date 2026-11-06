@@ -28,24 +28,27 @@ export const PhotoSlots: React.FC<PhotoSlotsProps> = ({
 }) => {
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const latestPhotos = useRef(photos);
+  latestPhotos.current = photos;
+  const uploadLock = useRef(false);
 
   const photosForSlot = (slot: PhotoSlotDef) =>
     photos.filter(p => p.title === slot.title);
 
   const handleFile = async (slot: PhotoSlotDef, files: FileList | null) => {
-    if (!files || files.length === 0 || disabled) return;
+    if (!files || files.length === 0 || disabled || uploadLock.current) return;
     const file = Array.from(files).find(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024);
     if (!file) {
       toast.error('Selecione uma imagem de até 10MB.');
       return;
     }
 
+    uploadLock.current = true;
     setUploadingSlot(slot.id);
     try {
       const uploaded = await uploadServicePhoto(serviceId, file, slot.title);
-      await syncServicePhotosFields(serviceId);
       onPhotosChange([
-        ...photos,
+        ...latestPhotos.current,
         {
           id: uploaded.dbId,
           dbId: uploaded.dbId,
@@ -54,11 +57,14 @@ export const PhotoSlots: React.FC<PhotoSlotsProps> = ({
           title: slot.title,
         },
       ]);
+      try { await syncServicePhotosFields(serviceId); }
+      catch { toast.warning('Foto salva. A atualização dos anexos será refeita ao abrir a demanda.'); }
       toast.success(`Foto adicionada em "${slot.title}".`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao enviar foto.');
     } finally {
       setUploadingSlot(null);
+      uploadLock.current = false;
       const input = inputRefs.current[slot.id];
       if (input) input.value = '';
     }
@@ -121,7 +127,7 @@ export const PhotoSlots: React.FC<PhotoSlotsProps> = ({
               variant="outline"
               size="sm"
               className="w-full"
-              disabled={disabled || isUploading}
+              disabled={disabled || uploadingSlot !== null}
               onClick={() => inputRefs.current[slot.id]?.click()}
             >
               {isUploading ? (

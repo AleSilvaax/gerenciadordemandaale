@@ -4,7 +4,8 @@ import React from "react";
 import Navbar from "./Navbar";
 import UserProfileMenu from "./UserProfileMenu";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2, Layers } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import pactoLogo from '@/assets/pacto-logo.png';
 import { Link } from "react-router-dom";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
@@ -29,11 +30,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <header className="sticky top-0 z-50 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
           <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2.5 min-w-0">
-              <div className="h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center">
-                <Layers className="h-5 w-5" />
-              </div>
+              <img src={pactoLogo} alt="Pacto" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg" />
               <div className="leading-tight min-w-0">
-                <p className="font-bold text-slate-900 dark:text-white truncate">ServiceFlow</p>
+                <p className="font-bold text-foreground truncate">Pacto</p>
                 <p className="text-[11px] text-slate-500 truncate">Gestão de Operações</p>
               </div>
             </Link>

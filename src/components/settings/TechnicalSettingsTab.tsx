@@ -50,6 +50,7 @@ export const TechnicalSettingsTab = () => {
 
   async function refreshTypes() {
     setIsSaving(true);
+    try {
     const types = await getServiceTypesFromDatabase();
     setServiceTypes(types);
     // se estava editando um tipo, buscar versão atualizada
@@ -57,7 +58,9 @@ export const TechnicalSettingsTab = () => {
       const updated = types.find(t => t.id === selectedType.id);
       setSelectedType(updated || null);
     }
-    setIsSaving(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar tipos de serviço.');
+    } finally { setIsSaving(false); }
   }
 
   // Checklist guiado (rascunho em edição)
@@ -71,7 +74,7 @@ export const TechnicalSettingsTab = () => {
     setDraftSteps(steps);
     setDraftSlots(selectedType?.photoSlots || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType?.id]);
+  }, [selectedType?.id, selectedType?.checklistSteps, selectedType?.photoSlots]);
 
   const toggleGuided = async (on: boolean) => {
     if (on) {
@@ -390,14 +393,15 @@ export const TechnicalSettingsTab = () => {
               onClick={async () => {
                 setIsSaving(true);
                 try {
-                  await createGuidedServiceType(
+                  const created = await createGuidedServiceType(
                     EV_TEMPLATE_NAME,
                     "Vistoria técnica para instalação de carregador veicular com checklist guiado e slots de fotos.",
                     evChargerTemplate.steps,
                     evChargerTemplate.photoSlots
                   );
                   await refreshTypes();
-                  toast.success("Template de Vistoria EV adicionado.");
+                  handleSelectType({ id: created.id, name: created.name, description: created.description || '', fields: [], checklistSteps: created.checklist_steps as unknown as ChecklistStep[], photoSlots: created.photo_slots as unknown as PhotoSlotDef[] });
+                  toast.success("Template de Vistoria EV aberto para edição.");
                 } catch {
                   toast.error("Erro ao adicionar o template. Verifique se ele já existe.");
                 }

@@ -19,7 +19,7 @@ export const ServiceTypeList: React.FC<Props> = ({
   onSelectType,
   onCreateNewType,
 }) => (
-  <div className="lg:col-span-2 border rounded-lg p-3 h-[500px] flex flex-col">
+  <div className="lg:col-span-2 border rounded-lg p-3 max-h-56 lg:h-[500px] lg:max-h-none flex flex-col">
     <div className="flex items-center justify-between mb-2">
       <h3 className="text-sm font-medium">Tipos de Serviço</h3>
       <Button size="sm" variant="ghost" onClick={onCreateNewType}>
@@ -30,17 +30,14 @@ export const ServiceTypeList: React.FC<Props> = ({
     <ScrollArea className="flex-grow">
       <div className="space-y-1 pr-3">
         {serviceTypes.map((type) => (
-          <button
+          <Button
+            variant={selectedType?.id === type.id ? 'default' : 'ghost'}
             key={type.id}
             onClick={() => onSelectType(type)}
-            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-              selectedType?.id === type.id
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
+            className="w-full h-auto justify-start text-left px-3 py-2 whitespace-normal text-sm"
           >
-            {type.name}
-          </button>
+            <span>{type.name}<span className="block text-xs opacity-80">{type.checklistSteps?.length ? `${type.checklistSteps.length} etapas · ${type.photoSlots?.length || 0} fotos` : 'Campos simples'}</span></span>
+          </Button>
         ))}
       </div>
     </ScrollArea>

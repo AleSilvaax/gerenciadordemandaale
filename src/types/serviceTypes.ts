@@ -60,6 +60,8 @@ export interface Service {
   creationDate?: string;
   createdBy?: string;
   serviceType?: ServiceType;
+  serviceTypeId?: string;
+  organizationId?: string;
   number?: string;
   reportData?: ReportData;
   photos?: string[];

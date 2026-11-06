@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Layers, LogIn, Loader2, AlertCircle } from "lucide-react";
+import { LogIn, Loader2, AlertCircle } from "lucide-react";
+import pactoLogo from '@/assets/pacto-logo.png';
 
 const Login = () => {
   const { login } = useAuth();
@@ -38,13 +39,11 @@ const Login = () => {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-8">
       <div className="w-full max-w-md space-y-6">
-        {/* Identidade ServiceFlow */}
+        {/* Identidade Pacto */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
-            <Layers className="h-6 w-6" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            ServiceFlow
+          <img src={pactoLogo} alt="Pacto" width={64} height={64} className="h-16 w-16 rounded-lg" />
+          <h1 className="text-2xl font-bold text-foreground">
+            Pacto
           </h1>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
             Plataforma Corporativa de Gestão de Operações em Campo
