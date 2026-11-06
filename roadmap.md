@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Corrigir fotos que desaparecem ao anexar na demanda
+- [ ] Corrigir edição/carregamento dos fluxos e tipos EV duplicados sem perder demandas
+- [ ] Criar nome e ícone próprios e aplicar no aplicativo/PWA
+
 - [ ] Link seguro do cliente: fotos, assinaturas e relatório completo
 - [ ] Feedback enviado pelo link do cliente
 - [ ] Assinatura ampliada em tela cheia no celular
