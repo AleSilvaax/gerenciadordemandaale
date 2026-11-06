@@ -1,6 +1,6 @@
 // Arquivo: src/hooks/useServiceDetail.ts (VERSÃO ATUALIZADA)
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,8 @@ interface Photo {
 }
 
 export const useServiceDetail = () => {
+  const requestVersion = useRef(0);
+  const photoVersion = useRef(0);
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
@@ -42,7 +44,7 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
 
       if (error) {
         console.error('[useServiceDetail] Erro ao carregar fotos:', error);
-        return [];
+        throw error;
       }
 
       if (photosData && photosData.length > 0) {
@@ -67,7 +69,7 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
         
         return photosWithSignedUrls;
       }
-      return [];
+      throw error;
     } catch (error) {
       console.error('[useServiceDetail] Erro ao carregar fotos:', error);
       return [];
@@ -75,6 +77,8 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
   };
 
   const fetchService = useCallback(async (serviceId: string) => {
+    const request = ++requestVersion.current;
+    const photoRevision = photoVersion.current;
     if (!user) {
       setIsLoading(false);
       return;
@@ -84,11 +88,14 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
     
     try {
       const foundService = await getServiceByIdFromDatabase(serviceId);
+      if (request !== requestVersion.current) return;
       
       if (foundService) {
         setService(foundService);
-        const loadedPhotos = await loadPhotosFromDatabase(serviceId);
-        setPhotos(loadedPhotos);
+        try {
+          const loadedPhotos = await loadPhotosFromDatabase(serviceId);
+          if (request === requestVersion.current && photoRevision === photoVersion.current) setPhotos(loadedPhotos);
+        } catch { toast.error('Não foi possível carregar as fotos. Tente abrir a demanda novamente.'); }
       } else {
         toast.error("Serviço não encontrado", { description: "Você pode não ter permissão para visualizar esta demanda." });
         navigate("/demandas");
@@ -97,7 +104,7 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
       toast.error("Erro ao carregar os detalhes do serviço");
       navigate("/demandas");
     } finally {
-      setIsLoading(false);
+      if (request === requestVersion.current) setIsLoading(false);
     }
   }, [user, navigate]);
 
@@ -105,16 +112,12 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
     if (id && user) {
       fetchService(id);
     }
+    return () => { requestVersion.current++; };
   }, [id, user, fetchService]);
 
   const handlePhotosChange = async (newPhotos: Photo[]) => {
+    photoVersion.current++;
     setPhotos(newPhotos);
-    if (service?.id) {
-      setTimeout(async () => {
-        const updatedPhotos = await loadPhotosFromDatabase(service.id);
-        setPhotos(updatedPhotos);
-      }, 1000);
-    }
   };
 
 const handleStatusChange = async (newStatus: Service["status"]) => {

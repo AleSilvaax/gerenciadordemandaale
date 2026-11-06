@@ -17,20 +17,19 @@ export const uploadServicePhoto = async (
     .upload(filename, file, { cacheControl: '3600', upsert: false });
   if (error) throw new Error(`Falha no upload: ${error.message}`);
 
-  const { data: signed, error: signError } = await supabase.storage
-    .from('service-photos')
-    .createSignedUrl(data.path, 3600);
-  if (signError) throw new Error(`Erro ao gerar URL da foto: ${signError.message}`);
-
   const photoTitle = title || file.name.replace(/\.[^/.]+$/, '');
   const { data: row, error: dbError } = await supabase
     .from('service_photos')
     .insert({ service_id: serviceId, photo_url: data.path, title: photoTitle })
     .select('id')
     .single();
-  if (dbError) throw new Error(`Erro ao salvar foto: ${dbError.message}`);
+  if (dbError) {
+    await supabase.storage.from('service-photos').remove([data.path]);
+    throw new Error(`Erro ao salvar foto: ${dbError.message}`);
+  }
+  const { data: signed } = await supabase.storage.from('service-photos').createSignedUrl(data.path, 3600);
 
-  return { path: data.path, signedUrl: signed.signedUrl, dbId: String(row.id), title: photoTitle };
+  return { path: data.path, signedUrl: signed?.signedUrl || URL.createObjectURL(file), dbId: String(row.id), title: photoTitle };
 };
 
 /** Espelha service_photos nos campos photos/photo_titles da tabela services. */

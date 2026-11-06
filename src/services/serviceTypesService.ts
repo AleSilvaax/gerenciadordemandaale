@@ -6,22 +6,25 @@ const getCurrentOrganizationId = async (): Promise<string> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado');
   
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
     .single();
   
-  return profile?.organization_id || '00000000-0000-0000-0000-000000000001';
+  if (error || !profile?.organization_id) throw new Error('Não foi possível identificar sua organização.');
+  return profile.organization_id;
 };
 
 export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]> => {
   try {
     console.log('[ServiceTypes] Iniciando busca de tipos de serviço...');
     
+    const organizationId = await getCurrentOrganizationId();
     const { data: types, error } = await supabase
       .from("service_types")
       .select("*")
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -31,11 +34,7 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
 
     if (!types || types.length === 0) {
       console.log('[ServiceTypes] Nenhum tipo encontrado, retornando tipos padrão');
-      return [
-        { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
-        { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
-        { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
-      ];
+      return [];
     }
 
     console.log('[ServiceTypes] Tipos encontrados:', types.length);
@@ -44,6 +43,7 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
     const { data: allFields, error: fieldsError } = await supabase
       .from("technical_fields")
       .select("*")
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: true });
 
     if (fieldsError) {
@@ -107,11 +107,7 @@ export const getServiceTypesFromDatabase = async (): Promise<ServiceTypeConfig[]
   } catch (e) {
     console.error("Erro ao buscar tipos de serviço:", e);
     // Retornar tipos padrão em caso de erro
-    return [
-      { id: '1', name: 'Vistoria', description: 'Vistoria padrão', fields: [] },
-      { id: '2', name: 'Instalação', description: 'Instalação padrão', fields: [] },
-      { id: '3', name: 'Manutenção', description: 'Manutenção padrão', fields: [] }
-    ];
+    throw e;
   }
 };
 
@@ -149,12 +145,17 @@ export const createGuidedServiceType = async (
   checklistSteps: unknown,
   photoSlots: unknown
 ) => {
+  const organizationId = await getCurrentOrganizationId();
+  const { data: existing, error: lookupError } = await supabase.from('service_types')
+    .select('*').eq('organization_id', organizationId).eq('name', name.trim()).limit(1).maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing) return existing;
   const { data, error } = await supabase
     .from("service_types")
     .insert({
       name,
       description,
-      organization_id: (await getCurrentOrganizationId()),
+      organization_id: organizationId,
       checklist_steps: checklistSteps as never,
       photo_slots: photoSlots as never,
     })
@@ -184,7 +185,8 @@ export const updateServiceTypeTemplate = async (
   const { error } = await supabase
     .from("service_types")
     .update({ checklist_steps: checklistSteps as never, photo_slots: photoSlots as never })
-    .eq("id", id);
+    .eq("id", id)
+    .select('id').single();
   if (error) throw error;
 };
 
