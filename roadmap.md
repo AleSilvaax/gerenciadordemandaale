@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Corrigir fotos que desaparecem ao anexar na demanda
-- [ ] Corrigir edição/carregamento dos fluxos e tipos EV duplicados sem perder demandas
-- [ ] Criar nome e ícone próprios e aplicar no aplicativo/PWA
+- [x] Corrigir persistência e sobrescrita de fotos ao anexar na demanda (testes de regressão)
+- [x] Corrigir edição/carregamento dos fluxos e tipos EV duplicados sem perder demandas (lista por organização)
+- [x] Criar nome e ícone próprios e aplicar no aplicativo/PWA
+- [ ] Confirmar upload/reabertura e edição de checklist em sessão autenticada (Supabase externo sem sessão disponível)
 
 - [ ] Link seguro do cliente: fotos, assinaturas e relatório completo
 - [ ] Feedback enviado pelo link do cliente
