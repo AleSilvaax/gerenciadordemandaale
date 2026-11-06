@@ -53,14 +53,15 @@ const { notifyServiceCompleted } = useIntelligentNotifications();
           photosData.map(async (photoData, index) => {
             const { extractFilePathFromUrl } = await import('@/utils/signedUrlHelper');
             const filePath = extractFilePathFromUrl(photoData.photo_url) || photoData.photo_url;
-            const { data: signedUrlData } = await supabase.storage
+            const { data: signedUrlData, error: signingError } = await supabase.storage
               .from('service-photos')
               .createSignedUrl(filePath, 3600);
+            if (signingError || !signedUrlData?.signedUrl) throw signingError || new Error('Foto sem endereço de visualização.');
             
             return {
               id: `db-${photoData.id}`,
               file: new File([], 'existing-photo'),
-              url: signedUrlData?.signedUrl || photoData.photo_url,
+              url: signedUrlData.signedUrl,
               title: photoData.title || `Foto ${index + 1}`,
               dbId: photoData.id, // Incluir o ID do banco de dados
             };
