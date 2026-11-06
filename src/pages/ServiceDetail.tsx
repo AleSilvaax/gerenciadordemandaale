@@ -48,9 +48,9 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
         : "";
       document.title = `OS ${shortNum ? `#${shortNum}` : ""} — ${
         service.title || "Detalhes"
-      } | ServiceFlow`;
+      } | Pacto`;
     } else {
-      document.title = "Detalhes da Demanda | ServiceFlow";
+      document.title = "Detalhes da Demanda | Pacto";
     }
   }, [service?.title, service?.number]);
 
@@ -142,6 +142,8 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ editMode = false }) => {
             >
               <ChecklistSection
                 serviceType={service.serviceType}
+                serviceTypeId={service.serviceTypeId}
+                organizationId={service.organizationId}
                 currentFields={service.customFields || []}
                 photos={photos}
                 serviceId={service.id}

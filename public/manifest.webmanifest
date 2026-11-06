@@ -1,14 +1,16 @@
 {
-  "name": "GerenciadorDemandas",
-  "short_name": "GDemandas",
-  "description": "Sistema moderno de gestão de demandas, ordens de serviço e equipe.",
+  "id": "/",
+  "name": "Pacto — Gestão de Operações",
+  "short_name": "Pacto",
+  "description": "Gestão de demandas, equipes e evidências de serviços em campo.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2962B8",
+  "theme_color": "#24292b",
   "icons": [
-    { "src": "/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/lovable-uploads/0171b2a3-44de-458d-bd3d-3e1206f82be7.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/pacto-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pacto-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/pacto-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

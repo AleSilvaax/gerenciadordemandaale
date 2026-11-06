@@ -42,6 +42,9 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [annotating, setAnnotating] = useState<Photo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const latestPhotos = useRef(photos);
+  latestPhotos.current = photos;
+  const uploadLock = useRef(false);
 
   console.log('[PhotoUploader] Renderizado com:', {
     photosCount: photos.length,
@@ -67,7 +70,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
   const handleFileSelect = useCallback(
     async (files: FileList | null) => {
-      if (!files || files.length === 0 || disabled) return;
+      if (!files || files.length === 0 || disabled || uploadLock.current) return;
 
       console.log('[PhotoUploader] Arquivos selecionados:', files.length);
 
@@ -93,6 +96,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         return;
       }
 
+      uploadLock.current = true;
       setIsUploading(true);
 
       try {
@@ -137,7 +141,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         }
 
         if (newPhotos.length > 0) {
-          const updatedPhotos = [...photos, ...newPhotos];
+          const updatedPhotos = [...latestPhotos.current, ...newPhotos];
           console.log(
             '[PhotoUploader] Adicionando',
             newPhotos.length,
@@ -152,6 +156,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         toast.error('Erro ao processar fotos');
       } finally {
         setIsUploading(false);
+        uploadLock.current = false;
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
