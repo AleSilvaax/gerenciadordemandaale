@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ServiceActionsProps {
   service: Service;
-  onStatusChange: (status: Service["status"]) => void;
+  onStatusChange: (status: Service["status"]) => Promise<void> | void;
   editMode?: boolean;
   onGenerateReport?: () => void;
 }
@@ -63,6 +63,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
       case "em_andamento": return "Em Andamento";
       case "concluido": return "Concluído";
       case "cancelado": return "Cancelado";
+      case "agendado": return "Agendado";
       default: return "Desconhecido";
     }
   };
@@ -100,7 +101,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
 
   const handleAddStock = () => {
     setValidationModalOpen(false);
-    navigate('/inventory');
+    navigate('/estoque');
   };
 
   const handleCopyTrackingLink = async () => {
@@ -141,11 +142,18 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
               <div className="space-y-4">
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-foreground block">Alterar Status:</label>
-                  <Select onValueChange={onStatusChange} value={service.status}>
+                  <Select disabled={isUpdatingStatus} onValueChange={async (status: Service['status']) => {
+                    if (status === 'concluido') { setIsCompleteDialogOpen(true); return; }
+                    setIsUpdatingStatus(true);
+                    try { await onStatusChange(status); }
+                    catch { /* The detail hook displays the error. */ }
+                    finally { setIsUpdatingStatus(false); }
+                  }} value={service.status}>
                     <SelectTrigger className="bg-card border border-border focus-visible:ring-2 focus-visible:ring-primary/50 h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="agendado">Agendado</SelectItem>
                       <SelectItem value="pendente">
                         <div className="flex items-center gap-3">
                           <Pause className="w-4 h-4 text-warning" />
@@ -275,7 +283,7 @@ export const ServiceActions: React.FC<ServiceActionsProps> = ({
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleCompleteService}
+              onClick={event => { event.preventDefault(); void handleCompleteService(); }}
               disabled={isUpdatingStatus}
               className="bg-success text-success-foreground hover:bg-success/90"
             >

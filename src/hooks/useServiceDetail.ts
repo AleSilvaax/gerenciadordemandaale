@@ -146,7 +146,7 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
       }
       console.error('[useServiceDetail] Erro na validação de materiais:', error);
       toast.error("Erro ao validar materiais para conclusão");
-      return;
+      throw error;
     }
   }
   
@@ -162,6 +162,7 @@ const handleStatusChange = async (newStatus: Service["status"]) => {
       }
     } else {
       toast.error("Erro ao atualizar status: Resposta inválida do servidor");
+      throw new Error('Não foi possível confirmar o novo status.');
     }
   } catch (error: any) {
     console.error('[useServiceDetail] Erro ao atualizar status:', error);

@@ -109,7 +109,7 @@ export const ClientTracking: React.FC = () => {
     <main className="min-h-dvh bg-background px-4 py-6 text-foreground">
       <div className="mx-auto max-w-2xl space-y-6">
         <header className="border-b border-border pb-4">
-          <p className="text-sm font-semibold text-primary">ServiceFlow</p>
+          <p className="text-sm font-semibold text-primary">Pacto</p>
           <div className="mt-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
