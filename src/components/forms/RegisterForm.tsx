@@ -129,7 +129,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ setRegistrationInPro
         team_id: role === 'requisitor' ? '' : teamId,
       };
       
-      console.log('[RegisterForm] Dados de registro:', userData);
       const success = await register(userData);
       
       if (success) {

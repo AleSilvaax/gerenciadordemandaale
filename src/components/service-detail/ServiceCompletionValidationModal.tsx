@@ -88,7 +88,7 @@ export const ServiceCompletionValidationModal: React.FC<ServiceCompletionValidat
               <div className="bg-gradient-to-r from-muted/10 to-muted/5 border border-border/30 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground">
                   💡 <strong>Dica:</strong> Você pode adicionar entrada de estoque para os materiais em falta, 
-                  ou prosseguir mesmo assim (não recomendado).
+                  e voltar à demanda para tentar finalizar novamente.
                 </p>
               </div>
             </>
@@ -122,7 +122,7 @@ export const ServiceCompletionValidationModal: React.FC<ServiceCompletionValidat
             </Button>
           )}
           
-          <Button 
+          {!hasShortages && <Button 
             onClick={onProceedAnyway}
             disabled={isLoading}
             className={hasShortages ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-success text-success-foreground hover:bg-success/90"}
@@ -135,7 +135,7 @@ export const ServiceCompletionValidationModal: React.FC<ServiceCompletionValidat
             ) : (
               hasShortages ? "Prosseguir Mesmo Assim" : "Finalizar Demanda"
             )}
-          </Button>
+          </Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

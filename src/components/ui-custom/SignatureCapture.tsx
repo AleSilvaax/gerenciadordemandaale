@@ -105,7 +105,7 @@ export const SignatureCapture: React.FC<Props> = ({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           aria-describedby={undefined}
-          className="!inset-0 !translate-x-0 !translate-y-0 !max-w-none !w-screen !h-[100dvh] !rounded-none !p-4 flex flex-col gap-3"
+          className="!inset-0 !translate-x-0 !translate-y-0 !max-w-none !max-h-none !w-screen !h-[100dvh] !rounded-none !p-4 flex flex-col gap-3"
         >
           <DialogTitle className="pr-8">{label}</DialogTitle>
           <div

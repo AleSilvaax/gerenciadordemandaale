@@ -67,15 +67,17 @@ const NewService = () => {
   useEffect(() => {
     getTeamMembers()
       .then((data) => setTechnicians(data || []))
-      .catch(() => {});
+      .catch(() => toast.error('Não foi possível carregar os técnicos.'));
 
     getServiceTypesFromDatabase()
       .then((types) => {
         if (types && types.length > 0) {
           setServiceTypes(types);
+          setServiceType(types[0].name);
+          setSelectedServiceTypeId(types[0].id);
         }
       })
-      .catch(() => {});
+      .catch(() => toast.error('Não foi possível carregar os tipos de serviço.'));
   }, []);
 
   const handleServiceTypeChange = (val: string) => {
@@ -108,9 +110,10 @@ const NewService = () => {
           ? technicians.find((t) => t.id === technicianId)
           : undefined;
 
-      const created = await createServiceInDatabase({
+      const { created, technicianError } = await createServiceInDatabase({
         title: title.trim(),
         serviceType,
+        serviceTypeId: selectedServiceTypeId || undefined,
         client: client.trim(),
         priority,
         location: location.trim() || city.trim() || "São Paulo",
@@ -121,11 +124,12 @@ const NewService = () => {
         notes: notes.trim(),
         technicians: selectedTech ? [selectedTech] : [],
         status: "pendente",
-      } as any);
+      });
 
       if (created) {
+        if (technicianError) toast.warning(technicianError);
         toast.success("Demanda criada com sucesso!");
-        navigate("/demandas");
+        navigate(`/demanda/${created.id}`);
       } else {
         toast.error("Não foi possível criar a demanda.");
       }

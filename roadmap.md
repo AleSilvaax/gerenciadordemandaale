@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Revisão de fechamento: coerência visual em celular/tablet/desktop e correção dos fluxos existentes
+- [ ] Executar testes disponíveis e conferir telas públicas em três tamanhos
+- [ ] Registrar critérios de operação e limitações de verificação autenticada
+
 - [x] Corrigir persistência e sobrescrita de fotos ao anexar na demanda (testes de regressão)
 - [x] Corrigir edição/carregamento dos fluxos e tipos EV duplicados sem perder demandas (lista por organização)
 - [x] Criar nome e ícone próprios e aplicar no aplicativo/PWA

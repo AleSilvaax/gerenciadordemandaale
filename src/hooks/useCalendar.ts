@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarEvent } from '@/types/calendarTypes';
 import { useAuth } from '@/context/AuthContext';
-import { parseISO, isValid, isSameDay, startOfMonth, addMonths } from 'date-fns';
+import { parseISO, isValid, isSameDay, startOfMonth, addMonths, format } from 'date-fns';
 
 const CALENDAR_QUERY_KEY = ['calendar-events'];
 
@@ -18,7 +18,7 @@ export const useCalendar = () => {
     error,
     refetch
   } = useQuery<CalendarEvent[]>({
-    queryKey: [...CALENDAR_QUERY_KEY, user?.id, selectedDate.toISOString().slice(0, 7)],
+    queryKey: [...CALENDAR_QUERY_KEY, user?.id, format(selectedDate, 'yyyy-MM')],
     
     queryFn: async (): Promise<CalendarEvent[]> => {
       if (!user) return [];
@@ -26,8 +26,8 @@ export const useCalendar = () => {
       // Define monthly range based on the currently selected date
       const monthStart = startOfMonth(selectedDate);
       const nextMonthStart = addMonths(monthStart, 1);
-      const monthStartStr = monthStart.toISOString().split('T')[0];
-      const nextMonthStartStr = nextMonthStart.toISOString().split('T')[0];
+      const monthStartStr = monthStart.toISOString();
+      const nextMonthStartStr = nextMonthStart.toISOString();
 
       let query = supabase
         .from('services')
@@ -40,7 +40,8 @@ export const useCalendar = () => {
           number,
           client,
           location,
-          service_technicians!inner (
+          service_technicians (
+            technician_id,
             profiles (
               id,
               name
@@ -65,7 +66,10 @@ export const useCalendar = () => {
       
       if (!servicesData) return [];
 
-      const events = servicesData.map((service: any): CalendarEvent | null => {
+      const visibleServices = user.role === 'tecnico'
+        ? servicesData.filter(service => service.service_technicians?.some(st => st.technician_id === user.id))
+        : servicesData;
+      const events = visibleServices.map((service: any): CalendarEvent | null => {
         const startDate = parseISO(service.due_date);
         if (!isValid(startDate)) return null;
 
