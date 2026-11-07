@@ -25,15 +25,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }
   
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-slate-50/80 dark:bg-slate-950 text-foreground">
+    <div className="flex flex-col min-h-[100dvh] bg-background text-foreground">
       {user && (
-        <header className="sticky top-0 z-50 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
+        <header className="sticky top-0 z-40 h-14 md:h-16 bg-card/95 backdrop-blur-md border-b border-border">
           <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2.5 min-w-0">
               <img src={pactoLogo} alt="Pacto" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg" />
               <div className="leading-tight min-w-0">
                 <p className="font-bold text-foreground truncate">Pacto</p>
-                <p className="text-[11px] text-slate-500 truncate">Gestão de Operações</p>
+                <p className="text-xs text-muted-foreground truncate">Gestão de Operações</p>
               </div>
             </Link>
             <div className="flex items-center gap-1.5">
@@ -44,7 +44,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
       )}
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-5 pb-24 md:pb-8">
+      <main className="flex-1 min-w-0 max-w-7xl mx-auto w-full px-3 md:px-6 py-4 md:py-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-24">
         {children}
       </main>
 
